@@ -38,7 +38,6 @@ jobs:
         with:
           files: |
             out/make/squirrel.windows/x64/*.exe
-            out/make/zip/win32/x64/*.zip
           draft: false
           prerelease: false
         env:
