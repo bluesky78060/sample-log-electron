@@ -309,7 +309,7 @@
     const synonyms = {
       name: ['성명', '이름', 'name'],
       address: ['도로명주소', '전체주소', 'address', 'fulladdress', '주소'],
-      detail: ['상세주소', '상세', '동호', '동/호', '동 호', '동', '호'],
+      detail: [],  // 상세주소는 기본적으로 선택 안함
       postalCode: ['우편번호', 'postalcode', 'postal_code', 'postcode', 'zip', 'zipcode']
     };
     const norm = (s) => String(s || '').toLowerCase();
