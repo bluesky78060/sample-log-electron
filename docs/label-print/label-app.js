@@ -657,6 +657,47 @@
     lastLabelStatus = null;
   }
 
+  // 라벨 위치 그리드 초기화 및 이벤트 바인딩
+  function initLabelGridPreview() {
+    const grid = document.getElementById('labelGridPreview');
+    if (!grid) return;
+
+    const cells = grid.querySelectorAll('.label-cell');
+    cells.forEach(cell => {
+      cell.addEventListener('click', () => {
+        const pos = parseInt(cell.dataset.pos, 10);
+        const hiddenInput = document.getElementById('labelStartPosition');
+        if (hiddenInput) {
+          hiddenInput.value = pos;
+        }
+        updateLabelGridPreview(pos);
+      });
+    });
+
+    // 초기 상태 (1번 시작)
+    updateLabelGridPreview(1);
+  }
+
+  // 라벨 그리드 프리뷰 업데이트
+  function updateLabelGridPreview(startPos) {
+    const grid = document.getElementById('labelGridPreview');
+    if (!grid) return;
+
+    const cells = grid.querySelectorAll('.label-cell');
+    cells.forEach(cell => {
+      const pos = parseInt(cell.dataset.pos, 10);
+      cell.classList.remove('used', 'start', 'available');
+
+      if (pos < startPos) {
+        cell.classList.add('used');
+      } else if (pos === startPos) {
+        cell.classList.add('start');
+      } else {
+        cell.classList.add('available');
+      }
+    });
+  }
+
   // 이벤트 바인딩
   document.addEventListener('DOMContentLoaded', () => {
     // 라벨 파일 드롭 영역
@@ -710,6 +751,9 @@
     // 라벨 초기화 버튼
     const btnReset = document.getElementById('btnLabelReset');
     if (btnReset) btnReset.addEventListener('click', resetLabelUI);
+
+    // 라벨 위치 그리드 클릭 이벤트
+    initLabelGridPreview();
 
     // 샘플 데이터 로드 버튼
     const btnSample = document.getElementById('btnLoadSampleData');

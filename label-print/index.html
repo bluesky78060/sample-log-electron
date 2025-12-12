@@ -487,6 +487,110 @@
             padding-left: 4px;
         }
 
+        /* 라벨 위치 선택 그리드 */
+        .label-position-container {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+
+        .label-grid-preview {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 4px;
+            padding: 12px;
+            background: rgba(248, 249, 255, 0.9);
+            border: 1.5px solid rgba(99, 102, 241, 0.15);
+            border-radius: var(--radius-sm);
+            width: fit-content;
+        }
+
+        .label-cell {
+            width: 36px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            background: white;
+            border: 1.5px solid rgba(99, 102, 241, 0.2);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .label-cell:hover {
+            border-color: var(--gradient-mid);
+            background: rgba(124, 58, 237, 0.08);
+            transform: scale(1.05);
+        }
+
+        .label-cell.used {
+            background: rgba(156, 163, 175, 0.3);
+            color: var(--text-quiet);
+            border-color: rgba(156, 163, 175, 0.4);
+        }
+
+        .label-cell.start {
+            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-mid));
+            color: white;
+            border-color: var(--gradient-mid);
+            font-weight: 700;
+            box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+        }
+
+        .label-cell.available {
+            background: rgba(16, 185, 129, 0.15);
+            color: #059669;
+            border-color: rgba(16, 185, 129, 0.4);
+        }
+
+        .label-position-info {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding-top: 4px;
+        }
+
+        .position-legend {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+            color: var(--text-body);
+        }
+
+        .legend-box {
+            width: 16px;
+            height: 12px;
+            border-radius: 3px;
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+
+        .legend-box.used {
+            background: rgba(156, 163, 175, 0.3);
+            border-color: rgba(156, 163, 175, 0.4);
+        }
+
+        .legend-box.start {
+            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-mid));
+            border-color: var(--gradient-mid);
+        }
+
+        .legend-box.available {
+            background: rgba(16, 185, 129, 0.15);
+            border-color: rgba(16, 185, 129, 0.4);
+        }
+
         .preview-card {
             background: rgba(255, 255, 255, 0.92);
             border-radius: var(--radius-md);
@@ -725,27 +829,38 @@
                     <div class="form-group">
                         <label for="labelStartPosition">시작 위치 (라벨지 절약)</label>
                         <div class="start-position-wrapper">
-                            <select id="labelStartPosition" name="labelStartPosition" autocomplete="off" aria-label="라벨 시작 위치 선택">
-                                <option value="1">1번부터 (처음부터)</option>
-                                <option value="2">2번부터</option>
-                                <option value="3">3번부터</option>
-                                <option value="4">4번부터</option>
-                                <option value="5">5번부터</option>
-                                <option value="6">6번부터</option>
-                                <option value="7">7번부터</option>
-                                <option value="8">8번부터</option>
-                                <option value="9">9번부터</option>
-                                <option value="10">10번부터</option>
-                                <option value="11">11번부터</option>
-                                <option value="12">12번부터</option>
-                                <option value="13">13번부터</option>
-                                <option value="14">14번부터</option>
-                                <option value="15">15번부터</option>
-                                <option value="16">16번부터</option>
-                                <option value="17">17번부터</option>
-                                <option value="18">18번부터</option>
-                            </select>
-                            <p class="hint-text">💡 이미 일부 사용한 라벨지가 있다면, 사용한 칸 다음 번호를 선택하세요.</p>
+                            <div class="label-position-container">
+                                <!-- 라벨 위치 미니 프리뷰 -->
+                                <div class="label-grid-preview" id="labelGridPreview">
+                                    <div class="label-cell" data-pos="1">1</div>
+                                    <div class="label-cell" data-pos="2">2</div>
+                                    <div class="label-cell" data-pos="3">3</div>
+                                    <div class="label-cell" data-pos="4">4</div>
+                                    <div class="label-cell" data-pos="5">5</div>
+                                    <div class="label-cell" data-pos="6">6</div>
+                                    <div class="label-cell" data-pos="7">7</div>
+                                    <div class="label-cell" data-pos="8">8</div>
+                                    <div class="label-cell" data-pos="9">9</div>
+                                    <div class="label-cell" data-pos="10">10</div>
+                                    <div class="label-cell" data-pos="11">11</div>
+                                    <div class="label-cell" data-pos="12">12</div>
+                                    <div class="label-cell" data-pos="13">13</div>
+                                    <div class="label-cell" data-pos="14">14</div>
+                                    <div class="label-cell" data-pos="15">15</div>
+                                    <div class="label-cell" data-pos="16">16</div>
+                                    <div class="label-cell" data-pos="17">17</div>
+                                    <div class="label-cell" data-pos="18">18</div>
+                                </div>
+                                <div class="label-position-info">
+                                    <div class="position-legend">
+                                        <span class="legend-item"><span class="legend-box used"></span> 사용됨 (건너뜀)</span>
+                                        <span class="legend-item"><span class="legend-box start"></span> 시작 위치</span>
+                                        <span class="legend-item"><span class="legend-box available"></span> 인쇄 영역</span>
+                                    </div>
+                                    <p class="hint-text">💡 클릭하여 시작 위치를 선택하세요</p>
+                                </div>
+                            </div>
+                            <input type="hidden" id="labelStartPosition" name="labelStartPosition" value="1">
                         </div>
                     </div>
 
