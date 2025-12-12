@@ -132,6 +132,42 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 파일 API 초기화
     await FileAPI.init();
 
+    // Electron 환경: 자동 저장 기본 활성화 및 첫 실행 시 폴더 선택
+    if (isElectron) {
+        const autoSaveToggle = document.getElementById('autoSaveToggle');
+        const hasSelectedFolder = localStorage.getItem('autoSaveFolderSelected') === 'true';
+
+        // 처음 실행이거나 폴더가 선택되지 않은 경우
+        if (!hasSelectedFolder) {
+            // 잠시 후 폴더 선택 다이얼로그 표시 (UI 로드 후)
+            setTimeout(async () => {
+                const confirmSelect = confirm('자동 저장 기능을 사용하시겠습니까?\n\n저장할 폴더를 선택해주세요.');
+                if (confirmSelect) {
+                    try {
+                        const result = await window.electronAPI.selectAutoSaveFolder();
+                        if (result.success) {
+                            FileAPI.autoSavePath = result.path;
+                            localStorage.setItem('autoSaveFolderSelected', 'true');
+                            localStorage.setItem('autoSaveEnabled', 'true');
+                            if (autoSaveToggle) {
+                                autoSaveToggle.checked = true;
+                            }
+                            console.log('📁 자동 저장 폴더 설정됨:', result.folder);
+                        }
+                    } catch (error) {
+                        console.error('폴더 선택 오류:', error);
+                    }
+                }
+            }, 500);
+        } else {
+            // 이전에 폴더를 선택한 경우, 자동 저장 기본 활성화
+            localStorage.setItem('autoSaveEnabled', 'true');
+            if (autoSaveToggle) {
+                autoSaveToggle.checked = true;
+            }
+        }
+    }
+
     const form = document.getElementById('sampleForm');
     const tableBody = document.getElementById('logTableBody');
     const emptyState = document.getElementById('emptyState');
@@ -2406,6 +2442,44 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // 라벨 인쇄 페이지로 이동
         window.location.href = '../label-print/index.html';
+    }
+
+    // ========================================
+    // 선택 삭제 기능
+    // ========================================
+    const btnBulkDelete = document.getElementById('btnBulkDelete');
+
+    if (btnBulkDelete) {
+        btnBulkDelete.addEventListener('click', () => {
+            const selectedIds = getSelectedIds();
+
+            if (selectedIds.length === 0) {
+                alert('삭제할 항목을 선택해주세요.');
+                return;
+            }
+
+            if (!confirm(`선택한 ${selectedIds.length}건을 삭제하시겠습니까?\n삭제 후 복구할 수 없습니다.`)) {
+                return;
+            }
+
+            // 선택된 항목 삭제
+            sampleLogs = sampleLogs.filter(log => !selectedIds.includes(log.id));
+            saveLogs();
+            renderLogs(sampleLogs);
+
+            // 전체 선택 체크박스 해제
+            if (selectAllCheckbox) {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = false;
+            }
+
+            // 삭제한 항목이 수정 중이던 항목이면 수정 모드 취소
+            if (selectedIds.includes(editingLogId)) {
+                cancelEditMode();
+            }
+
+            showToast(`${selectedIds.length}건이 삭제되었습니다.`, 'success');
+        });
     }
 
     // ========================================

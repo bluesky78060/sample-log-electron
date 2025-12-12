@@ -2409,6 +2409,44 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // ========================================
+    // 선택 삭제 기능
+    // ========================================
+    const btnBulkDelete = document.getElementById('btnBulkDelete');
+
+    if (btnBulkDelete) {
+        btnBulkDelete.addEventListener('click', () => {
+            const selectedIds = getSelectedIds();
+
+            if (selectedIds.length === 0) {
+                alert('삭제할 항목을 선택해주세요.');
+                return;
+            }
+
+            if (!confirm(`선택한 ${selectedIds.length}건을 삭제하시겠습니까?\n삭제 후 복구할 수 없습니다.`)) {
+                return;
+            }
+
+            // 선택된 항목 삭제
+            sampleLogs = sampleLogs.filter(log => !selectedIds.includes(log.id));
+            saveLogs();
+            renderLogs(sampleLogs);
+
+            // 전체 선택 체크박스 해제
+            if (selectAllCheckbox) {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = false;
+            }
+
+            // 삭제한 항목이 수정 중이던 항목이면 수정 모드 취소
+            if (selectedIds.includes(editingLogId)) {
+                cancelEditMode();
+            }
+
+            showToast(`${selectedIds.length}건이 삭제되었습니다.`, 'success');
+        });
+    }
+
+    // ========================================
     // 통계 기능
     // ========================================
     const btnStatistics = document.getElementById('btnStatistics');
