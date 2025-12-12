@@ -258,6 +258,9 @@
                             <span class="toggle-text">전체 보기</span>
                         </button>
                     </div>
+                    <button type="button" id="btnStatistics" class="btn-statistics" title="통계">
+                        📊 통계
+                    </button>
                     <button type="button" id="btnLabelPrint" class="btn-label-print" title="선택한 항목 라벨 인쇄">
                         🏷️ 라벨 인쇄
                     </button>
@@ -461,6 +464,75 @@
             <div class="modal-footer">
                 <button type="button" id="closeResultBtn" class="btn-cancel">닫기</button>
                 <button type="button" id="exportResultBtn" class="btn-confirm">엑셀로 내보내기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 통계 모달 -->
+    <div id="statisticsModal" class="modal hidden">
+        <div class="modal-overlay"></div>
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3>📊 접수 통계</h3>
+                <button type="button" class="modal-close" id="closeStatisticsModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="stats-container">
+                    <!-- 요약 카드 -->
+                    <div class="stats-summary">
+                        <div class="stat-card total">
+                            <div class="stat-icon">📋</div>
+                            <div class="stat-info">
+                                <span class="stat-value" id="statTotalCount">0</span>
+                                <span class="stat-label">총 접수</span>
+                            </div>
+                        </div>
+                        <div class="stat-card completed">
+                            <div class="stat-icon">✅</div>
+                            <div class="stat-info">
+                                <span class="stat-value" id="statCompletedCount">0</span>
+                                <span class="stat-label">완료</span>
+                            </div>
+                        </div>
+                        <div class="stat-card pending">
+                            <div class="stat-icon">⏳</div>
+                            <div class="stat-info">
+                                <span class="stat-value" id="statPendingCount">0</span>
+                                <span class="stat-label">미완료</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 상세 통계 -->
+                    <div class="stats-details">
+                        <!-- 시료 타입별 통계 -->
+                        <div class="stats-section">
+                            <h4>🧪 시료 타입별</h4>
+                            <div class="stats-chart" id="statsBySampleType"></div>
+                        </div>
+
+                        <!-- 목적(용도)별 통계 -->
+                        <div class="stats-section">
+                            <h4>🎯 목적(용도)별</h4>
+                            <div class="stats-chart" id="statsByPurpose"></div>
+                        </div>
+
+                        <!-- 월별 통계 -->
+                        <div class="stats-section">
+                            <h4>📅 월별 접수 현황</h4>
+                            <div class="stats-chart" id="statsByMonth"></div>
+                        </div>
+
+                        <!-- 수령 방법별 통계 -->
+                        <div class="stats-section">
+                            <h4>📮 수령 방법별</h4>
+                            <div class="stats-chart" id="statsByReceptionMethod"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="closeStatisticsBtn" class="btn-cancel">닫기</button>
             </div>
         </div>
     </div>

@@ -2377,6 +2377,173 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // ========================================
+    // 통계 기능
+    // ========================================
+    const btnStatistics = document.getElementById('btnStatistics');
+    const statisticsModal = document.getElementById('statisticsModal');
+    const closeStatisticsModal = document.getElementById('closeStatisticsModal');
+    const closeStatisticsBtn = document.getElementById('closeStatisticsBtn');
+
+    if (btnStatistics) {
+        btnStatistics.addEventListener('click', () => {
+            openStatisticsModal();
+        });
+    }
+
+    if (closeStatisticsModal) {
+        closeStatisticsModal.addEventListener('click', () => {
+            statisticsModal.classList.add('hidden');
+        });
+    }
+
+    if (closeStatisticsBtn) {
+        closeStatisticsBtn.addEventListener('click', () => {
+            statisticsModal.classList.add('hidden');
+        });
+    }
+
+    // 통계 모달 외부 클릭 시 닫기
+    if (statisticsModal) {
+        statisticsModal.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal-overlay')) {
+                statisticsModal.classList.add('hidden');
+            }
+        });
+    }
+
+    function openStatisticsModal() {
+        if (!statisticsModal) return;
+
+        // 통계 데이터 계산
+        const stats = calculateStatistics();
+
+        // 요약 카드 업데이트
+        document.getElementById('statTotalCount').textContent = stats.total;
+        document.getElementById('statCompletedCount').textContent = stats.completed;
+        document.getElementById('statPendingCount').textContent = stats.pending;
+
+        // 차트 렌더링
+        renderBarChart('statsBySampleType', stats.bySampleType, 'type');
+        renderBarChart('statsByPurpose', stats.byPurpose, 'purpose');
+        renderBarChart('statsByMonth', stats.byMonth, 'month');
+        renderBarChart('statsByReceptionMethod', stats.byReceptionMethod, 'method');
+
+        // 모달 표시
+        statisticsModal.classList.remove('hidden');
+    }
+
+    function calculateStatistics() {
+        const total = sampleLogs.length;
+        const completed = sampleLogs.filter(log => log.isCompleted).length;
+        const pending = total - completed;
+
+        // 시료 타입별 집계
+        const bySampleType = {};
+        const typeMapping = {
+            '토양': { label: '🌱 토양', class: 'type-soil' },
+            '물': { label: '💧 물', class: 'type-water' },
+            '잔류농약': { label: '🧫 잔류농약', class: 'type-pesticide' },
+            '가축분뇨퇴비': { label: '🐄 퇴비', class: 'type-compost' },
+            '기타': { label: '📦 기타', class: 'type-other' }
+        };
+
+        sampleLogs.forEach(log => {
+            const type = log.sampleType || '기타';
+            if (!bySampleType[type]) {
+                bySampleType[type] = { count: 0, ...typeMapping[type] || typeMapping['기타'] };
+            }
+            bySampleType[type].count++;
+        });
+
+        // 목적(용도)별 집계
+        const byPurpose = {};
+        const purposeMapping = {
+            '일반재배': { label: '🌾 일반재배', class: 'purpose-general' },
+            '유기': { label: '♻️ 유기', class: 'purpose-organic' },
+            '무농약': { label: '🍃 무농약', class: 'purpose-nopesticide' },
+            'GAP': { label: '✅ GAP', class: 'purpose-gap' },
+            '저탄소': { label: '🌱 저탄소', class: 'purpose-lowcarbon' }
+        };
+
+        sampleLogs.forEach(log => {
+            const purpose = log.purpose || '기타';
+            if (!byPurpose[purpose]) {
+                byPurpose[purpose] = { count: 0, ...purposeMapping[purpose] || { label: purpose, class: 'purpose-general' } };
+            }
+            byPurpose[purpose].count++;
+        });
+
+        // 월별 집계
+        const byMonth = {};
+        sampleLogs.forEach(log => {
+            if (log.date) {
+                const month = log.date.substring(0, 7); // YYYY-MM
+                if (!byMonth[month]) {
+                    byMonth[month] = { count: 0, label: month, class: 'month' };
+                }
+                byMonth[month].count++;
+            }
+        });
+
+        // 수령 방법별 집계
+        const byReceptionMethod = {};
+        const methodMapping = {
+            '우편': { label: '📮 우편', class: 'method-mail' },
+            '이메일': { label: '📧 이메일', class: 'method-email' },
+            '팩스': { label: '📠 팩스', class: 'method-fax' },
+            '직접방문': { label: '🚶 직접방문', class: 'method-visit' }
+        };
+
+        sampleLogs.forEach(log => {
+            const method = log.receptionMethod || '기타';
+            if (!byReceptionMethod[method]) {
+                byReceptionMethod[method] = { count: 0, ...methodMapping[method] || { label: method, class: 'method-mail' } };
+            }
+            byReceptionMethod[method].count++;
+        });
+
+        return {
+            total,
+            completed,
+            pending,
+            bySampleType,
+            byPurpose,
+            byMonth,
+            byReceptionMethod
+        };
+    }
+
+    function renderBarChart(containerId, data, prefix) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        const entries = Object.entries(data).sort((a, b) => b[1].count - a[1].count);
+
+        if (entries.length === 0) {
+            container.innerHTML = '<div class="stats-empty">데이터가 없습니다</div>';
+            return;
+        }
+
+        const maxCount = Math.max(...entries.map(([, v]) => v.count));
+
+        container.innerHTML = entries.map(([key, value]) => {
+            const percent = maxCount > 0 ? (value.count / maxCount) * 100 : 0;
+            const showInside = percent > 20;
+
+            return `
+                <div class="stat-bar-item">
+                    <span class="stat-bar-label">${value.label}</span>
+                    <div class="stat-bar-wrapper">
+                        <div class="stat-bar ${value.class}" style="width: ${percent}%"></div>
+                        ${showInside ? `<span class="stat-bar-count">${value.count}건</span>` : ''}
+                    </div>
+                    ${!showInside ? `<span style="font-size: 0.75rem; color: #6b7280; min-width: 40px;">${value.count}건</span>` : ''}
+                </div>
+            `;
+        }).join('');
+    }
+
+    // ========================================
     // 기존 작물 검색 모달 기능 (기존 코드 호환)
     // ========================================
     const cropModal = document.getElementById('cropModal');
