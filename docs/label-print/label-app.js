@@ -302,14 +302,12 @@
     const fields = [
       { key: 'name', label: '이름' },
       { key: 'address', label: '주소' },
-      { key: 'detail', label: '상세주소' },
       { key: 'postalCode', label: '우편번호' }
     ];
 
     const synonyms = {
       name: ['성명', '이름', 'name'],
       address: ['도로명주소', '전체주소', 'address', 'fulladdress', '주소'],
-      detail: [],  // 상세주소는 기본적으로 선택 안함
       postalCode: ['우편번호', 'postalcode', 'postal_code', 'postcode', 'zip', 'zipcode']
     };
     const norm = (s) => String(s || '').toLowerCase();
@@ -468,28 +466,22 @@
 
         if (dataIndex < total) {
           const rowData = dataRows[dataIndex];
-          let name = '', address = '', detail = '', postalCode = '';
+          let name = '', address = '', postalCode = '';
 
           if (typeof rowData === 'object' && !Array.isArray(rowData)) {
             name = fieldMappings.name ? (rowData[fieldMappings.name] ?? '') : '';
             address = fieldMappings.address ? (rowData[fieldMappings.address] ?? '') : '';
-            detail = fieldMappings.detail ? (rowData[fieldMappings.detail] ?? '') : '';
             postalCode = fieldMappings.postalCode ? (rowData[fieldMappings.postalCode] ?? '') : '';
           } else if (Array.isArray(rowData)) {
             const nameIndex = headers.indexOf(fieldMappings.name);
             const addressIndex = headers.indexOf(fieldMappings.address);
-            const detailIndex = headers.indexOf(fieldMappings.detail);
             const postalCodeIndex = headers.indexOf(fieldMappings.postalCode);
             name = nameIndex >= 0 ? (rowData[nameIndex] ?? '') : '';
             address = addressIndex >= 0 ? (rowData[addressIndex] ?? '') : '';
-            detail = detailIndex >= 0 ? (rowData[detailIndex] ?? '') : '';
             postalCode = postalCodeIndex >= 0 ? (rowData[postalCodeIndex] ?? '') : '';
           }
 
-          const addressParts = [];
-          if (address) addressParts.push(address);
-          if (detail) addressParts.push(detail);
-          const combinedAddress = addressParts.join(' ');
+          const combinedAddress = address;
 
           const displayNameParts = [];
           if (name) displayNameParts.push(name);

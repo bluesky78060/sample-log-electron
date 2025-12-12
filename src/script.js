@@ -133,6 +133,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     await FileAPI.init();
 
     // Electron 환경: 자동 저장 기본 활성화 및 첫 실행 시 폴더 선택
+    // 자동 저장 파일에서 데이터 로드하는 함수 (나중에 sampleLogs 초기화 후 호출)
+    window.loadFromAutoSaveFile = async function() {
+        if (isElectron && FileAPI.autoSavePath) {
+            try {
+                const content = await FileAPI.loadAutoSave();
+                if (content) {
+                    const parsed = JSON.parse(content);
+                    const loadedData = parsed.data || parsed;
+                    if (Array.isArray(loadedData) && loadedData.length > 0) {
+                        console.log('📂 자동 저장 파일에서 데이터 로드:', loadedData.length, '건');
+                        return loadedData;
+                    }
+                }
+            } catch (error) {
+                console.error('자동 저장 파일 로드 오류:', error);
+            }
+        }
+        return null;
+    };
+
     if (isElectron) {
         const autoSaveToggle = document.getElementById('autoSaveToggle');
         const hasSelectedFolder = localStorage.getItem('autoSaveFolderSelected') === 'true';
@@ -496,6 +516,42 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Load data from LocalStorage
     let sampleLogs = JSON.parse(localStorage.getItem('sampleLogs')) || [];
+
+    // ========================================
+    // Electron 환경: 자동 저장 파일에서 데이터 로드
+    // ========================================
+    if (isElectron && FileAPI.autoSavePath) {
+        (async () => {
+            try {
+                const autoSaveData = await window.loadFromAutoSaveFile();
+                if (autoSaveData && autoSaveData.length > 0) {
+                    // localStorage에 데이터가 없거나 자동 저장 파일이 더 많은 데이터를 가진 경우
+                    if (sampleLogs.length === 0) {
+                        sampleLogs = autoSaveData;
+                        localStorage.setItem('sampleLogs', JSON.stringify(sampleLogs));
+                        console.log('📂 자동 저장 파일에서 데이터 복원 완료:', sampleLogs.length, '건');
+                    } else if (autoSaveData.length > sampleLogs.length) {
+                        // 자동 저장 파일에 더 많은 데이터가 있으면 병합 여부 확인
+                        const mergeConfirm = confirm(
+                            `자동 저장 파일에 ${autoSaveData.length}건의 데이터가 있습니다.\n` +
+                            `현재 ${sampleLogs.length}건의 데이터가 로드되어 있습니다.\n\n` +
+                            `자동 저장 파일에서 데이터를 불러오시겠습니까?`
+                        );
+                        if (mergeConfirm) {
+                            sampleLogs = autoSaveData;
+                            localStorage.setItem('sampleLogs', JSON.stringify(sampleLogs));
+                            console.log('📂 자동 저장 파일에서 데이터 교체 완료:', sampleLogs.length, '건');
+                        }
+                    }
+                    // UI 업데이트
+                    renderLogs(sampleLogs);
+                    receptionNumberInput.value = generateNextReceptionNumber();
+                }
+            } catch (error) {
+                console.error('자동 저장 파일 로드 중 오류:', error);
+            }
+        })();
+    }
 
     // ========================================
     // 접수번호 자동 카운터
