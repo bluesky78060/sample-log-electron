@@ -2,6 +2,13 @@
    수질분석 시료 전용 스타일
    ======================================== */
 
+/* 숨김 컬럼 (우편번호 등) */
+.col-zipcode.hidden,
+th.col-zipcode.hidden,
+td.col-zipcode.hidden {
+    display: none;
+}
+
 /* 물 테마 색상 */
 :root {
     --water-primary: #3B82F6;
@@ -55,7 +62,25 @@
 
 /* 검사항목 아이콘 */
 .test-item-icon {
-    font-size: 1.6rem !important;
+    font-size: 1.3rem !important;
+}
+
+/* 검사항목 라벨 컴팩트하게 */
+.water-navbar ~ .main-content .test-item-label {
+    padding: 0.75rem 1rem !important;
+    gap: 0.6rem !important;
+}
+
+.water-navbar ~ .main-content .test-item-name {
+    font-size: 0.9rem !important;
+}
+
+.water-navbar ~ .main-content .test-item-count {
+    font-size: 0.75rem !important;
+}
+
+.water-navbar ~ .main-content .test-items-options {
+    gap: 0.75rem !important;
 }
 
 /* 통보방법 아이콘 */

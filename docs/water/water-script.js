@@ -427,13 +427,31 @@ document.addEventListener('DOMContentLoaded', async () => {
         locationCountBadge.textContent = `${count}개`;
     }
 
-    // 시료수 변경 시 채취장소 필드 업데이트
+    // 접수번호 범위 업데이트 (시료수에 따라)
+    function updateReceptionNumberRange(count) {
+        count = Math.max(1, parseInt(count) || 1);
+        const baseNumber = parseInt(receptionNumberInput.dataset.baseNumber || receptionNumberInput.value.split('-')[0], 10);
+
+        if (count === 1) {
+            receptionNumberInput.value = String(baseNumber);
+        } else {
+            const endNumber = baseNumber + count - 1;
+            receptionNumberInput.value = `${baseNumber}-${endNumber}`;
+        }
+    }
+
+    // 초기 기본 번호 저장
+    receptionNumberInput.dataset.baseNumber = receptionNumberInput.value;
+
+    // 시료수 변경 시 채취장소 필드 및 접수번호 업데이트
     if (sampleCountInput) {
         sampleCountInput.addEventListener('change', (e) => {
             updateSamplingLocations(e.target.value);
+            updateReceptionNumberRange(e.target.value);
         });
         sampleCountInput.addEventListener('input', (e) => {
             updateSamplingLocations(e.target.value);
+            updateReceptionNumberRange(e.target.value);
         });
     }
 
@@ -660,6 +678,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             firstLocationInput.value = '';
         }
 
+        // 접수번호 갱신 및 기본 번호 저장
+        const nextNumber = generateNextReceptionNumber();
+        receptionNumberInput.value = nextNumber;
+        receptionNumberInput.dataset.baseNumber = nextNumber;
+
         // 수정 모드 해제
         editingId = null;
     }
@@ -743,6 +766,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             const row = document.createElement('tr');
             row.dataset.id = log.id;
 
+            // 주소에서 우편번호 분리 (예: "(12345) 서울시..." -> 우편번호: "12345", 주소: "서울시...")
+            const addressFull = log.address || '';
+            const zipMatch = addressFull.match(/^\((\d{5})\)\s*/);
+            const zipcode = zipMatch ? zipMatch[1] : (log.addressPostcode || '');
+            const addressOnly = zipMatch ? addressFull.replace(zipMatch[0], '') : addressFull;
+
             row.innerHTML = `
                 <td class="col-checkbox">
                     <input type="checkbox" class="row-checkbox" data-id="${log.id}">
@@ -755,7 +784,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <td>${log.receptionNumber || '-'}</td>
                 <td>${log.date || '-'}</td>
                 <td>${log.name || '-'}</td>
-                <td class="text-truncate" title="${log.address || ''}">${log.address || '-'}</td>
+                <td class="col-zipcode hidden">${zipcode || '-'}</td>
+                <td class="text-truncate" title="${addressOnly || ''}">${addressOnly || '-'}</td>
                 <td>${log.sampleName || '-'}</td>
                 <td>${log.sampleCount || 1}점</td>
                 <td class="text-truncate" title="${log.samplingLocation || ''}">${log.samplingLocation || '-'}</td>
