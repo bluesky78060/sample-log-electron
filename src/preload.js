@@ -17,6 +17,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // 자동 저장 경로 가져오기
     getAutoSavePath: () => ipcRenderer.invoke('get-auto-save-path'),
 
+    // 자동 저장 폴더 선택
+    selectAutoSaveFolder: () => ipcRenderer.invoke('select-auto-save-folder'),
+
+    // 현재 자동 저장 폴더 가져오기
+    getAutoSaveFolder: () => ipcRenderer.invoke('get-auto-save-folder'),
+
     // 앱 데이터 경로 가져오기
     getAppPath: () => ipcRenderer.invoke('get-app-path'),
 

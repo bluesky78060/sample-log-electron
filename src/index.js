@@ -112,11 +112,76 @@ ipcMain.handle('read-file', async (event, filePath) => {
     }
 });
 
+// 자동 저장 설정 파일 경로
+function getSettingsPath() {
+    return path.join(app.getPath('userData'), 'settings.json');
+}
+
+// 설정 로드
+function loadSettings() {
+    try {
+        const settingsPath = getSettingsPath();
+        if (fs.existsSync(settingsPath)) {
+            const data = fs.readFileSync(settingsPath, 'utf-8');
+            return JSON.parse(data);
+        }
+    } catch (error) {
+        console.error('설정 로드 오류:', error);
+    }
+    return {};
+}
+
+// 설정 저장
+function saveSettings(settings) {
+    try {
+        const settingsPath = getSettingsPath();
+        fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf-8');
+        return true;
+    } catch (error) {
+        console.error('설정 저장 오류:', error);
+        return false;
+    }
+}
+
 // 자동 저장 경로 가져오기
 ipcMain.handle('get-auto-save-path', async () => {
+    const settings = loadSettings();
+    if (settings.autoSaveFolder) {
+        return path.join(settings.autoSaveFolder, 'auto-save.json');
+    }
+    // 기본 경로
     const userDataPath = app.getPath('userData');
-    const autoSavePath = path.join(userDataPath, 'auto-save.json');
-    return autoSavePath;
+    return path.join(userDataPath, 'auto-save.json');
+});
+
+// 자동 저장 폴더 선택
+ipcMain.handle('select-auto-save-folder', async () => {
+    const result = await dialog.showOpenDialog(mainWindow, {
+        title: '자동 저장 폴더 선택',
+        properties: ['openDirectory', 'createDirectory'],
+        buttonLabel: '폴더 선택'
+    });
+
+    if (result.canceled || result.filePaths.length === 0) {
+        return { success: false, canceled: true };
+    }
+
+    const selectedFolder = result.filePaths[0];
+    const settings = loadSettings();
+    settings.autoSaveFolder = selectedFolder;
+    saveSettings(settings);
+
+    return {
+        success: true,
+        folder: selectedFolder,
+        path: path.join(selectedFolder, 'auto-save.json')
+    };
+});
+
+// 현재 자동 저장 폴더 가져오기
+ipcMain.handle('get-auto-save-folder', async () => {
+    const settings = loadSettings();
+    return settings.autoSaveFolder || app.getPath('userData');
 });
 
 // 앱 데이터 경로 가져오기

@@ -135,7 +135,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const form = document.getElementById('sampleForm');
     const tableBody = document.getElementById('logTableBody');
     const emptyState = document.getElementById('emptyState');
-    const searchInput = document.getElementById('searchInput');
     const dateInput = document.getElementById('date');
 
     console.log('✅ 기본 요소 로드 완료');
@@ -152,6 +151,23 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function convertPyeongToM2(pyeong) {
         return (parseFloat(pyeong) * PYEONG_TO_M2).toFixed(2);
+    }
+
+    // 숫자 천 단위 구분자 포맷팅
+    function formatArea(value) {
+        const num = parseFloat(value);
+        if (isNaN(num)) return '0';
+        return num.toLocaleString('ko-KR');
+    }
+
+    // 단위 문자열 반환
+    function getUnitLabel(unit) {
+        return unit === 'pyeong' ? '평' : '㎡';
+    }
+
+    // 면적과 단위를 함께 포맷팅
+    function formatAreaWithUnit(area, unit) {
+        return `${formatArea(area)} ${getUnitLabel(unit)}`;
     }
 
     // ========================================
@@ -329,7 +345,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 주소 검색 모달 닫기
     function closeAddressModal() {
         addressModal.classList.add('hidden');
-        daumPostcodeContainer.innerHTML = ''; // 컨테이너 초기화
+        // 컨테이너 초기화 (지연 처리로 Postcode API 내부 정리 완료 대기)
+        setTimeout(() => {
+            if (daumPostcodeContainer) {
+                daumPostcodeContainer.innerHTML = '';
+            }
+        }, 100);
     }
 
     closeAddressModalBtn.addEventListener('click', closeAddressModal);
@@ -431,27 +452,25 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 다음 접수번호 생성
     function generateNextReceptionNumber() {
-        const year = new Date().getFullYear();
         let maxNumber = 0;
 
-        // 기존 데이터에서 올해 최대 번호 찾기
-        // 형식: 2024-001 (기본) 또는 2024-001-1 (서브 번호)
+        // 기존 데이터에서 최대 번호 찾기
+        // 형식: 1, 2, 3 (숫자만)
         sampleLogs.forEach(log => {
-            if (log.receptionNumber && log.receptionNumber.startsWith(`${year}-`)) {
-                const parts = log.receptionNumber.split('-');
-                if (parts.length >= 2) {
-                    // 두 번째 파트가 기본 번호 (001, 002 등)
-                    const num = parseInt(parts[1], 10);
-                    if (!isNaN(num) && num > maxNumber) {
-                        maxNumber = num;
-                    }
+            if (log.receptionNumber) {
+                // 숫자만 추출 (하위필지 번호 제외: "1-1" -> "1")
+                const baseNumber = log.receptionNumber.split('-')[0];
+                const num = parseInt(baseNumber, 10);
+                if (!isNaN(num) && num > maxNumber) {
+                    maxNumber = num;
                 }
             }
         });
 
-        // 다음 번호 생성 (3자리 패딩)
-        const nextNumber = (maxNumber + 1).toString().padStart(3, '0');
-        return `${year}-${nextNumber}`;
+        // 다음 번호 생성
+        const nextNumber = maxNumber + 1;
+        console.log(`📋 다음 접수번호 생성: ${nextNumber} (기존 최대: ${maxNumber})`);
+        return String(nextNumber);
     }
 
     // 초기 접수번호 설정
@@ -531,14 +550,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // 기존 작물 데이터가 있으면 첫 번째 것 사용
         const firstCrop = parcel.crops[0] || { name: '', area: '' };
-        const receptionNumber = getReceptionNumber();
+        const parcelNumber = index; // 필지 번호 (1, 2, 3...)
 
         console.log(`   - 첫 번째 작물:`, firstCrop);
-        console.log(`   - 접수번호: ${receptionNumber || '(없음)'}`);
+        console.log(`   - 필지 번호: ${parcelNumber}`);
 
         card.innerHTML = `
             <div class="parcel-card-header">
-                <h4>필지 ${index}</h4>
+                <h4>필지 ${parcelNumber}</h4>
                 <button type="button" class="btn-remove-parcel" data-id="${parcel.id}">삭제</button>
             </div>
             <div class="parcel-form-grid">
@@ -589,6 +608,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <button type="button" class="btn-add-crop-compact" data-id="${parcel.id}">
                         <span>+</span> 추가 작물
                     </button>
+                    <div class="crops-area-container" id="cropsArea-${parcel.id}">
+                        ${parcel.crops.slice(1).map((crop, idx) => {
+                            return `
+                                <div class="crop-area-item" data-index="${idx + 1}">
+                                    <span class="crop-name">${crop.name}</span>
+                                    <span class="crop-area">${formatArea(crop.area)} m²</span>
+                                    <button type="button" class="remove-crop-area">&times;</button>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
                 </div>
                 <div class="parcel-right-column">
                     <div class="parcel-form-group">
@@ -606,7 +636,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </div>
                         <div class="sub-lots-container" id="subLots-${parcel.id}">
                             ${parcel.subLots.map((subLot, idx) => {
-                                const number = receptionNumber ? receptionNumber + '-' + (idx + 1) : String(idx + 1);
+                                const number = `${parcelNumber}-${idx + 1}`;
                                 const lotAddress = typeof subLot === 'string' ? subLot : subLot.lotAddress;
                                 const crops = typeof subLot === 'string' ? [] : (subLot.crops || []);
                                 const subLotCropsId = 'subLotCrops-' + parcel.id + '-' + idx;
@@ -624,7 +654,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                                 <div class="sub-lot-crop-item">
                                                     <span class="crop-name">` + crop.name + `</span>
                                                     <div class="crop-area-info">
-                                                        <span class="crop-area">` + crop.area + ` m²</span>
+                                                        <span class="crop-area">` + formatArea(crop.area) + ` m²</span>
                                                         <button type="button" class="remove-sublot-crop" data-sublot-index="` + idx + `" data-crop-index="` + cropIdx + `">&times;</button>
                                                     </div>
                                                 </div>
@@ -1005,28 +1035,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         const parcel = parcels.find(p => p.id === parcelId);
         const cropInput = document.querySelector(`.crop-direct-input[data-id="${parcelId}"]`);
         const areaInput = document.querySelector(`.area-direct-input[data-id="${parcelId}"]`);
-        const unitSelect = document.getElementById(`area-unit-${parcelId}`);
+        const unitToggle = document.getElementById(`area-unit-${parcelId}`);
 
         if (!parcel || !cropInput || !areaInput) return;
 
         const cropName = cropInput.value.trim();
         let cropArea = areaInput.value.trim();
+        const unit = unitToggle ? unitToggle.dataset.unit : 'm2'; // 토글 버튼의 data-unit 속성에서 단위 가져오기
 
-        // 단위가 평이면 ㎡로 변환하여 저장
-        if (unitSelect && unitSelect.value === 'pyeong' && cropArea) {
-            cropArea = convertPyeongToM2(cropArea);
-        }
-
-        if (cropName || cropArea) {
+        // 작물명과 면적이 모두 있어야 유효한 작물로 저장
+        if (cropName && cropArea) {
             if (parcel.crops.length === 0) {
-                parcel.crops.push({ name: cropName, area: cropArea, code: '' });
+                parcel.crops.push({ name: cropName, area: cropArea, code: '', unit: unit });
             } else {
                 parcel.crops[0].name = cropName;
                 parcel.crops[0].area = cropArea;
+                parcel.crops[0].unit = unit;
             }
-        } else if (parcel.crops.length > 0 && !parcel.crops[0].name && !parcel.crops[0].area) {
-            // 첫 번째 작물이 비어있고 다른 작물도 없으면 제거
-            if (parcel.crops.length === 1) {
+        } else {
+            // 작물명 또는 면적이 없으면 첫 번째 작물 제거
+            if (parcel.crops.length === 1 && (!parcel.crops[0].name || !parcel.crops[0].area)) {
                 parcel.crops = [];
             }
         }
@@ -1037,24 +1065,35 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 필지 요약 렌더링
     function renderParcelSummary(parcel) {
-        // 메인 필지 작물 면적
-        const mainArea = parcel.crops.reduce((sum, crop) => sum + (parseFloat(crop.area) || 0), 0);
+        // 모든 작물 수집 (메인 + 하위 지번)
+        const allCrops = [
+            ...parcel.crops,
+            ...parcel.subLots.flatMap(subLot => {
+                if (typeof subLot === 'string') return [];
+                return subLot.crops || [];
+            })
+        ].filter(c => c.name && c.area);
 
-        // 하위 지번 작물 면적 합산
-        const subLotArea = parcel.subLots.reduce((sum, subLot) => {
-            if (typeof subLot === 'string') return sum;
-            const crops = subLot.crops || [];
-            return sum + crops.reduce((s, c) => s + (parseFloat(c.area) || 0), 0);
-        }, 0);
+        // 단위별 면적 합산
+        let m2Total = 0;
+        let pyeongTotal = 0;
+        allCrops.forEach(crop => {
+            const area = parseFloat(crop.area) || 0;
+            if (crop.unit === 'pyeong') {
+                pyeongTotal += area;
+            } else {
+                m2Total += area;
+            }
+        });
 
-        const totalArea = mainArea + subLotArea;
-        const mainCropCount = parcel.crops.length;
-        const subLotCropCount = parcel.subLots.reduce((sum, subLot) => {
-            if (typeof subLot === 'string') return sum;
-            return sum + (subLot.crops || []).length;
-        }, 0);
-        const cropCount = mainCropCount + subLotCropCount;
+        const cropCount = allCrops.length;
         const subLotCount = parcel.subLots.length;
+
+        // 면적 표시 문자열 생성
+        const areaParts = [];
+        if (m2Total > 0) areaParts.push(`${m2Total.toLocaleString()} ㎡`);
+        if (pyeongTotal > 0) areaParts.push(`${pyeongTotal.toLocaleString()} 평`);
+        const areaDisplay = areaParts.length > 0 ? areaParts.join(' / ') : '0';
 
         return `
             <div class="summary-item">
@@ -1067,7 +1106,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             </div>
             <div class="summary-item total-area">
                 <span>총 면적:</span>
-                <span>${totalArea.toLocaleString()} m²</span>
+                <span>${areaDisplay}</span>
             </div>
         `;
     }
@@ -1157,14 +1196,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 작물 제거
         if (target.classList.contains('remove-crop-area')) {
             const item = target.closest('.crop-area-item');
-            const container = target.closest('.crops-area-list');
+            const container = target.closest('.crops-area-container');
+            if (!container) return;
             const parcelId = container.id.replace('cropsArea-', '');
             const index = parseInt(item.dataset.index);
             const parcel = parcels.find(p => p.id === parcelId);
-            parcel.crops.splice(index, 1);
-            updateCropsAreaDisplay(parcelId);
-            updateParcelSummary(parcelId);
-            updateParcelsData();
+            if (parcel && parcel.crops[index]) {
+                parcel.crops.splice(index, 1);
+                updateCropsAreaDisplay(parcelId);
+                updateParcelSummary(parcelId);
+                updateParcelsData();
+            }
         }
     });
 
@@ -1223,12 +1265,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 하위 지번 표시 업데이트
     function updateSubLotsDisplay(parcelId) {
         const parcel = parcels.find(p => p.id === parcelId);
-        const receptionNumber = getReceptionNumber();
+        const parcelIndex = parcels.indexOf(parcel) + 1; // 필지 순번 (1, 2, 3...)
         const container = document.getElementById(`subLots-${parcelId}`);
 
-        // 접수번호가 있으면 접수번호-순번, 없으면 순번만
+        // 필지번호-하위번호 형식 (예: 1-1, 1-2, 2-1, 2-2)
         container.innerHTML = parcel.subLots.map((subLot, idx) => {
-            const number = receptionNumber ? receptionNumber + '-' + (idx + 1) : String(idx + 1);
+            const number = `${parcelIndex}-${idx + 1}`;
             const lotAddress = typeof subLot === 'string' ? subLot : subLot.lotAddress;
             const crops = typeof subLot === 'string' ? [] : (subLot.crops || []);
             const subLotCropsId = 'subLotCrops-' + parcelId + '-' + idx;
@@ -1246,7 +1288,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <div class="flex items-center justify-between bg-white dark:bg-zinc-900 px-2 py-1.5 rounded text-xs">
                                 <span class="font-medium text-slate-700 dark:text-slate-300">` + crop.name + `</span>
                                 <div class="flex items-center gap-2">
-                                    <span class="text-slate-600 dark:text-slate-400">` + crop.area + ` m²</span>
+                                    <span class="text-slate-600 dark:text-slate-400">` + formatAreaWithUnit(crop.area, crop.unit || 'm2') + `</span>
                                     <button type="button" class="remove-sublot-crop text-slate-400 hover:text-red-500 text-sm" data-sublot-index="` + idx + `" data-crop-index="` + cropIdx + `">&times;</button>
                                 </div>
                             </div>
@@ -1263,20 +1305,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 작물 면적 표시 업데이트
     function updateCropsAreaDisplay(parcelId) {
         const parcel = parcels.find(p => p.id === parcelId);
-        const receptionNumber = getReceptionNumber();
+        if (!parcel) return;
+
         const container = document.getElementById(`cropsArea-${parcelId}`);
 
+        // 컨테이너가 없으면 리턴 (모달에서 호출되는 경우)
+        if (!container) return;
+
         // 첫 번째 작물은 직접 입력 필드에 표시되므로 slice(1)
-        // 접수번호가 있으면 접수번호-순번, 없으면 순번만
         container.innerHTML = parcel.crops.slice(1).map((crop, idx) => {
-            const number = receptionNumber ? receptionNumber + '-' + (idx + 2) : String(idx + 2);
             // 지번 정보 표시
             const subLotLabel = getSubLotLabel(crop.subLotTarget, parcel);
             return `
                 <div class="crop-area-item" data-index="${idx + 1}">
-                    <span class="crop-number">${number}</span>
                     <span class="crop-name">${crop.name}</span>
-                    <span class="crop-area">${crop.area} m²</span>
+                    <span class="crop-area">${formatAreaWithUnit(crop.area, crop.unit || 'm2')}</span>
                     ${subLotLabel ? `<span class="crop-sublot">${subLotLabel}</span>` : ''}
                     <button type="button" class="remove-crop-area">&times;</button>
                 </div>
@@ -1418,15 +1461,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                            name="area-input-${idx}"
                            placeholder="면적"
                            value="${crop.area}"
-                           data-index="${idx}"
-                           style="width: 100px;">
-                    <select class="area-unit-modal-select"
-                            id="area-unit-modal-${idx}"
-                            data-index="${idx}"
-                            style="width: 60px; padding: 0.625rem 0.5rem; background: var(--gray-50); border: 1px solid var(--gray-300); border-radius: var(--radius-md); font-size: 0.875rem; min-height: 38px;">
-                        <option value="m2">㎡</option>
-                        <option value="pyeong">평</option>
-                    </select>
+                           data-index="${idx}">
+                    <div class="area-unit-toggle area-unit-modal-toggle"
+                         id="area-unit-modal-${idx}"
+                         data-index="${idx}"
+                         data-unit="${crop.unit || 'm2'}">
+                        <button type="button" class="unit-btn ${(!crop.unit || crop.unit === 'm2') ? 'active' : ''}" data-value="m2">㎡</button>
+                        <button type="button" class="unit-btn ${crop.unit === 'pyeong' ? 'active' : ''}" data-value="pyeong">평</button>
+                    </div>
                 </div>
                 ${hasSubLots ? `
                 <div class="sublot-select-wrapper">
@@ -1601,37 +1643,23 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         });
 
-        console.log('✅ All event bindings complete');
-    }
+        // 모달 내 단위 토글 버튼
+        cropAreaList.querySelectorAll('.area-unit-modal-toggle .unit-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const toggle = e.target.closest('.area-unit-modal-toggle');
+                const value = e.target.dataset.value;
 
-    // 작물 확인 버튼
-    confirmCropAreaBtn.addEventListener('click', () => {
-        // 유효한 작물만 저장 (이름과 면적이 있는 것)
-        // 평 단위를 ㎡로 변환하여 저장
-        const validCrops = tempCropAreas.filter(c => c.name.trim() && c.area).map((crop, idx) => {
-            const unitSelect = document.getElementById(`area-unit-modal-${idx}`);
-            let area = crop.area;
+                // 모든 버튼에서 active 제거 후 클릭된 버튼에 추가
+                toggle.querySelectorAll('.unit-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
 
-            // 단위가 평이면 ㎡로 변환
-            if (unitSelect && unitSelect.value === 'pyeong') {
-                area = convertPyeongToM2(area);
-            }
-
-            return {
-                ...crop,
-                area: area
-            };
+                // data-unit 속성 업데이트
+                toggle.dataset.unit = value;
+            });
         });
 
-        const parcel = parcels.find(p => p.id === currentParcelIdForCrop);
-        parcel.crops = validCrops;
-
-        updateCropsAreaDisplay(currentParcelIdForCrop);
-        updateParcelSummary(currentParcelIdForCrop);
-        updateParcelsData();
-
-        closeCropAreaModalFn();
-    });
+        console.log('✅ All event bindings complete');
+    }
 
     // ========================================
     // Sub-lot Crop Modal (하위 지번 작물 추가)
@@ -1659,13 +1687,29 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log('✅ Sublot modal shown, classList:', cropAreaModal.classList.toString());
     }
 
-    // 기존 작물 확인 버튼에 하위 지번 처리 추가
-    const originalConfirmHandler = confirmCropAreaBtn.onclick;
-    confirmCropAreaBtn.onclick = () => {
+    // 작물 확인 버튼 - 통합 핸들러
+    console.log('🎯 Binding confirmCropAreaBtn click handler:', confirmCropAreaBtn);
+    confirmCropAreaBtn.addEventListener('click', () => {
+        console.log('✅ Confirm button clicked!');
+        console.log('tempCropAreas:', tempCropAreas);
+        console.log('currentParcelIdForCrop:', currentParcelIdForCrop);
+        console.log('currentSubLotParcelId:', currentSubLotParcelId);
+        console.log('currentSubLotIndex:', currentSubLotIndex);
+
+        // 유효한 작물만 저장 (이름과 면적이 모두 있는 것)
+        // 단위 정보도 함께 저장 (변환 없이 원본 값 유지)
+        const validCrops = tempCropAreas.filter(c => c.name.trim() && c.area).map((crop, idx) => {
+            const unitToggle = document.getElementById(`area-unit-modal-${idx}`);
+            const unit = unitToggle ? unitToggle.dataset.unit : 'm2';
+
+            return {
+                ...crop,
+                unit: unit
+            };
+        });
+
         // 하위 지번 작물 추가 모드
         if (currentSubLotParcelId && currentSubLotIndex !== null) {
-            const validCrops = tempCropAreas.filter(c => c.name.trim() && c.area);
-
             const parcel = parcels.find(p => p.id === currentSubLotParcelId);
             if (parcel.subLots[currentSubLotIndex]) {
                 // 기존 문자열 형식이면 객체로 변환
@@ -1685,22 +1729,26 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             currentSubLotParcelId = null;
             currentSubLotIndex = null;
-            closeCropAreaModalFn();
         }
         // 메인 필지 작물 추가 모드
         else {
-            const validCrops = tempCropAreas.filter(c => c.name.trim() && c.area);
-
             const parcel = parcels.find(p => p.id === currentParcelIdForCrop);
-            parcel.crops = validCrops;
+            const receptionNumber = getReceptionNumber();
+
+            // 기존 첫 번째 작물(직접 입력 필드)은 유지하고 나머지를 모달에서 추가한 작물로 교체
+            const firstCrop = parcel.crops[0] || { name: '', area: '', code: '' };
+
+            parcel.crops = [firstCrop, ...validCrops];
+
+            console.log('📋 작물 저장 완료:', parcel.crops);
 
             updateCropsAreaDisplay(currentParcelIdForCrop);
             updateParcelSummary(currentParcelIdForCrop);
             updateParcelsData();
-
-            closeCropAreaModalFn();
         }
-    };
+
+        closeCropAreaModalFn();
+    });
 
     // ========================================
     // Form Submit Handler
@@ -1783,12 +1831,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 그룹 ID 생성 (같은 접수건 그룹화용)
         const groupId = crypto.randomUUID();
 
-        // 각 필지별로 별도 레코드 생성
+        // 각 필지별로 별도 레코드 생성 (각 필지는 독립적인 접수번호)
+        const baseNumber = parseInt(baseReceptionNumber, 10) || 1;
         const newLogs = validParcels.map((parcel, index) => {
-            // 첫 번째 필지는 기본 접수번호, 이후는 -1, -2 등 추가
-            const receptionNumber = index === 0
-                ? baseReceptionNumber
-                : `${baseReceptionNumber}-${index}`;
+            // 각 필지는 순차적인 접수번호 (1, 2, 3...)
+            const receptionNumber = String(baseNumber + index);
 
             return {
                 id: crypto.randomUUID(),
@@ -1810,8 +1857,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             };
         });
 
-        // 모든 레코드 저장 (역순으로 추가하여 순서 유지)
-        newLogs.reverse().forEach(log => sampleLogs.unshift(log));
+        // 모든 레코드 저장 (순서대로 뒤에 추가)
+        newLogs.forEach(log => sampleLogs.push(log));
         saveLogs();
         renderLogs(sampleLogs);
         form.reset();
@@ -1850,14 +1897,99 @@ document.addEventListener('DOMContentLoaded', async () => {
         switchView('list');
     });
 
-    // Search Handler
-    searchInput.addEventListener('input', (e) => {
-        const query = e.target.value.toLowerCase();
-        const filteredLogs = sampleLogs.filter(log =>
-            log.name.toLowerCase().includes(query) ||
-            log.receptionNumber.toLowerCase().includes(query)
-        );
+    // Search Modal Handler
+    const listSearchModal = document.getElementById('listSearchModal');
+    const openSearchModalBtn = document.getElementById('openSearchModalBtn');
+    const closeSearchModalBtn = document.getElementById('closeSearchModal');
+    const searchDateInput = document.getElementById('searchDateInput');
+    const searchTextInput = document.getElementById('searchTextInput');
+    const clearSearchDateBtn = document.getElementById('clearSearchDate');
+    const resetSearchBtn = document.getElementById('resetSearchBtn');
+    const applySearchBtn = document.getElementById('applySearchBtn');
+
+    // 현재 검색 필터 상태
+    let currentSearchFilter = {
+        date: '',
+        text: ''
+    };
+
+    function filterAndRenderLogs() {
+        const filteredLogs = sampleLogs.filter(log => {
+            // 텍스트 검색 (성명 또는 접수번호)
+            const matchesText = !currentSearchFilter.text ||
+                log.name.toLowerCase().includes(currentSearchFilter.text) ||
+                log.receptionNumber.toLowerCase().includes(currentSearchFilter.text);
+
+            // 날짜 검색
+            const matchesDate = !currentSearchFilter.date || log.date === currentSearchFilter.date;
+
+            return matchesText && matchesDate;
+        });
+
         renderLogs(filteredLogs);
+        updateSearchButtonState();
+    }
+
+    function updateSearchButtonState() {
+        const hasFilter = currentSearchFilter.date || currentSearchFilter.text;
+        if (hasFilter) {
+            openSearchModalBtn.classList.add('has-filter');
+            openSearchModalBtn.innerHTML = '🔍 검색 중';
+        } else {
+            openSearchModalBtn.classList.remove('has-filter');
+            openSearchModalBtn.innerHTML = '🔍 검색';
+        }
+    }
+
+    // 모달 열기
+    openSearchModalBtn.addEventListener('click', () => {
+        searchDateInput.value = currentSearchFilter.date;
+        searchTextInput.value = currentSearchFilter.text;
+        listSearchModal.classList.remove('hidden');
+        searchTextInput.focus();
+    });
+
+    // 모달 닫기
+    function closeSearchModal() {
+        listSearchModal.classList.add('hidden');
+    }
+
+    closeSearchModalBtn.addEventListener('click', closeSearchModal);
+    listSearchModal.querySelector('.modal-overlay').addEventListener('click', closeSearchModal);
+
+    // 날짜 초기화
+    clearSearchDateBtn.addEventListener('click', () => {
+        searchDateInput.value = '';
+    });
+
+    // 전체 초기화
+    resetSearchBtn.addEventListener('click', () => {
+        searchDateInput.value = '';
+        searchTextInput.value = '';
+        currentSearchFilter = { date: '', text: '' };
+        filterAndRenderLogs();
+        closeSearchModal();
+    });
+
+    // 검색 적용
+    applySearchBtn.addEventListener('click', () => {
+        currentSearchFilter.date = searchDateInput.value;
+        currentSearchFilter.text = searchTextInput.value.toLowerCase();
+        filterAndRenderLogs();
+        closeSearchModal();
+    });
+
+    // Enter 키로 검색
+    searchTextInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            applySearchBtn.click();
+        }
+    });
+
+    searchDateInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            applySearchBtn.click();
+        }
     });
 
     // ========================================
@@ -1868,18 +2000,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 수정 모드 취소 함수
     function cancelEditMode() {
         editingLogId = null;
-        const submitBtn = form.querySelector('button[type="submit"]');
-        submitBtn.textContent = '접수 등록';
-        submitBtn.classList.remove('btn-edit-mode');
 
-        // 취소 버튼 제거
-        const cancelBtn = form.querySelector('.btn-cancel-edit');
-        if (cancelBtn) cancelBtn.remove();
+        // 네비게이션 바 버튼 원래대로 복원
+        const navSubmitBtn = document.getElementById('navSubmitBtn');
+        if (navSubmitBtn) {
+            navSubmitBtn.title = '접수 등록';
+            navSubmitBtn.classList.remove('btn-edit-mode');
+        }
 
         // 폼 초기화
         form.reset();
-        subCategorySelect.disabled = true;
-        subCategorySelect.innerHTML = '<option value="">상위 카테고리를 먼저 선택하세요</option>';
+        const subCatSelect = document.getElementById('subCategory');
+        if (subCatSelect) {
+            subCatSelect.disabled = true;
+            subCatSelect.innerHTML = '<option value="">상위 카테고리를 먼저 선택하세요</option>';
+        }
         dateInput.valueAsDate = new Date();
 
         // 주소 필드 초기화
@@ -1989,19 +2124,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         updateParcelsData();
 
-        // 버튼 텍스트 변경
-        const submitBtn = form.querySelector('button[type="submit"]');
-        submitBtn.textContent = '수정 완료';
-        submitBtn.classList.add('btn-edit-mode');
-
-        // 취소 버튼 추가
-        if (!form.querySelector('.btn-cancel-edit')) {
-            const cancelBtn = document.createElement('button');
-            cancelBtn.type = 'button';
-            cancelBtn.className = 'btn-secondary btn-cancel-edit';
-            cancelBtn.textContent = '수정 취소';
-            cancelBtn.addEventListener('click', cancelEditMode);
-            form.querySelector('.form-actions').appendChild(cancelBtn);
+        // 네비게이션 바 버튼 텍스트/스타일 변경
+        const navSubmitBtn = document.getElementById('navSubmitBtn');
+        if (navSubmitBtn) {
+            navSubmitBtn.title = '수정 완료';
+            navSubmitBtn.classList.add('btn-edit-mode');
         }
 
         // 시료 접수 화면으로 전환
@@ -2100,6 +2227,154 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
     });
+
+    // ========================================
+    // 체크박스 선택 기능
+    // ========================================
+    const selectAllCheckbox = document.getElementById('selectAll');
+
+    // 전체 선택 체크박스 이벤트
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', (e) => {
+            const isChecked = e.target.checked;
+            const rowCheckboxes = tableBody.querySelectorAll('.row-checkbox');
+            rowCheckboxes.forEach(checkbox => {
+                checkbox.checked = isChecked;
+            });
+            updateSelectedCount();
+        });
+    }
+
+    // 개별 체크박스 이벤트 (이벤트 위임)
+    tableBody.addEventListener('change', (e) => {
+        if (e.target.classList.contains('row-checkbox')) {
+            updateSelectAllState();
+            updateSelectedCount();
+        }
+    });
+
+    // 전체 선택 체크박스 상태 업데이트
+    function updateSelectAllState() {
+        const rowCheckboxes = tableBody.querySelectorAll('.row-checkbox');
+        const checkedBoxes = tableBody.querySelectorAll('.row-checkbox:checked');
+
+        if (selectAllCheckbox) {
+            if (rowCheckboxes.length === 0) {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = false;
+            } else if (checkedBoxes.length === 0) {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = false;
+            } else if (checkedBoxes.length === rowCheckboxes.length) {
+                selectAllCheckbox.checked = true;
+                selectAllCheckbox.indeterminate = false;
+            } else {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = true;
+            }
+        }
+    }
+
+    // 선택된 항목 수 업데이트
+    function updateSelectedCount() {
+        const checkedBoxes = tableBody.querySelectorAll('.row-checkbox:checked');
+        const count = checkedBoxes.length;
+        // 선택 개수는 필요시 UI에 표시 가능
+        console.log(`${count}개 항목 선택됨`);
+    }
+
+    // 선택된 항목 ID 가져오기
+    function getSelectedIds() {
+        const checkedBoxes = tableBody.querySelectorAll('.row-checkbox:checked');
+        return Array.from(checkedBoxes).map(cb => cb.dataset.id);
+    }
+
+    // 전역에서 사용 가능하도록 window에 등록
+    window.getSelectedIds = getSelectedIds;
+
+    // ========================================
+    // 전체 보기/기본 보기 토글 기능
+    // ========================================
+    const viewToggleBtn = document.getElementById('viewToggleBtn');
+    const logTable = document.getElementById('logTable');
+    let isFullView = false;
+
+    if (viewToggleBtn) {
+        viewToggleBtn.addEventListener('click', () => {
+            isFullView = !isFullView;
+
+            const toggleText = viewToggleBtn.querySelector('.toggle-text');
+            const toggleIcon = viewToggleBtn.querySelector('.toggle-icon');
+
+            if (isFullView) {
+                // 전체 보기 모드 - 숨겨진 컬럼 표시
+                logTable.classList.add('full-view');
+                toggleText.textContent = '기본 보기';
+                toggleIcon.textContent = '👁️‍🗨️';
+                viewToggleBtn.classList.add('active');
+            } else {
+                // 기본 보기 모드 - 숨겨진 컬럼 숨김
+                logTable.classList.remove('full-view');
+                toggleText.textContent = '전체 보기';
+                toggleIcon.textContent = '👁️';
+                viewToggleBtn.classList.remove('active');
+            }
+        });
+    }
+
+    // ========================================
+    // 라벨 인쇄 기능
+    // ========================================
+    const btnLabelPrint = document.getElementById('btnLabelPrint');
+
+    if (btnLabelPrint) {
+        btnLabelPrint.addEventListener('click', () => {
+            const selectedIds = getSelectedIds();
+
+            if (selectedIds.length === 0) {
+                // 선택된 항목이 없으면 전체 데이터 사용 여부 확인
+                if (sampleLogs.length === 0) {
+                    alert('인쇄할 데이터가 없습니다.');
+                    return;
+                }
+
+                if (!confirm(`선택된 항목이 없습니다.\n전체 ${sampleLogs.length}건을 라벨 인쇄하시겠습니까?`)) {
+                    return;
+                }
+
+                // 전체 데이터로 라벨 인쇄
+                openLabelPrintWithData(sampleLogs);
+            } else {
+                // 선택된 데이터만 라벨 인쇄
+                const selectedLogs = sampleLogs.filter(log => selectedIds.includes(log.id));
+                openLabelPrintWithData(selectedLogs);
+            }
+        });
+    }
+
+    // 라벨 인쇄 페이지로 데이터 전달
+    function openLabelPrintWithData(logs) {
+        // 라벨 인쇄에 필요한 데이터 형식으로 변환
+        const labelData = logs.map(log => {
+            // 주소에서 우편번호 분리
+            const addressFull = log.address || '';
+            const zipMatch = addressFull.match(/^\((\d{5})\)\s*/);
+            const postalCode = zipMatch ? zipMatch[1] : '';
+            const address = zipMatch ? addressFull.replace(zipMatch[0], '') : addressFull;
+
+            return {
+                name: log.name || '',
+                address: address,
+                postalCode: postalCode
+            };
+        });
+
+        // localStorage에 데이터 저장
+        localStorage.setItem('labelPrintData', JSON.stringify(labelData));
+
+        // 라벨 인쇄 페이지로 이동
+        window.location.href = '../label-print/index.html';
+    }
 
     // ========================================
     // 기존 작물 검색 모달 기능 (기존 코드 호환)
@@ -2271,8 +2546,46 @@ document.addEventListener('DOMContentLoaded', async () => {
     const loadJsonInput = document.getElementById('loadJsonInput');
     const autoSaveToggle = document.getElementById('autoSaveToggle');
     const autoSaveStatus = document.getElementById('autoSaveStatus');
+    const selectAutoSaveFolderBtn = document.getElementById('selectAutoSaveFolderBtn');
 
     let autoSaveFileHandle = null;
+
+    // 자동 저장 폴더 선택 버튼 (Electron 전용)
+    if (selectAutoSaveFolderBtn && isElectron) {
+        selectAutoSaveFolderBtn.addEventListener('click', async () => {
+            try {
+                const result = await window.electronAPI.selectAutoSaveFolder();
+                if (result.success) {
+                    // FileAPI의 autoSavePath 업데이트
+                    FileAPI.autoSavePath = result.path;
+                    showToast(`저장 폴더가 변경되었습니다:\n${result.folder}`, 'success');
+
+                    // 자동 저장이 활성화되어 있으면 바로 저장
+                    if (autoSaveToggle && autoSaveToggle.checked) {
+                        await autoSaveToFile();
+                    }
+                } else if (!result.canceled) {
+                    showToast('폴더 선택에 실패했습니다.', 'error');
+                }
+            } catch (error) {
+                console.error('폴더 선택 오류:', error);
+                showToast('폴더 선택 중 오류가 발생했습니다.', 'error');
+            }
+        });
+
+        // 현재 폴더 경로를 툴팁에 표시
+        (async () => {
+            try {
+                const folder = await window.electronAPI.getAutoSaveFolder();
+                selectAutoSaveFolderBtn.title = `저장 폴더: ${folder}`;
+            } catch (error) {
+                console.error('폴더 경로 조회 오류:', error);
+            }
+        })();
+    } else if (selectAutoSaveFolderBtn && !isElectron) {
+        // 웹 환경에서는 숨김
+        selectAutoSaveFolderBtn.style.display = 'none';
+    }
 
     saveJsonBtn.addEventListener('click', () => {
         if (sampleLogs.length === 0) {
@@ -2591,9 +2904,26 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const cropsDisplay = parcel.crops && parcel.crops.length > 0
                         ? parcel.crops.map(c => c.name).join(', ')
                         : '-';
-                    const totalArea = parcel.crops
-                        ? parcel.crops.reduce((sum, c) => sum + (parseFloat(c.area) || 0), 0)
-                        : 0;
+
+                    // 단위별 면적 합산
+                    let m2Total = 0;
+                    let pyeongTotal = 0;
+                    if (parcel.crops) {
+                        parcel.crops.forEach(c => {
+                            const area = parseFloat(c.area) || 0;
+                            if (c.unit === 'pyeong') {
+                                pyeongTotal += area;
+                            } else {
+                                m2Total += area;
+                            }
+                        });
+                    }
+
+                    // 면적 표시 문자열 생성
+                    const areaParts = [];
+                    if (m2Total > 0) areaParts.push(`${m2Total.toLocaleString()}㎡`);
+                    if (pyeongTotal > 0) areaParts.push(`${pyeongTotal.toLocaleString()}평`);
+                    const areaDisplay = areaParts.length > 0 ? areaParts.join(' / ') : '-';
 
                     // 메인 필지 행 추가
                     rows.push({
@@ -2603,7 +2933,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         _displayNumber: log.receptionNumber,
                         _lotAddress: parcel.lotAddress || '-',
                         _cropsDisplay: cropsDisplay,
-                        _areaDisplay: totalArea > 0 ? totalArea.toLocaleString() : '-'
+                        _areaDisplay: areaDisplay
                     });
                     subLotIndex++;
 
@@ -2617,9 +2947,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                             const subLotCropsDisplay = subLotCrops.length > 0
                                 ? subLotCrops.map(c => c.name).join(', ')
                                 : '-';
-                            const subLotTotalArea = subLotCrops.length > 0
-                                ? subLotCrops.reduce((sum, c) => sum + (parseFloat(c.area) || 0), 0)
-                                : 0;
+
+                            // 하위 지번 단위별 면적 합산
+                            let subM2Total = 0;
+                            let subPyeongTotal = 0;
+                            subLotCrops.forEach(c => {
+                                const area = parseFloat(c.area) || 0;
+                                if (c.unit === 'pyeong') {
+                                    subPyeongTotal += area;
+                                } else {
+                                    subM2Total += area;
+                                }
+                            });
+
+                            // 하위 지번 면적 표시 문자열 생성
+                            const subAreaParts = [];
+                            if (subM2Total > 0) subAreaParts.push(`${subM2Total.toLocaleString()}㎡`);
+                            if (subPyeongTotal > 0) subAreaParts.push(`${subPyeongTotal.toLocaleString()}평`);
+                            const subAreaDisplay = subAreaParts.length > 0 ? subAreaParts.join(' / ') : '-';
 
                             rows.push({
                                 ...log,
@@ -2628,7 +2973,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 _displayNumber: `${log.receptionNumber}-${idx + 1}`,
                                 _lotAddress: lotAddress,
                                 _cropsDisplay: subLotCropsDisplay,
-                                _areaDisplay: subLotTotalArea > 0 ? subLotTotalArea.toLocaleString() : '-'
+                                _areaDisplay: subAreaDisplay
                             });
                             subLotIndex++;
                         });
@@ -2677,11 +3022,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else {
             emptyState.classList.add('hidden');
 
-            // 최신 데이터가 아래쪽에 표시되도록 역순 정렬
-            const reversedLogs = [...logs].reverse();
+            // 접수번호 기준 오름차순 정렬
+            const sortedLogs = [...logs].sort((a, b) => {
+                const numA = parseInt(a.receptionNumber, 10) || 0;
+                const numB = parseInt(b.receptionNumber, 10) || 0;
+                return numA - numB;
+            });
 
             // 데이터 평탄화
-            const flatRows = flattenLogsForTable(reversedLogs);
+            const flatRows = flattenLogsForTable(sortedLogs);
             let rowNum = 1;
 
             flatRows.forEach((row) => {
@@ -2708,8 +3057,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                 };
                 const methodIcon = methodIcons[row.receptionMethod] || '-';
 
+                // 주소에서 우편번호 분리 (예: "(12345) 서울시..." -> 우편번호: "12345", 주소: "서울시...")
+                const addressFull = row.address || '';
+                const zipMatch = addressFull.match(/^\((\d{5})\)\s*/);
+                const zipcode = zipMatch ? zipMatch[1] : '';
+                const addressOnly = zipMatch ? addressFull.replace(zipMatch[0], '') : addressFull;
+
                 tr.dataset.id = row.id;
                 tr.innerHTML = `
+                    <td class="col-checkbox">
+                        <input type="checkbox" class="row-checkbox" data-id="${row.id}">
+                    </td>
                     <td class="col-complete">
                         <button class="btn-complete ${isCompleted ? 'completed' : ''}" data-id="${row.id}" title="${isCompleted ? '완료 취소' : '완료'}">
                             ${isCompleted ? '✔' : ''}
@@ -2720,7 +3078,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <td>${row.subCategory || '-'}</td>
                     <td>${row.purpose || '-'}</td>
                     <td>${row.name}</td>
-                    <td title="${row.address || '-'}">${row.address || '-'}</td>
+                    <td class="col-zipcode">${zipcode || '-'}</td>
+                    <td title="${addressOnly || '-'}">${addressOnly || '-'}</td>
                     <td title="${row._lotAddress}">${row._lotAddress}</td>
                     <td title="${row._cropsDisplay}">${row._cropsDisplay}</td>
                     <td>${row._areaDisplay}</td>
@@ -2797,13 +3156,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const cropsHtml = parcel.crops.length > 0
                     ? `<div class="crop-list">
                         ${parcel.crops.map(crop =>
-                            `<span class="crop-tag">${crop.name}: ${crop.area}m²</span>`
+                            `<span class="crop-tag">${crop.name}: ${formatArea(crop.area)}m²</span>`
                         ).join('')}
                        </div>`
                     : '<span class="text-gray">작물 정보 없음</span>';
 
                 const subLotsText = parcel.subLots.length > 0
-                    ? `하위 지번: ${parcel.subLots.join(', ')}`
+                    ? `하위 지번: ${parcel.subLots.map(s => typeof s === 'string' ? s : s.lotAddress).join(', ')}`
                     : '';
 
                 return `
@@ -2910,7 +3269,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (parcel.subLots && parcel.subLots.length > 0) {
                     excelData.push({
                         '항목': '  하위 필지',
-                        '내용': parcel.subLots.join(', ')
+                        '내용': parcel.subLots.map(s => typeof s === 'string' ? s : s.lotAddress).join(', ')
                     });
                 }
 
@@ -2918,7 +3277,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     parcel.crops.forEach(crop => {
                         excelData.push({
                             '항목': '  작물',
-                            '내용': `${crop.name} (${crop.area}m²)`
+                            '내용': `${crop.name} (${formatArea(crop.area)}m²)`
                         });
                     });
                 }

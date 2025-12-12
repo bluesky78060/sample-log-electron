@@ -9,6 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
     <script>
         tailwind.config = {
@@ -24,7 +25,7 @@
                         display: ["Noto Sans KR", "sans-serif"],
                     },
                     borderRadius: {
-                        DEFAULT: "0.5rem",
+                        DEFAULT: "12px",
                     },
                 },
             },
@@ -94,6 +95,9 @@
                 <input type="checkbox" id="autoSaveToggle">
                 <span class="toggle-track"></span>
             </label>
+            <button type="button" id="selectAutoSaveFolderBtn" class="autosave-folder-btn" title="저장 폴더 변경">
+                📁
+            </button>
             <span id="autoSaveStatus" class="autosave-status">
                 <span class="status-indicator"></span>
             </span>
@@ -248,10 +252,18 @@
                     <span class="record-count" id="recordCount">0건</span>
                 </div>
                 <div class="header-right">
-                    <div class="search-wrapper">
-                        <span class="search-icon">🔍</span>
-                        <input type="text" id="searchInput" placeholder="성명 또는 번호로 검색...">
+                    <div class="view-toggle">
+                        <button type="button" id="viewToggleBtn" class="btn-view-toggle" title="전체 보기/기본 보기">
+                            <span class="toggle-icon">👁️</span>
+                            <span class="toggle-text">전체 보기</span>
+                        </button>
                     </div>
+                    <button type="button" id="btnLabelPrint" class="btn-label-print" title="선택한 항목 라벨 인쇄">
+                        🏷️ 라벨 인쇄
+                    </button>
+                    <button type="button" id="openSearchModalBtn" class="btn-search-open" title="검색">
+                        🔍 검색
+                    </button>
                 </div>
             </div>
 
@@ -259,16 +271,18 @@
                 <table id="logTable" class="data-table">
                     <thead>
                         <tr>
+                            <th class="col-checkbox"><input type="checkbox" id="selectAll" title="전체 선택"></th>
                             <th class="col-complete">완료</th>
                             <th>접수번호</th>
                             <th>접수일자</th>
                             <th>구분</th>
                             <th>목적(용도)</th>
                             <th>성명</th>
+                            <th class="col-zipcode">우편번호</th>
                             <th>주소</th>
                             <th>필지 주소</th>
                             <th>작물명</th>
-                            <th>면적(m²)</th>
+                            <th>면적</th>
                             <th>전화번호</th>
                             <th>수령 방법</th>
                             <th class="col-note">비고</th>
@@ -343,6 +357,49 @@
             <div class="modal-footer">
                 <button type="button" id="cancelCropAreaBtn" class="btn-cancel">취소</button>
                 <button type="button" id="confirmCropAreaBtn" class="btn-confirm">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 접수 목록 검색 모달 -->
+    <div id="listSearchModal" class="modal hidden">
+        <div class="modal-overlay"></div>
+        <div class="modal-content modal-search">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <span class="material-icons-outlined">search</span>
+                    <h3>검색</h3>
+                </div>
+                <button type="button" class="modal-close" id="closeSearchModal">
+                    <span class="material-icons-outlined">close</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="search-modal-form">
+                    <div class="search-form-group">
+                        <label for="searchDateInput">
+                            <span class="material-icons-outlined label-icon-calendar">calendar_today</span>
+                            접수일자
+                        </label>
+                        <div class="search-input-row">
+                            <div class="search-input-wrapper">
+                                <input type="date" id="searchDateInput" class="search-input">
+                            </div>
+                            <button type="button" id="clearSearchDate" class="btn-clear-field">초기화</button>
+                        </div>
+                    </div>
+                    <div class="search-form-group">
+                        <label for="searchTextInput">
+                            <span class="label-icon-abc">abc</span>
+                            성명 / 접수번호
+                        </label>
+                        <input type="text" id="searchTextInput" placeholder="성명 또는 접수번호 입력..." class="search-input">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="resetSearchBtn" class="btn-reset">전체 초기화</button>
+                <button type="button" id="applySearchBtn" class="btn-search-apply">검색</button>
             </div>
         </div>
     </div>
