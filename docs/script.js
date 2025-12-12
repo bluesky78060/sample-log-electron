@@ -203,6 +203,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
+    // URL hash에 따른 뷰 전환 (예: #listView → 접수목록 뷰로 이동)
+    function handleHashChange() {
+        const hash = window.location.hash;
+        if (hash === '#listView') {
+            switchView('list');
+        } else if (hash === '#formView') {
+            switchView('form');
+        }
+    }
+
+    // 페이지 로드 시 hash 확인
+    handleHashChange();
+
+    // hash 변경 시 뷰 전환
+    window.addEventListener('hashchange', handleHashChange);
+
     // 빈 상태에서 "새 시료 접수하기" 버튼
     const btnGoForm = document.querySelector('.btn-go-form');
     if (btnGoForm) {
