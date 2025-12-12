@@ -27,6 +27,14 @@ const createWindow = () => {
   // and load the index.html of the app.
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
 
+  // 내부 링크 네비게이션 허용 (soil/, water/ 등 하위 폴더)
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    // file:// 프로토콜이고 src 폴더 내의 파일이면 허용
+    if (url.startsWith('file://') && url.includes('/src/')) {
+      // 허용 - 아무것도 하지 않음
+    }
+  });
+
   // Open the DevTools in dev mode
   if (process.argv.includes('--dev')) {
     mainWindow.webContents.openDevTools();
