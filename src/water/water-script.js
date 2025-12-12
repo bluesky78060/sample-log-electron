@@ -16,8 +16,8 @@ const FileAPI = {
 
     async init() {
         if (isElectron) {
-            this.autoSavePath = await window.electronAPI.getAutoSavePath();
-            console.log('📁 Electron 자동 저장 경로:', this.autoSavePath);
+            this.autoSavePath = await window.electronAPI.getAutoSavePath('water');
+            console.log('📁 Electron 수질 자동 저장 경로:', this.autoSavePath);
         }
     },
 
@@ -128,6 +128,42 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log(isElectron ? '🖥️ Electron 환경' : '🌐 웹 브라우저 환경');
 
     await FileAPI.init();
+
+    // Electron 환경: 자동 저장 기본 활성화 및 첫 실행 시 폴더 선택
+    if (isElectron) {
+        const autoSaveToggle = document.getElementById('autoSaveToggle');
+        const hasSelectedFolder = localStorage.getItem('waterAutoSaveFolderSelected') === 'true';
+
+        // 처음 실행이거나 폴더가 선택되지 않은 경우
+        if (!hasSelectedFolder) {
+            // 잠시 후 폴더 선택 다이얼로그 표시 (UI 로드 후)
+            setTimeout(async () => {
+                const confirmSelect = confirm('수질분석 자동 저장 기능을 사용하시겠습니까?\n\n저장할 폴더를 선택해주세요.');
+                if (confirmSelect) {
+                    try {
+                        const result = await window.electronAPI.selectAutoSaveFolder();
+                        if (result.success) {
+                            FileAPI.autoSavePath = await window.electronAPI.getAutoSavePath('water');
+                            localStorage.setItem('waterAutoSaveFolderSelected', 'true');
+                            localStorage.setItem('waterAutoSaveEnabled', 'true');
+                            if (autoSaveToggle) {
+                                autoSaveToggle.checked = true;
+                            }
+                            console.log('📁 수질 자동 저장 폴더 설정됨:', result.folder);
+                        }
+                    } catch (error) {
+                        console.error('폴더 선택 오류:', error);
+                    }
+                }
+            }, 500);
+        } else {
+            // 이전에 폴더를 선택한 경우, 자동 저장 기본 활성화
+            localStorage.setItem('waterAutoSaveEnabled', 'true');
+            if (autoSaveToggle) {
+                autoSaveToggle.checked = true;
+            }
+        }
+    }
 
     // ========================================
     // DOM 요소
@@ -689,10 +725,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         const samplingLocations = getAllSamplingLocations();
         const samplingCrops = getAllSamplingCrops();
 
-        const data = {
-            id: Date.now().toString(),
+        // 접수번호 파싱 (예: "1, 2, 3" -> [1, 2, 3])
+        const receptionNumberStr = formData.get('receptionNumber') || generateNextReceptionNumber();
+        const receptionNumbers = receptionNumberStr.split(',').map(n => n.trim()).filter(n => n);
+
+        // 공통 데이터 (신청자 정보)
+        const commonData = {
             sampleType: SAMPLE_TYPE,
-            receptionNumber: formData.get('receptionNumber') || generateNextReceptionNumber(),
             date: formData.get('date'),
             name: formData.get('name'),
             phoneNumber: formData.get('phoneNumber'),
@@ -702,11 +741,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             addressDetail: formData.get('addressDetail'),
             receptionMethod: formData.get('receptionMethod'),
             sampleName: formData.get('sampleName'),
-            sampleCount: formData.get('sampleCount'),
-            samplingLocations: samplingLocations,
-            samplingLocation: samplingLocations.join(', '), // 호환성을 위해 문자열로도 저장
-            samplingCrops: samplingCrops,
-            mainCrop: samplingCrops.filter(c => c).join(', '), // 호환성을 위해 문자열로도 저장
             purpose: formData.get('purpose'),
             testItems: formData.get('testItems'),
             note: formData.get('note'),
@@ -714,12 +748,35 @@ document.addEventListener('DOMContentLoaded', async () => {
             createdAt: new Date().toISOString()
         };
 
-        sampleLogs.push(data);
-        saveLogs();
-        showToast('시료가 등록되었습니다.', 'success');
+        // 채취장소별로 개별 행 생성
+        const newLogs = [];
+        for (let i = 0; i < samplingLocations.length; i++) {
+            const data = {
+                ...commonData,
+                id: Date.now().toString() + '_' + i,
+                receptionNumber: receptionNumbers[i] || String(parseInt(receptionNumbers[0], 10) + i),
+                sampleCount: '1', // 각 행은 시료 1개
+                samplingLocation: samplingLocations[i] || '',
+                mainCrop: samplingCrops[i] || ''
+            };
+            newLogs.push(data);
+            sampleLogs.push(data);
+        }
 
-        // 결과 모달 표시
-        showRegistrationResult(data);
+        saveLogs();
+
+        const totalCount = samplingLocations.length;
+        showToast(`시료 ${totalCount}건이 등록되었습니다.`, 'success');
+
+        // 결과 모달 표시 (첫 번째 데이터 기준, 전체 개수 표시)
+        const resultData = {
+            ...newLogs[0],
+            receptionNumber: receptionNumbers.join(', '),
+            sampleCount: String(totalCount),
+            samplingLocation: samplingLocations.join(', '),
+            mainCrop: samplingCrops.filter(c => c).join(', ')
+        };
+        showRegistrationResult(resultData);
 
         resetForm();
         receptionNumberInput.value = generateNextReceptionNumber();
@@ -810,14 +867,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(sampleLogs));
         updateRecordCount();
 
-        // 자동 저장
-        if (isElectron && document.getElementById('autoSaveToggle')?.checked) {
-            const autoSaveContent = JSON.stringify({
-                sampleType: SAMPLE_TYPE,
-                savedAt: new Date().toISOString(),
-                data: sampleLogs
-            }, null, 2);
+        // 자동 저장 (Electron 환경)
+        if (isElectron && FileAPI.autoSavePath && document.getElementById('autoSaveToggle')?.checked) {
+            const autoSaveContent = JSON.stringify(sampleLogs, null, 2);
             FileAPI.autoSave(autoSaveContent);
+            console.log('💾 수질 데이터 자동 저장');
         }
     }
 
@@ -1049,6 +1103,76 @@ document.addEventListener('DOMContentLoaded', async () => {
             const checkboxes = document.querySelectorAll('.row-checkbox');
             checkboxes.forEach(cb => cb.checked = selectAllCheckbox.checked);
         });
+    }
+
+    // ========================================
+    // 라벨 인쇄 기능
+    // ========================================
+    const btnLabelPrint = document.getElementById('btnLabelPrint');
+
+    if (btnLabelPrint) {
+        btnLabelPrint.addEventListener('click', () => {
+            const selectedIds = Array.from(document.querySelectorAll('.row-checkbox:checked')).map(cb => cb.dataset.id);
+
+            if (selectedIds.length === 0) {
+                // 선택된 항목이 없으면 전체 데이터 사용 여부 확인
+                if (sampleLogs.length === 0) {
+                    alert('인쇄할 데이터가 없습니다.');
+                    return;
+                }
+
+                if (!confirm(`선택된 항목이 없습니다.\n전체 ${sampleLogs.length}건을 라벨 인쇄하시겠습니까?`)) {
+                    return;
+                }
+
+                // 전체 데이터로 라벨 인쇄
+                openLabelPrintWithData(sampleLogs);
+            } else {
+                // 선택된 데이터만 라벨 인쇄
+                const selectedLogs = sampleLogs.filter(log => selectedIds.includes(log.id));
+                openLabelPrintWithData(selectedLogs);
+            }
+        });
+    }
+
+    // 라벨 인쇄 페이지로 데이터 전달
+    function openLabelPrintWithData(logs) {
+        // 라벨 인쇄에 필요한 데이터 형식으로 변환
+        const labelData = logs.map(log => {
+            // 주소 조합 (도로명주소 + 상세주소)
+            const addressParts = [];
+            if (log.addressRoad) addressParts.push(log.addressRoad);
+            if (log.addressDetail) addressParts.push(log.addressDetail);
+            const address = addressParts.join(' ');
+
+            return {
+                name: log.name || '',
+                address: address,
+                postalCode: log.addressPostcode || ''
+            };
+        });
+
+        // 중복 제거 (성명 + 주소 기준)
+        const uniqueMap = new Map();
+        labelData.forEach(item => {
+            const key = `${item.name}|${item.address}|${item.postalCode}`;
+            if (!uniqueMap.has(key)) {
+                uniqueMap.set(key, item);
+            }
+        });
+        const uniqueLabelData = Array.from(uniqueMap.values());
+
+        // 중복이 있었으면 알림
+        const duplicateCount = labelData.length - uniqueLabelData.length;
+        if (duplicateCount > 0) {
+            showToast(`중복 ${duplicateCount}건 제거됨 (총 ${uniqueLabelData.length}건)`, 'info');
+        }
+
+        // localStorage에 데이터 저장
+        localStorage.setItem('labelPrintData', JSON.stringify(uniqueLabelData));
+
+        // 라벨 인쇄 페이지로 이동
+        window.location.href = '../label-print/index.html';
     }
 
     if (btnBulkDelete) {
@@ -1302,10 +1426,36 @@ document.addEventListener('DOMContentLoaded', async () => {
     const autoSaveToggle = document.getElementById('autoSaveToggle');
     const selectAutoSaveFolderBtn = document.getElementById('selectAutoSaveFolderBtn');
 
+    // 자동 저장 실행 함수
+    async function autoSaveToFile() {
+        if (isElectron && FileAPI.autoSavePath && autoSaveToggle && autoSaveToggle.checked) {
+            try {
+                const content = JSON.stringify(sampleLogs, null, 2);
+                await FileAPI.autoSave(content);
+                console.log('💾 수질 자동 저장 완료');
+            } catch (error) {
+                console.error('자동 저장 오류:', error);
+            }
+        }
+    }
+
+    // 데이터 변경 시 자동 저장 트리거
+    window.triggerWaterAutoSave = autoSaveToFile;
+
     if (autoSaveToggle) {
-        autoSaveToggle.checked = localStorage.getItem('waterAutoSaveEnabled') === 'true';
-        autoSaveToggle.addEventListener('change', () => {
+        // 페이지 로드 시 저장된 상태 복원 (Electron에서는 이미 위에서 처리)
+        if (!isElectron) {
+            autoSaveToggle.checked = localStorage.getItem('waterAutoSaveEnabled') === 'true';
+        }
+
+        autoSaveToggle.addEventListener('change', async () => {
             localStorage.setItem('waterAutoSaveEnabled', autoSaveToggle.checked);
+
+            if (autoSaveToggle.checked && isElectron) {
+                // 토글 ON: 즉시 저장 실행
+                await autoSaveToFile();
+                showToast('자동 저장이 활성화되었습니다.', 'success');
+            }
         });
     }
 
@@ -1314,13 +1464,38 @@ document.addEventListener('DOMContentLoaded', async () => {
             try {
                 const result = await window.electronAPI.selectAutoSaveFolder();
                 if (result.success) {
-                    FileAPI.autoSavePath = result.path;
-                    showToast('자동 저장 폴더가 설정되었습니다.', 'success');
+                    // 폴더 선택 후 water 타입으로 새 경로 가져오기
+                    FileAPI.autoSavePath = await window.electronAPI.getAutoSavePath('water');
+                    localStorage.setItem('waterAutoSaveFolderSelected', 'true');
+                    showToast(`저장 폴더가 변경되었습니다:\n${result.folder}`, 'success');
+
+                    // 자동 저장이 활성화되어 있으면 바로 저장
+                    if (autoSaveToggle && autoSaveToggle.checked) {
+                        await autoSaveToFile();
+                    }
                 }
             } catch (error) {
                 console.error('폴더 선택 오류:', error);
             }
         });
+    }
+
+    // Electron 환경에서 자동 저장 파일 로드
+    if (isElectron && FileAPI.autoSavePath) {
+        try {
+            const content = await FileAPI.loadAutoSave();
+            if (content) {
+                const parsed = JSON.parse(content);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    sampleLogs = parsed;
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(sampleLogs));
+                    console.log('📂 수질 자동 저장 파일에서 데이터 로드됨:', parsed.length, '건');
+                    renderLogs(sampleLogs);
+                }
+            }
+        } catch (error) {
+            console.error('자동 저장 파일 로드 오류:', error);
+        }
     }
 
     // ========================================

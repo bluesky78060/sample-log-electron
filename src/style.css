@@ -2540,8 +2540,15 @@ input[type="number"] {
 /* Empty State */
 .empty-state {
     display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     text-align: center;
     padding: 4rem 2rem;
+}
+
+.empty-state.show {
+    display: flex;
 }
 
 .empty-state .empty-icon {
@@ -2584,7 +2591,7 @@ input[type="number"] {
 
 /* Show empty state when table is empty */
 .table-wrapper:has(tbody:empty) .empty-state {
-    display: block;
+    display: flex;
 }
 
 .table-wrapper:has(tbody:empty) .data-table {

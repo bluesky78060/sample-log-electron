@@ -1,27 +1,26 @@
 // ========================================
-// 수질분석 시료 전용 스크립트
+// 퇴·액비 성분검사 위탁서 스크립트
 // ========================================
-const SAMPLE_TYPE = '물';
-const STORAGE_KEY = 'waterSampleLogs';
-const AUTO_SAVE_FILE = 'water-autosave.json';
+const DEFAULT_SAMPLE_TYPE = '가축분퇴비';
+const STORAGE_KEY = 'compostSampleLogs';
+const AUTO_SAVE_FILE = 'compost-autosave.json';
 
 // ========================================
 // Electron / Web 환경 감지 및 파일 API 추상화
 // ========================================
 const isElectron = window.electronAPI?.isElectron === true;
 
-// Electron 환경에서의 파일 시스템 API
 const FileAPI = {
     autoSavePath: null,
 
     async init() {
         if (isElectron) {
-            this.autoSavePath = await window.electronAPI.getAutoSavePath('water');
-            console.log('📁 Electron 수질 자동 저장 경로:', this.autoSavePath);
+            this.autoSavePath = await window.electronAPI.getAutoSavePath('compost');
+            console.log('📁 Electron 가축분뇨퇴비 자동 저장 경로:', this.autoSavePath);
         }
     },
 
-    async saveFile(content, suggestedName = 'water-data.json') {
+    async saveFile(content, suggestedName = 'compost-data.json') {
         if (isElectron) {
             const filePath = await window.electronAPI.saveFileDialog({
                 title: '파일 저장',
@@ -124,7 +123,7 @@ const FileAPI = {
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('🚀 수질분석 페이지 로드 시작');
+    console.log('🚀 퇴·액비 성분검사 위탁서 페이지 로드 시작');
     console.log(isElectron ? '🖥️ Electron 환경' : '🌐 웹 브라우저 환경');
 
     await FileAPI.init();
@@ -132,24 +131,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Electron 환경: 자동 저장 기본 활성화 및 첫 실행 시 폴더 선택
     if (isElectron) {
         const autoSaveToggle = document.getElementById('autoSaveToggle');
-        const hasSelectedFolder = localStorage.getItem('waterAutoSaveFolderSelected') === 'true';
+        const hasSelectedFolder = localStorage.getItem('compostAutoSaveFolderSelected') === 'true';
 
-        // 처음 실행이거나 폴더가 선택되지 않은 경우
         if (!hasSelectedFolder) {
-            // 잠시 후 폴더 선택 다이얼로그 표시 (UI 로드 후)
             setTimeout(async () => {
-                const confirmSelect = confirm('수질분석 자동 저장 기능을 사용하시겠습니까?\n\n저장할 폴더를 선택해주세요.');
+                const confirmSelect = confirm('가축분뇨퇴비 자동 저장 기능을 사용하시겠습니까?\n\n저장할 폴더를 선택해주세요.');
                 if (confirmSelect) {
                     try {
                         const result = await window.electronAPI.selectAutoSaveFolder();
                         if (result.success) {
-                            FileAPI.autoSavePath = await window.electronAPI.getAutoSavePath('water');
-                            localStorage.setItem('waterAutoSaveFolderSelected', 'true');
-                            localStorage.setItem('waterAutoSaveEnabled', 'true');
+                            FileAPI.autoSavePath = await window.electronAPI.getAutoSavePath('compost');
+                            localStorage.setItem('compostAutoSaveFolderSelected', 'true');
+                            localStorage.setItem('compostAutoSaveEnabled', 'true');
                             if (autoSaveToggle) {
                                 autoSaveToggle.checked = true;
                             }
-                            console.log('📁 수질 자동 저장 폴더 설정됨:', result.folder);
+                            console.log('📁 가축분뇨퇴비 자동 저장 폴더 설정됨:', result.folder);
                         }
                     } catch (error) {
                         console.error('폴더 선택 오류:', error);
@@ -157,8 +154,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }, 500);
         } else {
-            // 이전에 폴더를 선택한 경우, 자동 저장 기본 활성화
-            localStorage.setItem('waterAutoSaveEnabled', 'true');
+            localStorage.setItem('compostAutoSaveEnabled', 'true');
             if (autoSaveToggle) {
                 autoSaveToggle.checked = true;
             }
@@ -286,7 +282,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // ========================================
-    // 주소 검색
+    // 주소 검색 (의뢰인 주소)
     // ========================================
     const searchAddressBtn = document.getElementById('searchAddressBtn');
     const addressPostcode = document.getElementById('addressPostcode');
@@ -370,24 +366,29 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // ========================================
-    // 검사항목 선택 시 상세정보 토글
-    // ========================================
-    const testItemRadios = document.querySelectorAll('input[name="testItems"]');
-    const livingWaterItems = document.getElementById('livingWaterItems');
-    const agriculturalWaterItems = document.getElementById('agriculturalWaterItems');
 
-    testItemRadios.forEach(radio => {
+    // ========================================
+    // 축종 기타 입력 필드 처리
+    // ========================================
+    const animalTypeRadios = document.querySelectorAll('input[name="animalType"]');
+    const animalTypeOtherInput = document.getElementById('animalTypeOther');
+
+    animalTypeRadios.forEach(radio => {
         radio.addEventListener('change', () => {
-            if (radio.value === '생활용수') {
-                livingWaterItems.classList.add('active');
-                agriculturalWaterItems.classList.remove('active');
+            if (radio.value === '기타' && radio.checked) {
+                animalTypeOtherInput.classList.remove('hidden');
+                animalTypeOtherInput.focus();
             } else {
-                livingWaterItems.classList.remove('active');
-                agriculturalWaterItems.classList.add('active');
+                animalTypeOtherInput.classList.add('hidden');
+                animalTypeOtherInput.value = '';
             }
         });
     });
+
+    // ========================================
+    // 농장 주소 (직접 입력)
+    // ========================================
+    const farmAddressFullInput = document.getElementById('farmAddressFull');
 
     // ========================================
     // 접수번호 자동 생성
@@ -399,14 +400,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         sampleLogs.forEach(log => {
             if (log.receptionNumber) {
-                // 수질은 쉼표로 구분된 개별 번호 형식 (예: "5, 6, 7")
-                // 마지막 번호를 찾아서 그 다음 번호를 반환
-                const numbers = log.receptionNumber.split(',').map(n => parseInt(n.trim(), 10)).filter(n => !isNaN(n));
-                if (numbers.length > 0) {
-                    const lastNum = Math.max(...numbers);
-                    if (lastNum > maxNumber) {
-                        maxNumber = lastNum;
-                    }
+                const num = parseInt(log.receptionNumber, 10);
+                if (!isNaN(num) && num > maxNumber) {
+                    maxNumber = num;
                 }
             }
         });
@@ -417,280 +413,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     receptionNumberInput.value = generateNextReceptionNumber();
 
-    // 수정 모드 상태 변수 (상단에 선언)
+    // 수정 모드 상태 변수
     let editingId = null;
-
-    // ========================================
-    // 동적 채취장소 관리
-    // ========================================
-    const sampleCountInput = document.getElementById('sampleCount');
-    const samplingLocationsList = document.getElementById('samplingLocationsList');
-    const locationCountBadge = document.getElementById('locationCountBadge');
-
-    // 채취장소 필드 생성 함수
-    function createSamplingLocationItem(index) {
-        const item = document.createElement('div');
-        item.className = 'sampling-location-item';
-        item.dataset.index = index;
-        item.innerHTML = `
-            <span class="location-number">${index + 1}</span>
-            <div class="location-autocomplete-wrapper">
-                <input type="text" class="sampling-location-input" name="samplingLocations[]" required placeholder="리+지번 입력 (예: 내성리 123)">
-                <ul class="location-autocomplete-list"></ul>
-            </div>
-            <input type="text" class="sampling-crop-input" name="samplingCrops[]" placeholder="주작목">
-        `;
-        return item;
-    }
-
-    // 채취장소 필드 개수 업데이트
-    function updateSamplingLocations(count) {
-        const currentCount = samplingLocationsList.children.length;
-        count = Math.max(1, parseInt(count) || 1);
-
-        // 필드 추가
-        if (count > currentCount) {
-            for (let i = currentCount; i < count; i++) {
-                const item = createSamplingLocationItem(i);
-                samplingLocationsList.appendChild(item);
-                // 새로 추가된 필드에 자동완성 바인딩
-                bindLocationAutocomplete(item.querySelector('.sampling-location-input'), item.querySelector('.location-autocomplete-list'));
-            }
-        }
-        // 필드 제거
-        else if (count < currentCount) {
-            for (let i = currentCount - 1; i >= count; i--) {
-                samplingLocationsList.children[i].remove();
-            }
-        }
-
-        // 배지 업데이트
-        locationCountBadge.textContent = `${count}개`;
-    }
-
-    // 접수번호 범위 업데이트 (시료수에 따라) - 수질은 개별 번호 형식 (1, 2, 3)
-    function updateReceptionNumberRange(count) {
-        count = Math.max(1, parseInt(count) || 1);
-        const baseNumber = parseInt(receptionNumberInput.dataset.baseNumber || receptionNumberInput.value.split(',')[0].trim(), 10);
-
-        if (count === 1) {
-            receptionNumberInput.value = String(baseNumber);
-        } else {
-            // 수질은 개별 번호로 표시 (예: "5, 6, 7")
-            const numbers = [];
-            for (let i = 0; i < count; i++) {
-                numbers.push(baseNumber + i);
-            }
-            receptionNumberInput.value = numbers.join(', ');
-        }
-    }
-
-    // 초기 기본 번호 저장
-    receptionNumberInput.dataset.baseNumber = receptionNumberInput.value;
-
-    // 시료수 변경 시 채취장소 필드 및 접수번호 업데이트
-    if (sampleCountInput) {
-        sampleCountInput.addEventListener('change', (e) => {
-            updateSamplingLocations(e.target.value);
-            updateReceptionNumberRange(e.target.value);
-        });
-        sampleCountInput.addEventListener('input', (e) => {
-            updateSamplingLocations(e.target.value);
-            updateReceptionNumberRange(e.target.value);
-        });
-    }
-
-    // 채취장소 추가/삭제 버튼
-    const btnAddLocation = document.getElementById('btnAddLocation');
-    const btnRemoveLocation = document.getElementById('btnRemoveLocation');
-
-    if (btnAddLocation) {
-        btnAddLocation.addEventListener('click', () => {
-            const currentCount = samplingLocationsList.children.length;
-            const newCount = currentCount + 1;
-            updateSamplingLocations(newCount);
-            // 시료수도 동기화
-            if (sampleCountInput) {
-                sampleCountInput.value = newCount;
-            }
-            updateReceptionNumberRange(newCount);
-        });
-    }
-
-    if (btnRemoveLocation) {
-        btnRemoveLocation.addEventListener('click', () => {
-            const currentCount = samplingLocationsList.children.length;
-            if (currentCount > 1) {
-                const newCount = currentCount - 1;
-                updateSamplingLocations(newCount);
-                // 시료수도 동기화
-                if (sampleCountInput) {
-                    sampleCountInput.value = newCount;
-                }
-                updateReceptionNumberRange(newCount);
-            }
-        });
-    }
-
-    // ========================================
-    // 채취장소 자동완성 (봉화군 주소)
-    // ========================================
-    function bindLocationAutocomplete(input, autocompleteList) {
-        if (!input || !autocompleteList) {
-            console.warn('채취장소 자동완성: input 또는 autocompleteList가 없습니다');
-            return;
-        }
-        if (typeof suggestRegionVillages !== 'function') {
-            console.warn('채취장소 자동완성: suggestRegionVillages 함수를 찾을 수 없습니다');
-            return;
-        }
-
-        // 입력 시 자동완성 목록 표시
-        input.addEventListener('input', (e) => {
-            const value = e.target.value.trim();
-
-            // 이미 완전한 주소면 자동완성 비활성화 (시/군으로 시작)
-            if (value.startsWith('봉화군') || value.startsWith('영주시') || value.startsWith('울진군')) {
-                autocompleteList.classList.remove('show');
-                return;
-            }
-
-            if (value.length >= 1) {
-                const suggestions = suggestRegionVillages(value, ['bonghwa', 'yeongju', 'uljin']);
-
-                if (suggestions.length > 0) {
-                    autocompleteList.innerHTML = suggestions.map(item => `
-                        <li data-village="${item.village}" data-district="${item.district}" data-region="${item.region}">
-                            ${item.displayText}
-                        </li>
-                    `).join('');
-                    autocompleteList.classList.add('show');
-                } else {
-                    autocompleteList.classList.remove('show');
-                }
-            } else {
-                autocompleteList.classList.remove('show');
-            }
-        });
-
-        // Enter 키 처리 - 주소 변환
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                const value = input.value.trim();
-
-                // 이미 완전한 주소면 무시
-                if (value.startsWith('봉화군') || value.startsWith('영주시') || value.startsWith('울진군')) {
-                    autocompleteList.classList.remove('show');
-                    return;
-                }
-
-                if (typeof parseRegionAddress === 'function') {
-                    const result = parseRegionAddress(value, ['bonghwa', 'yeongju', 'uljin']);
-                    if (result) {
-                        // 여러 지역에서 중복되는 리인 경우
-                        if (result.multiRegion && result.regionMatches) {
-                            autocompleteList.innerHTML = result.regionMatches.map(match => `
-                                <li data-village="${match.village}" data-district="${match.district}" data-region="${match.region}" data-lot="${result.lotNumber || ''}">
-                                    ${match.region} ${match.district} ${match.village} ${result.lotNumber || ''}
-                                </li>
-                            `).join('');
-                            autocompleteList.classList.add('show');
-                        }
-                        // 단일 지역 내 중복인 경우
-                        else if (result.alternatives && result.alternatives.length > 1) {
-                            autocompleteList.innerHTML = result.alternatives.map(district => `
-                                <li data-village="${result.village}" data-district="${district}" data-lot="${result.lotNumber}" data-region="${result.region}">
-                                    ${result.region} ${district} ${result.village} ${result.lotNumber || ''}
-                                </li>
-                            `).join('');
-                            autocompleteList.classList.add('show');
-                        } else {
-                            // 단일 매칭 - 바로 변환
-                            input.value = result.fullAddress;
-                            autocompleteList.classList.remove('show');
-                        }
-                    }
-                }
-            }
-        });
-
-        // 자동완성 목록 클릭 시
-        autocompleteList.addEventListener('click', (e) => {
-            if (e.target.tagName === 'LI') {
-                const village = e.target.dataset.village;
-                const district = e.target.dataset.district;
-                const region = e.target.dataset.region;
-                const lot = e.target.dataset.lot;
-
-                // 지번이 있으면 포함
-                const fullAddress = lot
-                    ? `${region} ${district} ${village} ${lot}`
-                    : `${region} ${district} ${village}`;
-
-                input.value = fullAddress;
-                autocompleteList.classList.remove('show');
-            }
-        });
-
-        // 포커스 아웃 시 목록 숨김
-        input.addEventListener('blur', () => {
-            setTimeout(() => {
-                autocompleteList.classList.remove('show');
-            }, 200);
-        });
-    }
-
-    // 초기 채취장소 필드에 자동완성 바인딩
-    const initialLocationItems = samplingLocationsList.querySelectorAll('.sampling-location-item');
-    console.log('초기 채취장소 필드 개수:', initialLocationItems.length);
-    console.log('suggestRegionVillages 함수 존재:', typeof suggestRegionVillages === 'function');
-    console.log('parseRegionAddress 함수 존재:', typeof parseRegionAddress === 'function');
-
-    initialLocationItems.forEach((item, index) => {
-        const input = item.querySelector('.sampling-location-input');
-        const list = item.querySelector('.location-autocomplete-list');
-        console.log(`채취장소 ${index + 1} 바인딩:`, { input: !!input, list: !!list });
-        bindLocationAutocomplete(input, list);
-    });
-
-    // 모든 채취장소 값 가져오기
-    function getAllSamplingLocations() {
-        const inputs = samplingLocationsList.querySelectorAll('.sampling-location-input');
-        return Array.from(inputs).map(input => input.value.trim()).filter(v => v);
-    }
-
-    // 모든 주작목 값 가져오기
-    function getAllSamplingCrops() {
-        const inputs = samplingLocationsList.querySelectorAll('.sampling-crop-input');
-        return Array.from(inputs).map(input => input.value.trim());
-    }
-
-    // 채취장소와 주작목 값 설정 (수정 시 사용)
-    function setSamplingLocations(locations, crops = []) {
-        if (!Array.isArray(locations)) {
-            locations = [locations];
-        }
-        if (!Array.isArray(crops)) {
-            crops = [crops];
-        }
-        locations = locations.filter(l => l);
-
-        const count = Math.max(1, locations.length);
-        updateSamplingLocations(count);
-
-        const locationInputs = samplingLocationsList.querySelectorAll('.sampling-location-input');
-        const cropInputs = samplingLocationsList.querySelectorAll('.sampling-crop-input');
-
-        locations.forEach((loc, i) => {
-            if (locationInputs[i]) {
-                locationInputs[i].value = loc;
-            }
-            if (cropInputs[i] && crops[i]) {
-                cropInputs[i].value = crops[i];
-            }
-        });
-    }
 
     // ========================================
     // 폼 제출
@@ -722,61 +446,46 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function submitForm() {
         const formData = new FormData(form);
-        const samplingLocations = getAllSamplingLocations();
-        const samplingCrops = getAllSamplingCrops();
 
-        // 접수번호 파싱 (예: "1, 2, 3" -> [1, 2, 3])
-        const receptionNumberStr = formData.get('receptionNumber') || generateNextReceptionNumber();
-        const receptionNumbers = receptionNumberStr.split(',').map(n => n.trim()).filter(n => n);
+        // 축종 (기타 선택 시 입력값 사용)
+        let animalType = formData.get('animalType');
+        if (animalType === '기타') {
+            animalType = animalTypeOtherInput.value || '기타';
+        }
 
-        // 공통 데이터 (신청자 정보)
-        const commonData = {
-            sampleType: SAMPLE_TYPE,
+        const data = {
+            id: Date.now().toString(),
+            receptionNumber: formData.get('receptionNumber'),
             date: formData.get('date'),
+            // 의뢰자 정보
+            farmName: formData.get('farmName'),
             name: formData.get('name'),
             phoneNumber: formData.get('phoneNumber'),
             address: formData.get('address'),
             addressPostcode: formData.get('addressPostcode'),
             addressRoad: formData.get('addressRoad'),
             addressDetail: formData.get('addressDetail'),
-            receptionMethod: formData.get('receptionMethod'),
-            sampleName: formData.get('sampleName'),
+            farmName: formData.get('farmName'),
+            farmAddress: formData.get('farmAddressFull'),
+            farmArea: formData.get('farmArea'),
+            // 의뢰내용
+            sampleType: formData.get('sampleType'),
+            animalType: animalType,
+            productionDate: formData.get('productionDate'),
+            sampleCount: formData.get('sampleCount') || '1',
+            rawMaterials: formData.get('rawMaterials'),
             purpose: formData.get('purpose'),
-            testItems: formData.get('testItems'),
+            receptionMethod: formData.get('receptionMethod'),
             note: formData.get('note'),
             isComplete: false,
             createdAt: new Date().toISOString()
         };
 
-        // 채취장소별로 개별 행 생성
-        const newLogs = [];
-        for (let i = 0; i < samplingLocations.length; i++) {
-            const data = {
-                ...commonData,
-                id: Date.now().toString() + '_' + i,
-                receptionNumber: receptionNumbers[i] || String(parseInt(receptionNumbers[0], 10) + i),
-                sampleCount: '1', // 각 행은 시료 1개
-                samplingLocation: samplingLocations[i] || '',
-                mainCrop: samplingCrops[i] || ''
-            };
-            newLogs.push(data);
-            sampleLogs.push(data);
-        }
-
+        sampleLogs.push(data);
         saveLogs();
 
-        const totalCount = samplingLocations.length;
-        showToast(`시료 ${totalCount}건이 등록되었습니다.`, 'success');
-
-        // 결과 모달 표시 (첫 번째 데이터 기준, 전체 개수 표시)
-        const resultData = {
-            ...newLogs[0],
-            receptionNumber: receptionNumbers.join(', '),
-            sampleCount: String(totalCount),
-            samplingLocation: samplingLocations.join(', '),
-            mainCrop: samplingCrops.filter(c => c).join(', ')
-        };
-        showRegistrationResult(resultData);
+        showToast('시료가 등록되었습니다.', 'success');
+        showRegistrationResult(data);
 
         resetForm();
         receptionNumberInput.value = generateNextReceptionNumber();
@@ -785,32 +494,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     function resetForm() {
         form.reset();
         dateInput.valueAsDate = new Date();
+
+        // 통보방법 초기화
         receptionMethodBtns.forEach(b => b.classList.remove('active'));
         receptionMethodInput.value = '';
 
-        // 검사항목 초기화
-        const livingWaterRadio = document.querySelector('input[name="testItems"][value="생활용수"]');
-        if (livingWaterRadio) {
-            livingWaterRadio.checked = true;
-            livingWaterItems.classList.add('active');
-            agriculturalWaterItems.classList.remove('active');
+        // 시료종류 초기화 (첫 번째 라디오 선택)
+        const sampleTypeRadios = document.querySelectorAll('input[name="sampleType"]');
+        if (sampleTypeRadios.length > 0) {
+            sampleTypeRadios[0].checked = true;
         }
 
-        // 채취장소 및 주작목 초기화 (1개로 리셋)
-        updateSamplingLocations(1);
-        const firstLocationInput = samplingLocationsList.querySelector('.sampling-location-input');
-        const firstCropInput = samplingLocationsList.querySelector('.sampling-crop-input');
-        if (firstLocationInput) {
-            firstLocationInput.value = '';
+        // 축종 초기화 (첫 번째 라디오 선택)
+        if (animalTypeRadios.length > 0) {
+            animalTypeRadios[0].checked = true;
         }
-        if (firstCropInput) {
-            firstCropInput.value = '';
-        }
+        animalTypeOtherInput.classList.add('hidden');
+        animalTypeOtherInput.value = '';
 
-        // 접수번호 갱신 및 기본 번호 저장
+        // 접수번호 갱신
         const nextNumber = generateNextReceptionNumber();
         receptionNumberInput.value = nextNumber;
-        receptionNumberInput.dataset.baseNumber = nextNumber;
 
         // 수정 모드 해제
         editingId = null;
@@ -830,13 +534,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         resultTableBody.innerHTML = `
             <tr><th>접수번호</th><td>${data.receptionNumber}</td></tr>
             <tr><th>접수일자</th><td>${data.date}</td></tr>
-            <tr><th>성명</th><td>${data.name}</td></tr>
+            <tr><th>상호(농장명)</th><td>${data.farmName || '-'}</td></tr>
+            <tr><th>성명(대표자)</th><td>${data.name}</td></tr>
             <tr><th>연락처</th><td>${data.phoneNumber}</td></tr>
-            <tr><th>시료명</th><td>${data.sampleName}</td></tr>
-            <tr><th>시료수</th><td>${data.sampleCount}점</td></tr>
-            <tr><th>채취장소</th><td>${data.samplingLocation}</td></tr>
-            <tr><th>목적</th><td>${data.purpose}</td></tr>
-            <tr><th>검사항목</th><td>${data.testItems}</td></tr>
+            <tr><th>시료종류</th><td>${data.sampleType}</td></tr>
+            <tr><th>축종</th><td>${data.animalType}</td></tr>
+            <tr><th>생산일자</th><td>${data.productionDate || '-'}</td></tr>
+            <tr><th>시료수</th><td>${data.sampleCount || 1}점</td></tr>
+            <tr><th>원료 및 투입비율</th><td>${data.rawMaterials || '-'}</td></tr>
+            <tr><th>목적(용도)</th><td>${data.purpose || '-'}</td></tr>
             <tr><th>통보방법</th><td>${data.receptionMethod || '-'}</td></tr>
             <tr><th>비고</th><td>${data.note || '-'}</td></tr>
         `;
@@ -871,7 +577,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (isElectron && FileAPI.autoSavePath && document.getElementById('autoSaveToggle')?.checked) {
             const autoSaveContent = JSON.stringify(sampleLogs, null, 2);
             FileAPI.autoSave(autoSaveContent);
-            console.log('💾 수질 데이터 자동 저장');
+            console.log('💾 퇴·액비 데이터 자동 저장');
         }
     }
 
@@ -892,11 +598,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             const row = document.createElement('tr');
             row.dataset.id = log.id;
 
-            // 주소에서 우편번호 분리 (예: "(12345) 서울시..." -> 우편번호: "12345", 주소: "서울시...")
-            const addressFull = log.address || '';
-            const zipMatch = addressFull.match(/^\((\d{5})\)\s*/);
-            const zipcode = zipMatch ? zipMatch[1] : (log.addressPostcode || '');
-            const addressOnly = zipMatch ? addressFull.replace(zipMatch[0], '') : addressFull;
+            // 시료종류 배지
+            const sampleTypeBadge = getSampleTypeBadge(log.sampleType);
+
+            // 축종 배지
+            const animalTypeBadge = getAnimalTypeBadge(log.animalType);
 
             row.innerHTML = `
                 <td class="col-checkbox">
@@ -909,15 +615,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </td>
                 <td>${log.receptionNumber || '-'}</td>
                 <td>${log.date || '-'}</td>
+                <td>${log.farmName || log.companyName || '-'}</td>
                 <td>${log.name || '-'}</td>
-                <td class="col-zipcode hidden">${zipcode || '-'}</td>
-                <td class="text-truncate" title="${addressOnly || ''}">${addressOnly || '-'}</td>
-                <td>${log.sampleName || '-'}</td>
+                <td>${sampleTypeBadge}</td>
+                <td>${animalTypeBadge}</td>
+                <td>${log.productionDate || '-'}</td>
                 <td>${log.sampleCount || 1}점</td>
-                <td class="text-truncate" title="${log.samplingLocation || ''}">${log.samplingLocation || '-'}</td>
-                <td class="text-truncate" title="${log.mainCrop || ''}">${log.mainCrop || '-'}</td>
                 <td>${log.purpose || '-'}</td>
-                <td>${log.testItems || '-'}</td>
                 <td>${log.phoneNumber || '-'}</td>
                 <td>${log.receptionMethod || '-'}</td>
                 <td class="col-note text-truncate" title="${log.note || ''}">${log.note || '-'}</td>
@@ -934,9 +638,27 @@ document.addEventListener('DOMContentLoaded', async () => {
             tableBody.appendChild(row);
         });
 
-        // 이벤트 바인딩
         bindTableEvents();
         updateRecordCount();
+    }
+
+    function getSampleTypeBadge(type) {
+        const typeMap = {
+            '가축분퇴비': { class: 'compost', icon: '🌿' },
+            '가축분뇨발효액': { class: 'liquid', icon: '💧' }
+        };
+        const config = typeMap[type] || { class: 'other', icon: '📦' };
+        return `<span class="sample-type-badge ${config.class}">${config.icon} ${type || '기타'}</span>`;
+    }
+
+    function getAnimalTypeBadge(type) {
+        const typeMap = {
+            '소': { class: 'cow', icon: '🐄' },
+            '돼지': { class: 'pig', icon: '🐷' },
+            '닭·오리 등': { class: 'chicken', icon: '🐔' }
+        };
+        const config = typeMap[type] || { class: 'other', icon: '🐾' };
+        return `<span class="animal-type-badge ${config.class}">${config.icon} ${type || '기타'}</span>`;
     }
 
     function bindTableEvents() {
@@ -992,48 +714,53 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 폼에 데이터 채우기
         receptionNumberInput.value = log.receptionNumber || '';
         dateInput.value = log.date || '';
+
+        // 의뢰자 정보
+        document.getElementById('farmName').value = log.farmName || '';
         document.getElementById('name').value = log.name || '';
         document.getElementById('phoneNumber').value = log.phoneNumber || '';
         addressPostcode.value = log.addressPostcode || '';
         addressRoad.value = log.addressRoad || '';
         addressDetail.value = log.addressDetail || '';
         addressHidden.value = log.address || '';
-        document.getElementById('sampleName').value = log.sampleName || '';
-        document.getElementById('sampleCount').value = log.sampleCount || 1;
-        document.getElementById('note').value = log.note || '';
 
-        // 채취장소 및 주작목 설정 (배열 또는 문자열)
-        const crops = log.samplingCrops || [];
-        if (log.samplingLocations && Array.isArray(log.samplingLocations)) {
-            setSamplingLocations(log.samplingLocations, crops);
-        } else if (log.samplingLocation) {
-            // 이전 데이터 호환: 문자열을 쉼표로 분리
-            const locations = log.samplingLocation.split(',').map(s => s.trim());
-            setSamplingLocations(locations, crops);
+        // 농장 정보
+        if (farmAddressFullInput) {
+            farmAddressFullInput.value = log.farmAddress || '';
         }
+        document.getElementById('farmArea').value = log.farmArea || '';
+
+        // 시료종류 설정
+        const sampleTypeRadios = document.querySelectorAll('input[name="sampleType"]');
+        sampleTypeRadios.forEach(radio => {
+            radio.checked = radio.value === log.sampleType;
+        });
+
+        // 축종 설정
+        let animalTypeFound = false;
+        animalTypeRadios.forEach(radio => {
+            if (radio.value === log.animalType) {
+                radio.checked = true;
+                animalTypeFound = true;
+            } else if (radio.value === '기타' && !animalTypeFound && log.animalType && !['소', '돼지', '닭·오리 등'].includes(log.animalType)) {
+                radio.checked = true;
+                animalTypeOtherInput.value = log.animalType;
+                animalTypeOtherInput.classList.remove('hidden');
+            }
+        });
+
+        // 생산 정보
+        document.getElementById('productionDate').value = log.productionDate || '';
+        document.getElementById('sampleCount').value = log.sampleCount || 1;
+        document.getElementById('rawMaterials').value = log.rawMaterials || '';
+        document.getElementById('purpose').value = log.purpose || '';
+        document.getElementById('note').value = log.note || '';
 
         // 통보방법 선택
         receptionMethodBtns.forEach(b => {
             b.classList.toggle('active', b.dataset.method === log.receptionMethod);
         });
         receptionMethodInput.value = log.receptionMethod || '';
-
-        // 목적 선택
-        const purposeRadio = document.querySelector(`input[name="purpose"][value="${log.purpose}"]`);
-        if (purposeRadio) purposeRadio.checked = true;
-
-        // 검사항목 선택
-        const testItemsRadio = document.querySelector(`input[name="testItems"][value="${log.testItems}"]`);
-        if (testItemsRadio) {
-            testItemsRadio.checked = true;
-            if (log.testItems === '생활용수') {
-                livingWaterItems.classList.add('active');
-                agriculturalWaterItems.classList.remove('active');
-            } else {
-                livingWaterItems.classList.remove('active');
-                agriculturalWaterItems.classList.add('active');
-            }
-        }
 
         switchView('form');
         showToast('수정 모드입니다. 변경 후 등록 버튼을 클릭하세요.', 'warning');
@@ -1051,27 +778,35 @@ document.addEventListener('DOMContentLoaded', async () => {
     function updateSample() {
         const formData = new FormData(form);
         const log = sampleLogs.find(l => l.id === editingId);
-        const samplingLocations = getAllSamplingLocations();
-        const samplingCrops = getAllSamplingCrops();
+
+        // 축종 (기타 선택 시 입력값 사용)
+        let animalType = formData.get('animalType');
+        if (animalType === '기타') {
+            animalType = animalTypeOtherInput.value || '기타';
+        }
 
         if (log) {
             log.receptionNumber = formData.get('receptionNumber');
             log.date = formData.get('date');
+            // 의뢰자 정보
+            log.companyName = formData.get('companyName');
             log.name = formData.get('name');
             log.phoneNumber = formData.get('phoneNumber');
             log.address = formData.get('address');
             log.addressPostcode = formData.get('addressPostcode');
             log.addressRoad = formData.get('addressRoad');
             log.addressDetail = formData.get('addressDetail');
-            log.receptionMethod = formData.get('receptionMethod');
-            log.sampleName = formData.get('sampleName');
-            log.sampleCount = formData.get('sampleCount');
-            log.samplingLocations = samplingLocations;
-            log.samplingLocation = samplingLocations.join(', '); // 호환성을 위해 문자열로도 저장
-            log.samplingCrops = samplingCrops;
-            log.mainCrop = samplingCrops.filter(c => c).join(', '); // 호환성을 위해 문자열로도 저장
+            log.farmName = formData.get('farmName');
+            log.farmAddress = formData.get('farmAddressFull');
+            log.farmArea = formData.get('farmArea');
+            // 의뢰내용
+            log.sampleType = formData.get('sampleType');
+            log.animalType = animalType;
+            log.productionDate = formData.get('productionDate');
+            log.sampleCount = formData.get('sampleCount') || '1';
+            log.rawMaterials = formData.get('rawMaterials');
             log.purpose = formData.get('purpose');
-            log.testItems = formData.get('testItems');
+            log.receptionMethod = formData.get('receptionMethod');
             log.note = formData.get('note');
             log.updatedAt = new Date().toISOString();
 
@@ -1155,29 +890,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('statCompletedCount').textContent = completed;
         document.getElementById('statPendingCount').textContent = pending;
 
-        // 시료명별
-        const byWaterType = {};
+        // 시료종류별
+        const bySampleType = {};
         sampleLogs.forEach(l => {
-            const type = l.sampleName || '미지정';
-            byWaterType[type] = (byWaterType[type] || 0) + 1;
+            const type = l.sampleType || '미지정';
+            bySampleType[type] = (bySampleType[type] || 0) + 1;
         });
-        renderStatsChart('statsByWaterType', byWaterType, total);
+        renderStatsChart('statsByCompostType', bySampleType, total);
 
-        // 목적별
-        const byPurpose = {};
+        // 축종별
+        const byAnimalType = {};
         sampleLogs.forEach(l => {
-            const purpose = l.purpose || '미지정';
-            byPurpose[purpose] = (byPurpose[purpose] || 0) + 1;
+            const type = l.animalType || '미지정';
+            byAnimalType[type] = (byAnimalType[type] || 0) + 1;
         });
-        renderStatsChart('statsByPurpose', byPurpose, total);
-
-        // 검사항목별
-        const byTestItems = {};
-        sampleLogs.forEach(l => {
-            const items = l.testItems || '미지정';
-            byTestItems[items] = (byTestItems[items] || 0) + 1;
-        });
-        renderStatsChart('statsByTestItems', byTestItems, total);
+        renderStatsChart('statsByTestPurpose', byAnimalType, total);
 
         // 월별
         const byMonth = {};
@@ -1253,7 +980,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 let match = true;
                 if (dateFilter && log.date !== dateFilter) match = false;
                 if (textFilter) {
-                    const searchTarget = `${log.name} ${log.receptionNumber}`.toLowerCase();
+                    const searchTarget = `${log.name} ${log.receptionNumber} ${log.sampleType} ${log.animalType} ${log.farmName} ${log.companyName}`.toLowerCase();
                     if (!searchTarget.includes(textFilter)) match = false;
                 }
                 return match;
@@ -1273,12 +1000,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (saveJsonBtn) {
         saveJsonBtn.addEventListener('click', async () => {
             const content = JSON.stringify({
-                sampleType: SAMPLE_TYPE,
+                sampleType: '퇴·액비',
                 exportedAt: new Date().toISOString(),
                 data: sampleLogs
             }, null, 2);
 
-            const saved = await FileAPI.saveFile(content, `water-samples-${new Date().toISOString().split('T')[0]}.json`);
+            const saved = await FileAPI.saveFile(content, `compost-samples-${new Date().toISOString().split('T')[0]}.json`);
             if (saved) {
                 showToast('파일이 저장되었습니다.', 'success');
             }
@@ -1297,15 +1024,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const loadedData = parsed.data || parsed;
 
                     if (Array.isArray(loadedData)) {
-                        if (confirm(`${loadedData.length}건의 데이터를 불러오시겠습니까?\n기존 데이터는 유지됩니다.`)) {
+                        if (confirm(`${loadedData.length}건의 데이터를 불러옵니다. 기존 데이터에 추가하시겠습니까?\n(취소 선택 시 기존 데이터를 대체합니다)`)) {
                             sampleLogs = [...sampleLogs, ...loadedData];
-                            saveLogs();
-                            renderLogs(sampleLogs);
-                            showToast(`${loadedData.length}건의 데이터를 불러왔습니다.`, 'success');
+                        } else {
+                            sampleLogs = loadedData;
                         }
+                        saveLogs();
+                        renderLogs(sampleLogs);
+                        showToast(`${loadedData.length}건의 데이터를 불러왔습니다.`, 'success');
                     }
                 } catch (error) {
-                    showToast('파일을 읽는 중 오류가 발생했습니다.', 'error');
+                    showToast('파일 형식이 올바르지 않습니다.', 'error');
                 }
             };
             reader.readAsText(file);
@@ -1314,124 +1043,61 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // ========================================
-    // 엑셀 내보내기
+    // Electron 전용: 파일 메뉴에서 불러오기
     // ========================================
-    const exportBtn = document.getElementById('exportBtn');
+    const loadFileBtn = document.getElementById('loadFileBtn');
+    if (loadFileBtn) {
+        loadFileBtn.addEventListener('click', async () => {
+            const content = await FileAPI.openFile();
+            if (content) {
+                try {
+                    const parsed = JSON.parse(content);
+                    const loadedData = parsed.data || parsed;
 
-    if (exportBtn) {
-        exportBtn.addEventListener('click', () => {
-            if (sampleLogs.length === 0) {
-                alert('내보낼 데이터가 없습니다.');
-                return;
+                    if (Array.isArray(loadedData)) {
+                        if (confirm(`${loadedData.length}건의 데이터를 불러옵니다. 기존 데이터에 추가하시겠습니까?\n(취소 선택 시 기존 데이터를 대체합니다)`)) {
+                            sampleLogs = [...sampleLogs, ...loadedData];
+                        } else {
+                            sampleLogs = loadedData;
+                        }
+                        saveLogs();
+                        renderLogs(sampleLogs);
+                        showToast(`${loadedData.length}건의 데이터를 불러왔습니다.`, 'success');
+                    }
+                } catch (error) {
+                    showToast('파일 형식이 올바르지 않습니다.', 'error');
+                }
             }
-
-            const exportData = sampleLogs.map(log => ({
-                '접수번호': log.receptionNumber,
-                '접수일자': log.date,
-                '성명': log.name,
-                '연락처': log.phoneNumber,
-                '주소': log.address,
-                '시료명': log.sampleName,
-                '시료수': log.sampleCount,
-                '채취장소': log.samplingLocation,
-                '주작목': log.mainCrop,
-                '목적': log.purpose,
-                '검사항목': log.testItems,
-                '통보방법': log.receptionMethod,
-                '비고': log.note,
-                '완료여부': log.isComplete ? '완료' : '미완료'
-            }));
-
-            const wb = XLSX.utils.book_new();
-            const ws = XLSX.utils.json_to_sheet(exportData);
-            XLSX.utils.book_append_sheet(wb, ws, '수질분석 접수');
-            XLSX.writeFile(wb, `수질분석접수_${new Date().toISOString().split('T')[0]}.xlsx`);
-            showToast('엑셀 파일이 저장되었습니다.', 'success');
         });
     }
 
     // ========================================
-    // 자동 저장 설정
+    // 자동 저장 토글
     // ========================================
     const autoSaveToggle = document.getElementById('autoSaveToggle');
-    const selectAutoSaveFolderBtn = document.getElementById('selectAutoSaveFolderBtn');
-
-    // 자동 저장 실행 함수
-    async function autoSaveToFile() {
-        if (isElectron && FileAPI.autoSavePath && autoSaveToggle && autoSaveToggle.checked) {
-            try {
-                const content = JSON.stringify(sampleLogs, null, 2);
-                await FileAPI.autoSave(content);
-                console.log('💾 수질 자동 저장 완료');
-            } catch (error) {
-                console.error('자동 저장 오류:', error);
-            }
-        }
-    }
-
-    // 데이터 변경 시 자동 저장 트리거
-    window.triggerWaterAutoSave = autoSaveToFile;
-
     if (autoSaveToggle) {
-        // 페이지 로드 시 저장된 상태 복원 (Electron에서는 이미 위에서 처리)
-        if (!isElectron) {
-            autoSaveToggle.checked = localStorage.getItem('waterAutoSaveEnabled') === 'true';
-        }
-
-        autoSaveToggle.addEventListener('change', async () => {
-            localStorage.setItem('waterAutoSaveEnabled', autoSaveToggle.checked);
-
-            if (autoSaveToggle.checked && isElectron) {
-                // 토글 ON: 즉시 저장 실행
-                await autoSaveToFile();
+        autoSaveToggle.addEventListener('change', () => {
+            localStorage.setItem('compostAutoSaveEnabled', autoSaveToggle.checked ? 'true' : 'false');
+            if (autoSaveToggle.checked) {
+                saveLogs();
                 showToast('자동 저장이 활성화되었습니다.', 'success');
+            } else {
+                showToast('자동 저장이 비활성화되었습니다.', 'warning');
             }
         });
-    }
 
-    if (selectAutoSaveFolderBtn && isElectron) {
-        selectAutoSaveFolderBtn.addEventListener('click', async () => {
-            try {
-                const result = await window.electronAPI.selectAutoSaveFolder();
-                if (result.success) {
-                    // 폴더 선택 후 water 타입으로 새 경로 가져오기
-                    FileAPI.autoSavePath = await window.electronAPI.getAutoSavePath('water');
-                    localStorage.setItem('waterAutoSaveFolderSelected', 'true');
-                    showToast(`저장 폴더가 변경되었습니다:\n${result.folder}`, 'success');
-
-                    // 자동 저장이 활성화되어 있으면 바로 저장
-                    if (autoSaveToggle && autoSaveToggle.checked) {
-                        await autoSaveToFile();
-                    }
-                }
-            } catch (error) {
-                console.error('폴더 선택 오류:', error);
-            }
-        });
-    }
-
-    // Electron 환경에서 자동 저장 파일 로드
-    if (isElectron && FileAPI.autoSavePath) {
-        try {
-            const content = await FileAPI.loadAutoSave();
-            if (content) {
-                const parsed = JSON.parse(content);
-                if (Array.isArray(parsed) && parsed.length > 0) {
-                    sampleLogs = parsed;
-                    localStorage.setItem(STORAGE_KEY, JSON.stringify(sampleLogs));
-                    console.log('📂 수질 자동 저장 파일에서 데이터 로드됨:', parsed.length, '건');
-                    renderLogs(sampleLogs);
-                }
-            }
-        } catch (error) {
-            console.error('자동 저장 파일 로드 오류:', error);
+        // 초기 상태 설정
+        const savedState = localStorage.getItem('compostAutoSaveEnabled');
+        if (savedState === 'true') {
+            autoSaveToggle.checked = true;
         }
     }
 
     // ========================================
-    // 초기 렌더링
+    // 초기화
     // ========================================
     renderLogs(sampleLogs);
+    updateRecordCount();
 
-    console.log('✅ 수질분석 페이지 초기화 완료');
+    console.log('✅ 퇴·액비 성분검사 위탁서 페이지 로드 완료');
 });

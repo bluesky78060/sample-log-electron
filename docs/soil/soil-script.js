@@ -18,8 +18,8 @@ const FileAPI = {
     // 초기화
     async init() {
         if (isElectron) {
-            this.autoSavePath = await window.electronAPI.getAutoSavePath();
-            console.log('📁 Electron 자동 저장 경로:', this.autoSavePath);
+            this.autoSavePath = await window.electronAPI.getAutoSavePath('soil');
+            console.log('📁 Electron 토양 자동 저장 경로:', this.autoSavePath);
         }
     },
 
@@ -2892,8 +2892,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             try {
                 const result = await window.electronAPI.selectAutoSaveFolder();
                 if (result.success) {
-                    // FileAPI의 autoSavePath 업데이트
-                    FileAPI.autoSavePath = result.path;
+                    // 폴더 선택 후 soil 타입으로 새 경로 가져오기
+                    FileAPI.autoSavePath = await window.electronAPI.getAutoSavePath('soil');
                     showToast(`저장 폴더가 변경되었습니다:\n${result.folder}`, 'success');
 
                     // 자동 저장이 활성화되어 있으면 바로 저장

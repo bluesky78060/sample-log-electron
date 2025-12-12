@@ -151,15 +151,16 @@ function saveSettings(settings) {
     }
 }
 
-// 자동 저장 경로 가져오기
-ipcMain.handle('get-auto-save-path', async () => {
+// 자동 저장 경로 가져오기 (타입별로 다른 파일명 사용)
+ipcMain.handle('get-auto-save-path', async (event, type) => {
     const settings = loadSettings();
+    const fileName = type ? `auto-save-${type}.json` : 'auto-save.json';
     if (settings.autoSaveFolder) {
-        return path.join(settings.autoSaveFolder, 'auto-save.json');
+        return path.join(settings.autoSaveFolder, fileName);
     }
     // 기본 경로
     const userDataPath = app.getPath('userData');
-    return path.join(userDataPath, 'auto-save.json');
+    return path.join(userDataPath, fileName);
 });
 
 // 자동 저장 폴더 선택
@@ -181,8 +182,7 @@ ipcMain.handle('select-auto-save-folder', async () => {
 
     return {
         success: true,
-        folder: selectedFolder,
-        path: path.join(selectedFolder, 'auto-save.json')
+        folder: selectedFolder
     };
 });
 
