@@ -2750,8 +2750,31 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         })();
     } else if (selectAutoSaveFolderBtn && !isElectron) {
-        // 웹 환경에서는 숨김
-        selectAutoSaveFolderBtn.style.display = 'none';
+        // 웹 환경에서는 파일 선택 다이얼로그 사용
+        selectAutoSaveFolderBtn.title = '자동저장 파일 선택';
+        selectAutoSaveFolderBtn.addEventListener('click', async () => {
+            try {
+                if ('showSaveFilePicker' in window) {
+                    autoSaveFileHandle = await window.showSaveFilePicker({
+                        suggestedName: 'sample-logs-autosave.json',
+                        types: [{ description: 'JSON Files', accept: { 'application/json': ['.json'] } }]
+                    });
+                    showToast('자동저장 파일이 설정되었습니다.', 'success');
+                    if (autoSaveToggle) {
+                        autoSaveToggle.checked = true;
+                        localStorage.setItem('autoSaveEnabled', 'true');
+                    }
+                    await autoSaveToFile();
+                } else {
+                    showToast('이 브라우저에서는 파일 선택을 지원하지 않습니다.', 'error');
+                }
+            } catch (error) {
+                if (error.name !== 'AbortError') {
+                    console.error('파일 선택 오류:', error);
+                    showToast('파일 선택 중 오류가 발생했습니다.', 'error');
+                }
+            }
+        });
     }
 
     saveJsonBtn.addEventListener('click', () => {

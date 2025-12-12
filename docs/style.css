@@ -3469,9 +3469,13 @@ input[type="number"] {
         margin: 0 0.25rem;
     }
 
-    .navbar-utils,
-    .navbar-autosave {
+    .navbar-utils {
         display: none;
+    }
+
+    .navbar-autosave {
+        display: flex;
+        gap: 0.25rem;
     }
 
     .type-btn {
