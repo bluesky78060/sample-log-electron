@@ -3407,14 +3407,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 const tr = document.createElement('tr');
                 tr.className = isCompleted ? 'row-completed' : '';
-                // 수령 방법 아이콘 매핑
-                const methodIcons = {
-                    '우편': '📮',
-                    '이메일': '📧',
-                    '팩스': '📠',
-                    '직접방문': '🚶'
-                };
-                const methodIcon = methodIcons[row.receptionMethod] || '-';
+                // 수령 방법 텍스트
+                const methodText = row.receptionMethod || '-';
 
                 // 주소에서 우편번호 분리 (예: "(12345) 서울시..." -> 우편번호: "12345", 주소: "서울시...")
                 const addressFull = row.address || '';
@@ -3443,7 +3437,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <td title="${row._cropsDisplay}">${row._cropsDisplay}</td>
                     <td>${row._areaDisplay}</td>
                     <td>${row.phoneNumber || '-'}</td>
-                    <td title="${row.receptionMethod || ''}">${methodIcon}</td>
+                    <td>${methodText}</td>
                     <td class="col-note" title="${row.note || ''}"><div class="note-cell">${row.note || '-'}</div></td>
                     <td>
                         <div class="table-actions">
