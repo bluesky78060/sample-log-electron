@@ -2373,7 +2373,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         localStorage.setItem('labelPrintData', JSON.stringify(labelData));
 
         // 라벨 인쇄 페이지로 이동
-        window.location.href = '../label-print/index.html';
+        window.location.href = 'label-print/index.html';
     }
 
     // ========================================
