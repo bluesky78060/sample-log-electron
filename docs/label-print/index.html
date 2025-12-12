@@ -63,10 +63,15 @@
             position: relative;
         }
 
-        .back-link {
+        .nav-buttons {
             position: absolute;
             top: 20px;
             left: 20px;
+            display: flex;
+            gap: 8px;
+        }
+
+        .back-link, .nav-link {
             display: inline-flex;
             align-items: center;
             gap: 8px;
@@ -82,7 +87,7 @@
             transition: all 0.2s ease;
         }
 
-        .back-link:hover {
+        .back-link:hover, .nav-link:hover {
             background: rgba(255, 255, 255, 0.25);
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -703,9 +708,13 @@
                 padding: 0 8px;
             }
 
-            .back-link {
+            .nav-buttons {
                 top: 12px;
                 left: 12px;
+                gap: 6px;
+            }
+
+            .back-link, .nav-link {
                 padding: 8px 14px;
                 font-size: 0.85rem;
             }
@@ -773,7 +782,10 @@
 <body>
     <div class="container">
         <div class="header">
-            <a href="../index.html" class="back-link">← 메인으로</a>
+            <div class="nav-buttons">
+                <a href="../index.html" class="back-link">← 메인으로</a>
+                <a href="../index.html" class="nav-link">📋 접수목록</a>
+            </div>
             <div class="header-top">
                 <div class="hero-icon">🏷️</div>
                 <h1>라벨지 인쇄</h1>
