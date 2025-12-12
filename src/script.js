@@ -2385,8 +2385,24 @@ document.addEventListener('DOMContentLoaded', async () => {
             };
         });
 
+        // 중복 제거 (성명 + 주소 기준)
+        const uniqueMap = new Map();
+        labelData.forEach(item => {
+            const key = `${item.name}|${item.address}|${item.postalCode}`;
+            if (!uniqueMap.has(key)) {
+                uniqueMap.set(key, item);
+            }
+        });
+        const uniqueLabelData = Array.from(uniqueMap.values());
+
+        // 중복이 있었으면 알림
+        const duplicateCount = labelData.length - uniqueLabelData.length;
+        if (duplicateCount > 0) {
+            showToast(`중복 ${duplicateCount}건 제거됨 (총 ${uniqueLabelData.length}건)`, 'info');
+        }
+
         // localStorage에 데이터 저장
-        localStorage.setItem('labelPrintData', JSON.stringify(labelData));
+        localStorage.setItem('labelPrintData', JSON.stringify(uniqueLabelData));
 
         // 라벨 인쇄 페이지로 이동
         window.location.href = '../label-print/index.html';
