@@ -1,0 +1,358 @@
+/* ========================================
+   수질분석 시료 전용 스타일
+   ======================================== */
+
+/* 물 테마 색상 */
+:root {
+    --water-primary: #3B82F6;
+    --water-primary-hover: #2563EB;
+    --water-primary-light: #BFDBFE;
+    --water-primary-dark: #1D4ED8;
+    --water-gradient: linear-gradient(135deg, #3B82F6, #2563EB);
+}
+
+/* 네비게이션 바 물 테마 */
+.water-navbar {
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    border-bottom: 2px solid var(--water-primary-light);
+}
+
+.water-navbar .brand-icon {
+    font-size: 1.5rem;
+}
+
+.water-navbar .brand-text {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--water-primary-dark);
+    margin-left: 0.25rem;
+}
+
+/* 뒤로가기 버튼 */
+.back-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: white;
+    color: var(--water-primary-dark);
+    text-decoration: none;
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-right: 0.5rem;
+    border: 1px solid var(--water-primary-light);
+    transition: all 0.2s ease;
+}
+
+.back-btn:hover {
+    background: var(--water-primary);
+    color: white;
+    border-color: var(--water-primary);
+}
+
+/* 네비게이션 버튼 활성화 */
+.water-navbar .nav-btn.active {
+    background: var(--water-gradient);
+}
+
+/* 폼 카드 헤더 물 테마 */
+.water-navbar ~ .main-content .form-card .card-header {
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    border-bottom: 1px solid var(--water-primary-light);
+}
+
+.water-navbar ~ .main-content .form-card .card-header h3 {
+    color: var(--water-primary-dark);
+}
+
+/* 버튼 물 테마 */
+.water-navbar ~ .main-content .btn-add-small,
+.water-navbar ~ .main-content .btn-add-location-empty,
+.water-navbar ~ .main-content .btn-add-row {
+    background: var(--water-gradient);
+}
+
+.water-navbar ~ .main-content .btn-add-small:hover,
+.water-navbar ~ .main-content .btn-add-location-empty:hover,
+.water-navbar ~ .main-content .btn-add-row:hover {
+    background: linear-gradient(135deg, #2563EB, #1D4ED8);
+}
+
+/* 확인 버튼 물 테마 */
+.water-navbar ~ .main-content .btn-confirm,
+.water-navbar ~ .main-content .btn-search-apply {
+    background: var(--water-gradient);
+}
+
+.water-navbar ~ .main-content .btn-confirm:hover,
+.water-navbar ~ .main-content .btn-search-apply:hover {
+    background: linear-gradient(135deg, #2563EB, #1D4ED8);
+}
+
+/* 액션 버튼 물 테마 */
+.water-navbar .action-btn-icon.submit {
+    background: var(--water-gradient);
+}
+
+.water-navbar .action-btn-icon.submit:hover {
+    background: linear-gradient(135deg, #2563EB, #1D4ED8);
+}
+
+/* 검색 버튼 물 테마 */
+.water-navbar ~ .main-content .btn-search {
+    background: var(--water-gradient);
+}
+
+.water-navbar ~ .main-content .btn-search:hover {
+    background: linear-gradient(135deg, #2563EB, #1D4ED8);
+}
+
+/* 수령 방법 선택 버튼 물 테마 */
+.water-navbar ~ .main-content .reception-method-btn.active {
+    background: var(--water-gradient);
+    border-color: var(--water-primary);
+    color: white;
+}
+
+/* 체크박스 물 테마 */
+.water-navbar ~ .main-content input[type="checkbox"]:checked {
+    background: var(--water-primary);
+    border-color: var(--water-primary);
+}
+
+/* 토글 스위치 물 테마 */
+.water-navbar .autosave-toggle input:checked + .toggle-track {
+    background: var(--water-gradient);
+}
+
+/* 통계 카드 물 테마 */
+.water-navbar ~ .main-content .stat-card.total {
+    border-left-color: var(--water-primary);
+}
+
+/* 목록 뷰 헤더 */
+.water-navbar ~ .main-content .view-header-top h2 {
+    color: var(--water-primary-dark);
+}
+
+/* 토스트 성공 물 테마 */
+.toast.success {
+    background: var(--water-gradient) !important;
+}
+
+/* 시료수 입력 그룹 */
+.sample-count-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.sample-count-group input {
+    flex: 1;
+}
+
+.sample-count-unit {
+    font-size: 0.9rem;
+    color: #64748b;
+    font-weight: 500;
+}
+
+/* 목적(용도) 옵션 스타일 */
+.purpose-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.purpose-option {
+    cursor: pointer;
+}
+
+.purpose-option input[type="radio"] {
+    display: none;
+}
+
+.purpose-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: #f8fafc;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    transition: all 0.2s ease;
+}
+
+.purpose-option input[type="radio"]:checked + .purpose-label {
+    background: linear-gradient(135deg, #eff6ff, #dbeafe);
+    border-color: var(--water-primary);
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
+}
+
+.purpose-icon {
+    font-size: 1.25rem;
+}
+
+.purpose-text {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #334155;
+}
+
+.purpose-option input[type="radio"]:checked + .purpose-label .purpose-text {
+    color: var(--water-primary-dark);
+}
+
+/* 검사항목 옵션 스타일 */
+.test-items-options {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.test-item-option {
+    flex: 1;
+    cursor: pointer;
+}
+
+.test-item-option input[type="radio"] {
+    display: none;
+}
+
+.test-item-label {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.25rem;
+    background: #f8fafc;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    transition: all 0.2s ease;
+}
+
+.test-item-option input[type="radio"]:checked + .test-item-label {
+    background: linear-gradient(135deg, #eff6ff, #dbeafe);
+    border-color: var(--water-primary);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.test-item-icon {
+    font-size: 2rem;
+}
+
+.test-item-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.test-item-name {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #334155;
+}
+
+.test-item-count {
+    font-size: 0.8rem;
+    color: #64748b;
+}
+
+.test-item-option input[type="radio"]:checked + .test-item-label .test-item-name {
+    color: var(--water-primary-dark);
+}
+
+/* 검사항목 상세 정보 */
+.test-items-detail {
+    margin-top: 1rem;
+}
+
+.test-items-info {
+    display: none;
+    padding: 1rem;
+    background: #f8fafc;
+    border-radius: 10px;
+    border-left: 3px solid var(--water-primary);
+}
+
+.test-items-info.active {
+    display: block;
+}
+
+.test-items-info h4 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--water-primary-dark);
+    margin-bottom: 0.5rem;
+}
+
+.test-items-list {
+    font-size: 0.8rem;
+    color: #64748b;
+    line-height: 1.6;
+}
+
+/* 폼 필드 포커스 물 테마 */
+.water-navbar ~ .main-content input:focus,
+.water-navbar ~ .main-content select:focus,
+.water-navbar ~ .main-content textarea:focus {
+    border-color: var(--water-primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* 테이블 행 선택 물 테마 */
+.water-navbar ~ .main-content .data-table tbody tr:hover {
+    background: rgba(59, 130, 246, 0.05);
+}
+
+.water-navbar ~ .main-content .data-table tbody tr.selected {
+    background: rgba(59, 130, 246, 0.1);
+}
+
+/* 진행 바 물 테마 */
+.water-navbar ~ .main-content .progress-bar {
+    background: var(--water-gradient);
+}
+
+/* 링크 물 테마 */
+.water-navbar ~ .main-content a {
+    color: var(--water-primary);
+}
+
+.water-navbar ~ .main-content a:hover {
+    color: var(--water-primary-dark);
+}
+
+/* textarea 스타일 */
+textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    resize: vertical;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+textarea:focus {
+    outline: none;
+    border-color: var(--water-primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* 반응형 */
+@media (max-width: 768px) {
+    .test-items-options {
+        flex-direction: column;
+    }
+
+    .purpose-options {
+        flex-direction: column;
+    }
+
+    .purpose-label {
+        width: 100%;
+    }
+}

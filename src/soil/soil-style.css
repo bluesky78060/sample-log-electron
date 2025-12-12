@@ -1,0 +1,189 @@
+/* ========================================
+   토양 시료 전용 스타일
+   ======================================== */
+
+/* 토양 테마 색상 */
+:root {
+    --soil-primary: #22C55E;
+    --soil-primary-hover: #16A34A;
+    --soil-primary-light: #BBF7D0;
+    --soil-primary-dark: #15803D;
+    --soil-gradient: linear-gradient(135deg, #22C55E, #16A34A);
+}
+
+/* 네비게이션 바 토양 테마 */
+.soil-navbar {
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    border-bottom: 2px solid var(--soil-primary-light);
+}
+
+.soil-navbar .brand-icon {
+    font-size: 1.5rem;
+}
+
+.soil-navbar .brand-text {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--soil-primary-dark);
+    margin-left: 0.25rem;
+}
+
+/* 뒤로가기 버튼 */
+.back-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: white;
+    color: var(--soil-primary-dark);
+    text-decoration: none;
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-right: 0.5rem;
+    border: 1px solid var(--soil-primary-light);
+    transition: all 0.2s ease;
+}
+
+.back-btn:hover {
+    background: var(--soil-primary);
+    color: white;
+    border-color: var(--soil-primary);
+}
+
+/* 네비게이션 버튼 활성화 */
+.soil-navbar .nav-btn.active {
+    background: var(--soil-gradient);
+}
+
+/* 폼 카드 헤더 토양 테마 */
+.soil-navbar ~ .main-content .form-card .card-header {
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    border-bottom: 1px solid var(--soil-primary-light);
+}
+
+.soil-navbar ~ .main-content .form-card .card-header h3 {
+    color: var(--soil-primary-dark);
+}
+
+/* 버튼 토양 테마 */
+.soil-navbar ~ .main-content .btn-add-small,
+.soil-navbar ~ .main-content .btn-add-parcel-empty,
+.soil-navbar ~ .main-content .btn-add-row {
+    background: var(--soil-gradient);
+}
+
+.soil-navbar ~ .main-content .btn-add-small:hover,
+.soil-navbar ~ .main-content .btn-add-parcel-empty:hover,
+.soil-navbar ~ .main-content .btn-add-row:hover {
+    background: linear-gradient(135deg, #16A34A, #15803D);
+}
+
+/* 확인 버튼 토양 테마 */
+.soil-navbar ~ .main-content .btn-confirm,
+.soil-navbar ~ .main-content .btn-search-apply {
+    background: var(--soil-gradient);
+}
+
+.soil-navbar ~ .main-content .btn-confirm:hover,
+.soil-navbar ~ .main-content .btn-search-apply:hover {
+    background: linear-gradient(135deg, #16A34A, #15803D);
+}
+
+/* 액션 버튼 토양 테마 */
+.soil-navbar .action-btn-icon.submit {
+    background: var(--soil-gradient);
+}
+
+.soil-navbar .action-btn-icon.submit:hover {
+    background: linear-gradient(135deg, #16A34A, #15803D);
+}
+
+/* 검색 버튼 토양 테마 */
+.soil-navbar ~ .main-content .btn-search {
+    background: var(--soil-gradient);
+}
+
+.soil-navbar ~ .main-content .btn-search:hover {
+    background: linear-gradient(135deg, #16A34A, #15803D);
+}
+
+/* 수령 방법 선택 버튼 토양 테마 */
+.soil-navbar ~ .main-content .reception-method-btn.selected {
+    background: var(--soil-gradient);
+    border-color: var(--soil-primary);
+}
+
+/* 체크박스 토양 테마 */
+.soil-navbar ~ .main-content input[type="checkbox"]:checked {
+    background: var(--soil-primary);
+    border-color: var(--soil-primary);
+}
+
+/* 토글 스위치 토양 테마 */
+.soil-navbar .autosave-toggle input:checked + .toggle-track {
+    background: var(--soil-gradient);
+}
+
+/* 통계 카드 토양 테마 */
+.soil-navbar ~ .main-content .stat-card.total {
+    border-left-color: var(--soil-primary);
+}
+
+/* 목록 뷰 헤더 */
+.soil-navbar ~ .main-content .view-header-top h2 {
+    color: var(--soil-primary-dark);
+}
+
+/* 토스트 성공 토양 테마 */
+.soil-navbar ~ .main-content .toast.success,
+.toast.success {
+    background: var(--soil-gradient);
+}
+
+/* 필지 카드 토양 테마 */
+.soil-navbar ~ .main-content .parcel-card {
+    border-left: 3px solid var(--soil-primary);
+}
+
+.soil-navbar ~ .main-content .parcel-card:hover {
+    border-left-color: var(--soil-primary-dark);
+}
+
+/* 선택된 작물 태그 토양 테마 */
+.soil-navbar ~ .main-content .crop-tag {
+    background: var(--soil-primary-light);
+    color: var(--soil-primary-dark);
+}
+
+/* 폼 필드 포커스 토양 테마 */
+.soil-navbar ~ .main-content input:focus,
+.soil-navbar ~ .main-content select:focus,
+.soil-navbar ~ .main-content textarea:focus {
+    border-color: var(--soil-primary);
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+}
+
+/* 테이블 행 선택 토양 테마 */
+.soil-navbar ~ .main-content .data-table tbody tr:hover {
+    background: rgba(34, 197, 94, 0.05);
+}
+
+.soil-navbar ~ .main-content .data-table tbody tr.selected {
+    background: rgba(34, 197, 94, 0.1);
+}
+
+/* 진행 바 토양 테마 */
+.soil-navbar ~ .main-content .progress-bar {
+    background: var(--soil-gradient);
+}
+
+/* 링크 토양 테마 */
+.soil-navbar ~ .main-content a {
+    color: var(--soil-primary);
+}
+
+.soil-navbar ~ .main-content a:hover {
+    color: var(--soil-primary-dark);
+}
