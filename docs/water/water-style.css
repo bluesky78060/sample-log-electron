@@ -515,6 +515,46 @@ textarea:focus {
     color: #334155;
 }
 
+.location-header-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-add-location,
+.btn-remove-location {
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.btn-add-location {
+    background: var(--water-primary-light);
+    color: var(--water-primary-dark);
+}
+
+.btn-add-location:hover {
+    background: var(--water-primary);
+    color: white;
+}
+
+.btn-remove-location {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.btn-remove-location:hover {
+    background: #dc2626;
+    color: white;
+}
+
 .location-count-badge {
     background: var(--water-gradient);
     color: white;
@@ -536,6 +576,26 @@ textarea:focus {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+}
+
+.sampling-crop-input {
+    width: 140px;
+    flex-shrink: 0;
+    padding: 0.6rem 0.75rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.sampling-crop-input:focus {
+    outline: none;
+    border-color: var(--water-primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.sampling-crop-input::placeholder {
+    color: #94a3b8;
 }
 
 .location-number {

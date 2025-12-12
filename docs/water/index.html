@@ -299,18 +299,15 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="form-row single">
-                                    <div class="form-field full">
-                                        <label for="mainCrop">주작목</label>
-                                        <input type="text" id="mainCrop" name="mainCrop" placeholder="예: 벼, 고추, 사과 등">
-                                    </div>
-                                </div>
-
                                 <!-- 동적 채취장소 컨테이너 -->
                                 <div class="sampling-locations-container" id="samplingLocationsContainer">
                                     <div class="sampling-location-header">
                                         <label>채취장소 <span class="required">*</span></label>
-                                        <span class="location-count-badge" id="locationCountBadge">1개</span>
+                                        <div class="location-header-controls">
+                                            <button type="button" class="btn-add-location" id="btnAddLocation" title="채취장소 추가">➕</button>
+                                            <button type="button" class="btn-remove-location" id="btnRemoveLocation" title="채취장소 삭제">➖</button>
+                                            <span class="location-count-badge" id="locationCountBadge">1개</span>
+                                        </div>
                                     </div>
                                     <div class="sampling-locations-list" id="samplingLocationsList">
                                         <!-- 동적으로 추가되는 채취장소 필드들 -->
@@ -320,6 +317,7 @@
                                                 <input type="text" class="sampling-location-input" name="samplingLocations[]" required placeholder="리+지번 입력 (예: 내성리 123)">
                                                 <ul class="location-autocomplete-list"></ul>
                                             </div>
+                                            <input type="text" class="sampling-crop-input" name="samplingCrops[]" placeholder="주작목">
                                         </div>
                                     </div>
                                 </div>
@@ -374,6 +372,7 @@
                             <th>시료명</th>
                             <th>시료수</th>
                             <th>채취장소</th>
+                            <th>주작목</th>
                             <th>목적</th>
                             <th>검사항목</th>
                             <th>연락처</th>

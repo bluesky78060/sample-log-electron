@@ -363,10 +363,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         sampleLogs.forEach(log => {
             if (log.receptionNumber) {
-                const baseNumber = log.receptionNumber.split('-')[0];
-                const num = parseInt(baseNumber, 10);
-                if (!isNaN(num) && num > maxNumber) {
-                    maxNumber = num;
+                // 수질은 쉼표로 구분된 개별 번호 형식 (예: "5, 6, 7")
+                // 마지막 번호를 찾아서 그 다음 번호를 반환
+                const numbers = log.receptionNumber.split(',').map(n => parseInt(n.trim(), 10)).filter(n => !isNaN(n));
+                if (numbers.length > 0) {
+                    const lastNum = Math.max(...numbers);
+                    if (lastNum > maxNumber) {
+                        maxNumber = lastNum;
+                    }
                 }
             }
         });
@@ -398,6 +402,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <input type="text" class="sampling-location-input" name="samplingLocations[]" required placeholder="리+지번 입력 (예: 내성리 123)">
                 <ul class="location-autocomplete-list"></ul>
             </div>
+            <input type="text" class="sampling-crop-input" name="samplingCrops[]" placeholder="주작목">
         `;
         return item;
     }
@@ -427,16 +432,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         locationCountBadge.textContent = `${count}개`;
     }
 
-    // 접수번호 범위 업데이트 (시료수에 따라)
+    // 접수번호 범위 업데이트 (시료수에 따라) - 수질은 개별 번호 형식 (1, 2, 3)
     function updateReceptionNumberRange(count) {
         count = Math.max(1, parseInt(count) || 1);
-        const baseNumber = parseInt(receptionNumberInput.dataset.baseNumber || receptionNumberInput.value.split('-')[0], 10);
+        const baseNumber = parseInt(receptionNumberInput.dataset.baseNumber || receptionNumberInput.value.split(',')[0].trim(), 10);
 
         if (count === 1) {
             receptionNumberInput.value = String(baseNumber);
         } else {
-            const endNumber = baseNumber + count - 1;
-            receptionNumberInput.value = `${baseNumber}-${endNumber}`;
+            // 수질은 개별 번호로 표시 (예: "5, 6, 7")
+            const numbers = [];
+            for (let i = 0; i < count; i++) {
+                numbers.push(baseNumber + i);
+            }
+            receptionNumberInput.value = numbers.join(', ');
         }
     }
 
@@ -455,11 +464,50 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+    // 채취장소 추가/삭제 버튼
+    const btnAddLocation = document.getElementById('btnAddLocation');
+    const btnRemoveLocation = document.getElementById('btnRemoveLocation');
+
+    if (btnAddLocation) {
+        btnAddLocation.addEventListener('click', () => {
+            const currentCount = samplingLocationsList.children.length;
+            const newCount = currentCount + 1;
+            updateSamplingLocations(newCount);
+            // 시료수도 동기화
+            if (sampleCountInput) {
+                sampleCountInput.value = newCount;
+            }
+            updateReceptionNumberRange(newCount);
+        });
+    }
+
+    if (btnRemoveLocation) {
+        btnRemoveLocation.addEventListener('click', () => {
+            const currentCount = samplingLocationsList.children.length;
+            if (currentCount > 1) {
+                const newCount = currentCount - 1;
+                updateSamplingLocations(newCount);
+                // 시료수도 동기화
+                if (sampleCountInput) {
+                    sampleCountInput.value = newCount;
+                }
+                updateReceptionNumberRange(newCount);
+            }
+        });
+    }
+
     // ========================================
     // 채취장소 자동완성 (봉화군 주소)
     // ========================================
     function bindLocationAutocomplete(input, autocompleteList) {
-        if (!input || !autocompleteList || typeof suggestRegionVillages !== 'function') return;
+        if (!input || !autocompleteList) {
+            console.warn('채취장소 자동완성: input 또는 autocompleteList가 없습니다');
+            return;
+        }
+        if (typeof suggestRegionVillages !== 'function') {
+            console.warn('채취장소 자동완성: suggestRegionVillages 함수를 찾을 수 없습니다');
+            return;
+        }
 
         // 입력 시 자동완성 목록 표시
         input.addEventListener('input', (e) => {
@@ -559,11 +607,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 초기 채취장소 필드에 자동완성 바인딩
     const initialLocationItems = samplingLocationsList.querySelectorAll('.sampling-location-item');
-    initialLocationItems.forEach(item => {
-        bindLocationAutocomplete(
-            item.querySelector('.sampling-location-input'),
-            item.querySelector('.location-autocomplete-list')
-        );
+    console.log('초기 채취장소 필드 개수:', initialLocationItems.length);
+    console.log('suggestRegionVillages 함수 존재:', typeof suggestRegionVillages === 'function');
+    console.log('parseRegionAddress 함수 존재:', typeof parseRegionAddress === 'function');
+
+    initialLocationItems.forEach((item, index) => {
+        const input = item.querySelector('.sampling-location-input');
+        const list = item.querySelector('.location-autocomplete-list');
+        console.log(`채취장소 ${index + 1} 바인딩:`, { input: !!input, list: !!list });
+        bindLocationAutocomplete(input, list);
     });
 
     // 모든 채취장소 값 가져오기
@@ -572,20 +624,34 @@ document.addEventListener('DOMContentLoaded', async () => {
         return Array.from(inputs).map(input => input.value.trim()).filter(v => v);
     }
 
-    // 채취장소 값 설정 (수정 시 사용)
-    function setSamplingLocations(locations) {
+    // 모든 주작목 값 가져오기
+    function getAllSamplingCrops() {
+        const inputs = samplingLocationsList.querySelectorAll('.sampling-crop-input');
+        return Array.from(inputs).map(input => input.value.trim());
+    }
+
+    // 채취장소와 주작목 값 설정 (수정 시 사용)
+    function setSamplingLocations(locations, crops = []) {
         if (!Array.isArray(locations)) {
             locations = [locations];
+        }
+        if (!Array.isArray(crops)) {
+            crops = [crops];
         }
         locations = locations.filter(l => l);
 
         const count = Math.max(1, locations.length);
         updateSamplingLocations(count);
 
-        const inputs = samplingLocationsList.querySelectorAll('.sampling-location-input');
+        const locationInputs = samplingLocationsList.querySelectorAll('.sampling-location-input');
+        const cropInputs = samplingLocationsList.querySelectorAll('.sampling-crop-input');
+
         locations.forEach((loc, i) => {
-            if (inputs[i]) {
-                inputs[i].value = loc;
+            if (locationInputs[i]) {
+                locationInputs[i].value = loc;
+            }
+            if (cropInputs[i] && crops[i]) {
+                cropInputs[i].value = crops[i];
             }
         });
     }
@@ -621,6 +687,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     function submitForm() {
         const formData = new FormData(form);
         const samplingLocations = getAllSamplingLocations();
+        const samplingCrops = getAllSamplingCrops();
 
         const data = {
             id: Date.now().toString(),
@@ -636,9 +703,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             receptionMethod: formData.get('receptionMethod'),
             sampleName: formData.get('sampleName'),
             sampleCount: formData.get('sampleCount'),
-            mainCrop: formData.get('mainCrop'),
             samplingLocations: samplingLocations,
             samplingLocation: samplingLocations.join(', '), // 호환성을 위해 문자열로도 저장
+            samplingCrops: samplingCrops,
+            mainCrop: samplingCrops.filter(c => c).join(', '), // 호환성을 위해 문자열로도 저장
             purpose: formData.get('purpose'),
             testItems: formData.get('testItems'),
             note: formData.get('note'),
@@ -671,11 +739,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             agriculturalWaterItems.classList.remove('active');
         }
 
-        // 채취장소 초기화 (1개로 리셋)
+        // 채취장소 및 주작목 초기화 (1개로 리셋)
         updateSamplingLocations(1);
         const firstLocationInput = samplingLocationsList.querySelector('.sampling-location-input');
+        const firstCropInput = samplingLocationsList.querySelector('.sampling-crop-input');
         if (firstLocationInput) {
             firstLocationInput.value = '';
+        }
+        if (firstCropInput) {
+            firstCropInput.value = '';
         }
 
         // 접수번호 갱신 및 기본 번호 저장
@@ -789,6 +861,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <td>${log.sampleName || '-'}</td>
                 <td>${log.sampleCount || 1}점</td>
                 <td class="text-truncate" title="${log.samplingLocation || ''}">${log.samplingLocation || '-'}</td>
+                <td class="text-truncate" title="${log.mainCrop || ''}">${log.mainCrop || '-'}</td>
                 <td>${log.purpose || '-'}</td>
                 <td>${log.testItems || '-'}</td>
                 <td>${log.phoneNumber || '-'}</td>
@@ -873,16 +946,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         addressHidden.value = log.address || '';
         document.getElementById('sampleName').value = log.sampleName || '';
         document.getElementById('sampleCount').value = log.sampleCount || 1;
-        document.getElementById('mainCrop').value = log.mainCrop || '';
         document.getElementById('note').value = log.note || '';
 
-        // 채취장소 설정 (배열 또는 문자열)
+        // 채취장소 및 주작목 설정 (배열 또는 문자열)
+        const crops = log.samplingCrops || [];
         if (log.samplingLocations && Array.isArray(log.samplingLocations)) {
-            setSamplingLocations(log.samplingLocations);
+            setSamplingLocations(log.samplingLocations, crops);
         } else if (log.samplingLocation) {
             // 이전 데이터 호환: 문자열을 쉼표로 분리
             const locations = log.samplingLocation.split(',').map(s => s.trim());
-            setSamplingLocations(locations);
+            setSamplingLocations(locations, crops);
         }
 
         // 통보방법 선택
@@ -925,6 +998,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const formData = new FormData(form);
         const log = sampleLogs.find(l => l.id === editingId);
         const samplingLocations = getAllSamplingLocations();
+        const samplingCrops = getAllSamplingCrops();
 
         if (log) {
             log.receptionNumber = formData.get('receptionNumber');
@@ -938,9 +1012,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             log.receptionMethod = formData.get('receptionMethod');
             log.sampleName = formData.get('sampleName');
             log.sampleCount = formData.get('sampleCount');
-            log.mainCrop = formData.get('mainCrop');
             log.samplingLocations = samplingLocations;
             log.samplingLocation = samplingLocations.join(', '); // 호환성을 위해 문자열로도 저장
+            log.samplingCrops = samplingCrops;
+            log.mainCrop = samplingCrops.filter(c => c).join(', '); // 호환성을 위해 문자열로도 저장
             log.purpose = formData.get('purpose');
             log.testItems = formData.get('testItems');
             log.note = formData.get('note');
