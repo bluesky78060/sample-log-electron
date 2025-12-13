@@ -223,12 +223,7 @@
                                 <div class="form-row">
                                     <div class="form-field">
                                         <label for="cropName">재배 작물 <span class="required">*</span></label>
-                                        <div class="crop-input-wrapper">
-                                            <input type="text" id="cropName" name="cropName" required placeholder="작물명 입력">
-                                            <button type="button" id="searchCropBtn" class="btn-search-crop" title="작물 검색">
-                                                🔍
-                                            </button>
-                                        </div>
+                                        <input type="text" id="cropName" name="cropName" required placeholder="작물명 입력">
                                     </div>
                                     <div class="form-field">
                                         <label for="treeAge">과수 년생</label>
@@ -432,7 +427,6 @@
                             <th>접수번호</th>
                             <th>접수일자</th>
                             <th>성명</th>
-                            <th class="col-zipcode">우편번호</th>
                             <th>주소</th>
                             <th>연락처</th>
                             <th>시료채취장소</th>
@@ -457,38 +451,6 @@
             </div>
         </div>
     </main>
-
-    <!-- 작물 검색 모달 -->
-    <div id="cropModal" class="modal hidden">
-        <div class="modal-overlay"></div>
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>🌾 작물 검색</h3>
-                <button type="button" class="modal-close" id="closeCropModal">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="search-filter-row">
-                    <input type="text" id="cropSearchInput" placeholder="작물명 검색 (예: 고추, 사과...)">
-                    <select id="cropCategoryFilter">
-                        <option value="전체">전체 카테고리</option>
-                    </select>
-                </div>
-                <div class="results-info">
-                    <span id="cropResultCount">0개 작물</span>
-                    <button type="button" id="clearCropSelection" class="btn-text-danger">선택 초기화</button>
-                </div>
-                <div class="crop-list-wrapper">
-                    <ul id="cropList" class="crop-list">
-                        <!-- 작물 목록 -->
-                    </ul>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" id="cancelCropSelection" class="btn-cancel">취소</button>
-                <button type="button" id="confirmCropSelection" class="btn-confirm">선택 완료</button>
-            </div>
-        </div>
-    </div>
 
     <!-- 접수 목록 검색 모달 -->
     <div id="listSearchModal" class="modal hidden">

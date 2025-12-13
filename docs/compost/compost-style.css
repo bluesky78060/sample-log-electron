@@ -641,12 +641,19 @@
     margin-bottom: 0.25rem;
 }
 
-/* 입력 필드 크기 축소 */
-.compost-navbar ~ .main-content input,
+/* 입력 필드 크기 축소 (체크박스 제외) */
+.compost-navbar ~ .main-content input:not([type="checkbox"]):not([type="radio"]),
 .compost-navbar ~ .main-content select,
 .compost-navbar ~ .main-content textarea {
     padding: 0.4rem 0.6rem;
     font-size: 0.85rem;
+}
+
+/* 테이블 체크박스 크기 고정 */
+.compost-navbar ~ .main-content .data-table input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    padding: 0;
 }
 
 /* 비고 텍스트 영역 */

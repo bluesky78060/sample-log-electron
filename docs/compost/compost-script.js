@@ -119,6 +119,25 @@ const FileAPI = {
             }
         }
         return null;
+    },
+
+    async saveExcel(buffer, suggestedName = 'data.xlsx') {
+        if (isElectron) {
+            const filePath = await window.electronAPI.saveFileDialog({
+                title: '엑셀 파일 저장',
+                defaultPath: suggestedName,
+                filters: [
+                    { name: 'Excel Files', extensions: ['xlsx'] },
+                    { name: 'All Files', extensions: ['*'] }
+                ]
+            });
+            if (filePath) {
+                const result = await window.electronAPI.writeFile(filePath, buffer);
+                return result.success;
+            }
+            return false;
+        }
+        return false;
     }
 };
 
@@ -1143,6 +1162,76 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             renderLogs(filtered);
             listSearchModal.classList.add('hidden');
+        });
+    }
+
+    // ========================================
+    // 엑셀 내보내기
+    // ========================================
+    const exportBtn = document.getElementById('exportBtn');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', () => {
+            if (sampleLogs.length === 0) {
+                alert('내보낼 데이터가 없습니다.');
+                return;
+            }
+
+            const excelData = sampleLogs.map(log => ({
+                '접수번호': log.receptionNumber || '-',
+                '접수일자': log.date || '-',
+                '농장명': log.farmName || '-',
+                '대표자': log.name || '-',
+                '연락처': log.phoneNumber || '-',
+                '주소': log.address || '-',
+                '농장주소': log.farmAddress || '-',
+                '면적': log.area ? `${log.area} 평` : '-',
+                '시료종류': log.sampleType || '-',
+                '축종': log.animalType || '-',
+                '퇴비종류': log.compostType || '-',
+                '생산일': log.productionDate || '-',
+                '검사목적': log.purpose || '-',
+                '통보방법': log.receptionMethod || '-',
+                '비고': log.note || '-'
+            }));
+
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(excelData);
+
+            // 열 너비 설정
+            ws['!cols'] = [
+                { wch: 10 },  // 접수번호
+                { wch: 12 },  // 접수일자
+                { wch: 15 },  // 농장명
+                { wch: 10 },  // 대표자
+                { wch: 15 },  // 연락처
+                { wch: 30 },  // 주소
+                { wch: 30 },  // 농장주소
+                { wch: 12 },  // 면적
+                { wch: 12 },  // 시료종류
+                { wch: 10 },  // 축종
+                { wch: 10 },  // 퇴비종류
+                { wch: 12 },  // 생산일
+                { wch: 20 },  // 검사목적
+                { wch: 10 },  // 통보방법
+                { wch: 20 }   // 비고
+            ];
+
+            XLSX.utils.book_append_sheet(wb, ws, '퇴액비 접수목록');
+
+            const fileName = `퇴액비_접수목록_${new Date().toISOString().split('T')[0]}.xlsx`;
+
+            // Electron 환경에서는 FileAPI 사용
+            if (isElectron) {
+                const xlsxData = XLSX.write(wb, { bookType: 'xlsx', type: 'buffer' });
+                FileAPI.saveExcel(xlsxData, fileName).then(saved => {
+                    if (saved) {
+                        showToast('엑셀 파일로 내보내기 완료', 'success');
+                    }
+                });
+            } else {
+                XLSX.writeFile(wb, fileName);
+                showToast('엑셀 파일로 내보내기 완료', 'success');
+            }
         });
     }
 

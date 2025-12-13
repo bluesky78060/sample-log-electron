@@ -144,6 +144,56 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     await FileAPI.init();
 
+    // Electron 환경: 자동 저장 기본 활성화 및 첫 실행 시 폴더 선택
+    if (isElectron) {
+        const autoSaveToggle = document.getElementById('autoSaveToggle');
+        const hasSelectedFolder = localStorage.getItem('heavyMetalAutoSaveFolderSelected') === 'true';
+
+        // 처음 실행이거나 폴더가 선택되지 않은 경우
+        if (!hasSelectedFolder) {
+            // 잠시 후 폴더 선택 다이얼로그 표시 (UI 로드 후)
+            setTimeout(async () => {
+                const confirmSelect = confirm('자동 저장 기능을 사용하시겠습니까?\n\n저장할 폴더를 선택해주세요.');
+                if (confirmSelect) {
+                    try {
+                        const result = await window.electronAPI.selectAutoSaveFolder();
+                        if (result.success) {
+                            FileAPI.autoSavePath = await window.electronAPI.getAutoSavePath('heavy-metal');
+                            localStorage.setItem('heavyMetalAutoSaveFolderSelected', 'true');
+                            localStorage.setItem('heavyMetalAutoSaveEnabled', 'true');
+                            if (autoSaveToggle) {
+                                autoSaveToggle.checked = true;
+                            }
+                            updateAutoSaveStatus('active');
+                            autoSaveToFile();
+                            showToast('자동 저장이 활성화되었습니다.', 'success');
+                            console.log('📁 중금속 자동 저장 폴더 설정됨:', result.folder);
+                        }
+                    } catch (error) {
+                        console.error('폴더 선택 오류:', error);
+                    }
+                }
+            }, 500);
+        } else {
+            // 이전에 폴더를 선택한 경우, 자동 저장 기본 활성화
+            localStorage.setItem('heavyMetalAutoSaveEnabled', 'true');
+            if (autoSaveToggle) {
+                autoSaveToggle.checked = true;
+            }
+            // 자동 저장 경로 설정 및 활성화
+            (async () => {
+                try {
+                    FileAPI.autoSavePath = await window.electronAPI.getAutoSavePath('heavy-metal');
+                    updateAutoSaveStatus('active');
+                    autoSaveToFile();
+                    showToast('자동 저장이 활성화되었습니다.', 'success');
+                } catch (error) {
+                    console.error('자동 저장 경로 설정 오류:', error);
+                }
+            })();
+        }
+    }
+
     // ========================================
     // DOM 요소 참조
     // ========================================
@@ -190,6 +240,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let sampleLogs = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
     let editingIndex = -1;
     let isAllSelected = false;
+    let autoSaveFileHandle = null;  // Web 환경 자동저장 파일 핸들
 
     // 오늘 날짜 설정
     const today = new Date().toISOString().split('T')[0];
@@ -408,6 +459,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         samplingLocationInput.addEventListener('input', (e) => {
             const value = e.target.value.trim();
             samplingLocationAutocomplete.innerHTML = '';
+            samplingLocationAutocomplete.classList.remove('show');
 
             if (value.length < 1) return;
 
@@ -420,42 +472,80 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (typeof suggestRegionVillages === 'function') {
                 const suggestions = suggestRegionVillages(value, null);
                 if (suggestions.length > 0) {
-                    suggestions.slice(0, 10).forEach(suggestion => {
-                        const li = document.createElement('li');
-                        li.textContent = suggestion.fullAddress;
-                        li.addEventListener('click', () => {
-                            samplingLocationInput.value = suggestion.fullAddress;
-                            samplingLocationAutocomplete.innerHTML = '';
-                        });
-                        samplingLocationAutocomplete.appendChild(li);
-                    });
+                    samplingLocationAutocomplete.innerHTML = suggestions.slice(0, 10).map(suggestion => `
+                        <li data-village="${suggestion.village}" data-district="${suggestion.district}" data-region="${suggestion.region}">
+                            ${suggestion.displayText}
+                        </li>
+                    `).join('');
+                    samplingLocationAutocomplete.classList.add('show');
                 }
             }
         });
 
-        // Enter 키로 자동완성 확인
+        // Enter 키로 자동완성 확인 - 중복 리 검색 지원
         samplingLocationInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 const value = samplingLocationInput.value.trim();
 
+                // 이미 완전한 주소면 무시
                 if (GYEONGBUK_REGION_NAMES.some(name => value.startsWith(name))) {
                     samplingLocationAutocomplete.innerHTML = '';
+                    samplingLocationAutocomplete.classList.remove('show');
                     return;
                 }
 
                 if (typeof parseParcelAddress === 'function') {
                     const result = parseParcelAddress(value);
                     if (result) {
+                        // 여러 지역에서 중복되는 경우 (isDuplicate: true) - 드롭다운 표시
                         if (result.isDuplicate && result.locations) {
-                            // 여러 지역에 중복되는 경우 첫 번째 사용
-                            samplingLocationInput.value = result.locations[0].fullAddress + (result.lotNumber ? ' ' + result.lotNumber : '');
+                            samplingLocationAutocomplete.innerHTML = result.locations.map(loc => `
+                                <li data-village="${result.villageName}" data-district="${loc.district}" data-region="${loc.region}" data-lot="${result.lotNumber || ''}">
+                                    ${loc.fullAddress} ${result.lotNumber || ''}
+                                </li>
+                            `).join('');
+                            samplingLocationAutocomplete.classList.add('show');
+                        }
+                        // 단일 지역 내 중복인 경우
+                        else if (result.alternatives && result.alternatives.length > 1) {
+                            samplingLocationAutocomplete.innerHTML = result.alternatives.map(district => `
+                                <li data-village="${result.village}" data-district="${district}" data-lot="${result.lotNumber || ''}" data-region="${result.region}">
+                                    ${result.region} ${district} ${result.village} ${result.lotNumber || ''}
+                                </li>
+                            `).join('');
+                            samplingLocationAutocomplete.classList.add('show');
                         } else if (result.fullAddress) {
+                            // 단일 매칭 - 바로 변환
+                            samplingLocationAutocomplete.innerHTML = '';
+                            samplingLocationAutocomplete.classList.remove('show');
                             samplingLocationInput.value = result.fullAddress;
                         }
                     }
                 }
+            }
+        });
+
+        // 자동완성 목록 클릭 시 (중복 리 선택 포함)
+        samplingLocationAutocomplete.addEventListener('click', (e) => {
+            if (e.target.tagName === 'LI') {
+                const village = e.target.dataset.village;
+                const district = e.target.dataset.district;
+                const region = e.target.dataset.region;
+                const lot = e.target.dataset.lot;
+
+                // 클릭 시 전체 주소로 변환
+                const currentValue = samplingLocationInput.value.trim();
+                const match = currentValue.match(/(\d+[\d\-]*)$/);
+                const lotNumber = lot || (match ? match[1] : '');
+
+                const fullAddress = lotNumber
+                    ? `${region} ${district} ${village} ${lotNumber}`
+                    : `${region} ${district} ${village}`;
+
+                samplingLocationInput.value = fullAddress;
                 samplingLocationAutocomplete.innerHTML = '';
+                samplingLocationAutocomplete.classList.remove('show');
             }
         });
 
@@ -463,6 +553,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         samplingLocationInput.addEventListener('blur', () => {
             setTimeout(() => {
                 samplingLocationAutocomplete.innerHTML = '';
+                samplingLocationAutocomplete.classList.remove('show');
             }, 200);
         });
     }
@@ -560,20 +651,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ========================================
     // 접수번호 생성
     // ========================================
-    function generateReceptionNumber() {
-        const now = new Date();
-        const year = now.getFullYear().toString().slice(-2);
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
+    const receptionNumberInput = document.getElementById('receptionNumber');
 
-        // 오늘 날짜의 중금속 접수 건수 확인
-        const todayPrefix = `HM${year}${month}${day}`;
-        const todayLogs = sampleLogs.filter(log =>
-            log.receptionNumber && log.receptionNumber.startsWith(todayPrefix)
-        );
+    // 다음 접수번호 생성
+    function generateNextReceptionNumber() {
+        let maxNumber = 0;
 
-        const nextNum = todayLogs.length + 1;
-        return `${todayPrefix}-${String(nextNum).padStart(3, '0')}`;
+        // 기존 데이터에서 최대 번호 찾기
+        // 형식: 1, 2, 3 (숫자만)
+        sampleLogs.forEach(log => {
+            if (log.receptionNumber) {
+                const num = parseInt(log.receptionNumber, 10);
+                if (!isNaN(num) && num > maxNumber) {
+                    maxNumber = num;
+                }
+            }
+        });
+
+        // 다음 번호 생성
+        const nextNumber = maxNumber + 1;
+        console.log(`📋 다음 접수번호 생성: ${nextNumber} (기존 최대: ${maxNumber})`);
+        return String(nextNumber);
+    }
+
+    // 초기 접수번호 설정
+    if (receptionNumberInput) {
+        receptionNumberInput.value = generateNextReceptionNumber();
     }
 
     // ========================================
@@ -637,7 +740,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 데이터 수집
         const data = {
             id: editingIndex >= 0 ? sampleLogs[editingIndex].id : Date.now(),
-            receptionNumber: document.getElementById('receptionNumber')?.value || generateReceptionNumber(),
+            receptionNumber: document.getElementById('receptionNumber')?.value || generateNextReceptionNumber(),
             date: document.getElementById('date')?.value || today,
             name: name,
             phoneNumber: phoneNumber,
@@ -681,9 +784,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (dateInput) dateInput.value = today;
         if (samplingDateInput) samplingDateInput.value = today;
 
-        // 접수번호 초기화 (자동 생성)
-        const receptionNumberInput = document.getElementById('receptionNumber');
-        if (receptionNumberInput) receptionNumberInput.value = '';
+        // 다음 접수번호 자동 생성
+        if (receptionNumberInput) receptionNumberInput.value = generateNextReceptionNumber();
 
         // 수령 방법 선택 초기화
         receptionMethodBtns.forEach(btn => btn.classList.remove('active', 'selected'));
@@ -708,11 +810,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     async function autoSaveToFile() {
-        const autoSaveToggle = document.getElementById('autoSaveToggle');
-        if (!autoSaveToggle || !autoSaveToggle.checked) return;
-
         const dataToSave = {
-            version: '1.0',
+            version: '2.0',
             exportDate: new Date().toISOString(),
             sampleType: SAMPLE_TYPE,
             totalRecords: sampleLogs.length,
@@ -720,10 +819,45 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         const content = JSON.stringify(dataToSave, null, 2);
-        const success = await FileAPI.autoSave(content);
 
-        if (success) {
-            updateAutoSaveStatus('saved');
+        if (isElectron) {
+            // Electron: FileAPI 사용
+            try {
+                updateAutoSaveStatus('saving');
+                const success = await FileAPI.autoSave(content);
+                if (success) {
+                    updateAutoSaveStatus('saved');
+                    setTimeout(() => updateAutoSaveStatus('active'), 2000);
+                } else {
+                    updateAutoSaveStatus('error');
+                }
+            } catch (error) {
+                console.error('자동 저장 오류:', error);
+                updateAutoSaveStatus('error');
+            }
+        } else {
+            // Web: 기존 File System Access API
+            if (!autoSaveFileHandle) return;
+
+            try {
+                updateAutoSaveStatus('saving');
+
+                const writable = await autoSaveFileHandle.createWritable();
+                await writable.write(content);
+                await writable.close();
+
+                updateAutoSaveStatus('saved');
+
+                setTimeout(() => {
+                    if (autoSaveFileHandle) {
+                        updateAutoSaveStatus('active');
+                    }
+                }, 2000);
+
+            } catch (error) {
+                console.error('자동 저장 오류:', error);
+                updateAutoSaveStatus('error');
+            }
         }
     }
 
@@ -732,26 +866,38 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!autoSaveStatus) return;
 
         const statusIndicator = autoSaveStatus.querySelector('.status-indicator');
-        autoSaveStatus.classList.remove('active', 'saving', 'error');
+
+        autoSaveStatus.classList.remove('hidden', 'active', 'saving', 'error');
 
         switch (status) {
             case 'active':
                 autoSaveStatus.classList.add('active');
                 if (statusIndicator) statusIndicator.style.background = '#22c55e';
+                autoSaveStatus.classList.remove('hidden');
                 break;
             case 'saving':
                 autoSaveStatus.classList.add('saving');
                 if (statusIndicator) statusIndicator.style.background = '#f59e0b';
+                autoSaveStatus.classList.remove('hidden');
                 break;
             case 'saved':
                 autoSaveStatus.classList.add('active');
                 if (statusIndicator) statusIndicator.style.background = '#22c55e';
+                autoSaveStatus.classList.remove('hidden');
                 break;
             case 'error':
                 autoSaveStatus.classList.add('error');
                 if (statusIndicator) statusIndicator.style.background = '#ef4444';
+                autoSaveStatus.classList.remove('hidden');
                 break;
+            case 'pending':
+                autoSaveStatus.classList.add('saving');
+                if (statusIndicator) statusIndicator.style.background = '#3b82f6';
+                autoSaveStatus.classList.remove('hidden');
+                break;
+            case 'inactive':
             default:
+                autoSaveStatus.classList.add('hidden');
                 if (statusIndicator) statusIndicator.style.background = '#94a3b8';
         }
     }
@@ -793,7 +939,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <td>${log.receptionNumber || '-'}</td>
                 <td>${log.date || '-'}</td>
                 <td>${log.name || '-'}</td>
-                <td>${log.addressPostcode || '-'}</td>
                 <td title="${log.address || ''}">${(log.addressRoad || '-').substring(0, 20)}${(log.addressRoad || '').length > 20 ? '...' : ''}</td>
                 <td>${log.phoneNumber || '-'}</td>
                 <td title="${log.samplingLocation || ''}">${(log.samplingLocation || '-').substring(0, 15)}${(log.samplingLocation || '').length > 15 ? '...' : ''}</td>
@@ -993,8 +1138,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const autoSaveStatus = document.getElementById('autoSaveStatus');
     const selectAutoSaveFolderBtn = document.getElementById('selectAutoSaveFolderBtn');
 
-    let autoSaveFileHandle = null;
-
     // 자동 저장 폴더 선택 버튼 (Electron 전용)
     if (selectAutoSaveFolderBtn && isElectron) {
         selectAutoSaveFolderBtn.addEventListener('click', async () => {
@@ -1056,21 +1199,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // ========================================
-    // 자동 저장 기능 (Electron / Web 통합)
+    // 자동 저장 기능 (Web 환경 전용)
     // ========================================
+    // Electron 환경은 DOMContentLoaded 시작 부분에서 처리됨
 
-    // 페이지 로드 시 자동 저장 상태 복원
-    const autoSaveEnabled = localStorage.getItem('heavyMetalAutoSaveEnabled') === 'true';
-    if (autoSaveToggle && autoSaveEnabled) {
-        autoSaveToggle.checked = true;
-
-        if (isElectron) {
-            // Electron: 자동 저장 경로가 이미 설정됨
-            updateAutoSaveStatus('active');
-            autoSaveToFile();
-            showToast('자동 저장이 활성화되었습니다.', 'success');
-        } else {
-            // Web: 파일 핸들 새로 설정 필요
+    // 페이지 로드 시 Web 환경 자동 저장 상태 복원
+    if (!isElectron) {
+        const autoSaveEnabled = localStorage.getItem('heavyMetalAutoSaveEnabled') === 'true';
+        if (autoSaveToggle && autoSaveEnabled) {
+            autoSaveToggle.checked = true;
             updateAutoSaveStatus('pending');
             if ('showSaveFilePicker' in window) {
                 (async () => {
