@@ -187,3 +187,44 @@
 .soil-navbar ~ .main-content a:hover {
     color: var(--soil-primary-dark);
 }
+
+/* 필지 정보 카드 내부 스크롤 */
+.soil-navbar ~ .main-content .parcels-list {
+    max-height: calc(100vh - 180px);
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+/* 필지 목록 스크롤바 스타일 */
+.soil-navbar ~ .main-content .parcels-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.soil-navbar ~ .main-content .parcels-list::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 3px;
+}
+
+.soil-navbar ~ .main-content .parcels-list::-webkit-scrollbar-thumb {
+    background: var(--soil-primary-light);
+    border-radius: 3px;
+}
+
+.soil-navbar ~ .main-content .parcels-list::-webkit-scrollbar-thumb:hover {
+    background: var(--soil-primary);
+}
+
+/* 필지 요약과 작물추가 버튼 간격 축소 */
+.soil-navbar ~ .main-content .parcel-summary {
+    margin: 0;
+    padding: 0.15rem 0.4rem;
+    gap: 0.4rem;
+    font-size: 0.7rem;
+}
+
+.soil-navbar ~ .main-content .btn-add-crop-area {
+    margin: 0;
+    padding: 0.2rem 0.4rem;
+    font-size: 0.8rem;
+}
+

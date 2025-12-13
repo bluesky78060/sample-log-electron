@@ -1212,7 +1212,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         return `
             <div class="summary-item">
-                <span>하위 지번:</span>
+                <span>하위 필지:</span>
                 <span>${subLotCount}개</span>
             </div>
             <div class="summary-item">
