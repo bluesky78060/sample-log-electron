@@ -1,0 +1,415 @@
+/* ========================================
+   토양 중금속 시료 전용 스타일
+   ======================================== */
+
+/* 중금속 테마 색상 (보라색 계열) */
+:root {
+    --heavy-metal-primary: #8B5CF6;
+    --heavy-metal-primary-hover: #7C3AED;
+    --heavy-metal-primary-light: #DDD6FE;
+    --heavy-metal-primary-dark: #6D28D9;
+    --heavy-metal-gradient: linear-gradient(135deg, #8B5CF6, #7C3AED);
+}
+
+/* 네비게이션 바 중금속 테마 */
+.heavy-metal-navbar {
+    background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+    border-bottom: 2px solid var(--heavy-metal-primary-light);
+}
+
+.heavy-metal-navbar .brand-icon {
+    font-size: 1.5rem;
+}
+
+.heavy-metal-navbar .brand-text {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--heavy-metal-primary-dark);
+    margin-left: 0.25rem;
+}
+
+/* 뒤로가기 버튼 */
+.heavy-metal-navbar .back-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: white;
+    color: var(--heavy-metal-primary-dark);
+    text-decoration: none;
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-right: 0.5rem;
+    border: 1px solid var(--heavy-metal-primary-light);
+    transition: all 0.2s ease;
+}
+
+.heavy-metal-navbar .back-btn:hover {
+    background: var(--heavy-metal-primary);
+    color: white;
+    border-color: var(--heavy-metal-primary);
+}
+
+/* 네비게이션 버튼 활성화 */
+.heavy-metal-navbar .nav-btn.active {
+    background: var(--heavy-metal-gradient);
+}
+
+/* 폼 카드 헤더 중금속 테마 */
+.heavy-metal-navbar ~ .main-content .form-card .card-header {
+    background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+    border-bottom: 1px solid var(--heavy-metal-primary-light);
+}
+
+.heavy-metal-navbar ~ .main-content .form-card .card-header h3 {
+    color: var(--heavy-metal-primary-dark);
+}
+
+/* 버튼 중금속 테마 */
+.heavy-metal-navbar ~ .main-content .btn-add-small,
+.heavy-metal-navbar ~ .main-content .btn-add-parcel-empty,
+.heavy-metal-navbar ~ .main-content .btn-add-row,
+.heavy-metal-navbar ~ .main-content .btn-select-all {
+    background: var(--heavy-metal-gradient);
+}
+
+.heavy-metal-navbar ~ .main-content .btn-add-small:hover,
+.heavy-metal-navbar ~ .main-content .btn-add-parcel-empty:hover,
+.heavy-metal-navbar ~ .main-content .btn-add-row:hover,
+.heavy-metal-navbar ~ .main-content .btn-select-all:hover {
+    background: linear-gradient(135deg, #7C3AED, #6D28D9);
+}
+
+/* 전체선택 버튼 스타일 */
+.btn-select-all {
+    padding: 0.35rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+/* 확인 버튼 중금속 테마 */
+.heavy-metal-navbar ~ .main-content .btn-confirm,
+.heavy-metal-navbar ~ .main-content .btn-search-apply {
+    background: var(--heavy-metal-gradient);
+}
+
+.heavy-metal-navbar ~ .main-content .btn-confirm:hover,
+.heavy-metal-navbar ~ .main-content .btn-search-apply:hover {
+    background: linear-gradient(135deg, #7C3AED, #6D28D9);
+}
+
+/* 액션 버튼 중금속 테마 */
+.heavy-metal-navbar .action-btn-icon.submit {
+    background: var(--heavy-metal-gradient);
+}
+
+.heavy-metal-navbar .action-btn-icon.submit:hover {
+    background: linear-gradient(135deg, #7C3AED, #6D28D9);
+}
+
+/* 검색 버튼 중금속 테마 */
+.heavy-metal-navbar ~ .main-content .btn-search {
+    background: var(--heavy-metal-gradient);
+}
+
+.heavy-metal-navbar ~ .main-content .btn-search:hover {
+    background: linear-gradient(135deg, #7C3AED, #6D28D9);
+}
+
+/* 수령 방법 선택 버튼 중금속 테마 */
+.heavy-metal-navbar ~ .main-content .reception-method-btn.selected {
+    background: var(--heavy-metal-gradient);
+    border-color: var(--heavy-metal-primary);
+}
+
+/* 체크박스 중금속 테마 */
+.heavy-metal-navbar ~ .main-content input[type="checkbox"]:checked {
+    background: var(--heavy-metal-primary);
+    border-color: var(--heavy-metal-primary);
+}
+
+/* 라디오 버튼 중금속 테마 */
+.heavy-metal-navbar ~ .main-content input[type="radio"]:checked {
+    border-color: var(--heavy-metal-primary);
+}
+
+.heavy-metal-navbar ~ .main-content input[type="radio"]:checked::before {
+    background: var(--heavy-metal-primary);
+}
+
+/* 토글 스위치 중금속 테마 */
+.heavy-metal-navbar .autosave-toggle input:checked + .toggle-track {
+    background: var(--heavy-metal-gradient);
+}
+
+/* 통계 카드 중금속 테마 */
+.heavy-metal-navbar ~ .main-content .stat-card.total {
+    border-left-color: var(--heavy-metal-primary);
+}
+
+/* 목록 뷰 헤더 */
+.heavy-metal-navbar ~ .main-content .view-header-top h2 {
+    color: var(--heavy-metal-primary-dark);
+}
+
+/* 토스트 성공 중금속 테마 */
+.heavy-metal-navbar ~ .main-content .toast.success,
+.toast.success {
+    background: var(--heavy-metal-gradient);
+}
+
+/* 폼 필드 포커스 중금속 테마 */
+.heavy-metal-navbar ~ .main-content input:focus,
+.heavy-metal-navbar ~ .main-content select:focus,
+.heavy-metal-navbar ~ .main-content textarea:focus {
+    border-color: var(--heavy-metal-primary);
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+}
+
+/* 테이블 행 선택 중금속 테마 */
+.heavy-metal-navbar ~ .main-content .data-table tbody tr:hover {
+    background: rgba(139, 92, 246, 0.05);
+}
+
+.heavy-metal-navbar ~ .main-content .data-table tbody tr.selected {
+    background: rgba(139, 92, 246, 0.1);
+}
+
+/* 진행 바 중금속 테마 */
+.heavy-metal-navbar ~ .main-content .progress-bar {
+    background: var(--heavy-metal-gradient);
+}
+
+/* 링크 중금속 테마 */
+.heavy-metal-navbar ~ .main-content a {
+    color: var(--heavy-metal-primary);
+}
+
+.heavy-metal-navbar ~ .main-content a:hover {
+    color: var(--heavy-metal-primary-dark);
+}
+
+/* ========================================
+   분석항목 그리드 스타일
+   ======================================== */
+
+.analysis-items-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+}
+
+.analysis-item {
+    cursor: pointer;
+}
+
+.analysis-item input[type="checkbox"] {
+    display: none;
+}
+
+.analysis-item .item-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem 0.5rem;
+    background: #f8fafc;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    transition: all 0.2s ease;
+    min-height: 80px;
+}
+
+.analysis-item:hover .item-box {
+    border-color: var(--heavy-metal-primary-light);
+    background: #f5f3ff;
+}
+
+.analysis-item input:checked + .item-box {
+    background: var(--heavy-metal-gradient);
+    border-color: var(--heavy-metal-primary);
+    color: white;
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+.item-symbol {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+}
+
+.item-name {
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.analysis-item input:checked + .item-box .item-symbol,
+.analysis-item input:checked + .item-box .item-name {
+    color: white;
+}
+
+/* 선택된 항목 요약 */
+.selected-items-summary {
+    text-align: center;
+    padding: 0.75rem;
+    background: #f8fafc;
+    border-radius: 8px;
+    margin-top: 0.75rem;
+    font-size: 0.875rem;
+    color: #64748b;
+}
+
+.selected-items-summary #selectedItemsCount {
+    font-weight: 700;
+    color: var(--heavy-metal-primary);
+    font-size: 1.1rem;
+}
+
+/* ========================================
+   목적(용도) 옵션 스타일
+   ======================================== */
+
+.purpose-options {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.75rem;
+}
+
+.purpose-option {
+    cursor: pointer;
+}
+
+.purpose-option input[type="radio"] {
+    display: none;
+}
+
+.purpose-option .option-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem 0.5rem;
+    background: #f8fafc;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    transition: all 0.2s ease;
+    min-height: 70px;
+}
+
+.purpose-option:hover .option-box {
+    border-color: var(--heavy-metal-primary-light);
+    background: #f5f3ff;
+}
+
+.purpose-option input:checked + .option-box {
+    background: var(--heavy-metal-gradient);
+    border-color: var(--heavy-metal-primary);
+    color: white;
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+.option-icon {
+    font-size: 1.5rem;
+    margin-bottom: 0.25rem;
+}
+
+.option-text {
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.purpose-option input:checked + .option-box .option-text {
+    color: white;
+}
+
+/* 인증용 안내 메시지 */
+.certification-notice {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border: 1px solid #f59e0b;
+    border-radius: 8px;
+    margin-top: 0.75rem;
+    font-size: 0.85rem;
+    color: #92400e;
+}
+
+.certification-notice.hidden {
+    display: none;
+}
+
+.notice-icon {
+    font-size: 1.1rem;
+}
+
+/* ========================================
+   작물 입력 래퍼
+   ======================================== */
+
+.crop-input-wrapper {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.crop-input-wrapper input {
+    flex: 1;
+}
+
+.btn-search-crop {
+    padding: 0.5rem 0.75rem;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-search-crop:hover {
+    background: var(--heavy-metal-primary-light);
+    border-color: var(--heavy-metal-primary);
+}
+
+/* ========================================
+   반응형 스타일
+   ======================================== */
+
+@media (max-width: 1024px) {
+    .analysis-items-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    .purpose-options {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .analysis-items-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .purpose-options {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .form-two-column {
+        flex-direction: column;
+    }
+
+    .form-left-column,
+    .form-right-column {
+        width: 100%;
+    }
+}
