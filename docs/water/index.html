@@ -38,11 +38,44 @@
 <body>
     <!-- 네비게이션 바 -->
     <nav class="navbar water-navbar">
-        <!-- 로고 -->
+        <!-- 뒤로가기 버튼 -->
+        <a href="../index.html" class="back-btn" title="메인으로">←</a>
+        <!-- 로고 및 파트 선택 드롭다운 -->
         <div class="navbar-brand">
-            <a href="../index.html" class="back-btn" title="메인으로">←</a>
-            <span class="brand-icon">💧</span>
-            <span class="brand-text">수질분석</span>
+            <div class="brand-dropdown-trigger">
+                <span class="brand-icon">💧</span>
+                <span class="brand-text">수질분석</span>
+                <span class="dropdown-arrow">▼</span>
+            </div>
+            <div class="brand-dropdown-menu">
+                <div class="dropdown-header">시료 분석 메뉴</div>
+                <a href="../soil/index.html" class="dropdown-item">
+                    <span class="item-icon">🌱</span>
+                    <span class="item-text">토양 분석</span>
+                </a>
+                <a href="../water/index.html" class="dropdown-item active">
+                    <span class="item-icon">💧</span>
+                    <span class="item-text">수질 분석</span>
+                </a>
+                <a href="../compost/index.html" class="dropdown-item">
+                    <span class="item-icon">🐄</span>
+                    <span class="item-text">퇴·액비 성분검사</span>
+                </a>
+                <div class="dropdown-divider"></div>
+                <a href="#" class="dropdown-item" onclick="alert('준비 중입니다'); return false;">
+                    <span class="item-icon">🧪</span>
+                    <span class="item-text">잔류농약 검사</span>
+                </a>
+                <a href="#" class="dropdown-item" onclick="alert('준비 중입니다'); return false;">
+                    <span class="item-icon">⚗️</span>
+                    <span class="item-text">중금속 검사</span>
+                </a>
+                <div class="dropdown-divider"></div>
+                <a href="../label-print/index.html" class="dropdown-item">
+                    <span class="item-icon">🏷️</span>
+                    <span class="item-text">라벨 인쇄</span>
+                </a>
+            </div>
         </div>
 
         <!-- 메인 네비게이션 -->
