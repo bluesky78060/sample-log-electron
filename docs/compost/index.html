@@ -209,14 +209,24 @@
                                 <div class="form-row">
                                     <div class="form-field full">
                                         <label for="farmAddressFull">농장주소</label>
-                                        <input type="text" id="farmAddressFull" name="farmAddressFull"
-                                            placeholder="농장 주소 직접 입력 (예: 경북 봉화군 봉화읍 내성리 123)">
+                                        <div class="lot-address-autocomplete-wrapper">
+                                            <input type="text" id="farmAddressFull" name="farmAddressFull"
+                                                placeholder="마을명 + 번지 입력 (예: 내성 123) 후 Enter">
+                                            <ul class="lot-address-autocomplete-list" id="farmAddressAutocomplete"></ul>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="form-row">
-                                    <div class="form-field">
-                                        <label for="farmArea">면적(㎡)</label>
-                                        <input type="number" id="farmArea" name="farmArea" placeholder="면적">
+                                    <div class="form-field full">
+                                        <label for="farmArea">면적</label>
+                                        <div class="area-input-wrapper">
+                                            <input type="text" id="farmArea" name="farmArea" placeholder="면적" inputmode="numeric">
+                                            <div class="area-unit-toggle" id="areaUnitToggle" data-unit="m2">
+                                                <button type="button" class="unit-btn active" data-value="m2">㎡</button>
+                                                <button type="button" class="unit-btn" data-value="pyeong">평</button>
+                                            </div>
+                                        </div>
+                                        <input type="hidden" id="farmAreaUnit" name="farmAreaUnit" value="m2">
                                     </div>
                                 </div>
                             </div>
@@ -233,7 +243,7 @@
                             </div>
                             <div class="card-body">
                                 <!-- 시료종류 -->
-                                <div class="form-row">
+                                <div class="form-row single">
                                     <div class="form-field full-width">
                                         <label>시료종류 <span class="required">*</span></label>
                                         <div class="sample-type-options">
@@ -256,7 +266,7 @@
                                 </div>
 
                                 <!-- 축종 -->
-                                <div class="form-row">
+                                <div class="form-row single">
                                     <div class="form-field full-width">
                                         <label>축종 <span class="required">*</span></label>
                                         <div class="animal-type-options">
@@ -319,14 +329,7 @@
                                 <div class="form-row single">
                                     <div class="form-field full">
                                         <label for="purpose">목적(용도)</label>
-                                        <select id="purpose" name="purpose">
-                                            <option value="퇴비화기준 적합여부 판정">퇴비화기준 적합여부 판정</option>
-                                            <option value="자가사용">자가사용</option>
-                                            <option value="판매용">판매용</option>
-                                            <option value="참고용">참고용</option>
-                                            <option value="민원">민원</option>
-                                            <option value="기타">기타</option>
-                                        </select>
+                                        <input type="text" id="purpose" name="purpose" placeholder="목적(용도) 입력">
                                     </div>
                                 </div>
 
@@ -347,25 +350,30 @@
 
         <!-- 접수 목록 뷰 -->
         <div id="listView" class="view">
-            <div class="list-header">
-                <h2>퇴·액비 접수 목록 <span id="recordCount" class="record-count">0건</span></h2>
-                <div class="list-actions">
-                    <button type="button" id="toggleColumnsBtn" class="btn-secondary">
-                        👁️ 전체 보기
-                    </button>
-                    <button type="button" id="statsBtn" class="btn-primary">
+            <div class="view-header-top">
+                <div class="header-left">
+                    <h2>퇴·액비 접수 목록</h2>
+                    <span class="record-count" id="recordCount">0건</span>
+                </div>
+                <div class="header-right">
+                    <div class="view-toggle">
+                        <button type="button" id="toggleColumnsBtn" class="btn-view-toggle" title="전체 보기/기본 보기">
+                            <span class="toggle-icon">👁️</span>
+                            <span class="toggle-text">전체 보기</span>
+                        </button>
+                    </div>
+                    <button type="button" id="statsBtn" class="btn-statistics" title="통계">
                         📊 통계
                     </button>
-                    <button type="button" id="printLabelBtn" class="btn-warning">
+                    <button type="button" id="printLabelBtn" class="btn-label-print" title="선택한 항목 라벨 인쇄">
                         🏷️ 라벨 인쇄
                     </button>
-                    <button type="button" id="deleteSelectedBtn" class="btn-danger">
+                    <button type="button" id="deleteSelectedBtn" class="btn-bulk-delete" title="선택한 항목 일괄 삭제">
                         🗑️ 선택 삭제
                     </button>
-                    <div class="search-box">
-                        <input type="text" id="searchInput" placeholder="검색..." class="search-input">
-                        <span class="search-icon">🔍</span>
-                    </div>
+                    <button type="button" id="openSearchModalBtn" class="btn-search-open" title="검색">
+                        🔍 검색
+                    </button>
                 </div>
             </div>
             <div class="table-wrapper">
@@ -380,10 +388,13 @@
                             <th>접수일자</th>
                             <th>농장명</th>
                             <th>대표자</th>
+                            <th class="col-postcode col-hidden">우편번호</th>
+                            <th class="col-address">주소</th>
+                            <th class="col-farm-address">농장주소</th>
+                            <th>면적</th>
                             <th>시료종류</th>
                             <th>축종</th>
                             <th>생산일</th>
-                            <th>시료수</th>
                             <th>목적</th>
                             <th>연락처</th>
                             <th>통보방법</th>
@@ -413,7 +424,7 @@
                 <button type="button" class="modal-close" id="closeAddressModal">&times;</button>
             </div>
             <div class="modal-body">
-                <div id="daumPostcodeContainer"></div>
+                <div id="daumPostcodeContainer" class="postcode-container"></div>
             </div>
         </div>
     </div>
@@ -472,13 +483,45 @@
         </div>
     </div>
 
+    <!-- 접수 목록 검색 모달 -->
+    <div id="listSearchModal" class="modal hidden">
+        <div class="modal-overlay"></div>
+        <div class="modal-content modal-search">
+            <div class="modal-header">
+                <h3>🔍 검색</h3>
+                <button type="button" class="modal-close" id="closeSearchModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="search-modal-form">
+                    <div class="search-form-group">
+                        <label for="searchDateInput">접수일자</label>
+                        <div class="search-input-row">
+                            <input type="date" id="searchDateInput" class="search-input">
+                            <button type="button" id="clearSearchDate" class="btn-clear-field">초기화</button>
+                        </div>
+                    </div>
+                    <div class="search-form-group">
+                        <label for="searchTextInput">성명 / 접수번호 / 농장명</label>
+                        <input type="text" id="searchTextInput" placeholder="검색어 입력..." class="search-input">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="resetSearchBtn" class="btn-secondary">전체 초기화</button>
+                <button type="button" id="applySearchBtn" class="btn-primary">검색</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 토스트 컨테이너 -->
     <div id="toastContainer" class="toast-container"></div>
 
     <!-- 다음 우편번호 서비스 -->
-    <script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+    <script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
     <!-- XLSX 라이브러리 -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <!-- 봉화 지역 데이터 (자동완성용) -->
+    <script src="../bonghwaData.js"></script>
     <!-- 메인 스크립트 -->
     <script src="compost-script.js"></script>
 </body>
