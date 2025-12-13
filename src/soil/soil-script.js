@@ -2791,13 +2791,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                         '구분': log.subCategory || '-',
                         '목적(용도)': log.purpose || '-',
                         '성명': log.name,
+                        '전화번호': log.phoneNumber,
                         '주소': log.address,
                         '필지 주소': parcel.lotAddress || '-',
                         '작물': cropsDisplay,
                         '면적(m²)': totalArea > 0 ? totalArea : '-',
-                        '전화번호': log.phoneNumber,
                         '수령 방법': log.receptionMethod || '-',
-                        '비고': log.note || '-'
+                        '비고': log.note || '-',
+                        '완료여부': log.isCompleted ? '완료' : '미완료',
+                        '등록일시': log.createdAt ? new Date(log.createdAt).toLocaleString('ko-KR') : '-'
                     });
 
                     // 하위 필지 데이터 추가 (접수 목록과 동일한 방식)
@@ -2819,13 +2821,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 '구분': log.subCategory || '-',
                                 '목적(용도)': log.purpose || '-',
                                 '성명': log.name,
+                                '전화번호': log.phoneNumber,
                                 '주소': log.address,
                                 '필지 주소': subLotAddress,
                                 '작물': subLotCropsDisplay,
                                 '면적(m²)': subLotTotalArea > 0 ? subLotTotalArea : '-',
-                                '전화번호': log.phoneNumber,
                                 '수령 방법': log.receptionMethod || '-',
-                                '비고': log.note || '-'
+                                '비고': log.note || '-',
+                                '완료여부': log.isCompleted ? '완료' : '미완료',
+                                '등록일시': log.createdAt ? new Date(log.createdAt).toLocaleString('ko-KR') : '-'
                             });
                         });
                     }
@@ -2838,13 +2842,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                     '구분': log.subCategory || '-',
                     '목적(용도)': log.purpose || '-',
                     '성명': log.name,
+                    '전화번호': log.phoneNumber,
                     '주소': log.address,
                     '필지 주소': log.lotAddress || '-',
                     '작물': log.cropsDisplay || '-',
                     '면적(m²)': log.area || '-',
-                    '전화번호': log.phoneNumber,
                     '수령 방법': log.receptionMethod || '-',
-                    '비고': log.note || '-'
+                    '비고': log.note || '-',
+                    '완료여부': log.isCompleted ? '완료' : '미완료',
+                    '등록일시': log.createdAt ? new Date(log.createdAt).toLocaleString('ko-KR') : '-'
                 });
             }
         });
@@ -2858,13 +2864,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             { wch: 8 },   // 구분
             { wch: 12 },  // 목적(용도)
             { wch: 10 },  // 성명
+            { wch: 15 },  // 전화번호
             { wch: 35 },  // 주소
             { wch: 30 },  // 필지 주소
             { wch: 15 },  // 작물
             { wch: 10 },  // 면적
-            { wch: 15 },  // 전화번호
             { wch: 10 },  // 수령 방법
-            { wch: 20 }   // 비고
+            { wch: 20 },  // 비고
+            { wch: 8 },   // 완료여부
+            { wch: 18 }   // 등록일시
         ];
 
         XLSX.utils.book_append_sheet(wb, ws, '시료접수대장');

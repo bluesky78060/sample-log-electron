@@ -780,6 +780,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         form?.reset();
         editingIndex = -1;
 
+        // 네비게이션 바 버튼 원래대로 복원
+        const navSubmitBtn = document.getElementById('navSubmitBtn');
+        if (navSubmitBtn) {
+            navSubmitBtn.title = '접수 등록';
+            navSubmitBtn.classList.remove('btn-edit-mode');
+        }
+
         // 오늘 날짜 재설정
         if (dateInput) dateInput.value = today;
         if (samplingDateInput) samplingDateInput.value = today;
@@ -923,7 +930,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             const tr = document.createElement('tr');
             tr.dataset.index = sampleLogs.indexOf(log);
 
+            // 분석항목 표시: 전체 선택시 "전체 항목", 아니면 선택된 항목 모두 표시
             const analysisItemsStr = log.analysisItems ? log.analysisItems.join(', ') : '';
+            const isAllItems = log.analysisItems && log.analysisItems.length === ANALYSIS_ITEMS.length;
+            const analysisItemsDisplay = !log.analysisItems || log.analysisItems.length === 0
+                ? '-'
+                : isAllItems
+                    ? '전체 항목'
+                    : analysisItemsStr;
+
             const receptionMethodIcons = {
                 '우편': '📮', '이메일': '📧', '팩스': '📠', '직접방문': '🚶'
             };
@@ -944,7 +959,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <td title="${log.samplingLocation || ''}">${(log.samplingLocation || '-').substring(0, 15)}${(log.samplingLocation || '').length > 15 ? '...' : ''}</td>
                 <td>${log.cropName || '-'}${log.treeAge ? ' (' + log.treeAge + '년생)' : ''}</td>
                 <td>${log.samplingDate || '-'}</td>
-                <td title="${analysisItemsStr}">${log.analysisItems ? log.analysisItems.length + '항목' : '-'}</td>
+                <td title="${analysisItemsStr}">${analysisItemsDisplay}</td>
                 <td>${log.purpose || '-'}</td>
                 <td title="${log.receptionMethod || ''}">${methodIcon}</td>
                 <td title="${log.note || ''}">${(log.note || '-').substring(0, 10)}${(log.note || '').length > 10 ? '...' : ''}</td>
@@ -1025,6 +1040,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             btn.classList.toggle('selected', btn.dataset.method === log.receptionMethod);
         });
         if (receptionMethodInput) receptionMethodInput.value = log.receptionMethod || '';
+
+        // 네비게이션 바 버튼 텍스트/스타일 변경
+        const navSubmitBtn = document.getElementById('navSubmitBtn');
+        if (navSubmitBtn) {
+            navSubmitBtn.title = '수정 완료';
+            navSubmitBtn.classList.add('btn-edit-mode');
+        }
 
         // 폼 뷰로 전환
         switchView('form');

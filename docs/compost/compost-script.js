@@ -1176,23 +1176,38 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            const excelData = sampleLogs.map(log => ({
-                '접수번호': log.receptionNumber || '-',
-                '접수일자': log.date || '-',
-                '농장명': log.farmName || '-',
-                '대표자': log.name || '-',
-                '연락처': log.phoneNumber || '-',
-                '주소': log.address || '-',
-                '농장주소': log.farmAddress || '-',
-                '면적': log.area ? `${log.area} 평` : '-',
-                '시료종류': log.sampleType || '-',
-                '축종': log.animalType || '-',
-                '퇴비종류': log.compostType || '-',
-                '생산일': log.productionDate || '-',
-                '검사목적': log.purpose || '-',
-                '통보방법': log.receptionMethod || '-',
-                '비고': log.note || '-'
-            }));
+            const excelData = sampleLogs.map(log => {
+                // 면적 표시 (단위 포함)
+                let areaDisplay = '-';
+                if (log.farmArea) {
+                    const unit = log.farmAreaUnit === 'pyeong' ? '평' : 'm²';
+                    areaDisplay = `${log.farmArea} ${unit}`;
+                }
+
+                return {
+                    '접수번호': log.receptionNumber || '-',
+                    '접수일자': log.date || '-',
+                    '농장명': log.farmName || '-',
+                    '대표자': log.name || '-',
+                    '연락처': log.phoneNumber || '-',
+                    '우편번호': log.addressPostcode || '-',
+                    '도로명주소': log.addressRoad || '-',
+                    '상세주소': log.addressDetail || '-',
+                    '전체주소': log.address || '-',
+                    '농장주소': log.farmAddress || '-',
+                    '농장면적': areaDisplay,
+                    '시료종류': log.sampleType || '-',
+                    '축종': log.animalType || '-',
+                    '원료(부재료)': log.rawMaterials || '-',
+                    '생산일': log.productionDate || '-',
+                    '시료수': log.sampleCount || '-',
+                    '검사목적': log.purpose || '-',
+                    '통보방법': log.receptionMethod || '-',
+                    '비고': log.note || '-',
+                    '완료여부': log.isComplete ? '완료' : '미완료',
+                    '등록일시': log.createdAt ? new Date(log.createdAt).toLocaleString('ko-KR') : '-'
+                };
+            });
 
             const wb = XLSX.utils.book_new();
             const ws = XLSX.utils.json_to_sheet(excelData);
@@ -1204,16 +1219,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                 { wch: 15 },  // 농장명
                 { wch: 10 },  // 대표자
                 { wch: 15 },  // 연락처
-                { wch: 30 },  // 주소
+                { wch: 8 },   // 우편번호
+                { wch: 30 },  // 도로명주소
+                { wch: 20 },  // 상세주소
+                { wch: 40 },  // 전체주소
                 { wch: 30 },  // 농장주소
-                { wch: 12 },  // 면적
+                { wch: 12 },  // 농장면적
                 { wch: 12 },  // 시료종류
                 { wch: 10 },  // 축종
-                { wch: 10 },  // 퇴비종류
+                { wch: 15 },  // 원료(부재료)
                 { wch: 12 },  // 생산일
-                { wch: 20 },  // 검사목적
+                { wch: 8 },   // 시료수
+                { wch: 25 },  // 검사목적
                 { wch: 10 },  // 통보방법
-                { wch: 20 }   // 비고
+                { wch: 20 },  // 비고
+                { wch: 8 },   // 완료여부
+                { wch: 20 }   // 등록일시
             ];
 
             XLSX.utils.book_append_sheet(wb, ws, '퇴액비 접수목록');

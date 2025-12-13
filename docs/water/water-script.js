@@ -1433,24 +1433,51 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             const exportData = sampleLogs.map(log => ({
-                '접수번호': log.receptionNumber,
-                '접수일자': log.date,
-                '성명': log.name,
-                '연락처': log.phoneNumber,
-                '주소': log.address,
-                '시료명': log.sampleName,
-                '시료수': log.sampleCount,
-                '채취장소': log.samplingLocation,
-                '주작목': log.mainCrop,
-                '목적': log.purpose,
-                '검사항목': log.testItems,
-                '통보방법': log.receptionMethod,
-                '비고': log.note,
-                '완료여부': log.isComplete ? '완료' : '미완료'
+                '접수번호': log.receptionNumber || '-',
+                '접수일자': log.date || '-',
+                '성명': log.name || '-',
+                '연락처': log.phoneNumber || '-',
+                '우편번호': log.addressPostcode || '-',
+                '도로명주소': log.addressRoad || '-',
+                '상세주소': log.addressDetail || '-',
+                '전체주소': log.address || '-',
+                '시료명': log.sampleName || '-',
+                '시료수': log.sampleCount || '-',
+                '채취장소': log.samplingLocation || '-',
+                '주작목': log.mainCrop || '-',
+                '목적': log.purpose || '-',
+                '검사항목': log.testItems || '-',
+                '통보방법': log.receptionMethod || '-',
+                '비고': log.note || '-',
+                '완료여부': log.isComplete ? '완료' : '미완료',
+                '등록일시': log.createdAt ? new Date(log.createdAt).toLocaleString('ko-KR') : '-'
             }));
 
             const wb = XLSX.utils.book_new();
             const ws = XLSX.utils.json_to_sheet(exportData);
+
+            // 열 너비 설정
+            ws['!cols'] = [
+                { wch: 10 },  // 접수번호
+                { wch: 12 },  // 접수일자
+                { wch: 10 },  // 성명
+                { wch: 15 },  // 연락처
+                { wch: 8 },   // 우편번호
+                { wch: 30 },  // 도로명주소
+                { wch: 20 },  // 상세주소
+                { wch: 40 },  // 전체주소
+                { wch: 15 },  // 시료명
+                { wch: 8 },   // 시료수
+                { wch: 25 },  // 채취장소
+                { wch: 15 },  // 주작목
+                { wch: 15 },  // 목적
+                { wch: 25 },  // 검사항목
+                { wch: 10 },  // 통보방법
+                { wch: 20 },  // 비고
+                { wch: 8 },   // 완료여부
+                { wch: 20 }   // 등록일시
+            ];
+
             XLSX.utils.book_append_sheet(wb, ws, '수질분석 접수');
             XLSX.writeFile(wb, `수질분석접수_${new Date().toISOString().split('T')[0]}.xlsx`);
             showToast('엑셀 파일이 저장되었습니다.', 'success');

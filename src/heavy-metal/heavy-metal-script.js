@@ -780,6 +780,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         form?.reset();
         editingIndex = -1;
 
+        // 네비게이션 바 버튼 원래대로 복원
+        const navSubmitBtn = document.getElementById('navSubmitBtn');
+        if (navSubmitBtn) {
+            navSubmitBtn.title = '접수 등록';
+            navSubmitBtn.classList.remove('btn-edit-mode');
+        }
+
         // 오늘 날짜 재설정
         if (dateInput) dateInput.value = today;
         if (samplingDateInput) samplingDateInput.value = today;
@@ -923,7 +930,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             const tr = document.createElement('tr');
             tr.dataset.index = sampleLogs.indexOf(log);
 
+            // 분석항목 표시: 전체 선택시 "전체 항목", 아니면 선택된 항목 모두 표시
             const analysisItemsStr = log.analysisItems ? log.analysisItems.join(', ') : '';
+            const isAllItems = log.analysisItems && log.analysisItems.length === ANALYSIS_ITEMS.length;
+            const analysisItemsDisplay = !log.analysisItems || log.analysisItems.length === 0
+                ? '-'
+                : isAllItems
+                    ? '전체 항목'
+                    : analysisItemsStr;
+
             const receptionMethodIcons = {
                 '우편': '📮', '이메일': '📧', '팩스': '📠', '직접방문': '🚶'
             };
@@ -944,7 +959,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <td title="${log.samplingLocation || ''}">${(log.samplingLocation || '-').substring(0, 15)}${(log.samplingLocation || '').length > 15 ? '...' : ''}</td>
                 <td>${log.cropName || '-'}${log.treeAge ? ' (' + log.treeAge + '년생)' : ''}</td>
                 <td>${log.samplingDate || '-'}</td>
-                <td title="${analysisItemsStr}">${log.analysisItems ? log.analysisItems.length + '항목' : '-'}</td>
+                <td title="${analysisItemsStr}">${analysisItemsDisplay}</td>
                 <td>${log.purpose || '-'}</td>
                 <td title="${log.receptionMethod || ''}">${methodIcon}</td>
                 <td title="${log.note || ''}">${(log.note || '-').substring(0, 10)}${(log.note || '').length > 10 ? '...' : ''}</td>
@@ -1026,6 +1041,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
         if (receptionMethodInput) receptionMethodInput.value = log.receptionMethod || '';
 
+        // 네비게이션 바 버튼 텍스트/스타일 변경
+        const navSubmitBtn = document.getElementById('navSubmitBtn');
+        if (navSubmitBtn) {
+            navSubmitBtn.title = '수정 완료';
+            navSubmitBtn.classList.add('btn-edit-mode');
+        }
+
         // 폼 뷰로 전환
         switchView('form');
         showToast('수정 모드입니다.', 'warning');
@@ -1042,27 +1064,64 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            const exportData = sampleLogs.map(log => ({
-                '접수번호': log.receptionNumber,
-                '접수일자': log.date,
-                '성명': log.name,
-                '우편번호': log.addressPostcode,
-                '주소': log.address,
-                '연락처': log.phoneNumber,
-                '시료채취장소': log.samplingLocation,
-                '재배작물': log.cropName,
-                '과수년생': log.treeAge,
-                '채취일': log.samplingDate,
-                '시료수': log.sampleCount,
-                '분석항목': log.analysisItems?.join(', '),
-                '목적': log.purpose,
-                '수령방법': log.receptionMethod,
-                '비고': log.note,
-                '완료여부': log.isCompleted ? 'Y' : 'N'
-            }));
+            const exportData = sampleLogs.map(log => {
+                // 분석항목 표시
+                const isAllItems = log.analysisItems && log.analysisItems.length === ANALYSIS_ITEMS.length;
+                const analysisDisplay = !log.analysisItems || log.analysisItems.length === 0
+                    ? '-'
+                    : isAllItems
+                        ? '전체 항목'
+                        : log.analysisItems.join(', ');
+
+                return {
+                    '접수번호': log.receptionNumber || '-',
+                    '접수일자': log.date || '-',
+                    '성명': log.name || '-',
+                    '연락처': log.phoneNumber || '-',
+                    '우편번호': log.addressPostcode || '-',
+                    '도로명주소': log.addressRoad || '-',
+                    '상세주소': log.addressDetail || '-',
+                    '전체주소': log.address || '-',
+                    '시료채취장소': log.samplingLocation || '-',
+                    '재배작물': log.cropName || '-',
+                    '과수년생': log.treeAge || '-',
+                    '채취일': log.samplingDate || '-',
+                    '시료수': log.sampleCount || '-',
+                    '분석항목': analysisDisplay,
+                    '목적': log.purpose || '-',
+                    '수령방법': log.receptionMethod || '-',
+                    '비고': log.note || '-',
+                    '완료여부': log.isCompleted ? '완료' : '미완료',
+                    '등록일시': log.createdAt ? new Date(log.createdAt).toLocaleString('ko-KR') : '-'
+                };
+            });
 
             const ws = XLSX.utils.json_to_sheet(exportData);
             const wb = XLSX.utils.book_new();
+
+            // 열 너비 설정
+            ws['!cols'] = [
+                { wch: 10 },  // 접수번호
+                { wch: 12 },  // 접수일자
+                { wch: 10 },  // 성명
+                { wch: 15 },  // 연락처
+                { wch: 8 },   // 우편번호
+                { wch: 30 },  // 도로명주소
+                { wch: 20 },  // 상세주소
+                { wch: 40 },  // 전체주소
+                { wch: 25 },  // 시료채취장소
+                { wch: 12 },  // 재배작물
+                { wch: 10 },  // 과수년생
+                { wch: 12 },  // 채취일
+                { wch: 8 },   // 시료수
+                { wch: 40 },  // 분석항목
+                { wch: 15 },  // 목적
+                { wch: 10 },  // 수령방법
+                { wch: 20 },  // 비고
+                { wch: 8 },   // 완료여부
+                { wch: 20 }   // 등록일시
+            ];
+
             XLSX.utils.book_append_sheet(wb, ws, '토양중금속접수');
 
             const fileName = `토양중금속_접수대장_${new Date().toISOString().split('T')[0]}.xlsx`;
