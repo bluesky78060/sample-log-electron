@@ -449,6 +449,23 @@ textarea:focus {
     }
 }
 
+/* 채취장소 자동완성 - 카드 overflow 해제 */
+.water-navbar ~ .main-content .form-card.has-autocomplete,
+.water-navbar ~ .main-content .form-card:has(.location-autocomplete-wrapper) {
+    overflow: visible;
+}
+
+.water-navbar ~ .main-content .form-card.has-autocomplete .card-body,
+.water-navbar ~ .main-content .form-card .card-body:has(.location-autocomplete-wrapper) {
+    overflow: visible;
+}
+
+/* 채취장소 컨테이너도 overflow visible */
+.sampling-locations-container,
+.sampling-locations-list {
+    overflow: visible !important;
+}
+
 /* 채취장소 자동완성 스타일 */
 .location-autocomplete-wrapper {
     position: relative;
@@ -466,7 +483,7 @@ textarea:focus {
     border-radius: 0 0 8px 8px;
     max-height: 200px;
     overflow-y: auto;
-    z-index: 1000;
+    z-index: 9999;
     list-style: none;
     margin: 0;
     padding: 0;
@@ -652,4 +669,68 @@ textarea:focus {
 
 .sampling-locations-list::-webkit-scrollbar-thumb:hover {
     background: var(--water-primary);
+}
+
+/* 그리드 레이아웃 1:1 비율로 변경, 간격 축소 */
+.water-navbar ~ .main-content .form-two-column {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+/* 카드 가로 길이 통일 및 가운데 정렬 */
+.water-navbar ~ .main-content .form-right-column .form-card,
+.water-navbar ~ .main-content .form-left-column .form-card {
+    max-width: 520px;
+    width: 100%;
+}
+
+/* 양쪽 컬럼 가운데 정렬 */
+.water-navbar ~ .main-content .form-left-column {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.water-navbar ~ .main-content .form-right-column {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+    padding-right: 8px;
+}
+
+/* 오른쪽 컬럼 스크롤바 스타일 */
+.water-navbar ~ .main-content .form-right-column::-webkit-scrollbar {
+    width: 6px;
+}
+
+.water-navbar ~ .main-content .form-right-column::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 3px;
+}
+
+.water-navbar ~ .main-content .form-right-column::-webkit-scrollbar-thumb {
+    background: var(--water-primary-light);
+    border-radius: 3px;
+}
+
+.water-navbar ~ .main-content .form-right-column::-webkit-scrollbar-thumb:hover {
+    background: var(--water-primary);
+}
+
+/* 검사항목 옵션 컴팩트하게 */
+.water-navbar ~ .main-content .test-item-label {
+    padding: 0.9rem 1rem !important;
+}
+
+.water-navbar ~ .main-content .test-item-icon {
+    font-size: 1.5rem !important;
+}
+
+/* 채취장소 컴팩트하게 */
+.water-navbar ~ .main-content .sampling-crop-input {
+    width: 120px;
 }
