@@ -449,6 +449,23 @@ textarea:focus {
     }
 }
 
+/* 채취장소 자동완성 - 카드 overflow 해제 */
+.water-navbar ~ .main-content .form-card.has-autocomplete,
+.water-navbar ~ .main-content .form-card:has(.location-autocomplete-wrapper) {
+    overflow: visible;
+}
+
+.water-navbar ~ .main-content .form-card.has-autocomplete .card-body,
+.water-navbar ~ .main-content .form-card .card-body:has(.location-autocomplete-wrapper) {
+    overflow: visible;
+}
+
+/* 채취장소 컨테이너도 overflow visible */
+.sampling-locations-container,
+.sampling-locations-list {
+    overflow: visible !important;
+}
+
 /* 채취장소 자동완성 스타일 */
 .location-autocomplete-wrapper {
     position: relative;
@@ -466,7 +483,7 @@ textarea:focus {
     border-radius: 0 0 8px 8px;
     max-height: 200px;
     overflow-y: auto;
-    z-index: 1000;
+    z-index: 9999;
     list-style: none;
     margin: 0;
     padding: 0;
