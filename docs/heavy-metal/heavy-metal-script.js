@@ -640,7 +640,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             receptionNumber: document.getElementById('receptionNumber')?.value || generateReceptionNumber(),
             date: document.getElementById('date')?.value || today,
             name: name,
-            birthDate: document.getElementById('birthDate')?.value || '',
             phoneNumber: phoneNumber,
             addressPostcode: addressPostcode?.value || '',
             addressRoad: addressRoad?.value || '',
@@ -794,7 +793,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <td>${log.receptionNumber || '-'}</td>
                 <td>${log.date || '-'}</td>
                 <td>${log.name || '-'}</td>
-                <td>${log.birthDate || '-'}</td>
                 <td>${log.addressPostcode || '-'}</td>
                 <td title="${log.address || ''}">${(log.addressRoad || '-').substring(0, 20)}${(log.addressRoad || '').length > 20 ? '...' : ''}</td>
                 <td>${log.phoneNumber || '-'}</td>
@@ -853,7 +851,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('receptionNumber').value = log.receptionNumber || '';
         document.getElementById('date').value = log.date || '';
         document.getElementById('name').value = log.name || '';
-        document.getElementById('birthDate').value = log.birthDate || '';
         document.getElementById('phoneNumber').value = log.phoneNumber || '';
         if (addressPostcode) addressPostcode.value = log.addressPostcode || '';
         if (addressRoad) addressRoad.value = log.addressRoad || '';
@@ -904,7 +901,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 '접수번호': log.receptionNumber,
                 '접수일자': log.date,
                 '성명': log.name,
-                '생년월일': log.birthDate,
                 '우편번호': log.addressPostcode,
                 '주소': log.address,
                 '연락처': log.phoneNumber,
@@ -994,50 +990,165 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 자동저장 토글
     // ========================================
     const autoSaveToggle = document.getElementById('autoSaveToggle');
+    const autoSaveStatus = document.getElementById('autoSaveStatus');
     const selectAutoSaveFolderBtn = document.getElementById('selectAutoSaveFolderBtn');
 
-    if (autoSaveToggle) {
-        // 저장된 상태 복원
-        const savedState = localStorage.getItem('heavyMetalAutoSaveEnabled');
-        if (savedState === 'true') {
-            autoSaveToggle.checked = true;
-            updateAutoSaveStatus('active');
-        }
+    let autoSaveFileHandle = null;
 
-        autoSaveToggle.addEventListener('change', () => {
-            localStorage.setItem('heavyMetalAutoSaveEnabled', autoSaveToggle.checked);
-            if (autoSaveToggle.checked) {
-                updateAutoSaveStatus('active');
-                autoSaveToFile();
-            } else {
-                updateAutoSaveStatus('inactive');
+    // 자동 저장 폴더 선택 버튼 (Electron 전용)
+    if (selectAutoSaveFolderBtn && isElectron) {
+        selectAutoSaveFolderBtn.addEventListener('click', async () => {
+            try {
+                const result = await window.electronAPI.selectAutoSaveFolder();
+                if (result.success) {
+                    // 폴더 선택 후 heavy-metal 타입으로 새 경로 가져오기
+                    FileAPI.autoSavePath = await window.electronAPI.getAutoSavePath('heavy-metal');
+                    showToast(`저장 폴더가 변경되었습니다:\n${result.folder}`, 'success');
+
+                    // 자동 저장이 활성화되어 있으면 바로 저장
+                    if (autoSaveToggle && autoSaveToggle.checked) {
+                        await autoSaveToFile();
+                    }
+                } else if (!result.canceled) {
+                    showToast('폴더 선택에 실패했습니다.', 'error');
+                }
+            } catch (error) {
+                console.error('폴더 선택 오류:', error);
+                showToast('폴더 선택 중 오류가 발생했습니다.', 'error');
+            }
+        });
+
+        // 현재 폴더 경로를 툴팁에 표시
+        (async () => {
+            try {
+                const folder = await window.electronAPI.getAutoSaveFolder();
+                selectAutoSaveFolderBtn.title = `저장 폴더: ${folder}`;
+            } catch (error) {
+                console.error('폴더 경로 조회 오류:', error);
+            }
+        })();
+    } else if (selectAutoSaveFolderBtn && !isElectron) {
+        // 웹 환경에서는 파일 선택 다이얼로그 사용
+        selectAutoSaveFolderBtn.title = '자동저장 파일 선택';
+        selectAutoSaveFolderBtn.addEventListener('click', async () => {
+            try {
+                if ('showSaveFilePicker' in window) {
+                    autoSaveFileHandle = await window.showSaveFilePicker({
+                        suggestedName: 'heavy-metal-logs-autosave.json',
+                        types: [{ description: 'JSON Files', accept: { 'application/json': ['.json'] } }]
+                    });
+                    showToast('자동저장 파일이 설정되었습니다.', 'success');
+                    if (autoSaveToggle) {
+                        autoSaveToggle.checked = true;
+                        localStorage.setItem('heavyMetalAutoSaveEnabled', 'true');
+                    }
+                    await autoSaveToFile();
+                } else {
+                    showToast('이 브라우저에서는 파일 선택을 지원하지 않습니다.', 'error');
+                }
+            } catch (error) {
+                if (error.name !== 'AbortError') {
+                    console.error('파일 선택 오류:', error);
+                    showToast('파일 선택 중 오류가 발생했습니다.', 'error');
+                }
             }
         });
     }
 
-    if (selectAutoSaveFolderBtn) {
-        selectAutoSaveFolderBtn.addEventListener('click', async () => {
-            if (isElectron) {
-                try {
-                    const result = await window.electronAPI.selectAutoSaveFolder();
-                    if (result.success) {
-                        FileAPI.autoSavePath = result.path;
-                        showToast('자동 저장 폴더가 설정되었습니다.', 'success');
-                    }
-                } catch (e) {
-                    console.error(e);
-                }
-            } else if ('showDirectoryPicker' in window) {
-                try {
-                    FileAPI.autoSaveFolderHandle = await window.showDirectoryPicker();
-                    showToast('자동 저장 폴더가 설정되었습니다.', 'success');
-                    if (autoSaveToggle) {
-                        autoSaveToggle.checked = true;
-                        localStorage.setItem('heavyMetalAutoSaveEnabled', 'true');
+    // ========================================
+    // 자동 저장 기능 (Electron / Web 통합)
+    // ========================================
+
+    // 페이지 로드 시 자동 저장 상태 복원
+    const autoSaveEnabled = localStorage.getItem('heavyMetalAutoSaveEnabled') === 'true';
+    if (autoSaveToggle && autoSaveEnabled) {
+        autoSaveToggle.checked = true;
+
+        if (isElectron) {
+            // Electron: 자동 저장 경로가 이미 설정됨
+            updateAutoSaveStatus('active');
+            autoSaveToFile();
+            showToast('자동 저장이 활성화되었습니다.', 'success');
+        } else {
+            // Web: 파일 핸들 새로 설정 필요
+            updateAutoSaveStatus('pending');
+            if ('showSaveFilePicker' in window) {
+                (async () => {
+                    try {
+                        const today = new Date().toISOString().slice(0, 10);
+                        autoSaveFileHandle = await window.showSaveFilePicker({
+                            suggestedName: `중금속시료접수대장_${today}.json`,
+                            types: [{
+                                description: 'JSON Files',
+                                accept: { 'application/json': ['.json'] }
+                            }]
+                        });
                         updateAutoSaveStatus('active');
+                        await autoSaveToFile();
+                        showToast('자동 저장이 복원되었습니다.', 'success');
+                    } catch (error) {
+                        if (error.name === 'AbortError') {
+                            updateAutoSaveStatus('inactive');
+                            autoSaveToggle.checked = false;
+                            localStorage.setItem('heavyMetalAutoSaveEnabled', 'false');
+                        }
                     }
-                } catch (e) {
-                    if (e.name !== 'AbortError') console.error(e);
+                })();
+            }
+        }
+    }
+
+    if (autoSaveToggle) {
+        autoSaveToggle.addEventListener('change', async () => {
+            try {
+                // 토글 OFF - 자동저장 비활성화
+                if (!autoSaveToggle.checked) {
+                    autoSaveFileHandle = null;
+                    localStorage.setItem('heavyMetalAutoSaveEnabled', 'false');
+                    updateAutoSaveStatus('inactive');
+                    return;
+                }
+
+                // 토글 ON - 자동저장 활성화
+                if (isElectron) {
+                    // Electron: 자동 저장 경로 사용
+                    localStorage.setItem('heavyMetalAutoSaveEnabled', 'true');
+                    updateAutoSaveStatus('active');
+                    await autoSaveToFile();
+                    showToast('자동 저장이 활성화되었습니다.', 'success');
+                } else {
+                    // Web: 파일 선택 다이얼로그
+                    if (!('showSaveFilePicker' in window)) {
+                        alert('이 브라우저는 자동 저장 기능을 지원하지 않습니다.\nChrome, Edge 브라우저를 사용해주세요.');
+                        autoSaveToggle.checked = false;
+                        return;
+                    }
+
+                    const today = new Date().toISOString().slice(0, 10);
+                    autoSaveFileHandle = await window.showSaveFilePicker({
+                        suggestedName: `중금속시료접수대장_${today}.json`,
+                        types: [{
+                            description: 'JSON Files',
+                            accept: { 'application/json': ['.json'] }
+                        }]
+                    });
+
+                    localStorage.setItem('heavyMetalAutoSaveEnabled', 'true');
+                    updateAutoSaveStatus('active');
+                    await autoSaveToFile();
+                    showToast('자동 저장이 활성화되었습니다.', 'success');
+                }
+
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    autoSaveToggle.checked = false;
+                    updateAutoSaveStatus('inactive');
+                } else {
+                    console.error('자동 저장 설정 오류:', error);
+                    alert('자동 저장 설정에 실패했습니다.');
+                    autoSaveToggle.checked = false;
+                    localStorage.setItem('heavyMetalAutoSaveEnabled', 'false');
+                    updateAutoSaveStatus('inactive');
                 }
             }
         });
