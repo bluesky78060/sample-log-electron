@@ -5,6 +5,10 @@ const SAMPLE_TYPE = '잔류농약';
 const STORAGE_KEY = 'pesticideSampleLogs';
 const AUTO_SAVE_FILE = 'pesticide-autosave.json';
 
+// 디버그 모드 (프로덕션에서는 false)
+const DEBUG = false;
+const log = (...args) => DEBUG && console.log(...args);
+
 // ========================================
 // Electron / Web 환경 감지 및 파일 API 추상화
 // ========================================
@@ -19,7 +23,7 @@ const FileAPI = {
     async init(year) {
         if (isElectron) {
             this.autoSavePath = await window.electronAPI.getAutoSavePath('pesticide', year);
-            console.log('📁 Electron 잔류농약 자동 저장 경로:', this.autoSavePath);
+            log('📁 Electron 잔류농약 자동 저장 경로:', this.autoSavePath);
         }
     },
 
@@ -27,7 +31,7 @@ const FileAPI = {
     async updateAutoSavePath(year) {
         if (isElectron) {
             this.autoSavePath = await window.electronAPI.getAutoSavePath('pesticide', year);
-            console.log('📁 잔류농약 자동 저장 경로 업데이트:', this.autoSavePath);
+            log('📁 잔류농약 자동 저장 경로 업데이트:', this.autoSavePath);
         }
     },
 
@@ -141,8 +145,8 @@ const FileAPI = {
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('🚀 페이지 로드 시작 - DOMContentLoaded');
-    console.log(isElectron ? '🖥️ Electron 환경 감지됨' : '🌐 웹 브라우저 환경');
+    log('🚀 페이지 로드 시작 - DOMContentLoaded');
+    log(isElectron ? '🖥️ Electron 환경 감지됨' : '🌐 웹 브라우저 환경');
 
     // 파일 API 초기화 (현재 년도로)
     const currentYear = new Date().getFullYear().toString();
@@ -158,7 +162,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const parsed = JSON.parse(content);
                     const loadedData = parsed.data || parsed;
                     if (Array.isArray(loadedData) && loadedData.length > 0) {
-                        console.log('📂 자동 저장 파일에서 데이터 로드:', loadedData.length, '건');
+                        log('📂 자동 저장 파일에서 데이터 로드:', loadedData.length, '건');
                         return loadedData;
                     }
                 }
@@ -188,7 +192,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             if (autoSaveToggle) {
                                 autoSaveToggle.checked = true;
                             }
-                            console.log('📁 자동 저장 폴더 설정됨:', result.folder);
+                            log('📁 자동 저장 폴더 설정됨:', result.folder);
                         }
                     } catch (error) {
                         console.error('폴더 선택 오류:', error);
@@ -209,7 +213,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const emptyState = document.getElementById('emptyState');
     const dateInput = document.getElementById('date');
 
-    console.log('✅ 기본 요소 로드 완료');
+    log('✅ 기본 요소 로드 완료');
 
     // ========================================
     // 면적 단위 변환 함수
@@ -427,7 +431,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Address Search Handler (Daum Postcode API)
     searchAddressBtn.addEventListener('click', () => {
-        console.log('주소 검색 버튼 클릭됨');
+        log('주소 검색 버튼 클릭됨');
 
         if (typeof daum === 'undefined' || typeof daum.Postcode === 'undefined') {
             alert('주소 검색 서비스를 불러오는 중입니다. 잠시 후 다시 시도해주세요.');
@@ -436,7 +440,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // 모달 표시
         addressModal.classList.remove('hidden');
-        console.log('주소 검색 모달 표시됨');
+        log('주소 검색 모달 표시됨');
 
         // 이전 내용 초기화
         daumPostcodeContainer.innerHTML = '';
@@ -444,7 +448,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 모달 내부에 주소 검색 임베드
         new daum.Postcode({
             oncomplete: function(data) {
-                console.log('주소 선택 완료:', data);
+                log('주소 선택 완료:', data);
 
                 // 도로명 주소
                 let roadAddr = data.roadAddress;
@@ -464,7 +468,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
 
                 const finalRoadAddr = roadAddr + extraRoadAddr;
-                console.log('입력할 주소 정보:', {
+                log('입력할 주소 정보:', {
                     우편번호: data.zonecode,
                     도로명주소: finalRoadAddr
                 });
@@ -474,7 +478,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 addressRoad.value = finalRoadAddr;
                 addressDetail.value = ''; // 상세주소 초기화
 
-                console.log('필드 값 설정 완료:', {
+                log('필드 값 설정 완료:', {
                     우편번호필드: addressPostcode.value,
                     도로명주소필드: addressRoad.value,
                     상세주소필드: addressDetail.value
@@ -484,7 +488,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 // 모달 닫기
                 closeAddressModal();
-                console.log('주소 검색 모달 닫힘');
+                log('주소 검색 모달 닫힘');
 
                 // 상세주소 입력 필드로 포커스
                 addressDetail.focus();
@@ -515,7 +519,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const producerAddressAutocomplete = document.getElementById('producerAddressAutocomplete');
 
     if (producerAddressInput && producerAddressAutocomplete) {
-        console.log('📍 생산지 주소 자동완성 초기화');
+        log('📍 생산지 주소 자동완성 초기화');
 
         producerAddressInput.addEventListener('input', () => {
             const value = producerAddressInput.value.trim();
@@ -900,7 +904,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 년도 변경 이벤트
         yearSelect.addEventListener('change', async () => {
             selectedYear = yearSelect.value;
-            console.log(`📅 년도 변경: ${selectedYear}`);
+            log(`📅 년도 변경: ${selectedYear}`);
 
             // 접수 목록 제목 업데이트
             updateListViewTitle();
@@ -932,7 +936,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     function loadYearData(year) {
         const yearStorageKey = getStorageKey(year);
         sampleLogs = JSON.parse(localStorage.getItem(yearStorageKey)) || [];
-        console.log(`📂 ${year}년 데이터 로드: ${sampleLogs.length}건`);
+        log(`📂 ${year}년 데이터 로드: ${sampleLogs.length}건`);
 
         renderLogs(sampleLogs);
         receptionNumberInput.value = generateNextReceptionNumber();
@@ -961,7 +965,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const existingData = JSON.parse(localStorage.getItem(currentYearKey)) || [];
             const mergedData = [...existingData, ...oldData];
             localStorage.setItem(currentYearKey, JSON.stringify(mergedData));
-            console.log(`📦 기존 데이터 ${oldData.length}건을 ${currentYear}년으로 마이그레이션 완료`);
+            log(`📦 기존 데이터 ${oldData.length}건을 ${currentYear}년으로 마이그레이션 완료`);
 
             // 현재 선택 년도가 현재 년도면 데이터 반영
             if (selectedYear === currentYear) {
@@ -983,7 +987,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (sampleLogs.length === 0) {
                         sampleLogs = autoSaveData;
                         localStorage.setItem(STORAGE_KEY, JSON.stringify(sampleLogs));
-                        console.log('📂 자동 저장 파일에서 데이터 복원 완료:', sampleLogs.length, '건');
+                        log('📂 자동 저장 파일에서 데이터 복원 완료:', sampleLogs.length, '건');
                     } else if (autoSaveData.length > sampleLogs.length) {
                         // 자동 저장 파일에 더 많은 데이터가 있으면 병합 여부 확인
                         const mergeConfirm = confirm(
@@ -994,7 +998,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         if (mergeConfirm) {
                             sampleLogs = autoSaveData;
                             localStorage.setItem(STORAGE_KEY, JSON.stringify(sampleLogs));
-                            console.log('📂 자동 저장 파일에서 데이터 교체 완료:', sampleLogs.length, '건');
+                            log('📂 자동 저장 파일에서 데이터 교체 완료:', sampleLogs.length, '건');
                         }
                     }
                     // UI 업데이트
@@ -1031,7 +1035,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // 다음 번호 생성
         const nextNumber = maxNumber + 1;
-        console.log(`📋 다음 접수번호 생성: ${nextNumber} (기존 최대: ${maxNumber})`);
+        log(`📋 다음 접수번호 생성: ${nextNumber} (기존 최대: ${maxNumber})`);
         return String(nextNumber);
     }
 
@@ -1048,7 +1052,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // const addParcelBtn = document.getElementById('addParcelBtn');
     // const parcelsDataInput = document.getElementById('parcelsData');
 
-    console.log('📋 의뢰내용 시스템 초기화');
+    log('📋 의뢰내용 시스템 초기화');
 
     // 빈 parcels 배열 (하위 호환성을 위해 유지)
     let parcels = [];
@@ -1064,7 +1068,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function _OLD_addParcel() {
-        console.log('✨ 필지 추가 함수 호출됨');
+        log('✨ 필지 추가 함수 호출됨');
         const parcelId = `parcel-${parcelIdCounter++}`;
         const parcel = {
             id: parcelId,
@@ -1073,8 +1077,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             crops: []
         };
         parcels.push(parcel);
-        console.log(`   - 생성된 필지 ID: ${parcelId}`);
-        console.log(`   - 전체 필지 개수: ${parcels.length}`);
+        log(`   - 생성된 필지 ID: ${parcelId}`);
+        log(`   - 전체 필지 개수: ${parcels.length}`);
 
         renderParcelCard(parcel, parcels.length);
         updateParcelsData();
@@ -1083,7 +1087,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 필지 카드 렌더링
     function renderParcelCard(parcel, index) {
-        console.log(`📍 필지 카드 렌더링 시작: ${parcel.id}, index: ${index}`);
+        log(`📍 필지 카드 렌더링 시작: ${parcel.id}, index: ${index}`);
 
         const card = document.createElement('div');
         card.className = 'parcel-card';
@@ -1093,8 +1097,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         const firstCrop = parcel.crops[0] || { name: '', area: '' };
         const parcelNumber = index; // 필지 번호 (1, 2, 3...)
 
-        console.log(`   - 첫 번째 작물:`, firstCrop);
-        console.log(`   - 필지 번호: ${parcelNumber}`);
+        log(`   - 첫 번째 작물:`, firstCrop);
+        log(`   - 필지 번호: ${parcelNumber}`);
 
         card.innerHTML = `
             <div class="parcel-card-header">
@@ -1222,7 +1226,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         parcelsContainer.appendChild(card);
-        console.log(`   ✅ 필지 카드가 DOM에 추가되었습니다`);
+        log(`   ✅ 필지 카드가 DOM에 추가되었습니다`);
 
         // 직접 입력 자동완성 이벤트 바인딩
         bindDirectCropAutocomplete(parcel.id);
@@ -1233,7 +1237,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 면적 단위 변환 이벤트 바인딩
         bindAreaUnitConversion(parcel.id);
 
-        console.log(`   ✅ 모든 이벤트 바인딩 완료`);
+        log(`   ✅ 모든 이벤트 바인딩 완료`);
     }
 
     // 면적 단위 변환 이벤트 바인딩
@@ -1494,13 +1498,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 직접 입력 필드 자동완성 바인딩
     function bindDirectCropAutocomplete(parcelId) {
-        console.log('🌾 bindDirectCropAutocomplete called for parcelId:', parcelId);
+        log('🌾 bindDirectCropAutocomplete called for parcelId:', parcelId);
 
         const cropInput = document.querySelector(`.crop-direct-input[data-id="${parcelId}"]`);
         const autocompleteList = document.getElementById(`autocomplete-direct-${parcelId}`);
 
-        console.log('  cropInput:', cropInput);
-        console.log('  autocompleteList:', autocompleteList);
+        log('  cropInput:', cropInput);
+        log('  autocompleteList:', autocompleteList);
 
         if (!cropInput || !autocompleteList) {
             console.warn('⚠️ Missing elements for parcel', parcelId);
@@ -1508,7 +1512,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         cropInput.addEventListener('input', (e) => {
-            console.log('✏️ DIRECT CROP INPUT EVENT!', e.target.value);
+            log('✏️ DIRECT CROP INPUT EVENT!', e.target.value);
 
             const value = e.target.value.trim().toLowerCase();
 
@@ -1517,7 +1521,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     crop.name.toLowerCase().includes(value)
                 ).slice(0, 8);
 
-                console.log('🔍 Direct crop matches:', matches.length);
+                log('🔍 Direct crop matches:', matches.length);
 
                 if (matches.length > 0) {
                     autocompleteList.innerHTML = matches.map(crop => `
@@ -1531,14 +1535,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                     autocompleteList.style.width = `${rect.width}px`;
 
                     autocompleteList.classList.add('show');
-                    console.log('✅ Direct crop autocomplete shown at position:', rect);
+                    log('✅ Direct crop autocomplete shown at position:', rect);
                 } else {
                     autocompleteList.classList.remove('show');
-                    console.log('❌ No matches found');
+                    log('❌ No matches found');
                 }
             } else {
                 autocompleteList.classList.remove('show');
-                console.log('⚠️ Empty value or CROP_DATA unavailable');
+                log('⚠️ Empty value or CROP_DATA unavailable');
             }
 
             // 첫 번째 작물 업데이트
@@ -1553,7 +1557,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         autocompleteList.addEventListener('click', (e) => {
             if (e.target.tagName === 'LI') {
-                console.log('🎯 Direct crop item clicked');
+                log('🎯 Direct crop item clicked');
 
                 const name = e.target.dataset.name;
                 cropInput.value = name;
@@ -1564,11 +1568,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const areaInput = document.querySelector(`.area-direct-input[data-id="${parcelId}"]`);
                 if (areaInput) areaInput.focus();
 
-                console.log('✅ Direct crop selected:', name);
+                log('✅ Direct crop selected:', name);
             }
         });
 
-        console.log('✅ Direct crop autocomplete events bound');
+        log('✅ Direct crop autocomplete events bound');
     }
 
     // 첫 번째 작물 업데이트
@@ -1797,12 +1801,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         const parts = value.split('-');
         if (parts.length >= 2) {
             const numberPart = parts.slice(1).join('-'); // 연도 제외한 나머지 (예: "001" 또는 "001-A")
-            console.log(`접수번호 추출: ${value} → ${numberPart}`);
+            log(`접수번호 추출: ${value} → ${numberPart}`);
             return numberPart;
         }
 
         // "-"가 없으면 그대로 반환
-        console.log(`접수번호 형식 확인: ${value}`);
+        log(`접수번호 형식 확인: ${value}`);
         return value;
     }
 
@@ -1917,30 +1921,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     const cancelCropAreaBtn = document.getElementById('cancelCropAreaBtn');
     const closeCropAreaModalBtn = document.getElementById('closeCropAreaModal');
 
-    console.log('🔍 Modal elements initialization:');
-    console.log('cropAreaModal:', cropAreaModal);
-    console.log('cropAreaList:', cropAreaList);
-    console.log('addCropAreaBtn:', addCropAreaBtn);
-    console.log('CROP_DATA loaded:', typeof CROP_DATA !== 'undefined', CROP_DATA ? CROP_DATA.length : 0);
+    log('🔍 Modal elements initialization:');
+    log('cropAreaModal:', cropAreaModal);
+    log('cropAreaList:', cropAreaList);
+    log('addCropAreaBtn:', addCropAreaBtn);
+    log('CROP_DATA loaded:', typeof CROP_DATA !== 'undefined', CROP_DATA ? CROP_DATA.length : 0);
 
     let currentParcelIdForCrop = null;
     let tempCropAreas = [];
 
     function openCropAreaModal(parcelId) {
-        console.log('🎯 openCropAreaModal called with parcelId:', parcelId);
+        log('🎯 openCropAreaModal called with parcelId:', parcelId);
         currentParcelIdForCrop = parcelId;
         const parcel = parcels.find(p => p.id === parcelId);
-        console.log('📦 Parcel found:', parcel);
+        log('📦 Parcel found:', parcel);
         // 기존 작물 데이터에 subLotTarget이 없으면 'all'로 초기화
         tempCropAreas = parcel.crops.map(c => ({
             ...c,
             subLotTarget: c.subLotTarget || 'all'
         }));
-        console.log('🌾 tempCropAreas initialized:', tempCropAreas);
+        log('🌾 tempCropAreas initialized:', tempCropAreas);
 
         renderCropAreaModal();
         cropAreaModal.classList.remove('hidden');
-        console.log('✅ Modal shown, classList:', cropAreaModal.classList.toString());
+        log('✅ Modal shown, classList:', cropAreaModal.classList.toString());
     }
 
     // 현재 필지의 지번 옵션 가져오기
@@ -1980,9 +1984,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 모달 내 작물 목록 렌더링
     function renderCropAreaModal() {
-        console.log('🔧 renderCropAreaModal called');
-        console.log('📊 cropAreaList element:', cropAreaList);
-        console.log('🌾 tempCropAreas:', tempCropAreas);
+        log('🔧 renderCropAreaModal called');
+        log('📊 cropAreaList element:', cropAreaList);
+        log('🌾 tempCropAreas:', tempCropAreas);
 
         if (tempCropAreas.length === 0) {
             tempCropAreas.push({ name: '', area: '', code: '', subLotTarget: 'all' });
@@ -2042,26 +2046,26 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 자동완성 이벤트 바인딩 (간소화된 직접 바인딩 방식)
     function bindAutocompleteEvents() {
-        console.log('🔧 bindAutocompleteEvents called');
-        console.log('📋 cropAreaList element:', cropAreaList);
-        console.log('🌾 CROP_DATA available:', typeof CROP_DATA !== 'undefined', CROP_DATA ? CROP_DATA.length : 0);
+        log('🔧 bindAutocompleteEvents called');
+        log('📋 cropAreaList element:', cropAreaList);
+        log('🌾 CROP_DATA available:', typeof CROP_DATA !== 'undefined', CROP_DATA ? CROP_DATA.length : 0);
 
         // 작물 검색 input 요소들 찾기
         const searchInputs = cropAreaList.querySelectorAll('.crop-search-input');
-        console.log('🔍 Found', searchInputs.length, 'crop search inputs');
+        log('🔍 Found', searchInputs.length, 'crop search inputs');
 
         searchInputs.forEach((input, index) => {
-            console.log(`  - Input ${index}:`, input, 'data-index:', input.dataset.index);
+            log(`  - Input ${index}:`, input, 'data-index:', input.dataset.index);
 
             // input 이벤트
             input.addEventListener('input', (e) => {
-                console.log('✏️ INPUT EVENT FIRED!', e.target.value);
+                log('✏️ INPUT EVENT FIRED!', e.target.value);
 
                 const idx = parseInt(e.target.dataset.index);
                 const value = e.target.value.trim().toLowerCase();
                 const autocompleteList = document.getElementById(`autocomplete-${idx}`);
 
-                console.log('📝 Processing input - idx:', idx, 'value:', value, 'list:', autocompleteList);
+                log('📝 Processing input - idx:', idx, 'value:', value, 'list:', autocompleteList);
 
                 tempCropAreas[idx].name = e.target.value;
                 tempCropAreas[idx].code = '';
@@ -2071,7 +2075,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         crop.name.toLowerCase().includes(value)
                     ).slice(0, 10);
 
-                    console.log('🔍 Found', matches.length, 'matches');
+                    log('🔍 Found', matches.length, 'matches');
 
                     if (matches.length > 0) {
                         autocompleteList.innerHTML = matches.map(crop => `
@@ -2084,7 +2088,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         autocompleteList.style.width = `${rect.width}px`;
 
                         autocompleteList.classList.add('show');
-                        console.log('✅ Autocomplete shown');
+                        log('✅ Autocomplete shown');
                     } else {
                         autocompleteList.classList.remove('show');
                     }
@@ -2107,12 +2111,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // 자동완성 항목 클릭
         const autocompleteLists = cropAreaList.querySelectorAll('.crop-autocomplete-list');
-        console.log('🔍 Found', autocompleteLists.length, 'autocomplete lists');
+        log('🔍 Found', autocompleteLists.length, 'autocomplete lists');
 
         autocompleteLists.forEach(list => {
             list.addEventListener('click', (e) => {
                 if (e.target.tagName === 'LI') {
-                    console.log('🎯 Autocomplete item clicked');
+                    log('🎯 Autocomplete item clicked');
 
                     const idx = parseInt(list.id.replace('autocomplete-', ''));
                     const name = e.target.dataset.name;
@@ -2128,7 +2132,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const areaInput = cropAreaList.querySelector(`.area-input[data-index="${idx}"]`);
                     if (areaInput) areaInput.focus();
 
-                    console.log('✅ Crop selected:', name);
+                    log('✅ Crop selected:', name);
                 }
             });
         });
@@ -2206,7 +2210,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         });
 
-        console.log('✅ All event bindings complete');
+        log('✅ All event bindings complete');
     }
 
     // ========================================
@@ -2216,33 +2220,33 @@ document.addEventListener('DOMContentLoaded', async () => {
     let currentSubLotIndex = null;
 
     function openSubLotCropModal(parcelId, subLotIndex) {
-        console.log('🎯 openSubLotCropModal called with parcelId:', parcelId, 'subLotIndex:', subLotIndex);
+        log('🎯 openSubLotCropModal called with parcelId:', parcelId, 'subLotIndex:', subLotIndex);
         currentSubLotParcelId = parcelId;
         currentSubLotIndex = subLotIndex;
 
         const parcel = parcels.find(p => p.id === parcelId);
         const subLot = parcel.subLots[subLotIndex];
-        console.log('📦 Sub-lot found:', subLot);
+        log('📦 Sub-lot found:', subLot);
 
         // 기존 작물 데이터 로드
         tempCropAreas = subLot.crops && subLot.crops.length > 0
             ? subLot.crops.map(c => ({ ...c }))
             : [{ name: '', area: '', code: '' }];
-        console.log('🌾 tempCropAreas for sublot:', tempCropAreas);
+        log('🌾 tempCropAreas for sublot:', tempCropAreas);
 
         renderCropAreaModal();
         cropAreaModal.classList.remove('hidden');
-        console.log('✅ Sublot modal shown, classList:', cropAreaModal.classList.toString());
+        log('✅ Sublot modal shown, classList:', cropAreaModal.classList.toString());
     }
 
     // 작물 확인 버튼 - 통합 핸들러
-    console.log('🎯 Binding confirmCropAreaBtn click handler:', confirmCropAreaBtn);
+    log('🎯 Binding confirmCropAreaBtn click handler:', confirmCropAreaBtn);
     confirmCropAreaBtn.addEventListener('click', () => {
-        console.log('✅ Confirm button clicked!');
-        console.log('tempCropAreas:', tempCropAreas);
-        console.log('currentParcelIdForCrop:', currentParcelIdForCrop);
-        console.log('currentSubLotParcelId:', currentSubLotParcelId);
-        console.log('currentSubLotIndex:', currentSubLotIndex);
+        log('✅ Confirm button clicked!');
+        log('tempCropAreas:', tempCropAreas);
+        log('currentParcelIdForCrop:', currentParcelIdForCrop);
+        log('currentSubLotParcelId:', currentSubLotParcelId);
+        log('currentSubLotIndex:', currentSubLotIndex);
 
         // 유효한 작물만 저장 (이름과 면적이 모두 있는 것)
         // 단위 정보도 함께 저장 (변환 없이 원본 값 유지)
@@ -2288,7 +2292,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             parcel.crops = [firstCrop, ...validCrops];
 
-            console.log('📋 작물 저장 완료:', parcel.crops);
+            log('📋 작물 저장 완료:', parcel.crops);
 
             updateCropsAreaDisplay(currentParcelIdForCrop);
             updateParcelSummary(currentParcelIdForCrop);
@@ -2848,7 +2852,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const checkedBoxes = tableBody.querySelectorAll('.row-checkbox:checked');
         const count = checkedBoxes.length;
         // 선택 개수는 필요시 UI에 표시 가능
-        console.log(`${count}개 항목 선택됨`);
+        log(`${count}개 항목 선택됨`);
     }
 
     // 선택된 항목 ID 가져오기

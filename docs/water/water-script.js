@@ -5,6 +5,10 @@ const SAMPLE_TYPE = '물';
 const STORAGE_KEY = 'waterSampleLogs';
 const AUTO_SAVE_FILE = 'water-autosave.json';
 
+// 디버그 모드 (프로덕션에서는 false)
+const DEBUG = false;
+const log = (...args) => DEBUG && console.log(...args);
+
 // ========================================
 // Electron / Web 환경 감지 및 파일 API 추상화
 // ========================================
@@ -17,7 +21,7 @@ const FileAPI = {
     async init(year) {
         if (isElectron) {
             this.autoSavePath = await window.electronAPI.getAutoSavePath('water', year);
-            console.log('📁 Electron 수질 자동 저장 경로:', this.autoSavePath);
+            log('📁 Electron 수질 자동 저장 경로:', this.autoSavePath);
         }
     },
 
@@ -25,7 +29,7 @@ const FileAPI = {
     async updateAutoSavePath(year) {
         if (isElectron) {
             this.autoSavePath = await window.electronAPI.getAutoSavePath('water', year);
-            console.log('📁 수질 자동 저장 경로 업데이트:', this.autoSavePath);
+            log('📁 수질 자동 저장 경로 업데이트:', this.autoSavePath);
         }
     },
 
@@ -132,8 +136,8 @@ const FileAPI = {
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('🚀 수질분석 페이지 로드 시작');
-    console.log(isElectron ? '🖥️ Electron 환경' : '🌐 웹 브라우저 환경');
+    log('🚀 수질분석 페이지 로드 시작');
+    log(isElectron ? '🖥️ Electron 환경' : '🌐 웹 브라우저 환경');
 
     // 파일 API 초기화 (현재 년도로)
     const currentYear = new Date().getFullYear().toString();
@@ -159,7 +163,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             if (autoSaveToggle) {
                                 autoSaveToggle.checked = true;
                             }
-                            console.log('📁 수질 자동 저장 폴더 설정됨:', result.folder);
+                            log('📁 수질 자동 저장 폴더 설정됨:', result.folder);
                         }
                     } catch (error) {
                         console.error('폴더 선택 오류:', error);
@@ -226,7 +230,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (oldData.length > 0 && sampleLogs.length === 0) {
         sampleLogs = oldData;
         localStorage.setItem(getStorageKey(selectedYear), JSON.stringify(sampleLogs));
-        console.log('📂 기존 데이터를 년도별 저장소로 마이그레이션:', sampleLogs.length, '건');
+        log('📂 기존 데이터를 년도별 저장소로 마이그레이션:', sampleLogs.length, '건');
     }
 
     // 년도별 데이터 로드 함수
@@ -730,14 +734,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 초기 채취장소 필드에 자동완성 바인딩
     const initialLocationItems = samplingLocationsList.querySelectorAll('.sampling-location-item');
-    console.log('초기 채취장소 필드 개수:', initialLocationItems.length);
-    console.log('suggestRegionVillages 함수 존재:', typeof suggestRegionVillages === 'function');
-    console.log('parseRegionAddress 함수 존재:', typeof parseRegionAddress === 'function');
+    log('초기 채취장소 필드 개수:', initialLocationItems.length);
+    log('suggestRegionVillages 함수 존재:', typeof suggestRegionVillages === 'function');
+    log('parseRegionAddress 함수 존재:', typeof parseRegionAddress === 'function');
 
     initialLocationItems.forEach((item, index) => {
         const input = item.querySelector('.sampling-location-input');
         const list = item.querySelector('.location-autocomplete-list');
-        console.log(`채취장소 ${index + 1} 바인딩:`, { input: !!input, list: !!list });
+        log(`채취장소 ${index + 1} 바인딩:`, { input: !!input, list: !!list });
         bindLocationAutocomplete(input, list);
     });
 
@@ -965,7 +969,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (isElectron && FileAPI.autoSavePath && document.getElementById('autoSaveToggle')?.checked) {
             const autoSaveContent = JSON.stringify(sampleLogs, null, 2);
             FileAPI.autoSave(autoSaveContent);
-            console.log('💾 수질 데이터 자동 저장');
+            log('💾 수질 데이터 자동 저장');
         }
     }
 
@@ -1610,7 +1614,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (success) {
                     updateAutoSaveStatus('saved');
                     setTimeout(() => updateAutoSaveStatus('active'), 2000);
-                    console.log('💾 수질 자동 저장 완료');
+                    log('💾 수질 자동 저장 완료');
                 } else {
                     updateAutoSaveStatus('error');
                 }
@@ -1778,7 +1782,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (loadedData && loadedData.length > 0) {
                     sampleLogs = loadedData;
                     localStorage.setItem(STORAGE_KEY, JSON.stringify(sampleLogs));
-                    console.log('📂 수질 자동 저장 파일에서 데이터 로드됨:', loadedData.length, '건');
+                    log('📂 수질 자동 저장 파일에서 데이터 로드됨:', loadedData.length, '건');
                     renderLogs(sampleLogs);
                 }
             }
@@ -1792,5 +1796,5 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ========================================
     renderLogs(sampleLogs);
 
-    console.log('✅ 수질분석 페이지 초기화 완료');
+    log('✅ 수질분석 페이지 초기화 완료');
 });

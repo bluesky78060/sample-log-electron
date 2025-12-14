@@ -5,6 +5,10 @@ const SAMPLE_TYPE = '중금속';
 const STORAGE_KEY = 'heavyMetalSampleLogs';
 const AUTO_SAVE_FILE = 'heavy-metal-autosave.json';
 
+// 디버그 모드 (프로덕션에서는 false)
+const DEBUG = false;
+const log = (...args) => DEBUG && console.log(...args);
+
 // 중금속 분석 항목 목록
 const ANALYSIS_ITEMS = ['구리', '납', '니켈', '비소', '수은', '아연', '카드뮴', '6가크롬'];
 
@@ -29,7 +33,7 @@ const FileAPI = {
     async init(year) {
         if (isElectron) {
             this.autoSavePath = await window.electronAPI.getAutoSavePath('heavy-metal', year);
-            console.log('📁 Electron 중금속 자동 저장 경로:', this.autoSavePath);
+            log('📁 Electron 중금속 자동 저장 경로:', this.autoSavePath);
         }
     },
 
@@ -37,7 +41,7 @@ const FileAPI = {
     async updateAutoSavePath(year) {
         if (isElectron) {
             this.autoSavePath = await window.electronAPI.getAutoSavePath('heavy-metal', year);
-            console.log('📁 중금속 자동 저장 경로 업데이트:', this.autoSavePath);
+            log('📁 중금속 자동 저장 경로 업데이트:', this.autoSavePath);
         }
     },
 
@@ -155,8 +159,8 @@ const FileAPI = {
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('🚀 중금속 페이지 로드 시작');
-    console.log(isElectron ? '🖥️ Electron 환경' : '🌐 웹 브라우저 환경');
+    log('🚀 중금속 페이지 로드 시작');
+    log(isElectron ? '🖥️ Electron 환경' : '🌐 웹 브라우저 환경');
 
     await FileAPI.init(selectedYear);
 
@@ -183,7 +187,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             updateAutoSaveStatus('active');
                             autoSaveToFile();
                             showToast('자동 저장이 활성화되었습니다.', 'success');
-                            console.log('📁 중금속 자동 저장 폴더 설정됨:', result.folder);
+                            log('📁 중금속 자동 저장 폴더 설정됨:', result.folder);
                         }
                     } catch (error) {
                         console.error('폴더 선택 오류:', error);
@@ -259,7 +263,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const currentYearKey = getStorageKey(selectedYear);
         if (!localStorage.getItem(currentYearKey)) {
             localStorage.setItem(currentYearKey, oldData);
-            console.log('📦 기존 중금속 데이터를 현재 년도로 마이그레이션 완료');
+            log('📦 기존 중금속 데이터를 현재 년도로 마이그레이션 완료');
         }
     }
 
@@ -739,7 +743,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // 다음 번호 생성
         const nextNumber = maxNumber + 1;
-        console.log(`📋 다음 접수번호 생성: ${nextNumber} (기존 최대: ${maxNumber})`);
+        log(`📋 다음 접수번호 생성: ${nextNumber} (기존 최대: ${maxNumber})`);
         return String(nextNumber);
     }
 
@@ -1629,5 +1633,5 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderLogs();
     updateSelectedItemsCount();
 
-    console.log('✅ 중금속 페이지 초기화 완료');
+    log('✅ 중금속 페이지 초기화 완료');
 });
