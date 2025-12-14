@@ -151,10 +151,21 @@ function saveSettings(settings) {
     }
 }
 
-// 자동 저장 경로 가져오기 (타입별로 다른 파일명 사용)
-ipcMain.handle('get-auto-save-path', async (event, type) => {
+// 자동 저장 경로 가져오기 (타입별, 연도별로 다른 파일명 사용)
+ipcMain.handle('get-auto-save-path', async (event, type, year) => {
     const settings = loadSettings();
-    const fileName = type ? `auto-save-${type}.json` : 'auto-save.json';
+    // 연도가 있으면 연도별 파일명 생성 (예: auto-save-heavy-metal-2025.json)
+    let fileName;
+    if (type && year) {
+        fileName = `auto-save-${type}-${year}.json`;
+    } else if (type) {
+        fileName = `auto-save-${type}.json`;
+    } else if (year) {
+        fileName = `auto-save-${year}.json`;
+    } else {
+        fileName = 'auto-save.json';
+    }
+
     if (settings.autoSaveFolder) {
         return path.join(settings.autoSaveFolder, fileName);
     }

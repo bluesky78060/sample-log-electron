@@ -16,10 +16,18 @@ const FileAPI = {
     autoSavePath: null,
 
     // 초기화
-    async init() {
+    async init(year) {
         if (isElectron) {
-            this.autoSavePath = await window.electronAPI.getAutoSavePath('soil');
+            this.autoSavePath = await window.electronAPI.getAutoSavePath('soil', year);
             console.log('📁 Electron 토양 자동 저장 경로:', this.autoSavePath);
+        }
+    },
+
+    // 연도 변경 시 경로 업데이트
+    async updateAutoSavePath(year) {
+        if (isElectron) {
+            this.autoSavePath = await window.electronAPI.getAutoSavePath('soil', year);
+            console.log('📁 토양 자동 저장 경로 업데이트:', this.autoSavePath);
         }
     },
 
@@ -136,8 +144,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 페이지 로드 시작 - DOMContentLoaded');
     console.log(isElectron ? '🖥️ Electron 환경 감지됨' : '🌐 웹 브라우저 환경');
 
-    // 파일 API 초기화
-    await FileAPI.init();
+    // 파일 API 초기화 (현재 년도로)
+    const currentYear = new Date().getFullYear().toString();
+    await FileAPI.init(currentYear);
 
     // Electron 환경: 자동 저장 기본 활성화 및 첫 실행 시 폴더 선택
     // 자동 저장 파일에서 데이터 로드하는 함수 (나중에 sampleLogs 초기화 후 호출)
@@ -230,19 +239,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateListViewTitle();
 
     // ========================================
-    // 면적 단위 변환 함수
+    // 면적 포맷팅 함수
     // ========================================
-    // 1평 = 3.305785 ㎡
-    const PYEONG_TO_M2 = 3.305785;
-
-    function convertM2ToPyeong(m2) {
-        return (parseFloat(m2) / PYEONG_TO_M2).toFixed(2);
-    }
-
-    function convertPyeongToM2(pyeong) {
-        return (parseFloat(pyeong) * PYEONG_TO_M2).toFixed(2);
-    }
-
     // 숫자 천 단위 구분자 포맷팅
     function formatArea(value) {
         const num = parseFloat(value);
@@ -570,9 +568,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 년도 선택 이벤트
     if (yearSelect) {
-        yearSelect.addEventListener('change', (e) => {
+        yearSelect.addEventListener('change', async (e) => {
             selectedYear = e.target.value;
             loadYearData(selectedYear);
+            // 자동 저장 경로도 연도별로 업데이트
+            if (isElectron) {
+                await FileAPI.updateAutoSavePath(selectedYear);
+            }
+            showToast(`${selectedYear}년 데이터를 불러왔습니다.`, 'success');
         });
     }
 
@@ -873,7 +876,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         unitButtons.forEach(btn => {
             btn.addEventListener('click', (e) => {
-                const currentValue = areaInput.value.trim();
                 const newUnit = btn.dataset.value;
                 const previousUnit = unitToggle.dataset.unit;
 
@@ -885,18 +887,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 btn.classList.add('active');
                 unitToggle.dataset.unit = newUnit;
 
-                if (!currentValue || isNaN(currentValue)) {
-                    return;
-                }
-
-                // 단위 변환
-                if (previousUnit === 'm2' && newUnit === 'pyeong') {
-                    // ㎡ → 평
-                    areaInput.value = convertM2ToPyeong(currentValue);
-                } else if (previousUnit === 'pyeong' && newUnit === 'm2') {
-                    // 평 → ㎡
-                    areaInput.value = convertPyeongToM2(currentValue);
-                }
+                // 면적 값은 변환하지 않고 단위만 변경 (입력한 값 그대로 유지)
             });
         });
     }
@@ -1760,34 +1751,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         });
 
-        // 면적 단위 변환 이벤트
+        // 면적 단위 변환 이벤트 (단위만 변경, 값은 그대로 유지)
         cropAreaList.querySelectorAll('.area-unit-modal-select').forEach((select, idx) => {
-            // 이전 단위 저장
-            let previousUnit = 'm2';
-
             select.addEventListener('change', (e) => {
                 const index = parseInt(e.target.dataset.index);
-                const areaInput = document.getElementById(`area-input-${index}`);
-                const currentValue = areaInput.value.trim();
                 const newUnit = e.target.value;
 
-                if (!currentValue || isNaN(currentValue)) {
-                    previousUnit = newUnit;
-                    return;
-                }
-
-                // 단위 변환
-                if (previousUnit === 'm2' && newUnit === 'pyeong') {
-                    // ㎡ → 평
-                    areaInput.value = convertM2ToPyeong(currentValue);
-                } else if (previousUnit === 'pyeong' && newUnit === 'm2') {
-                    // 평 → ㎡
-                    areaInput.value = convertPyeongToM2(currentValue);
-                }
-
-                // tempCropAreas 업데이트
-                tempCropAreas[index].area = areaInput.value;
-                previousUnit = newUnit;
+                // tempCropAreas 단위 업데이트 (값은 변환하지 않음)
+                tempCropAreas[index].unit = newUnit;
             });
         });
 
@@ -2953,7 +2924,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const result = await window.electronAPI.selectAutoSaveFolder();
                 if (result.success) {
                     // 폴더 선택 후 soil 타입으로 새 경로 가져오기
-                    FileAPI.autoSavePath = await window.electronAPI.getAutoSavePath('soil');
+                    FileAPI.autoSavePath = await window.electronAPI.getAutoSavePath('soil', selectedYear);
                     showToast(`저장 폴더가 변경되었습니다:\n${result.folder}`, 'success');
 
                     // 자동 저장이 활성화되어 있으면 바로 저장

@@ -16,10 +16,18 @@ const FileAPI = {
     autoSavePath: null,
 
     // 초기화
-    async init() {
+    async init(year) {
         if (isElectron) {
-            this.autoSavePath = await window.electronAPI.getAutoSavePath('pesticide');
-            console.log('📁 Electron 토양 자동 저장 경로:', this.autoSavePath);
+            this.autoSavePath = await window.electronAPI.getAutoSavePath('pesticide', year);
+            console.log('📁 Electron 잔류농약 자동 저장 경로:', this.autoSavePath);
+        }
+    },
+
+    // 연도 변경 시 경로 업데이트
+    async updateAutoSavePath(year) {
+        if (isElectron) {
+            this.autoSavePath = await window.electronAPI.getAutoSavePath('pesticide', year);
+            console.log('📁 잔류농약 자동 저장 경로 업데이트:', this.autoSavePath);
         }
     },
 
@@ -136,8 +144,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 페이지 로드 시작 - DOMContentLoaded');
     console.log(isElectron ? '🖥️ Electron 환경 감지됨' : '🌐 웹 브라우저 환경');
 
-    // 파일 API 초기화
-    await FileAPI.init();
+    // 파일 API 초기화 (현재 년도로)
+    const currentYear = new Date().getFullYear().toString();
+    await FileAPI.init(currentYear);
 
     // Electron 환경: 자동 저장 기본 활성화 및 첫 실행 시 폴더 선택
     // 자동 저장 파일에서 데이터 로드하는 함수 (나중에 sampleLogs 초기화 후 호출)
@@ -889,7 +898,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         yearSelect.value = selectedYear;
 
         // 년도 변경 이벤트
-        yearSelect.addEventListener('change', () => {
+        yearSelect.addEventListener('change', async () => {
             selectedYear = yearSelect.value;
             console.log(`📅 년도 변경: ${selectedYear}`);
 
@@ -898,6 +907,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // 해당 년도 데이터 로드 및 렌더링
             loadYearData(selectedYear);
+
+            // 자동 저장 경로도 연도별로 업데이트
+            if (isElectron) {
+                await FileAPI.updateAutoSavePath(selectedYear);
+            }
+            showToast(`${selectedYear}년 데이터를 불러왔습니다.`, 'success');
         });
     }
 
@@ -3339,7 +3354,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const result = await window.electronAPI.selectAutoSaveFolder();
                 if (result.success) {
                     // 폴더 선택 후 soil 타입으로 새 경로 가져오기
-                    FileAPI.autoSavePath = await window.electronAPI.getAutoSavePath('pesticide');
+                    FileAPI.autoSavePath = await window.electronAPI.getAutoSavePath('pesticide', selectedYear);
                     showToast(`저장 폴더가 변경되었습니다:\n${result.folder}`, 'success');
 
                     // 자동 저장이 활성화되어 있으면 바로 저장

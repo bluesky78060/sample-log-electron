@@ -14,8 +14,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // 파일 읽기
     readFile: (filePath) => ipcRenderer.invoke('read-file', filePath),
 
-    // 자동 저장 경로 가져오기 (타입별로 다른 파일명 사용)
-    getAutoSavePath: (type) => ipcRenderer.invoke('get-auto-save-path', type),
+    // 자동 저장 경로 가져오기 (타입별, 연도별로 다른 파일명 사용)
+    getAutoSavePath: (type, year) => ipcRenderer.invoke('get-auto-save-path', type, year),
 
     // 자동 저장 폴더 선택
     selectAutoSaveFolder: () => ipcRenderer.invoke('select-auto-save-folder'),

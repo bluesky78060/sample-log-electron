@@ -14,10 +14,18 @@ const isElectron = window.electronAPI?.isElectron === true;
 const FileAPI = {
     autoSavePath: null,
 
-    async init() {
+    async init(year) {
         if (isElectron) {
-            this.autoSavePath = await window.electronAPI.getAutoSavePath('water');
+            this.autoSavePath = await window.electronAPI.getAutoSavePath('water', year);
             console.log('📁 Electron 수질 자동 저장 경로:', this.autoSavePath);
+        }
+    },
+
+    // 연도 변경 시 경로 업데이트
+    async updateAutoSavePath(year) {
+        if (isElectron) {
+            this.autoSavePath = await window.electronAPI.getAutoSavePath('water', year);
+            console.log('📁 수질 자동 저장 경로 업데이트:', this.autoSavePath);
         }
     },
 
@@ -127,7 +135,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 수질분석 페이지 로드 시작');
     console.log(isElectron ? '🖥️ Electron 환경' : '🌐 웹 브라우저 환경');
 
-    await FileAPI.init();
+    // 파일 API 초기화 (현재 년도로)
+    const currentYear = new Date().getFullYear().toString();
+    await FileAPI.init(currentYear);
 
     // Electron 환경: 자동 저장 기본 활성화 및 첫 실행 시 폴더 선택
     if (isElectron) {
@@ -143,7 +153,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     try {
                         const result = await window.electronAPI.selectAutoSaveFolder();
                         if (result.success) {
-                            FileAPI.autoSavePath = await window.electronAPI.getAutoSavePath('water');
+                            FileAPI.autoSavePath = await window.electronAPI.getAutoSavePath('water', selectedYear);
                             localStorage.setItem('waterAutoSaveFolderSelected', 'true');
                             localStorage.setItem('waterAutoSaveEnabled', 'true');
                             if (autoSaveToggle) {
@@ -230,9 +240,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 년도 선택 이벤트
     if (yearSelect) {
-        yearSelect.addEventListener('change', (e) => {
+        yearSelect.addEventListener('change', async (e) => {
             selectedYear = e.target.value;
             loadYearData(selectedYear);
+            // 자동 저장 경로도 연도별로 업데이트
+            if (isElectron) {
+                await FileAPI.updateAutoSavePath(selectedYear);
+            }
+            showToast(`${selectedYear}년 데이터를 불러왔습니다.`, 'success');
         });
     }
 
@@ -1631,7 +1646,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             try {
                 const result = await window.electronAPI.selectAutoSaveFolder();
                 if (result.success) {
-                    FileAPI.autoSavePath = await window.electronAPI.getAutoSavePath('water');
+                    FileAPI.autoSavePath = await window.electronAPI.getAutoSavePath('water', selectedYear);
                     localStorage.setItem('waterAutoSaveFolderSelected', 'true');
                     showToast(`저장 폴더가 변경되었습니다:\n${result.folder}`, 'success');
 

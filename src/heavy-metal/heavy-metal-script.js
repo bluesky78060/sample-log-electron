@@ -26,10 +26,18 @@ const FileAPI = {
     autoSavePath: null,
     autoSaveFolderHandle: null,
 
-    async init() {
+    async init(year) {
         if (isElectron) {
-            this.autoSavePath = await window.electronAPI.getAutoSavePath('heavy-metal');
+            this.autoSavePath = await window.electronAPI.getAutoSavePath('heavy-metal', year);
             console.log('📁 Electron 중금속 자동 저장 경로:', this.autoSavePath);
+        }
+    },
+
+    // 연도 변경 시 경로 업데이트
+    async updateAutoSavePath(year) {
+        if (isElectron) {
+            this.autoSavePath = await window.electronAPI.getAutoSavePath('heavy-metal', year);
+            console.log('📁 중금속 자동 저장 경로 업데이트:', this.autoSavePath);
         }
     },
 
@@ -150,7 +158,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 중금속 페이지 로드 시작');
     console.log(isElectron ? '🖥️ Electron 환경' : '🌐 웹 브라우저 환경');
 
-    await FileAPI.init();
+    await FileAPI.init(selectedYear);
 
     // Electron 환경: 자동 저장 기본 활성화 및 첫 실행 시 폴더 선택
     if (isElectron) {
@@ -166,7 +174,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     try {
                         const result = await window.electronAPI.selectAutoSaveFolder();
                         if (result.success) {
-                            FileAPI.autoSavePath = await window.electronAPI.getAutoSavePath('heavy-metal');
+                            FileAPI.autoSavePath = await window.electronAPI.getAutoSavePath('heavy-metal', selectedYear);
                             localStorage.setItem('heavyMetalAutoSaveFolderSelected', 'true');
                             localStorage.setItem('heavyMetalAutoSaveEnabled', 'true');
                             if (autoSaveToggle) {
@@ -191,7 +199,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             // 자동 저장 경로 설정 및 활성화
             (async () => {
                 try {
-                    FileAPI.autoSavePath = await window.electronAPI.getAutoSavePath('heavy-metal');
+                    FileAPI.autoSavePath = await window.electronAPI.getAutoSavePath('heavy-metal', selectedYear);
                     updateAutoSaveStatus('active');
                     autoSaveToFile();
                     showToast('자동 저장이 활성화되었습니다.', 'success');
@@ -294,9 +302,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 년도 선택 변경 이벤트
     if (yearSelect) {
-        yearSelect.addEventListener('change', (e) => {
+        yearSelect.addEventListener('change', async (e) => {
             selectedYear = e.target.value;
             loadYearData(selectedYear);
+            // 자동 저장 경로도 연도별로 업데이트
+            if (isElectron) {
+                await FileAPI.updateAutoSavePath(selectedYear);
+            }
             showToast(`${selectedYear}년 데이터를 불러왔습니다.`, 'success');
         });
     }
@@ -1261,8 +1273,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             try {
                 const result = await window.electronAPI.selectAutoSaveFolder();
                 if (result.success) {
-                    // 폴더 선택 후 heavy-metal 타입으로 새 경로 가져오기
-                    FileAPI.autoSavePath = await window.electronAPI.getAutoSavePath('heavy-metal');
+                    // 폴더 선택 후 heavy-metal 타입으로 새 경로 가져오기 (연도 포함)
+                    FileAPI.autoSavePath = await window.electronAPI.getAutoSavePath('heavy-metal', selectedYear);
                     showToast(`저장 폴더가 변경되었습니다:\n${result.folder}`, 'success');
 
                     // 자동 저장이 활성화되어 있으면 바로 저장
