@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>토양 시료 접수 대장</title>
+    <title>잔류농약 시료 접수 대장</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap"
@@ -17,7 +17,7 @@
             theme: {
                 extend: {
                     colors: {
-                        primary: "#22C55E",
+                        primary: "#8B5CF6",
                         "background-light": "#F8FAFC",
                         "background-dark": "#18181B",
                     },
@@ -32,24 +32,24 @@
         };
     </script>
     <link rel="stylesheet" href="../style.css">
-    <link rel="stylesheet" href="soil-style.css">
+    <link rel="stylesheet" href="pesticide-style.css">
 </head>
 
 <body>
     <!-- 네비게이션 바 -->
-    <nav class="navbar soil-navbar">
+    <nav class="navbar pesticide-navbar">
         <!-- 뒤로가기 버튼 -->
         <a href="../index.html" class="back-btn" title="메인으로">←</a>
         <!-- 로고 및 파트 선택 드롭다운 -->
         <div class="navbar-brand">
             <div class="brand-dropdown-trigger">
-                <span class="brand-icon">🌱</span>
-                <span class="brand-text">토양</span>
+                <span class="brand-icon">🧪</span>
+                <span class="brand-text">잔류농약</span>
                 <span class="dropdown-arrow">▼</span>
             </div>
             <div class="brand-dropdown-menu">
                 <div class="dropdown-header">시료 분석 메뉴</div>
-                <a href="../soil/index.html" class="dropdown-item active">
+                <a href="../soil/index.html" class="dropdown-item">
                     <span class="item-icon">🌱</span>
                     <span class="item-text">토양 분석</span>
                 </a>
@@ -62,7 +62,7 @@
                     <span class="item-text">퇴·액비 성분검사</span>
                 </a>
                 <div class="dropdown-divider"></div>
-                <a href="../pesticide/index.html" class="dropdown-item">
+                <a href="../pesticide/index.html" class="dropdown-item active">
                     <span class="item-icon">🧪</span>
                     <span class="item-text">잔류농약 검사</span>
                 </a>
@@ -206,8 +206,8 @@
                         <!-- 시료 정보 카드 -->
                         <div class="form-card">
                             <div class="card-header">
-                                <span class="card-icon">🌱</span>
-                                <h3>토양 시료 정보</h3>
+                                <span class="card-icon">🧪</span>
+                                <h3>잔류농약 시료 정보</h3>
                             </div>
                             <div class="card-body">
                                 <div class="form-row">
@@ -215,21 +215,21 @@
                                         <label for="subCategory">구분</label>
                                         <select id="subCategory" name="subCategory">
                                             <option value="">선택하세요</option>
-                                            <option value="논">논</option>
-                                            <option value="밭">밭</option>
-                                            <option value="과수">과수</option>
-                                            <option value="시설">시설</option>
+                                            <option value="생산물">생산물</option>
+                                            <option value="작물체">작물체</option>
+                                            <option value="토양">토양</option>
                                         </select>
                                     </div>
                                     <div class="form-field">
                                         <label for="purpose">목적 (용도) <span class="required">*</span></label>
                                         <select id="purpose" name="purpose" required>
                                             <option value="">선택하세요</option>
-                                            <option value="일반재배">🌾 일반재배</option>
-                                            <option value="무농약">🍃 무농약</option>
-                                            <option value="유기">♻️ 유기</option>
-                                            <option value="GAP">✅ GAP</option>
-                                            <option value="저탄소">🌱 저탄소</option>
+                                            <option value="참고용">📝 참고용</option>
+                                            <option value="제출(급식)">🍽️ 제출(급식)</option>
+                                            <option value="인증(무농약)">🍃 인증(무농약)</option>
+                                            <option value="인증(유기농)">♻️ 인증(유기농)</option>
+                                            <option value="인증(GAP)">✅ 인증(GAP)</option>
+                                            <option value="인증(글로벌GAP)">🌍 인증(글로벌GAP)</option>
                                         </select>
                                     </div>
                                 </div>
@@ -243,25 +243,52 @@
                         </div>
                     </div>
 
-                    <!-- 오른쪽: 필지 정보 -->
+                    <!-- 오른쪽: 의뢰내용 -->
                     <div class="form-right-column">
-                        <!-- 필지 정보 카드 -->
-                        <div class="form-card">
+                        <!-- 의뢰내용 카드 -->
+                        <div class="form-card request-items-card">
                             <div class="card-header">
-                                <span class="card-icon">🗺️</span>
-                                <h3>필지 정보</h3>
-                                <button type="button" id="addParcelBtn" class="btn-add-small">+ 필지 추가</button>
+                                <span class="card-icon">📋</span>
+                                <h3>의뢰내용</h3>
+                                <button type="button" id="btnAddRequestItem" class="btn-add-item" title="의뢰 항목 추가">
+                                    ➕ 항목 추가
+                                </button>
                             </div>
                             <div class="card-body">
-                                <div id="parcelsContainer" class="parcels-list">
-                                    <!-- 필지가 동적으로 추가됩니다 -->
+                                <!-- 생산자 성명 (공통) -->
+                                <div class="form-row">
+                                    <div class="form-field full-width">
+                                        <label for="producerName">생산자 성명</label>
+                                        <input type="text" id="producerName" name="producerName" placeholder="생산자 성명 입력">
+                                    </div>
                                 </div>
-                                <div id="emptyParcels" class="empty-parcels">
-                                    <p>등록된 필지가 없습니다</p>
-                                    <button type="button" class="btn-add-parcel-empty">+ 첫 번째 필지 추가</button>
+
+                                <!-- 의뢰 항목 목록 -->
+                                <div id="requestItemsList" class="request-items-list">
+                                    <!-- 첫 번째 의뢰 항목 -->
+                                    <div class="request-item" data-index="0">
+                                        <div class="request-item-header">
+                                            <span class="item-number">의뢰 1</span>
+                                            <button type="button" class="btn-remove-item" title="항목 삭제" style="display: none;">✕</button>
+                                        </div>
+                                        <div class="form-row">
+                                            <div class="form-field full-width">
+                                                <label>생산지 주소 <span class="label-hint">* 리+지번 입력 후 Enter</span></label>
+                                                <div class="producer-address-autocomplete-wrapper">
+                                                    <input type="text" class="request-producer-address" name="producerAddress[]" placeholder="예: 문단리 123" class="address-input-wide">
+                                                    <ul class="producer-address-autocomplete-list"></ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="form-row">
+                                            <div class="form-field full-width">
+                                                <label>의뢰물품명(작물명)</label>
+                                                <input type="text" class="request-crop-name" name="requestContent[]" placeholder="예: 사과, 배, 포도 등">
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <input type="hidden" id="parcelsData" name="parcelsData">
                         </div>
                     </div>
                 </div>
@@ -273,7 +300,7 @@
         <div id="listView" class="view">
             <div class="view-header-top">
                 <div class="header-left">
-                    <h2>토양 접수 목록</h2>
+                    <h2>잔류농약 접수 목록</h2>
                     <span class="record-count" id="recordCount">0건</span>
                 </div>
                 <div class="header-right">
@@ -311,9 +338,9 @@
                             <th>성명</th>
                             <th class="col-zipcode">우편번호</th>
                             <th>주소</th>
-                            <th>필지 주소</th>
-                            <th>작물명</th>
-                            <th>면적</th>
+                            <th>생산자 성명</th>
+                            <th>생산지 주소</th>
+                            <th>의뢰물품명</th>
                             <th>전화번호</th>
                             <th>수령 방법</th>
                             <th class="col-note">비고</th>
@@ -376,7 +403,7 @@
         <div class="modal-overlay"></div>
         <div class="modal-content modal-medium">
             <div class="modal-header">
-                <h3>🌱 작물 및 면적 입력</h3>
+                <h3>🧪 작물 및 면적 입력</h3>
                 <button type="button" class="modal-close" id="closeCropAreaModal">&times;</button>
             </div>
             <div class="modal-body">
@@ -501,7 +528,7 @@
         <div class="modal-overlay"></div>
         <div class="modal-content modal-large">
             <div class="modal-header">
-                <h3>📊 토양 접수 통계</h3>
+                <h3>📊 잔류농약 접수 통계</h3>
                 <button type="button" class="modal-close" id="closeStatisticsModal">&times;</button>
             </div>
             <div class="modal-body">
@@ -572,7 +599,7 @@
     <script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
     <script src="../cropData.js"></script>
     <script src="../bonghwaData.js"></script>
-    <script src="soil-script.js"></script>
+    <script src="pesticide-script.js"></script>
 </body>
 
 </html>

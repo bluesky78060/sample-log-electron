@@ -1,0 +1,554 @@
+/* ========================================
+   잔류농약 시료 전용 스타일
+   ======================================== */
+
+/* 잔류농약 테마 색상 */
+:root {
+    --pesticide-primary: #8B5CF6;
+    --pesticide-primary-hover: #7C3AED;
+    --pesticide-primary-light: #DDD6FE;
+    --pesticide-primary-dark: #6D28D9;
+    --pesticide-gradient: linear-gradient(135deg, #8B5CF6, #7C3AED);
+}
+
+/* ========================================
+   네비게이션 바 스타일
+   ======================================== */
+
+.pesticide-navbar {
+    background: var(--pesticide-gradient);
+    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.15);
+}
+
+.pesticide-navbar .back-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.pesticide-navbar .brand-icon {
+    font-size: 1.3rem;
+}
+
+.pesticide-navbar .brand-text {
+    font-weight: 600;
+    color: white;
+}
+
+.pesticide-navbar .dropdown-arrow {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.pesticide-navbar .nav-btn {
+    background: transparent;
+    color: white;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.pesticide-navbar .nav-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.pesticide-navbar .nav-btn.active {
+    background: rgba(255, 255, 255, 0.25);
+    font-weight: 600;
+}
+
+.pesticide-navbar .action-btn-icon {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.pesticide-navbar .action-btn-icon:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.05);
+}
+
+.pesticide-navbar .action-btn-icon.submit {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.pesticide-navbar .action-btn-icon.submit:hover {
+    background: rgba(255, 255, 255, 0.35);
+}
+
+.pesticide-navbar .navbar-divider {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* ========================================
+   폼 스타일
+   ======================================== */
+
+.pesticide-navbar ~ .main-content .form-section {
+    border-color: var(--pesticide-primary-light);
+}
+
+.pesticide-navbar ~ .main-content legend {
+    color: var(--pesticide-primary);
+    font-weight: 600;
+}
+
+.pesticide-navbar ~ .main-content input:focus,
+.pesticide-navbar ~ .main-content select:focus,
+.pesticide-navbar ~ .main-content textarea:focus {
+    border-color: var(--pesticide-primary);
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+}
+
+.pesticide-navbar ~ .main-content input[type="checkbox"]:checked {
+    background-color: var(--pesticide-primary);
+    border-color: var(--pesticide-primary);
+}
+
+.pesticide-navbar ~ .main-content input[type="radio"]:checked {
+    background-color: var(--pesticide-primary);
+    border-color: var(--pesticide-primary);
+}
+
+/* ========================================
+   버튼 스타일
+   ======================================== */
+
+.pesticide-navbar ~ .main-content .action-btn {
+    background: var(--pesticide-gradient);
+    color: white;
+}
+
+.pesticide-navbar ~ .main-content .action-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.2);
+}
+
+.pesticide-navbar ~ .main-content .btn-edit {
+    background: var(--pesticide-primary);
+}
+
+.pesticide-navbar ~ .main-content .btn-edit:hover {
+    background: var(--pesticide-primary-hover);
+}
+
+/* ========================================
+   테이블 스타일
+   ======================================== */
+
+.pesticide-navbar ~ .main-content .data-table thead {
+    background: linear-gradient(to bottom, #FAF5FF, #F3E8FF);
+}
+
+.pesticide-navbar ~ .main-content .data-table th {
+    color: var(--pesticide-primary-dark);
+    font-weight: 600;
+}
+
+.pesticide-navbar ~ .main-content .data-table tbody tr:hover {
+    background: #FAF5FF;
+}
+
+.pesticide-navbar ~ .main-content input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    padding: 0;
+}
+
+/* ========================================
+   컬럼 너비 설정
+   ======================================== */
+
+.col-select {
+    width: 60px;
+    text-align: center;
+}
+
+.col-reception-number {
+    width: 120px;
+}
+
+.col-date {
+    width: 110px;
+}
+
+.col-name {
+    width: 100px;
+}
+
+.col-contact {
+    width: 130px;
+}
+
+.col-producer {
+    width: 100px;
+}
+
+.col-crop {
+    width: 120px;
+}
+
+.col-purpose {
+    width: 100px;
+}
+
+.col-note {
+    min-width: 150px;
+}
+
+.col-completed {
+    width: 70px;
+    text-align: center;
+}
+
+.col-actions {
+    width: 120px;
+    text-align: center;
+}
+
+/* ========================================
+   아이콘 크기 조정
+   ======================================== */
+
+.pesticide-navbar ~ .main-content .card-icon {
+    font-size: 1.2rem;
+}
+
+.nav-btn-icon {
+    font-size: 1.1rem;
+}
+
+/* ========================================
+   체크박스 그룹 스타일
+   ======================================== */
+
+.checkbox-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.checkbox-label:hover {
+    background: rgba(139, 92, 246, 0.05);
+}
+
+.checkbox-label input[type="radio"] {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+}
+
+/* ========================================
+   완료 상태 표시
+   ======================================== */
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.status-badge.completed {
+    background: #DDD6FE;
+    color: #6D28D9;
+}
+
+.status-badge.pending {
+    background: #FEF3C7;
+    color: #92400E;
+}
+
+/* ========================================
+   폼 레이아웃 조정
+   ======================================== */
+
+.pesticide-navbar ~ .main-content .form-two-column {
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.pesticide-navbar ~ .main-content .form-left-column {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.pesticide-navbar ~ .main-content .form-left-column .form-card {
+    width: 100%;
+    max-width: 500px;
+}
+
+.pesticide-navbar ~ .main-content .form-left-column .form-field.full-width {
+    grid-column: 1 / -1;
+    width: 100%;
+}
+
+.pesticide-navbar ~ .main-content .form-left-column .form-field.full-width #note {
+    width: 100%;
+}
+
+/* ========================================
+   의뢰내용 카드 스타일
+   ======================================== */
+
+.pesticide-navbar ~ .main-content .form-right-column {
+    width: 80%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.pesticide-navbar ~ .main-content .form-right-column .form-card {
+    width: 100%;
+    max-height: 320px;
+}
+
+.pesticide-navbar ~ .main-content .form-right-column .card-body {
+    padding: 1rem;
+}
+
+.pesticide-navbar ~ .main-content .form-right-column .form-row {
+    margin-bottom: 0.75rem;
+    display: block;
+}
+
+.pesticide-navbar ~ .main-content .form-right-column input,
+.pesticide-navbar ~ .main-content .form-right-column textarea {
+    font-size: 0.9rem;
+    padding: 0.5rem;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.pesticide-navbar ~ .main-content .form-right-column .form-field {
+    width: 100%;
+}
+
+.pesticide-navbar ~ .main-content .form-right-column .form-field.full-width {
+    width: 100%;
+}
+
+.pesticide-navbar ~ .main-content .form-right-column #producerName {
+    width: 50%;
+}
+
+/* ========================================
+   반응형 스타일
+   ======================================== */
+
+@media (max-width: 768px) {
+    .pesticide-navbar ~ .main-content .form-row {
+        flex-direction: column;
+    }
+
+    .pesticide-navbar ~ .main-content .form-group {
+        width: 100%;
+    }
+
+    .checkbox-group {
+        flex-direction: column;
+    }
+}
+
+/* ========================================
+   생산지 주소 자동완성 스타일
+   ======================================== */
+
+.producer-address-autocomplete-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.producer-address-autocomplete-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid var(--pesticide-primary-light);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.15);
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+    list-style: none;
+    margin: 4px 0 0 0;
+    padding: 0;
+}
+
+.producer-address-autocomplete-list.show {
+    display: block;
+}
+
+.producer-address-autocomplete-list li {
+    padding: 10px 12px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    border-bottom: 1px solid #f1f5f9;
+    transition: background 0.2s ease;
+}
+
+.producer-address-autocomplete-list li:last-child {
+    border-bottom: none;
+}
+
+.producer-address-autocomplete-list li:hover {
+    background: #FAF5FF;
+    color: var(--pesticide-primary-dark);
+}
+
+.label-hint {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    font-weight: 400;
+}
+
+/* ========================================
+   다중 의뢰 항목 스타일
+   ======================================== */
+
+.request-items-card .card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.request-items-card .card-header h3 {
+    flex: 1;
+}
+
+.btn-add-item {
+    background: var(--pesticide-gradient);
+    color: white;
+    border: none;
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.btn-add-item:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+}
+
+.request-items-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-height: 280px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.request-items-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.request-items-list::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 3px;
+}
+
+.request-items-list::-webkit-scrollbar-thumb {
+    background: var(--pesticide-primary-light);
+    border-radius: 3px;
+}
+
+.request-items-list::-webkit-scrollbar-thumb:hover {
+    background: var(--pesticide-primary);
+}
+
+.request-item {
+    background: #FAFAFA;
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
+    padding: 0.75rem;
+    position: relative;
+}
+
+.request-item:hover {
+    border-color: var(--pesticide-primary-light);
+}
+
+.request-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px dashed #E5E7EB;
+}
+
+.item-number {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--pesticide-primary);
+    background: var(--pesticide-primary-light);
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+}
+
+.btn-remove-item {
+    background: #FEE2E2;
+    color: #DC2626;
+    border: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.btn-remove-item:hover {
+    background: #DC2626;
+    color: white;
+}
+
+.request-item .form-row {
+    margin-bottom: 0.5rem;
+}
+
+.request-item .form-row:last-child {
+    margin-bottom: 0;
+}
+
+.request-item label {
+    font-size: 0.8rem;
+    color: #64748B;
+    margin-bottom: 0.25rem;
+    display: block;
+}
+
+.request-item input {
+    font-size: 0.85rem;
+    padding: 0.4rem 0.6rem;
+}
+
+/* 의뢰내용 카드 높이 조정 */
+.pesticide-navbar ~ .main-content .form-right-column .request-items-card {
+    max-height: none;
+}
+
+.pesticide-navbar ~ .main-content .form-right-column .request-items-card .card-body {
+    padding: 0.75rem;
+}
