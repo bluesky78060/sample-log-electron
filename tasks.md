@@ -279,3 +279,16 @@ sample-log-electron/
 - [ ] 반응형 디자인 개선
 - [ ] 접근성 향상
 - [ ] 키보드 네비게이션
+
+### 보안
+- [ ] innerHTML XSS 위험 개선 - DOMPurify 라이브러리 도입 검토
+  - 대부분의 innerHTML 사용은 정적 템플릿이나, 사용자 입력이 포함될 경우 주의 필요
+  - 웹 버전 공개 배포 시 또는 외부 API 데이터 표시 시 적용 권장
+
+### 코드 구조
+- [ ] style.css 파일 분리 검토 (현재 3,984줄)
+  - 현재 단일 파일로 성능 문제 없음, 필요시 모듈화 진행
+  - 분리 시 구조: variables, navbar, forms, tables, modals, pagination, utilities
+- [ ] ESLint 도입 검토
+  - 현재 미설정 상태, 개인 프로젝트로 급하지 않음
+  - 팀 협업 또는 프로젝트 확장 시 도입 권장
