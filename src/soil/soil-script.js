@@ -7,142 +7,11 @@ const AUTO_SAVE_FILE = 'soil-autosave.json';
 
 // 디버그 모드 (프로덕션에서는 false)
 const DEBUG = false;
-const log = (...args) => DEBUG && log(...args);
+const log = (...args) => DEBUG && console.log(...args);
 
-// ========================================
-// Electron / Web 환경 감지 및 파일 API 추상화
-// ========================================
-const isElectron = window.electronAPI?.isElectron === true;
-
-// Electron 환경에서의 파일 시스템 API
-const FileAPI = {
-    // 자동 저장 경로 (Electron 전용)
-    autoSavePath: null,
-
-    // 초기화
-    async init(year) {
-        if (isElectron) {
-            this.autoSavePath = await window.electronAPI.getAutoSavePath('soil', year);
-            log('📁 Electron 토양 자동 저장 경로:', this.autoSavePath);
-        }
-    },
-
-    // 연도 변경 시 경로 업데이트
-    async updateAutoSavePath(year) {
-        if (isElectron) {
-            this.autoSavePath = await window.electronAPI.getAutoSavePath('soil', year);
-            log('📁 토양 자동 저장 경로 업데이트:', this.autoSavePath);
-        }
-    },
-
-    // 파일 저장
-    async saveFile(content, suggestedName = 'data.json') {
-        if (isElectron) {
-            const filePath = await window.electronAPI.saveFileDialog({
-                title: '파일 저장',
-                defaultPath: suggestedName,
-                filters: [
-                    { name: 'JSON Files', extensions: ['json'] },
-                    { name: 'All Files', extensions: ['*'] }
-                ]
-            });
-            if (filePath) {
-                const result = await window.electronAPI.writeFile(filePath, content);
-                return result.success;
-            }
-            return false;
-        } else {
-            // Web File System Access API
-            if ('showSaveFilePicker' in window) {
-                try {
-                    const handle = await window.showSaveFilePicker({
-                        suggestedName,
-                        types: [{
-                            description: 'JSON Files',
-                            accept: { 'application/json': ['.json'] }
-                        }]
-                    });
-                    const writable = await handle.createWritable();
-                    await writable.write(content);
-                    await writable.close();
-                    return true;
-                } catch (e) {
-                    if (e.name !== 'AbortError') console.error(e);
-                    return false;
-                }
-            } else {
-                // 폴백: Blob 다운로드
-                const blob = new Blob([content], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = suggestedName;
-                a.click();
-                URL.revokeObjectURL(url);
-                return true;
-            }
-        }
-    },
-
-    // 파일 열기
-    async openFile() {
-        if (isElectron) {
-            const filePath = await window.electronAPI.openFileDialog({
-                title: '파일 열기',
-                filters: [
-                    { name: 'JSON Files', extensions: ['json'] },
-                    { name: 'All Files', extensions: ['*'] }
-                ]
-            });
-            if (filePath) {
-                const result = await window.electronAPI.readFile(filePath);
-                if (result.success) {
-                    return result.content;
-                }
-            }
-            return null;
-        } else {
-            // Web File System Access API
-            if ('showOpenFilePicker' in window) {
-                try {
-                    const [handle] = await window.showOpenFilePicker({
-                        types: [{
-                            description: 'JSON Files',
-                            accept: { 'application/json': ['.json'] }
-                        }]
-                    });
-                    const file = await handle.getFile();
-                    return await file.text();
-                } catch (e) {
-                    if (e.name !== 'AbortError') console.error(e);
-                    return null;
-                }
-            } else {
-                return null;
-            }
-        }
-    },
-
-    // 자동 저장 (Electron에서는 자동 저장 경로에 저장)
-    async autoSave(content) {
-        if (isElectron && this.autoSavePath) {
-            const result = await window.electronAPI.writeFile(this.autoSavePath, content);
-            return result.success;
-        }
-        return false;
-    },
-
-    // 자동 저장 데이터 로드
-    async loadAutoSave() {
-        if (isElectron && this.autoSavePath) {
-            const result = await window.electronAPI.readFile(this.autoSavePath);
-            if (result.success) {
-                return result.content;
-            }
-        }
-        return null;
-    }
-};
+// 공통 모듈에서 가져온 변수/함수 사용 (../shared/*.js)
+const isElectron = window.isElectron;
+const FileAPI = window.createFileAPI('soil');
 
 document.addEventListener('DOMContentLoaded', async () => {
     log('🚀 페이지 로드 시작 - DOMContentLoaded');
@@ -186,7 +55,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     try {
                         const result = await window.electronAPI.selectAutoSaveFolder();
                         if (result.success) {
-                            FileAPI.autoSavePath = result.path;
+                            FileAPI.autoSavePath = await window.electronAPI.getAutoSavePath('soil', currentYear);
                             localStorage.setItem('autoSaveFolderSelected', 'true');
                             localStorage.setItem('autoSaveEnabled', 'true');
                             if (autoSaveToggle) {
@@ -355,34 +224,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // ========================================
-    // 토스트 메시지 시스템
-    // ========================================
-    function showToast(message, type = 'success') {
-        const container = document.getElementById('toastContainer');
-        if (!container) return;
-
-        const icons = {
-            success: '✓',
-            error: '✗',
-            warning: '⚠'
-        };
-
-        const toast = document.createElement('div');
-        toast.className = `toast ${type}`;
-        toast.innerHTML = `
-            <span class="toast-icon">${icons[type] || icons.success}</span>
-            <span class="toast-message">${message}</span>
-        `;
-
-        container.appendChild(toast);
-
-        // 3초 후 자동 제거
-        setTimeout(() => {
-            toast.style.animation = 'toastIn 0.3s ease reverse';
-            setTimeout(() => toast.remove(), 300);
-        }, 3000);
-    }
+    // 토스트 메시지 - 공통 모듈 사용 (../shared/toast.js)
+    const showToast = window.showToast;
 
     // 빈 필지 상태 표시/숨김
     function updateEmptyParcelsState() {
@@ -461,114 +304,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
-    // Address Search Elements
-    const searchAddressBtn = document.getElementById('searchAddressBtn');
+    // 주소 검색 - 공통 모듈 사용 (../shared/address.js)
     const addressPostcode = document.getElementById('addressPostcode');
     const addressRoad = document.getElementById('addressRoad');
     const addressDetail = document.getElementById('addressDetail');
     const addressHidden = document.getElementById('address');
 
-    // 주소 검색 모달 요소
-    const addressModal = document.getElementById('addressModal');
-    const closeAddressModalBtn = document.getElementById('closeAddressModal');
-    const daumPostcodeContainer = document.getElementById('daumPostcodeContainer');
-
-    // 주소 검색 모달 닫기
-    function closeAddressModal() {
-        addressModal.classList.add('hidden');
-        // 컨테이너 초기화 (지연 처리로 Postcode API 내부 정리 완료 대기)
-        setTimeout(() => {
-            if (daumPostcodeContainer) {
-                daumPostcodeContainer.innerHTML = '';
-            }
-        }, 100);
-    }
-
-    closeAddressModalBtn.addEventListener('click', closeAddressModal);
-    addressModal.querySelector('.modal-overlay').addEventListener('click', closeAddressModal);
-
-    // Address Search Handler (Daum Postcode API)
-    searchAddressBtn.addEventListener('click', () => {
-        log('주소 검색 버튼 클릭됨');
-
-        if (typeof daum === 'undefined' || typeof daum.Postcode === 'undefined') {
-            alert('주소 검색 서비스를 불러오는 중입니다. 잠시 후 다시 시도해주세요.');
-            return;
-        }
-
-        // 모달 표시
-        addressModal.classList.remove('hidden');
-        log('주소 검색 모달 표시됨');
-
-        // 이전 내용 초기화
-        daumPostcodeContainer.innerHTML = '';
-
-        // 모달 내부에 주소 검색 임베드
-        new daum.Postcode({
-            oncomplete: function(data) {
-                log('주소 선택 완료:', data);
-
-                // 도로명 주소
-                let roadAddr = data.roadAddress;
-                let extraRoadAddr = '';
-
-                // 법정동명이 있을 경우 추가
-                if (data.bname !== '' && /[동|로|가]$/g.test(data.bname)) {
-                    extraRoadAddr += data.bname;
-                }
-                // 건물명이 있고, 공동주택일 경우 추가
-                if (data.buildingName !== '' && data.apartment === 'Y') {
-                    extraRoadAddr += (extraRoadAddr !== '' ? ', ' + data.buildingName : data.buildingName);
-                }
-                // 표시할 참고항목이 있을 경우 괄호 추가
-                if (extraRoadAddr !== '') {
-                    extraRoadAddr = ' (' + extraRoadAddr + ')';
-                }
-
-                const finalRoadAddr = roadAddr + extraRoadAddr;
-                log('입력할 주소 정보:', {
-                    우편번호: data.zonecode,
-                    도로명주소: finalRoadAddr
-                });
-
-                // 우편번호와 주소 정보를 해당 필드에 넣는다.
-                addressPostcode.value = data.zonecode;
-                addressRoad.value = finalRoadAddr;
-                addressDetail.value = ''; // 상세주소 초기화
-
-                log('필드 값 설정 완료:', {
-                    우편번호필드: addressPostcode.value,
-                    도로명주소필드: addressRoad.value,
-                    상세주소필드: addressDetail.value
-                });
-
-                updateFullAddress();
-
-                // 모달 닫기
-                closeAddressModal();
-                log('주소 검색 모달 닫힘');
-
-                // 상세주소 입력 필드로 포커스
-                addressDetail.focus();
-            },
-            width: '100%',
-            height: '100%'
-        }).embed(daumPostcodeContainer);
+    const addressManager = new window.AddressManager({
+        searchBtn: document.getElementById('searchAddressBtn'),
+        postcodeInput: addressPostcode,
+        roadInput: addressRoad,
+        detailInput: addressDetail,
+        hiddenInput: addressHidden,
+        modal: document.getElementById('addressModal'),
+        closeBtn: document.getElementById('closeAddressModal'),
+        container: document.getElementById('daumPostcodeContainer')
     });
-
-    addressDetail.addEventListener('input', updateFullAddress);
-
-    function updateFullAddress() {
-        const postcode = addressPostcode.value;
-        const road = addressRoad.value;
-        const detail = addressDetail.value;
-
-        if (postcode && road) {
-            addressHidden.value = `(${postcode}) ${road}${detail ? ' ' + detail : ''}`;
-        } else {
-            addressHidden.value = '';
-        }
-    }
 
     // Set default date to today
     dateInput.valueAsDate = new Date();
@@ -617,7 +368,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     // localStorage에 데이터가 없거나 자동 저장 파일이 더 많은 데이터를 가진 경우
                     if (sampleLogs.length === 0) {
                         sampleLogs = autoSaveData;
-                        localStorage.setItem(STORAGE_KEY, JSON.stringify(sampleLogs));
+                        localStorage.setItem(getStorageKey(selectedYear), JSON.stringify(sampleLogs));
                         log('📂 자동 저장 파일에서 데이터 복원 완료:', sampleLogs.length, '건');
                     } else if (autoSaveData.length > sampleLogs.length) {
                         // 자동 저장 파일에 더 많은 데이터가 있으면 병합 여부 확인
@@ -628,7 +379,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         );
                         if (mergeConfirm) {
                             sampleLogs = autoSaveData;
-                            localStorage.setItem(STORAGE_KEY, JSON.stringify(sampleLogs));
+                            localStorage.setItem(getStorageKey(selectedYear), JSON.stringify(sampleLogs));
                             log('📂 자동 저장 파일에서 데이터 교체 완료:', sampleLogs.length, '건');
                         }
                     }

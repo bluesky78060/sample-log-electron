@@ -15,140 +15,9 @@ let itemsPerPage = parseInt(localStorage.getItem('pesticideItemsPerPage')) || 10
 let totalPages = 1;
 let currentFlatRows = [];
 
-// ========================================
-// Electron / Web 환경 감지 및 파일 API 추상화
-// ========================================
-const isElectron = window.electronAPI?.isElectron === true;
-
-// Electron 환경에서의 파일 시스템 API
-const FileAPI = {
-    // 자동 저장 경로 (Electron 전용)
-    autoSavePath: null,
-
-    // 초기화
-    async init(year) {
-        if (isElectron) {
-            this.autoSavePath = await window.electronAPI.getAutoSavePath('pesticide', year);
-            log('📁 Electron 잔류농약 자동 저장 경로:', this.autoSavePath);
-        }
-    },
-
-    // 연도 변경 시 경로 업데이트
-    async updateAutoSavePath(year) {
-        if (isElectron) {
-            this.autoSavePath = await window.electronAPI.getAutoSavePath('pesticide', year);
-            log('📁 잔류농약 자동 저장 경로 업데이트:', this.autoSavePath);
-        }
-    },
-
-    // 파일 저장
-    async saveFile(content, suggestedName = 'data.json') {
-        if (isElectron) {
-            const filePath = await window.electronAPI.saveFileDialog({
-                title: '파일 저장',
-                defaultPath: suggestedName,
-                filters: [
-                    { name: 'JSON Files', extensions: ['json'] },
-                    { name: 'All Files', extensions: ['*'] }
-                ]
-            });
-            if (filePath) {
-                const result = await window.electronAPI.writeFile(filePath, content);
-                return result.success;
-            }
-            return false;
-        } else {
-            // Web File System Access API
-            if ('showSaveFilePicker' in window) {
-                try {
-                    const handle = await window.showSaveFilePicker({
-                        suggestedName,
-                        types: [{
-                            description: 'JSON Files',
-                            accept: { 'application/json': ['.json'] }
-                        }]
-                    });
-                    const writable = await handle.createWritable();
-                    await writable.write(content);
-                    await writable.close();
-                    return true;
-                } catch (e) {
-                    if (e.name !== 'AbortError') console.error(e);
-                    return false;
-                }
-            } else {
-                // 폴백: Blob 다운로드
-                const blob = new Blob([content], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = suggestedName;
-                a.click();
-                URL.revokeObjectURL(url);
-                return true;
-            }
-        }
-    },
-
-    // 파일 열기
-    async openFile() {
-        if (isElectron) {
-            const filePath = await window.electronAPI.openFileDialog({
-                title: '파일 열기',
-                filters: [
-                    { name: 'JSON Files', extensions: ['json'] },
-                    { name: 'All Files', extensions: ['*'] }
-                ]
-            });
-            if (filePath) {
-                const result = await window.electronAPI.readFile(filePath);
-                if (result.success) {
-                    return result.content;
-                }
-            }
-            return null;
-        } else {
-            // Web File System Access API
-            if ('showOpenFilePicker' in window) {
-                try {
-                    const [handle] = await window.showOpenFilePicker({
-                        types: [{
-                            description: 'JSON Files',
-                            accept: { 'application/json': ['.json'] }
-                        }]
-                    });
-                    const file = await handle.getFile();
-                    return await file.text();
-                } catch (e) {
-                    if (e.name !== 'AbortError') console.error(e);
-                    return null;
-                }
-            } else {
-                return null;
-            }
-        }
-    },
-
-    // 자동 저장 (Electron에서는 자동 저장 경로에 저장)
-    async autoSave(content) {
-        if (isElectron && this.autoSavePath) {
-            const result = await window.electronAPI.writeFile(this.autoSavePath, content);
-            return result.success;
-        }
-        return false;
-    },
-
-    // 자동 저장 데이터 로드
-    async loadAutoSave() {
-        if (isElectron && this.autoSavePath) {
-            const result = await window.electronAPI.readFile(this.autoSavePath);
-            if (result.success) {
-                return result.content;
-            }
-        }
-        return null;
-    }
-};
+// 공통 모듈에서 가져온 변수/함수 사용 (../shared/*.js)
+const isElectron = window.isElectron;
+const FileAPI = window.createFileAPI('pesticide');
 
 document.addEventListener('DOMContentLoaded', async () => {
     log('🚀 페이지 로드 시작 - DOMContentLoaded');
@@ -192,7 +61,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     try {
                         const result = await window.electronAPI.selectAutoSaveFolder();
                         if (result.success) {
-                            FileAPI.autoSavePath = result.path;
+                            FileAPI.autoSavePath = await window.electronAPI.getAutoSavePath('pesticide', currentYear);
                             localStorage.setItem('autoSaveFolderSelected', 'true');
                             localStorage.setItem('autoSaveEnabled', 'true');
                             if (autoSaveToggle) {
@@ -218,6 +87,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     const tableBody = document.getElementById('logTableBody');
     const emptyState = document.getElementById('emptyState');
     const dateInput = document.getElementById('date');
+    const paginationContainer = document.getElementById('pagination');
+
+    // 페이지네이션 요소들
+    const paginationInfo = document.getElementById('paginationInfo');
+    const itemsPerPageSelect = document.getElementById('itemsPerPage');
+    const pageNumbersContainer = document.getElementById('pageNumbers');
+    const firstPageBtn = document.getElementById('firstPage');
+    const prevPageBtn = document.getElementById('prevPage');
+    const nextPageBtn = document.getElementById('nextPage');
+    const lastPageBtn = document.getElementById('lastPage');
+
+    // 페이지당 항목 수 초기화
+    if (itemsPerPageSelect) {
+        itemsPerPageSelect.value = itemsPerPage;
+    }
 
     log('✅ 기본 요소 로드 완료');
 
@@ -314,34 +198,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // ========================================
-    // 토스트 메시지 시스템
-    // ========================================
-    function showToast(message, type = 'success') {
-        const container = document.getElementById('toastContainer');
-        if (!container) return;
-
-        const icons = {
-            success: '✓',
-            error: '✗',
-            warning: '⚠'
-        };
-
-        const toast = document.createElement('div');
-        toast.className = `toast ${type}`;
-        toast.innerHTML = `
-            <span class="toast-icon">${icons[type] || icons.success}</span>
-            <span class="toast-message">${message}</span>
-        `;
-
-        container.appendChild(toast);
-
-        // 3초 후 자동 제거
-        setTimeout(() => {
-            toast.style.animation = 'toastIn 0.3s ease reverse';
-            setTimeout(() => toast.remove(), 300);
-        }, 3000);
-    }
+    // 토스트 메시지 - 공통 모듈 사용 (../shared/toast.js)
+    const showToast = window.showToast;
 
     // 빈 상태 표시/숨김 (잔류농약에서는 사용하지 않음)
     function updateEmptyParcelsState() {
@@ -409,114 +267,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
-    // Address Search Elements
-    const searchAddressBtn = document.getElementById('searchAddressBtn');
+    // 주소 검색 - 공통 모듈 사용 (../shared/address.js)
     const addressPostcode = document.getElementById('addressPostcode');
     const addressRoad = document.getElementById('addressRoad');
     const addressDetail = document.getElementById('addressDetail');
     const addressHidden = document.getElementById('address');
 
-    // 주소 검색 모달 요소
-    const addressModal = document.getElementById('addressModal');
-    const closeAddressModalBtn = document.getElementById('closeAddressModal');
-    const daumPostcodeContainer = document.getElementById('daumPostcodeContainer');
-
-    // 주소 검색 모달 닫기
-    function closeAddressModal() {
-        addressModal.classList.add('hidden');
-        // 컨테이너 초기화 (지연 처리로 Postcode API 내부 정리 완료 대기)
-        setTimeout(() => {
-            if (daumPostcodeContainer) {
-                daumPostcodeContainer.innerHTML = '';
-            }
-        }, 100);
-    }
-
-    closeAddressModalBtn.addEventListener('click', closeAddressModal);
-    addressModal.querySelector('.modal-overlay').addEventListener('click', closeAddressModal);
-
-    // Address Search Handler (Daum Postcode API)
-    searchAddressBtn.addEventListener('click', () => {
-        log('주소 검색 버튼 클릭됨');
-
-        if (typeof daum === 'undefined' || typeof daum.Postcode === 'undefined') {
-            alert('주소 검색 서비스를 불러오는 중입니다. 잠시 후 다시 시도해주세요.');
-            return;
-        }
-
-        // 모달 표시
-        addressModal.classList.remove('hidden');
-        log('주소 검색 모달 표시됨');
-
-        // 이전 내용 초기화
-        daumPostcodeContainer.innerHTML = '';
-
-        // 모달 내부에 주소 검색 임베드
-        new daum.Postcode({
-            oncomplete: function(data) {
-                log('주소 선택 완료:', data);
-
-                // 도로명 주소
-                let roadAddr = data.roadAddress;
-                let extraRoadAddr = '';
-
-                // 법정동명이 있을 경우 추가
-                if (data.bname !== '' && /[동|로|가]$/g.test(data.bname)) {
-                    extraRoadAddr += data.bname;
-                }
-                // 건물명이 있고, 공동주택일 경우 추가
-                if (data.buildingName !== '' && data.apartment === 'Y') {
-                    extraRoadAddr += (extraRoadAddr !== '' ? ', ' + data.buildingName : data.buildingName);
-                }
-                // 표시할 참고항목이 있을 경우 괄호 추가
-                if (extraRoadAddr !== '') {
-                    extraRoadAddr = ' (' + extraRoadAddr + ')';
-                }
-
-                const finalRoadAddr = roadAddr + extraRoadAddr;
-                log('입력할 주소 정보:', {
-                    우편번호: data.zonecode,
-                    도로명주소: finalRoadAddr
-                });
-
-                // 우편번호와 주소 정보를 해당 필드에 넣는다.
-                addressPostcode.value = data.zonecode;
-                addressRoad.value = finalRoadAddr;
-                addressDetail.value = ''; // 상세주소 초기화
-
-                log('필드 값 설정 완료:', {
-                    우편번호필드: addressPostcode.value,
-                    도로명주소필드: addressRoad.value,
-                    상세주소필드: addressDetail.value
-                });
-
-                updateFullAddress();
-
-                // 모달 닫기
-                closeAddressModal();
-                log('주소 검색 모달 닫힘');
-
-                // 상세주소 입력 필드로 포커스
-                addressDetail.focus();
-            },
-            width: '100%',
-            height: '100%'
-        }).embed(daumPostcodeContainer);
+    const addressManager = new window.AddressManager({
+        searchBtn: document.getElementById('searchAddressBtn'),
+        postcodeInput: addressPostcode,
+        roadInput: addressRoad,
+        detailInput: addressDetail,
+        hiddenInput: addressHidden,
+        modal: document.getElementById('addressModal'),
+        closeBtn: document.getElementById('closeAddressModal'),
+        container: document.getElementById('daumPostcodeContainer')
     });
-
-    addressDetail.addEventListener('input', updateFullAddress);
-
-    function updateFullAddress() {
-        const postcode = addressPostcode.value;
-        const road = addressRoad.value;
-        const detail = addressDetail.value;
-
-        if (postcode && road) {
-            addressHidden.value = `(${postcode}) ${road}${detail ? ' ' + detail : ''}`;
-        } else {
-            addressHidden.value = '';
-        }
-    }
 
     // ========================================
     // 생산지 주소 자동완성 (봉화군/영주시/울진군)
@@ -896,41 +662,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     dateInput.valueAsDate = new Date();
 
     // ========================================
-    // 년도 선택 관리
+    // 년도 선택 기능 (sampleLogs 초기화 전에 정의)
     // ========================================
     const yearSelect = document.getElementById('yearSelect');
     const listViewTitle = document.getElementById('listViewTitle');
-    let selectedYear = new Date().getFullYear().toString(); // 현재 년도로 초기화
+    let selectedYear = new Date().getFullYear().toString();
 
-    // 년도 선택 초기화
+    // 현재 년도로 드롭다운 기본값 설정
     if (yearSelect) {
-        // 현재 년도를 기본값으로 설정
         yearSelect.value = selectedYear;
-
-        // 년도 변경 이벤트
-        yearSelect.addEventListener('change', async () => {
-            selectedYear = yearSelect.value;
-            log(`📅 년도 변경: ${selectedYear}`);
-
-            // 접수 목록 제목 업데이트
-            updateListViewTitle();
-
-            // 해당 년도 데이터 로드 및 렌더링
-            loadYearData(selectedYear);
-
-            // 자동 저장 경로도 연도별로 업데이트
-            if (isElectron) {
-                await FileAPI.updateAutoSavePath(selectedYear);
-            }
-            showToast(`${selectedYear}년 데이터를 불러왔습니다.`, 'success');
-        });
-    }
-
-    // 접수 목록 제목 업데이트
-    function updateListViewTitle() {
-        if (listViewTitle) {
-            listViewTitle.textContent = `${selectedYear}년 잔류농약 접수 목록`;
-        }
     }
 
     // 년도별 스토리지 키 생성
@@ -938,14 +678,61 @@ document.addEventListener('DOMContentLoaded', async () => {
         return `${STORAGE_KEY}_${year}`;
     }
 
-    // 년도별 데이터 로드
+    // 년도 선택 시 제목 업데이트
+    function updateListViewTitle() {
+        if (listViewTitle) {
+            listViewTitle.textContent = `${selectedYear}년 잔류농약 접수 목록`;
+        }
+    }
+
+    // 초기 제목 설정
+    updateListViewTitle();
+
+    // ========================================
+    // 접수번호 자동 카운터
+    // ========================================
+    const receptionNumberInput = document.getElementById('receptionNumber');
+
+    // 다음 접수번호 생성
+    function generateNextReceptionNumber() {
+        let maxNumber = 0;
+
+        // 기존 데이터에서 최대 번호 찾기
+        sampleLogs.forEach(logItem => {
+            if (logItem.receptionNumber) {
+                const baseNumber = logItem.receptionNumber.split('-')[0];
+                const num = parseInt(baseNumber, 10);
+                if (!isNaN(num) && num > maxNumber) {
+                    maxNumber = num;
+                }
+            }
+        });
+
+        const nextNumber = maxNumber + 1;
+        log(`📋 다음 접수번호 생성: ${nextNumber} (기존 최대: ${maxNumber})`);
+        return String(nextNumber);
+    }
+
+    // ========================================
+    // 데이터 초기화 (Load from LocalStorage)
+    // ========================================
+    let sampleLogs = JSON.parse(localStorage.getItem(getStorageKey(selectedYear))) || [];
+
+    // 기존 데이터 마이그레이션 (년도 없는 기존 데이터를 현재 년도로 이동)
+    const oldData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    if (oldData.length > 0 && sampleLogs.length === 0) {
+        sampleLogs = oldData;
+        localStorage.setItem(getStorageKey(selectedYear), JSON.stringify(sampleLogs));
+        log('📂 기존 데이터를 년도별 저장소로 마이그레이션:', sampleLogs.length, '건');
+    }
+
+    // 년도별 데이터 로드 함수
     function loadYearData(year) {
         const yearStorageKey = getStorageKey(year);
         sampleLogs = JSON.parse(localStorage.getItem(yearStorageKey)) || [];
-        log(`📂 ${year}년 데이터 로드: ${sampleLogs.length}건`);
-
         renderLogs(sampleLogs);
         receptionNumberInput.value = generateNextReceptionNumber();
+        updateListViewTitle();
     }
 
     // 년도별 데이터 저장
@@ -954,31 +741,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         localStorage.setItem(yearStorageKey, JSON.stringify(sampleLogs));
     }
 
-    // 초기 제목 설정
-    updateListViewTitle();
-
-    // Load data from LocalStorage (선택된 년도 기준)
-    let sampleLogs = JSON.parse(localStorage.getItem(getStorageKey(selectedYear))) || [];
-
-    // 기존 데이터 마이그레이션 (한번만 실행)
-    const migrationKey = `${STORAGE_KEY}_migrated`;
-    if (!localStorage.getItem(migrationKey)) {
-        const oldData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-        if (oldData.length > 0) {
-            // 기존 데이터를 현재 년도로 이동
-            const currentYear = new Date().getFullYear().toString();
-            const currentYearKey = getStorageKey(currentYear);
-            const existingData = JSON.parse(localStorage.getItem(currentYearKey)) || [];
-            const mergedData = [...existingData, ...oldData];
-            localStorage.setItem(currentYearKey, JSON.stringify(mergedData));
-            log(`📦 기존 데이터 ${oldData.length}건을 ${currentYear}년으로 마이그레이션 완료`);
-
-            // 현재 선택 년도가 현재 년도면 데이터 반영
-            if (selectedYear === currentYear) {
-                sampleLogs = mergedData;
+    // 년도 선택 이벤트
+    if (yearSelect) {
+        yearSelect.addEventListener('change', async (e) => {
+            selectedYear = e.target.value;
+            loadYearData(selectedYear);
+            // 자동 저장 경로도 연도별로 업데이트
+            if (isElectron) {
+                await FileAPI.updateAutoSavePath(selectedYear);
             }
-        }
-        localStorage.setItem(migrationKey, 'true');
+            showToast(`${selectedYear}년 데이터를 불러왔습니다.`, 'success');
+        });
     }
 
     // ========================================
@@ -992,7 +765,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     // localStorage에 데이터가 없거나 자동 저장 파일이 더 많은 데이터를 가진 경우
                     if (sampleLogs.length === 0) {
                         sampleLogs = autoSaveData;
-                        localStorage.setItem(STORAGE_KEY, JSON.stringify(sampleLogs));
+                        localStorage.setItem(getStorageKey(selectedYear), JSON.stringify(sampleLogs));
                         log('📂 자동 저장 파일에서 데이터 복원 완료:', sampleLogs.length, '건');
                     } else if (autoSaveData.length > sampleLogs.length) {
                         // 자동 저장 파일에 더 많은 데이터가 있으면 병합 여부 확인
@@ -1003,53 +776,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                         );
                         if (mergeConfirm) {
                             sampleLogs = autoSaveData;
-                            localStorage.setItem(STORAGE_KEY, JSON.stringify(sampleLogs));
+                            localStorage.setItem(getStorageKey(selectedYear), JSON.stringify(sampleLogs));
                             log('📂 자동 저장 파일에서 데이터 교체 완료:', sampleLogs.length, '건');
                         }
                     }
-                    // UI 업데이트
-                    renderLogs(sampleLogs);
-                    receptionNumberInput.value = generateNextReceptionNumber();
                 }
             } catch (error) {
                 console.error('자동 저장 파일 로드 중 오류:', error);
             }
+
+            // 자동 저장 데이터 로드 후 렌더링
+            renderLogs(sampleLogs);
+            receptionNumberInput.value = generateNextReceptionNumber();
         })();
+    } else {
+        // 웹 환경이거나 자동 저장 경로가 없는 경우 바로 렌더링
+        renderLogs(sampleLogs);
+        receptionNumberInput.value = generateNextReceptionNumber();
     }
-
-    // ========================================
-    // 접수번호 자동 카운터
-    // ========================================
-    const receptionNumberInput = document.getElementById('receptionNumber');
-
-    // 다음 접수번호 생성
-    function generateNextReceptionNumber() {
-        let maxNumber = 0;
-
-        // 기존 데이터에서 최대 번호 찾기
-        // 형식: 1, 2, 3 (숫자만)
-        sampleLogs.forEach(log => {
-            if (log.receptionNumber) {
-                // 숫자만 추출 (하위필지 번호 제외: "1-1" -> "1")
-                const baseNumber = log.receptionNumber.split('-')[0];
-                const num = parseInt(baseNumber, 10);
-                if (!isNaN(num) && num > maxNumber) {
-                    maxNumber = num;
-                }
-            }
-        });
-
-        // 다음 번호 생성
-        const nextNumber = maxNumber + 1;
-        log(`📋 다음 접수번호 생성: ${nextNumber} (기존 최대: ${maxNumber})`);
-        return String(nextNumber);
-    }
-
-    // 초기 접수번호 설정
-    receptionNumberInput.value = generateNextReceptionNumber();
-
-    // Render initial list
-    renderLogs(sampleLogs);
 
     // ========================================
     // 필지 관리 시스템 (잔류농약 페이지에서는 사용 안 함)
@@ -3518,11 +3262,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 페이지 로드 시 자동 저장 상태 복원
     const autoSaveEnabled = localStorage.getItem('autoSaveEnabled') === 'true';
+    log('🔧 자동저장 상태 확인:', { autoSaveEnabled, autoSaveToggle: !!autoSaveToggle, isElectron, autoSavePath: FileAPI.autoSavePath });
     if (autoSaveToggle && autoSaveEnabled) {
         autoSaveToggle.checked = true;
+        log('🔧 자동저장 토글 활성화');
 
         if (isElectron) {
             // Electron: 자동 저장 경로가 이미 설정됨
+            log('🔧 Electron 환경에서 자동저장 활성화');
             updateAutoSaveStatus('active');
             autoSaveToFile();
             showToast('자동 저장이 활성화되었습니다.', 'success');
@@ -3843,19 +3590,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         return rows;
     }
 
-    // 페이지네이션 DOM 요소
-    const paginationInfo = document.getElementById('paginationInfo');
-    const itemsPerPageSelect = document.getElementById('itemsPerPage');
-    const pageNumbersContainer = document.getElementById('pageNumbers');
-    const firstPageBtn = document.getElementById('firstPage');
-    const prevPageBtn = document.getElementById('prevPage');
-    const nextPageBtn = document.getElementById('nextPage');
-    const lastPageBtn = document.getElementById('lastPage');
-    const paginationContainer = document.getElementById('pagination');
-
-    // 페이지네이션 초기화
+    // 페이지네이션 이벤트 리스너
     if (itemsPerPageSelect) {
-        itemsPerPageSelect.value = itemsPerPage;
         itemsPerPageSelect.addEventListener('change', (e) => {
             itemsPerPage = parseInt(e.target.value);
             localStorage.setItem('pesticideItemsPerPage', itemsPerPage);

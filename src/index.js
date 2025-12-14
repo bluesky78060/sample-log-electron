@@ -191,9 +191,12 @@ ipcMain.handle('select-auto-save-folder', async () => {
     settings.autoSaveFolder = selectedFolder;
     saveSettings(settings);
 
+    // 선택한 폴더 경로와 전체 경로 모두 반환
+    const defaultFileName = 'auto-save.json';
     return {
         success: true,
-        folder: selectedFolder
+        folder: selectedFolder,
+        path: path.join(selectedFolder, defaultFileName)
     };
 });
 

@@ -9,131 +9,9 @@ const AUTO_SAVE_FILE = 'water-autosave.json';
 const DEBUG = false;
 const log = (...args) => DEBUG && console.log(...args);
 
-// ========================================
-// Electron / Web 환경 감지 및 파일 API 추상화
-// ========================================
-const isElectron = window.electronAPI?.isElectron === true;
-
-// Electron 환경에서의 파일 시스템 API
-const FileAPI = {
-    autoSavePath: null,
-
-    async init(year) {
-        if (isElectron) {
-            this.autoSavePath = await window.electronAPI.getAutoSavePath('water', year);
-            log('📁 Electron 수질 자동 저장 경로:', this.autoSavePath);
-        }
-    },
-
-    // 연도 변경 시 경로 업데이트
-    async updateAutoSavePath(year) {
-        if (isElectron) {
-            this.autoSavePath = await window.electronAPI.getAutoSavePath('water', year);
-            log('📁 수질 자동 저장 경로 업데이트:', this.autoSavePath);
-        }
-    },
-
-    async saveFile(content, suggestedName = 'water-data.json') {
-        if (isElectron) {
-            const filePath = await window.electronAPI.saveFileDialog({
-                title: '파일 저장',
-                defaultPath: suggestedName,
-                filters: [
-                    { name: 'JSON Files', extensions: ['json'] },
-                    { name: 'All Files', extensions: ['*'] }
-                ]
-            });
-            if (filePath) {
-                const result = await window.electronAPI.writeFile(filePath, content);
-                return result.success;
-            }
-            return false;
-        } else {
-            if ('showSaveFilePicker' in window) {
-                try {
-                    const handle = await window.showSaveFilePicker({
-                        suggestedName,
-                        types: [{
-                            description: 'JSON Files',
-                            accept: { 'application/json': ['.json'] }
-                        }]
-                    });
-                    const writable = await handle.createWritable();
-                    await writable.write(content);
-                    await writable.close();
-                    return true;
-                } catch (e) {
-                    if (e.name !== 'AbortError') console.error(e);
-                    return false;
-                }
-            } else {
-                const blob = new Blob([content], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = suggestedName;
-                a.click();
-                URL.revokeObjectURL(url);
-                return true;
-            }
-        }
-    },
-
-    async openFile() {
-        if (isElectron) {
-            const filePath = await window.electronAPI.openFileDialog({
-                title: '파일 열기',
-                filters: [
-                    { name: 'JSON Files', extensions: ['json'] },
-                    { name: 'All Files', extensions: ['*'] }
-                ]
-            });
-            if (filePath) {
-                const result = await window.electronAPI.readFile(filePath);
-                if (result.success) {
-                    return result.content;
-                }
-            }
-            return null;
-        } else {
-            if ('showOpenFilePicker' in window) {
-                try {
-                    const [handle] = await window.showOpenFilePicker({
-                        types: [{
-                            description: 'JSON Files',
-                            accept: { 'application/json': ['.json'] }
-                        }]
-                    });
-                    const file = await handle.getFile();
-                    return await file.text();
-                } catch (e) {
-                    if (e.name !== 'AbortError') console.error(e);
-                    return null;
-                }
-            } else {
-                return null;
-            }
-        }
-    },
-
-    async autoSave(content) {
-        if (isElectron && this.autoSavePath) {
-            const result = await window.electronAPI.writeFile(this.autoSavePath, content);
-            return result.success;
-        }
-        return false;
-    },
-
-    async loadAutoSave() {
-        if (isElectron && this.autoSavePath) {
-            const result = await window.electronAPI.readFile(this.autoSavePath);
-            if (result.success) {
-                return result.content;
-            }
-        }
-        return null;
-    }
-};
+// 공통 모듈에서 가져온 변수/함수 사용 (../shared/*.js)
+const isElectron = window.isElectron;
+const FileAPI = window.createFileAPI('water');
 
 document.addEventListener('DOMContentLoaded', async () => {
     log('🚀 수질분석 페이지 로드 시작');
@@ -307,29 +185,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         btnGoForm.addEventListener('click', () => switchView('form'));
     }
 
-    // ========================================
-    // 토스트 메시지
-    // ========================================
-    function showToast(message, type = 'success') {
-        const container = document.getElementById('toastContainer');
-        if (!container) return;
-
-        const icons = { success: '✓', error: '✗', warning: '⚠' };
-
-        const toast = document.createElement('div');
-        toast.className = `toast ${type}`;
-        toast.innerHTML = `
-            <span class="toast-icon">${icons[type] || icons.success}</span>
-            <span class="toast-message">${message}</span>
-        `;
-
-        container.appendChild(toast);
-
-        setTimeout(() => {
-            toast.style.animation = 'toastIn 0.3s ease reverse';
-            setTimeout(() => toast.remove(), 300);
-        }, 3000);
-    }
+    // 토스트 메시지 - 공통 모듈 사용 (../shared/toast.js)
+    const showToast = window.showToast;
 
     // ========================================
     // 레코드 카운트 업데이트
@@ -377,90 +234,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
-    // ========================================
-    // 주소 검색
-    // ========================================
-    const searchAddressBtn = document.getElementById('searchAddressBtn');
+    // 주소 검색 - 공통 모듈 사용 (../shared/address.js)
     const addressPostcode = document.getElementById('addressPostcode');
     const addressRoad = document.getElementById('addressRoad');
     const addressDetail = document.getElementById('addressDetail');
     const addressHidden = document.getElementById('address');
-    const addressModal = document.getElementById('addressModal');
-    const closeAddressModalBtn = document.getElementById('closeAddressModal');
-    const daumPostcodeContainer = document.getElementById('daumPostcodeContainer');
 
-    function closeAddressModal() {
-        addressModal.classList.add('hidden');
-        setTimeout(() => {
-            if (daumPostcodeContainer) {
-                daumPostcodeContainer.innerHTML = '';
-            }
-        }, 100);
-    }
-
-    if (closeAddressModalBtn) {
-        closeAddressModalBtn.addEventListener('click', closeAddressModal);
-    }
-    if (addressModal) {
-        addressModal.querySelector('.modal-overlay').addEventListener('click', closeAddressModal);
-    }
-
-    if (searchAddressBtn) {
-        searchAddressBtn.addEventListener('click', () => {
-            if (typeof daum === 'undefined' || typeof daum.Postcode === 'undefined') {
-                alert('주소 검색 서비스를 불러오는 중입니다. 잠시 후 다시 시도해주세요.');
-                return;
-            }
-
-            addressModal.classList.remove('hidden');
-            daumPostcodeContainer.innerHTML = '';
-
-            new daum.Postcode({
-                oncomplete: function(data) {
-                    let roadAddr = data.roadAddress;
-                    let extraRoadAddr = '';
-
-                    if (data.bname !== '' && /[동|로|가]$/g.test(data.bname)) {
-                        extraRoadAddr += data.bname;
-                    }
-                    if (data.buildingName !== '' && data.apartment === 'Y') {
-                        extraRoadAddr += (extraRoadAddr !== '' ? ', ' + data.buildingName : data.buildingName);
-                    }
-                    if (extraRoadAddr !== '') {
-                        extraRoadAddr = ' (' + extraRoadAddr + ')';
-                    }
-
-                    const finalRoadAddr = roadAddr + extraRoadAddr;
-
-                    addressPostcode.value = data.zonecode;
-                    addressRoad.value = finalRoadAddr;
-                    addressDetail.value = '';
-
-                    updateFullAddress();
-                    closeAddressModal();
-                    addressDetail.focus();
-                },
-                width: '100%',
-                height: '100%'
-            }).embed(daumPostcodeContainer);
-        });
-    }
-
-    if (addressDetail) {
-        addressDetail.addEventListener('input', updateFullAddress);
-    }
-
-    function updateFullAddress() {
-        const postcode = addressPostcode.value;
-        const road = addressRoad.value;
-        const detail = addressDetail.value;
-
-        if (postcode && road) {
-            addressHidden.value = `(${postcode}) ${road}${detail ? ' ' + detail : ''}`;
-        } else {
-            addressHidden.value = '';
-        }
-    }
+    const addressManager = new window.AddressManager({
+        searchBtn: document.getElementById('searchAddressBtn'),
+        postcodeInput: addressPostcode,
+        roadInput: addressRoad,
+        detailInput: addressDetail,
+        hiddenInput: addressHidden,
+        modal: document.getElementById('addressModal'),
+        closeBtn: document.getElementById('closeAddressModal'),
+        container: document.getElementById('daumPostcodeContainer')
+    });
 
     // ========================================
     // 검사항목 선택 시 상세정보 토글

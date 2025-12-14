@@ -26,142 +26,32 @@ function getStorageKey(year) {
     return `${STORAGE_KEY}_${year}`;
 }
 
-// ========================================
-// Electron / Web 환경 감지 및 파일 API 추상화
-// ========================================
-const isElectron = window.electronAPI?.isElectron === true;
+// 공통 모듈에서 가져온 변수/함수 사용 (../shared/*.js)
+const isElectron = window.isElectron;
+const FileAPI = window.createFileAPI('heavy-metal');
 
-// Electron 환경에서의 파일 시스템 API
-const FileAPI = {
-    autoSavePath: null,
-    autoSaveFolderHandle: null,
-
-    async init(year) {
-        if (isElectron) {
-            this.autoSavePath = await window.electronAPI.getAutoSavePath('heavy-metal', year);
-            log('📁 Electron 중금속 자동 저장 경로:', this.autoSavePath);
-        }
-    },
-
-    // 연도 변경 시 경로 업데이트
-    async updateAutoSavePath(year) {
-        if (isElectron) {
-            this.autoSavePath = await window.electronAPI.getAutoSavePath('heavy-metal', year);
-            log('📁 중금속 자동 저장 경로 업데이트:', this.autoSavePath);
-        }
-    },
-
-    async saveFile(content, suggestedName = 'data.json') {
-        if (isElectron) {
-            const filePath = await window.electronAPI.saveFileDialog({
-                title: '파일 저장',
-                defaultPath: suggestedName,
-                filters: [
-                    { name: 'JSON Files', extensions: ['json'] },
-                    { name: 'All Files', extensions: ['*'] }
-                ]
-            });
-            if (filePath) {
-                const result = await window.electronAPI.writeFile(filePath, content);
-                return result.success;
-            }
-            return false;
-        } else {
-            if ('showSaveFilePicker' in window) {
-                try {
-                    const handle = await window.showSaveFilePicker({
-                        suggestedName,
-                        types: [{
-                            description: 'JSON Files',
-                            accept: { 'application/json': ['.json'] }
-                        }]
-                    });
-                    const writable = await handle.createWritable();
-                    await writable.write(content);
-                    await writable.close();
-                    return true;
-                } catch (e) {
-                    if (e.name !== 'AbortError') console.error(e);
-                    return false;
-                }
-            } else {
-                const blob = new Blob([content], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = suggestedName;
-                a.click();
-                URL.revokeObjectURL(url);
-                return true;
-            }
-        }
-    },
-
-    async openFile() {
-        if (isElectron) {
-            const filePath = await window.electronAPI.openFileDialog({
-                title: '파일 열기',
-                filters: [
-                    { name: 'JSON Files', extensions: ['json'] },
-                    { name: 'All Files', extensions: ['*'] }
-                ]
-            });
-            if (filePath) {
-                const result = await window.electronAPI.readFile(filePath);
-                if (result.success) {
-                    return result.content;
-                }
-            }
-            return null;
-        } else {
-            if ('showOpenFilePicker' in window) {
-                try {
-                    const [handle] = await window.showOpenFilePicker({
-                        types: [{
-                            description: 'JSON Files',
-                            accept: { 'application/json': ['.json'] }
-                        }]
-                    });
-                    const file = await handle.getFile();
-                    return await file.text();
-                } catch (e) {
-                    if (e.name !== 'AbortError') console.error(e);
-                    return null;
-                }
-            } else {
-                return null;
-            }
-        }
-    },
-
-    async autoSave(content) {
-        if (isElectron && this.autoSavePath) {
-            const result = await window.electronAPI.writeFile(this.autoSavePath, content);
-            return result.success;
-        } else if (!isElectron && this.autoSaveFolderHandle) {
-            try {
-                const fileHandle = await this.autoSaveFolderHandle.getFileHandle(AUTO_SAVE_FILE, { create: true });
-                const writable = await fileHandle.createWritable();
-                await writable.write(content);
-                await writable.close();
-                return true;
-            } catch (e) {
-                console.error('자동 저장 실패:', e);
-                return false;
-            }
-        }
-        return false;
-    },
-
-    async loadAutoSave() {
-        if (isElectron && this.autoSavePath) {
-            const result = await window.electronAPI.readFile(this.autoSavePath);
-            if (result.success) {
-                return result.content;
-            }
-        }
-        return null;
+// heavy-metal 전용 웹 환경 자동저장 확장
+FileAPI.autoSaveFolderHandle = null;
+const originalAutoSave = FileAPI.autoSave.bind(FileAPI);
+FileAPI.autoSave = async function(content) {
+    // Electron 환경에서는 기본 autoSave 사용
+    if (isElectron) {
+        return originalAutoSave(content);
     }
+    // 웹 환경에서 폴더 핸들이 있으면 사용
+    if (this.autoSaveFolderHandle) {
+        try {
+            const fileHandle = await this.autoSaveFolderHandle.getFileHandle(AUTO_SAVE_FILE, { create: true });
+            const writable = await fileHandle.createWritable();
+            await writable.write(content);
+            await writable.close();
+            return true;
+        } catch (e) {
+            console.error('자동 저장 실패:', e);
+            return false;
+        }
+    }
+    return false;
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -356,27 +246,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         btnGoForm.addEventListener('click', () => switchView('form'));
     }
 
-    // ========================================
-    // 토스트 메시지
-    // ========================================
-    function showToast(message, type = 'success') {
-        const container = document.getElementById('toastContainer');
-        if (!container) return;
-
-        const icons = { success: '✓', error: '✗', warning: '⚠' };
-        const toast = document.createElement('div');
-        toast.className = `toast ${type}`;
-        toast.innerHTML = `
-            <span class="toast-icon">${icons[type] || icons.success}</span>
-            <span class="toast-message">${message}</span>
-        `;
-        container.appendChild(toast);
-
-        setTimeout(() => {
-            toast.style.animation = 'toastIn 0.3s ease reverse';
-            setTimeout(() => toast.remove(), 300);
-        }, 3000);
-    }
+    // 토스트 메시지 - 공통 모듈 사용 (../shared/toast.js)
+    const showToast = window.showToast;
 
     // ========================================
     // 분석항목 선택 관리
@@ -458,70 +329,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // ========================================
-    // 주소 검색 (다음 우편번호)
-    // ========================================
-    function updateFullAddress() {
-        if (addressHidden) {
-            const parts = [addressRoad?.value, addressDetail?.value].filter(Boolean);
-            addressHidden.value = parts.join(' ');
-        }
-    }
-
-    function closeAddressModal() {
-        if (addressModal) addressModal.classList.add('hidden');
-        setTimeout(() => {
-            if (daumPostcodeContainer) daumPostcodeContainer.innerHTML = '';
-        }, 100);
-    }
-
-    if (closeAddressModalBtn) {
-        closeAddressModalBtn.addEventListener('click', closeAddressModal);
-    }
-    if (addressModal) {
-        addressModal.querySelector('.modal-overlay')?.addEventListener('click', closeAddressModal);
-    }
-
-    if (searchAddressBtn) {
-        searchAddressBtn.addEventListener('click', () => {
-            if (typeof daum === 'undefined' || typeof daum.Postcode === 'undefined') {
-                alert('주소 검색 서비스를 불러오는 중입니다.');
-                return;
-            }
-
-            addressModal.classList.remove('hidden');
-            daumPostcodeContainer.innerHTML = '';
-
-            new daum.Postcode({
-                oncomplete: function(data) {
-                    let roadAddr = data.roadAddress;
-                    let extraRoadAddr = '';
-                    if (data.bname !== '' && /[동|로|가]$/g.test(data.bname)) {
-                        extraRoadAddr += data.bname;
-                    }
-                    if (data.buildingName !== '' && data.apartment === 'Y') {
-                        extraRoadAddr += (extraRoadAddr ? ', ' + data.buildingName : data.buildingName);
-                    }
-                    if (extraRoadAddr) {
-                        extraRoadAddr = ' (' + extraRoadAddr + ')';
-                    }
-
-                    addressPostcode.value = data.zonecode;
-                    addressRoad.value = roadAddr + extraRoadAddr;
-                    addressDetail.value = '';
-                    updateFullAddress();
-                    closeAddressModal();
-                    addressDetail.focus();
-                },
-                width: '100%',
-                height: '100%'
-            }).embed(daumPostcodeContainer);
-        });
-    }
-
-    if (addressDetail) {
-        addressDetail.addEventListener('input', updateFullAddress);
-    }
+    // 주소 검색 - 공통 모듈 사용 (../shared/address.js)
+    const addressManager = new window.AddressManager({
+        searchBtn: searchAddressBtn,
+        postcodeInput: addressPostcode,
+        roadInput: addressRoad,
+        detailInput: addressDetail,
+        hiddenInput: addressHidden,
+        modal: addressModal,
+        closeBtn: closeAddressModalBtn,
+        container: daumPostcodeContainer
+    });
 
     // ========================================
     // 채취장소 자동완성 (경상북도 전체)
