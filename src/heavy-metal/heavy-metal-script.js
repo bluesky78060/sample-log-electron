@@ -8,6 +8,14 @@ const AUTO_SAVE_FILE = 'heavy-metal-autosave.json';
 // 중금속 분석 항목 목록
 const ANALYSIS_ITEMS = ['구리', '납', '니켈', '비소', '수은', '아연', '카드뮴', '6가크롬'];
 
+// 년도 선택 관련 변수
+let selectedYear = new Date().getFullYear().toString();
+
+// 년도별 스토리지 키 생성
+function getStorageKey(year) {
+    return `${STORAGE_KEY}_${year}`;
+}
+
 // ========================================
 // Electron / Web 환경 감지 및 파일 API 추상화
 // ========================================
@@ -237,7 +245,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ========================================
     // 데이터 초기화
     // ========================================
-    let sampleLogs = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    // 기존 데이터 마이그레이션 (년도 없는 데이터 → 현재 년도로)
+    const oldData = localStorage.getItem(STORAGE_KEY);
+    if (oldData) {
+        const currentYearKey = getStorageKey(selectedYear);
+        if (!localStorage.getItem(currentYearKey)) {
+            localStorage.setItem(currentYearKey, oldData);
+            console.log('📦 기존 중금속 데이터를 현재 년도로 마이그레이션 완료');
+        }
+    }
+
+    let sampleLogs = JSON.parse(localStorage.getItem(getStorageKey(selectedYear))) || [];
     let editingIndex = -1;
     let isAllSelected = false;
     let autoSaveFileHandle = null;  // Web 환경 자동저장 파일 핸들
@@ -246,6 +264,45 @@ document.addEventListener('DOMContentLoaded', async () => {
     const today = new Date().toISOString().split('T')[0];
     if (dateInput) dateInput.value = today;
     if (samplingDateInput) samplingDateInput.value = today;
+
+    // ========================================
+    // 년도 선택 기능
+    // ========================================
+    const yearSelect = document.getElementById('yearSelect');
+    const listViewTitle = document.getElementById('listViewTitle');
+
+    // 현재 년도 선택
+    if (yearSelect) {
+        yearSelect.value = selectedYear;
+    }
+
+    // 목록 뷰 타이틀 업데이트
+    function updateListViewTitle() {
+        if (listViewTitle) {
+            listViewTitle.textContent = `${selectedYear}년 토양 중금속 접수 목록`;
+        }
+    }
+
+    // 년도별 데이터 로드 함수
+    function loadYearData(year) {
+        const yearStorageKey = getStorageKey(year);
+        sampleLogs = JSON.parse(localStorage.getItem(yearStorageKey)) || [];
+        renderLogs(sampleLogs);
+        receptionNumberInput.value = generateNextReceptionNumber();
+        updateListViewTitle();
+    }
+
+    // 년도 선택 변경 이벤트
+    if (yearSelect) {
+        yearSelect.addEventListener('change', (e) => {
+            selectedYear = e.target.value;
+            loadYearData(selectedYear);
+            showToast(`${selectedYear}년 데이터를 불러왔습니다.`, 'success');
+        });
+    }
+
+    // 초기 타이틀 설정
+    updateListViewTitle();
 
     // ========================================
     // 뷰 전환 기능
@@ -812,7 +869,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 데이터 저장 및 로드
     // ========================================
     function saveData() {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(sampleLogs));
+        const yearStorageKey = getStorageKey(selectedYear);
+        localStorage.setItem(yearStorageKey, JSON.stringify(sampleLogs));
         autoSaveToFile();
     }
 

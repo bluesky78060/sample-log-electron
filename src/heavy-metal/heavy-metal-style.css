@@ -466,3 +466,49 @@
         width: 100%;
     }
 }
+
+/* ========================================
+   년도 선택 드롭다운 스타일
+   ======================================== */
+
+.year-select-wrapper {
+    display: flex;
+    align-items: center;
+    margin-right: 1rem;
+}
+
+.year-select {
+    padding: 0.5rem 2rem 0.5rem 1rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    background: white;
+    color: var(--heavy-metal-primary-dark);
+    border: 2px solid var(--heavy-metal-primary);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238B5CF6' d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 12px;
+}
+
+.year-select:hover {
+    border-color: var(--heavy-metal-primary-dark);
+    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.2);
+}
+
+.year-select:focus {
+    outline: none;
+    border-color: var(--heavy-metal-primary-dark);
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+}
+
+.year-select option {
+    background: white;
+    color: var(--heavy-metal-primary-dark);
+    padding: 0.5rem;
+}

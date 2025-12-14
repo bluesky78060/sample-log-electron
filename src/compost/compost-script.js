@@ -195,9 +195,61 @@ document.addEventListener('DOMContentLoaded', async () => {
     dateInput.valueAsDate = new Date();
 
     // ========================================
-    // 데이터 로드
+    // 년도 선택 기능
     // ========================================
-    let sampleLogs = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    const yearSelect = document.getElementById('yearSelect');
+    const listViewTitle = document.getElementById('listViewTitle');
+    let selectedYear = new Date().getFullYear().toString();
+
+    // 현재 년도로 드롭다운 기본값 설정
+    if (yearSelect) {
+        yearSelect.value = selectedYear;
+    }
+
+    // 년도별 스토리지 키 생성
+    function getStorageKey(year) {
+        return `${STORAGE_KEY}_${year}`;
+    }
+
+    // 년도 선택 시 제목 업데이트
+    function updateListViewTitle() {
+        if (listViewTitle) {
+            listViewTitle.textContent = `${selectedYear}년 퇴·액비 접수 목록`;
+        }
+    }
+
+    // 초기 제목 설정
+    updateListViewTitle();
+
+    // ========================================
+    // 데이터 로드 (년도별)
+    // ========================================
+    let sampleLogs = JSON.parse(localStorage.getItem(getStorageKey(selectedYear))) || [];
+
+    // 기존 데이터 마이그레이션 (년도 없는 기존 데이터를 현재 년도로 이동)
+    const oldData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    if (oldData.length > 0 && sampleLogs.length === 0) {
+        sampleLogs = oldData;
+        localStorage.setItem(getStorageKey(selectedYear), JSON.stringify(sampleLogs));
+        console.log('📂 기존 데이터를 년도별 저장소로 마이그레이션:', sampleLogs.length, '건');
+    }
+
+    // 년도별 데이터 로드 함수
+    function loadYearData(year) {
+        const yearStorageKey = getStorageKey(year);
+        sampleLogs = JSON.parse(localStorage.getItem(yearStorageKey)) || [];
+        renderLogs(sampleLogs);
+        receptionNumberInput.value = generateNextReceptionNumber();
+        updateListViewTitle();
+    }
+
+    // 년도 선택 이벤트
+    if (yearSelect) {
+        yearSelect.addEventListener('change', (e) => {
+            selectedYear = e.target.value;
+            loadYearData(selectedYear);
+        });
+    }
 
     // ========================================
     // 뷰 전환
@@ -658,7 +710,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 데이터 저장
     // ========================================
     function saveLogs() {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(sampleLogs));
+        const yearStorageKey = getStorageKey(selectedYear);
+        localStorage.setItem(yearStorageKey, JSON.stringify(sampleLogs));
         updateRecordCount();
 
         // 자동 저장 (Electron 환경)

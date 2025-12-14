@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>토양 시료 접수 대장</title>
+    <title>시료 접수 대장</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap"
@@ -17,7 +17,7 @@
             theme: {
                 extend: {
                     colors: {
-                        primary: "#22C55E",
+                        primary: "#3B82F6",
                         "background-light": "#F8FAFC",
                         "background-dark": "#18181B",
                     },
@@ -31,51 +31,15 @@
             },
         };
     </script>
-    <link rel="stylesheet" href="../style.css">
-    <link rel="stylesheet" href="soil-style.css">
+    <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
     <!-- 네비게이션 바 -->
-    <nav class="navbar soil-navbar">
-        <!-- 뒤로가기 버튼 -->
-        <a href="../index.html" class="back-btn" title="메인으로">←</a>
-        <!-- 로고 및 파트 선택 드롭다운 -->
+    <nav class="navbar">
+        <!-- 로고 -->
         <div class="navbar-brand">
-            <div class="brand-dropdown-trigger">
-                <span class="brand-icon">🌱</span>
-                <span class="brand-text">토양</span>
-                <span class="dropdown-arrow">▼</span>
-            </div>
-            <div class="brand-dropdown-menu">
-                <div class="dropdown-header">시료 분석 메뉴</div>
-                <a href="../soil/index.html" class="dropdown-item active">
-                    <span class="item-icon">🌱</span>
-                    <span class="item-text">토양 분석</span>
-                </a>
-                <a href="../water/index.html" class="dropdown-item">
-                    <span class="item-icon">💧</span>
-                    <span class="item-text">수질 분석</span>
-                </a>
-                <a href="../compost/index.html" class="dropdown-item">
-                    <span class="item-icon">🐄</span>
-                    <span class="item-text">퇴·액비 성분검사</span>
-                </a>
-                <div class="dropdown-divider"></div>
-                <a href="../pesticide/index.html" class="dropdown-item">
-                    <span class="item-icon">🧪</span>
-                    <span class="item-text">잔류농약 검사</span>
-                </a>
-                <a href="../heavy-metal/index.html" class="dropdown-item">
-                    <span class="item-icon">⚗️</span>
-                    <span class="item-text">토양 중금속</span>
-                </a>
-                <div class="dropdown-divider"></div>
-                <a href="../label-print/index.html" class="dropdown-item">
-                    <span class="item-icon">🏷️</span>
-                    <span class="item-text">라벨 인쇄</span>
-                </a>
-            </div>
+            <span class="brand-icon">📋</span>
         </div>
 
         <!-- 메인 네비게이션 -->
@@ -98,6 +62,17 @@
             <button type="button" id="navSubmitBtn" class="action-btn-icon submit" title="접수 등록">
                 <span>✅</span>
             </button>
+        </div>
+
+        <div class="navbar-divider"></div>
+
+        <!-- 시료 타입 -->
+        <div class="navbar-types">
+            <button type="button" class="type-btn" data-type="토양" title="토양">🌱</button>
+            <button type="button" class="type-btn" data-type="물" title="물">💧</button>
+            <button type="button" class="type-btn" data-type="잔류농약" title="잔류농약">🧫</button>
+            <button type="button" class="type-btn" data-type="가축분뇨퇴비" title="퇴비">🐄</button>
+            <button type="button" class="type-btn" data-type="기타" title="기타">📦</button>
         </div>
 
         <div class="navbar-spacer"></div>
@@ -143,16 +118,6 @@
                             <div class="card-header">
                                 <span class="card-icon">👤</span>
                                 <h3>기본 정보</h3>
-                                <div class="year-select-wrapper">
-                                    <select id="yearSelect" class="year-select">
-                                        <option value="2025">2025년</option>
-                                        <option value="2026">2026년</option>
-                                        <option value="2027">2027년</option>
-                                        <option value="2028">2028년</option>
-                                        <option value="2029">2029년</option>
-                                        <option value="2030">2030년</option>
-                                    </select>
-                                </div>
                                 <div class="reception-method-group">
                                     <button type="button" class="reception-method-btn" data-method="우편" title="우편">
                                         <span class="method-icon">📮</span>
@@ -216,8 +181,8 @@
                         <!-- 시료 정보 카드 -->
                         <div class="form-card">
                             <div class="card-header">
-                                <span class="card-icon">🌱</span>
-                                <h3>토양 시료 정보</h3>
+                                <span class="card-icon">🧪</span>
+                                <h3>시료 정보</h3>
                             </div>
                             <div class="card-body">
                                 <div class="form-row">
@@ -283,7 +248,7 @@
         <div id="listView" class="view">
             <div class="view-header-top">
                 <div class="header-left">
-                    <h2 id="listViewTitle">2025년 토양 접수 목록</h2>
+                    <h2>접수 목록</h2>
                     <span class="record-count" id="recordCount">0건</span>
                 </div>
                 <div class="header-right">
@@ -511,7 +476,7 @@
         <div class="modal-overlay"></div>
         <div class="modal-content modal-large">
             <div class="modal-header">
-                <h3>📊 토양 접수 통계</h3>
+                <h3>📊 접수 통계</h3>
                 <button type="button" class="modal-close" id="closeStatisticsModal">&times;</button>
             </div>
             <div class="modal-body">
@@ -543,10 +508,10 @@
 
                     <!-- 상세 통계 -->
                     <div class="stats-details">
-                        <!-- 구분별 통계 -->
+                        <!-- 시료 타입별 통계 -->
                         <div class="stats-section">
-                            <h4>🏞️ 구분별</h4>
-                            <div class="stats-chart" id="statsByCategory"></div>
+                            <h4>🧪 시료 타입별</h4>
+                            <div class="stats-chart" id="statsBySampleType"></div>
                         </div>
 
                         <!-- 목적(용도)별 통계 -->
@@ -580,9 +545,9 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
-    <script src="../cropData.js"></script>
-    <script src="../bonghwaData.js"></script>
-    <script src="soil-script.js"></script>
+    <script src="cropData.js"></script>
+    <script src="bonghwaData.js"></script>
+    <script src="script.js"></script>
 </body>
 
 </html>

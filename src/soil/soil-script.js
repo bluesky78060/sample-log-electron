@@ -203,6 +203,33 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log('✅ 기본 요소 로드 완료');
 
     // ========================================
+    // 년도 선택 기능
+    // ========================================
+    const yearSelect = document.getElementById('yearSelect');
+    const listViewTitle = document.getElementById('listViewTitle');
+    let selectedYear = new Date().getFullYear().toString();
+
+    // 현재 년도로 드롭다운 기본값 설정
+    if (yearSelect) {
+        yearSelect.value = selectedYear;
+    }
+
+    // 년도별 스토리지 키 생성
+    function getStorageKey(year) {
+        return `${STORAGE_KEY}_${year}`;
+    }
+
+    // 년도 선택 시 제목 업데이트
+    function updateListViewTitle() {
+        if (listViewTitle) {
+            listViewTitle.textContent = `${selectedYear}년 토양 접수 목록`;
+        }
+    }
+
+    // 초기 제목 설정
+    updateListViewTitle();
+
+    // ========================================
     // 면적 단위 변환 함수
     // ========================================
     // 1평 = 3.305785 ㎡
@@ -521,8 +548,33 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Set default date to today
     dateInput.valueAsDate = new Date();
 
-    // Load data from LocalStorage
-    let sampleLogs = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    // Load data from LocalStorage (년도별)
+    let sampleLogs = JSON.parse(localStorage.getItem(getStorageKey(selectedYear))) || [];
+
+    // 기존 데이터 마이그레이션 (년도 없는 기존 데이터를 현재 년도로 이동)
+    const oldData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    if (oldData.length > 0 && sampleLogs.length === 0) {
+        sampleLogs = oldData;
+        localStorage.setItem(getStorageKey(selectedYear), JSON.stringify(sampleLogs));
+        console.log('📂 기존 데이터를 년도별 저장소로 마이그레이션:', sampleLogs.length, '건');
+    }
+
+    // 년도별 데이터 로드 함수
+    function loadYearData(year) {
+        const yearStorageKey = getStorageKey(year);
+        sampleLogs = JSON.parse(localStorage.getItem(yearStorageKey)) || [];
+        renderLogs(sampleLogs);
+        receptionNumberInput.value = generateNextReceptionNumber();
+        updateListViewTitle();
+    }
+
+    // 년도 선택 이벤트
+    if (yearSelect) {
+        yearSelect.addEventListener('change', (e) => {
+            selectedYear = e.target.value;
+            loadYearData(selectedYear);
+        });
+    }
 
     // ========================================
     // Electron 환경: 자동 저장 파일에서 데이터 로드
@@ -3250,7 +3302,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Helper Functions
     // ========================================
     function saveLogs() {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(sampleLogs));
+        const yearStorageKey = getStorageKey(selectedYear);
+        localStorage.setItem(yearStorageKey, JSON.stringify(sampleLogs));
 
         if (autoSaveFileHandle) {
             autoSaveToFile();

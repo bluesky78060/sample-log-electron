@@ -8,6 +8,14 @@ const AUTO_SAVE_FILE = 'heavy-metal-autosave.json';
 // 중금속 분석 항목 목록
 const ANALYSIS_ITEMS = ['구리', '납', '니켈', '비소', '수은', '아연', '카드뮴', '6가크롬'];
 
+// 년도 선택 관련 변수
+let selectedYear = new Date().getFullYear().toString();
+
+// 년도별 스토리지 키 생성
+function getStorageKey(year) {
+    return `${STORAGE_KEY}_${year}`;
+}
+
 // ========================================
 // Electron / Web 환경 감지 및 파일 API 추상화
 // ========================================
@@ -237,7 +245,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ========================================
     // 데이터 초기화
     // ========================================
-    let sampleLogs = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    // 기존 데이터 마이그레이션 (년도 없는 데이터 → 현재 년도로)
+    const oldData = localStorage.getItem(STORAGE_KEY);
+    if (oldData) {
+        const currentYearKey = getStorageKey(selectedYear);
+        if (!localStorage.getItem(currentYearKey)) {
+            localStorage.setItem(currentYearKey, oldData);
+            console.log('📦 기존 중금속 데이터를 현재 년도로 마이그레이션 완료');
+        }
+    }
+
+    let sampleLogs = JSON.parse(localStorage.getItem(getStorageKey(selectedYear))) || [];
     let editingIndex = -1;
     let isAllSelected = false;
     let autoSaveFileHandle = null;  // Web 환경 자동저장 파일 핸들
@@ -246,6 +264,45 @@ document.addEventListener('DOMContentLoaded', async () => {
     const today = new Date().toISOString().split('T')[0];
     if (dateInput) dateInput.value = today;
     if (samplingDateInput) samplingDateInput.value = today;
+
+    // ========================================
+    // 년도 선택 기능
+    // ========================================
+    const yearSelect = document.getElementById('yearSelect');
+    const listViewTitle = document.getElementById('listViewTitle');
+
+    // 현재 년도 선택
+    if (yearSelect) {
+        yearSelect.value = selectedYear;
+    }
+
+    // 목록 뷰 타이틀 업데이트
+    function updateListViewTitle() {
+        if (listViewTitle) {
+            listViewTitle.textContent = `${selectedYear}년 토양 중금속 접수 목록`;
+        }
+    }
+
+    // 년도별 데이터 로드 함수
+    function loadYearData(year) {
+        const yearStorageKey = getStorageKey(year);
+        sampleLogs = JSON.parse(localStorage.getItem(yearStorageKey)) || [];
+        renderLogs(sampleLogs);
+        receptionNumberInput.value = generateNextReceptionNumber();
+        updateListViewTitle();
+    }
+
+    // 년도 선택 변경 이벤트
+    if (yearSelect) {
+        yearSelect.addEventListener('change', (e) => {
+            selectedYear = e.target.value;
+            loadYearData(selectedYear);
+            showToast(`${selectedYear}년 데이터를 불러왔습니다.`, 'success');
+        });
+    }
+
+    // 초기 타이틀 설정
+    updateListViewTitle();
 
     // ========================================
     // 뷰 전환 기능
@@ -812,7 +869,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 데이터 저장 및 로드
     // ========================================
     function saveData() {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(sampleLogs));
+        const yearStorageKey = getStorageKey(selectedYear);
+        localStorage.setItem(yearStorageKey, JSON.stringify(sampleLogs));
         autoSaveToFile();
     }
 
@@ -1064,27 +1122,64 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            const exportData = sampleLogs.map(log => ({
-                '접수번호': log.receptionNumber,
-                '접수일자': log.date,
-                '성명': log.name,
-                '우편번호': log.addressPostcode,
-                '주소': log.address,
-                '연락처': log.phoneNumber,
-                '시료채취장소': log.samplingLocation,
-                '재배작물': log.cropName,
-                '과수년생': log.treeAge,
-                '채취일': log.samplingDate,
-                '시료수': log.sampleCount,
-                '분석항목': log.analysisItems?.join(', '),
-                '목적': log.purpose,
-                '수령방법': log.receptionMethod,
-                '비고': log.note,
-                '완료여부': log.isCompleted ? 'Y' : 'N'
-            }));
+            const exportData = sampleLogs.map(log => {
+                // 분석항목 표시
+                const isAllItems = log.analysisItems && log.analysisItems.length === ANALYSIS_ITEMS.length;
+                const analysisDisplay = !log.analysisItems || log.analysisItems.length === 0
+                    ? '-'
+                    : isAllItems
+                        ? '전체 항목'
+                        : log.analysisItems.join(', ');
+
+                return {
+                    '접수번호': log.receptionNumber || '-',
+                    '접수일자': log.date || '-',
+                    '성명': log.name || '-',
+                    '연락처': log.phoneNumber || '-',
+                    '우편번호': log.addressPostcode || '-',
+                    '도로명주소': log.addressRoad || '-',
+                    '상세주소': log.addressDetail || '-',
+                    '전체주소': log.address || '-',
+                    '시료채취장소': log.samplingLocation || '-',
+                    '재배작물': log.cropName || '-',
+                    '과수년생': log.treeAge || '-',
+                    '채취일': log.samplingDate || '-',
+                    '시료수': log.sampleCount || '-',
+                    '분석항목': analysisDisplay,
+                    '목적': log.purpose || '-',
+                    '수령방법': log.receptionMethod || '-',
+                    '비고': log.note || '-',
+                    '완료여부': log.isCompleted ? '완료' : '미완료',
+                    '등록일시': log.createdAt ? new Date(log.createdAt).toLocaleString('ko-KR') : '-'
+                };
+            });
 
             const ws = XLSX.utils.json_to_sheet(exportData);
             const wb = XLSX.utils.book_new();
+
+            // 열 너비 설정
+            ws['!cols'] = [
+                { wch: 10 },  // 접수번호
+                { wch: 12 },  // 접수일자
+                { wch: 10 },  // 성명
+                { wch: 15 },  // 연락처
+                { wch: 8 },   // 우편번호
+                { wch: 30 },  // 도로명주소
+                { wch: 20 },  // 상세주소
+                { wch: 40 },  // 전체주소
+                { wch: 25 },  // 시료채취장소
+                { wch: 12 },  // 재배작물
+                { wch: 10 },  // 과수년생
+                { wch: 12 },  // 채취일
+                { wch: 8 },   // 시료수
+                { wch: 40 },  // 분석항목
+                { wch: 15 },  // 목적
+                { wch: 10 },  // 수령방법
+                { wch: 20 },  // 비고
+                { wch: 8 },   // 완료여부
+                { wch: 20 }   // 등록일시
+            ];
+
             XLSX.utils.book_append_sheet(wb, ws, '토양중금속접수');
 
             const fileName = `토양중금속_접수대장_${new Date().toISOString().split('T')[0]}.xlsx`;
