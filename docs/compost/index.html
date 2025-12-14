@@ -416,6 +416,25 @@
                         <!-- 데이터가 여기에 추가됩니다 -->
                     </tbody>
                 </table>
+                <!-- 페이지네이션 -->
+                <div id="pagination" class="pagination-container">
+                    <div class="pagination-info">
+                        <span id="paginationInfo">0건 중 0-0</span>
+                        <select id="itemsPerPage" class="items-per-page">
+                            <option value="50">50건</option>
+                            <option value="100" selected>100건</option>
+                            <option value="200">200건</option>
+                            <option value="500">500건</option>
+                        </select>
+                    </div>
+                    <div class="pagination-controls">
+                        <button id="firstPage" class="pagination-btn" title="처음">«</button>
+                        <button id="prevPage" class="pagination-btn" title="이전">‹</button>
+                        <div id="pageNumbers" class="page-numbers"></div>
+                        <button id="nextPage" class="pagination-btn" title="다음">›</button>
+                        <button id="lastPage" class="pagination-btn" title="마지막">»</button>
+                    </div>
+                </div>
                 <div id="emptyState" class="empty-state">
                     <div class="empty-icon">📭</div>
                     <p>등록된 접수 내역이 없습니다</p>

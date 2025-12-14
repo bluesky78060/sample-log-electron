@@ -9,6 +9,12 @@ const AUTO_SAVE_FILE = 'compost-autosave.json';
 const DEBUG = false;
 const log = (...args) => DEBUG && console.log(...args);
 
+// 페이지네이션 설정
+let currentPage = 1;
+let itemsPerPage = parseInt(localStorage.getItem('compostItemsPerPage')) || 100;
+let totalPages = 1;
+let currentLogsData = [];
+
 // ========================================
 // Electron / Web 환경 감지 및 파일 API 추상화
 // ========================================
@@ -744,60 +750,87 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ========================================
     // 목록 렌더링
     // ========================================
-    function renderLogs(logs) {
+
+    // 페이지네이션 DOM 요소
+    const paginationInfo = document.getElementById('paginationInfo');
+    const itemsPerPageSelect = document.getElementById('itemsPerPage');
+    const pageNumbersContainer = document.getElementById('pageNumbers');
+    const firstPageBtn = document.getElementById('firstPage');
+    const prevPageBtn = document.getElementById('prevPage');
+    const nextPageBtn = document.getElementById('nextPage');
+    const lastPageBtn = document.getElementById('lastPage');
+    const paginationContainer = document.getElementById('pagination');
+
+    // 페이지네이션 초기화
+    if (itemsPerPageSelect) {
+        itemsPerPageSelect.value = itemsPerPage;
+        itemsPerPageSelect.addEventListener('change', (e) => {
+            itemsPerPage = parseInt(e.target.value);
+            localStorage.setItem('compostItemsPerPage', itemsPerPage);
+            currentPage = 1;
+            renderCurrentPage();
+        });
+    }
+
+    // 페이지네이션 버튼 이벤트
+    if (firstPageBtn) firstPageBtn.addEventListener('click', () => goToPage(1));
+    if (prevPageBtn) prevPageBtn.addEventListener('click', () => goToPage(currentPage - 1));
+    if (nextPageBtn) nextPageBtn.addEventListener('click', () => goToPage(currentPage + 1));
+    if (lastPageBtn) lastPageBtn.addEventListener('click', () => goToPage(totalPages));
+
+    function goToPage(page) {
+        if (page < 1 || page > totalPages) return;
+        currentPage = page;
+        renderCurrentPage();
+        const tableWrapper = document.querySelector('.table-wrapper');
+        if (tableWrapper) tableWrapper.scrollTop = 0;
+    }
+
+    function renderCurrentPage() {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        const pageData = currentLogsData.slice(startIndex, endIndex);
+
         tableBody.innerHTML = '';
-
-        if (logs.length === 0) {
-            emptyState.style.display = 'flex';
-            return;
-        }
-
-        emptyState.style.display = 'none';
-
-        logs.forEach(log => {
+        pageData.forEach(logItem => {
             const row = document.createElement('tr');
-            row.dataset.id = log.id;
+            row.dataset.id = logItem.id;
 
-            // 시료종류 배지
-            const sampleTypeBadge = getSampleTypeBadge(log.sampleType);
-
-            // 축종 배지
-            const animalTypeBadge = getAnimalTypeBadge(log.animalType);
-
-            // 주소 조합 (도로명 주소 + 상세주소)
-            const fullAddress = [log.addressRoad, log.addressDetail].filter(Boolean).join(' ') || '-';
+            const sampleTypeBadge = getSampleTypeBadge(logItem.sampleType);
+            const animalTypeBadge = getAnimalTypeBadge(logItem.animalType);
+            const fullAddress = [logItem.addressRoad, logItem.addressDetail].filter(Boolean).join(' ') || '-';
 
             row.innerHTML = `
                 <td class="col-checkbox">
-                    <input type="checkbox" class="row-checkbox" data-id="${log.id}">
+                    <input type="checkbox" class="row-checkbox" data-id="${logItem.id}">
                 </td>
                 <td class="col-complete">
-                    <button class="btn-complete ${log.isComplete ? 'completed' : ''}" data-id="${log.id}" title="${log.isComplete ? '완료됨' : '완료 표시'}">
-                        ${log.isComplete ? '✅' : '⬜'}
+                    <button class="btn-complete ${logItem.isComplete ? 'completed' : ''}" data-id="${logItem.id}" title="${logItem.isComplete ? '완료됨' : '완료 표시'}">
+                        ${logItem.isComplete ? '✅' : '⬜'}
                     </button>
                 </td>
-                <td>${log.receptionNumber || '-'}</td>
-                <td>${log.date || '-'}</td>
-                <td>${log.farmName || log.companyName || '-'}</td>
-                <td>${log.name || '-'}</td>
-                <td class="col-postcode col-hidden">${log.addressPostcode || '-'}</td>
+                <td>${logItem.receptionNumber || '-'}</td>
+                <td>${logItem.date || '-'}</td>
+                <td>${logItem.farmName || logItem.companyName || '-'}</td>
+                <td>${logItem.name || '-'}</td>
+                <td class="col-postcode col-hidden">${logItem.addressPostcode || '-'}</td>
                 <td class="col-address text-truncate" title="${fullAddress}">${fullAddress}</td>
-                <td class="col-farm-address text-truncate" title="${log.farmAddress || ''}">${log.farmAddress || '-'}</td>
-                <td>${log.farmArea ? parseInt(log.farmArea).toLocaleString('ko-KR') + ' ' + getUnitLabel(log.farmAreaUnit) : '-'}</td>
+                <td class="col-farm-address text-truncate" title="${logItem.farmAddress || ''}">${logItem.farmAddress || '-'}</td>
+                <td>${logItem.farmArea ? parseInt(logItem.farmArea).toLocaleString('ko-KR') + ' ' + getUnitLabel(logItem.farmAreaUnit) : '-'}</td>
                 <td>${sampleTypeBadge}</td>
                 <td>${animalTypeBadge}</td>
-                <td>${log.productionDate || '-'}</td>
-                <td>${log.purpose || '-'}</td>
-                <td>${log.phoneNumber || '-'}</td>
-                <td>${log.receptionMethod || '-'}</td>
-                <td class="col-note text-truncate" title="${log.note || ''}">${log.note || '-'}</td>
+                <td>${logItem.productionDate || '-'}</td>
+                <td>${logItem.purpose || '-'}</td>
+                <td>${logItem.phoneNumber || '-'}</td>
+                <td>${logItem.receptionMethod || '-'}</td>
+                <td class="col-note text-truncate" title="${logItem.note || ''}">${logItem.note || '-'}</td>
                 <td class="col-action">
-                    <button class="btn-edit" data-id="${log.id}" title="수정">✏️</button>
-                    <button class="btn-delete" data-id="${log.id}" title="삭제">🗑️</button>
+                    <button class="btn-edit" data-id="${logItem.id}" title="수정">✏️</button>
+                    <button class="btn-delete" data-id="${logItem.id}" title="삭제">🗑️</button>
                 </td>
             `;
 
-            if (log.isComplete) {
+            if (logItem.isComplete) {
                 row.classList.add('completed-row');
             }
 
@@ -805,6 +838,101 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
 
         bindTableEvents();
+        updatePaginationUI();
+    }
+
+    function updatePaginationUI() {
+        const totalItems = currentLogsData.length;
+        totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+
+        if (currentPage > totalPages) currentPage = totalPages;
+
+        const startItem = totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
+        const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+
+        if (paginationInfo) {
+            paginationInfo.textContent = `${totalItems}건 중 ${startItem}-${endItem}`;
+        }
+
+        if (firstPageBtn) firstPageBtn.disabled = currentPage === 1;
+        if (prevPageBtn) prevPageBtn.disabled = currentPage === 1;
+        if (nextPageBtn) nextPageBtn.disabled = currentPage === totalPages;
+        if (lastPageBtn) lastPageBtn.disabled = currentPage === totalPages;
+
+        renderPageNumbers();
+    }
+
+    function renderPageNumbers() {
+        if (!pageNumbersContainer) return;
+        pageNumbersContainer.innerHTML = '';
+
+        const maxVisiblePages = 5;
+        let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+        let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+        if (endPage - startPage + 1 < maxVisiblePages) {
+            startPage = Math.max(1, endPage - maxVisiblePages + 1);
+        }
+
+        if (startPage > 1) {
+            pageNumbersContainer.appendChild(createPageButton(1));
+            if (startPage > 2) {
+                const ellipsis = document.createElement('span');
+                ellipsis.className = 'page-ellipsis';
+                ellipsis.textContent = '...';
+                pageNumbersContainer.appendChild(ellipsis);
+            }
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            pageNumbersContainer.appendChild(createPageButton(i));
+        }
+
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) {
+                const ellipsis = document.createElement('span');
+                ellipsis.className = 'page-ellipsis';
+                ellipsis.textContent = '...';
+                pageNumbersContainer.appendChild(ellipsis);
+            }
+            pageNumbersContainer.appendChild(createPageButton(totalPages));
+        }
+    }
+
+    function createPageButton(pageNum) {
+        const btn = document.createElement('button');
+        btn.className = `page-btn ${pageNum === currentPage ? 'active' : ''}`;
+        btn.textContent = pageNum;
+        btn.addEventListener('click', () => goToPage(pageNum));
+        return btn;
+    }
+
+    function renderLogs(logs) {
+        tableBody.innerHTML = '';
+
+        if (logs.length === 0) {
+            emptyState.style.display = 'flex';
+            if (paginationContainer) paginationContainer.style.display = 'none';
+            currentLogsData = [];
+            updatePaginationUI();
+            updateRecordCount();
+            return;
+        }
+
+        emptyState.style.display = 'none';
+        if (paginationContainer) paginationContainer.style.display = 'flex';
+
+        // 접수번호 기준 오름차순 정렬
+        currentLogsData = [...logs].sort((a, b) => {
+            const numA = parseInt(a.receptionNumber, 10) || 0;
+            const numB = parseInt(b.receptionNumber, 10) || 0;
+            return numA - numB;
+        });
+
+        totalPages = Math.ceil(currentLogsData.length / itemsPerPage) || 1;
+        if (currentPage > totalPages) currentPage = totalPages;
+
+        renderCurrentPage();
         updateRecordCount();
     }
 

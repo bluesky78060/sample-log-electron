@@ -9,6 +9,12 @@ const AUTO_SAVE_FILE = 'heavy-metal-autosave.json';
 const DEBUG = false;
 const log = (...args) => DEBUG && console.log(...args);
 
+// 페이지네이션 설정
+let currentPage = 1;
+let itemsPerPage = parseInt(localStorage.getItem('heavyMetalItemsPerPage')) || 100;
+let totalPages = 1;
+let currentLogsData = [];
+
 // 중금속 분석 항목 목록
 const ANALYSIS_ITEMS = ['구리', '납', '니켈', '비소', '수은', '아연', '카드뮴', '6가크롬'];
 
@@ -986,28 +992,57 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ========================================
     // 목록 렌더링
     // ========================================
-    function renderLogs(logsToRender = sampleLogs) {
+
+    // 페이지네이션 DOM 요소
+    const paginationInfo = document.getElementById('paginationInfo');
+    const itemsPerPageSelect = document.getElementById('itemsPerPage');
+    const pageNumbersContainer = document.getElementById('pageNumbers');
+    const firstPageBtn = document.getElementById('firstPage');
+    const prevPageBtn = document.getElementById('prevPage');
+    const nextPageBtn = document.getElementById('nextPage');
+    const lastPageBtn = document.getElementById('lastPage');
+    const paginationContainer = document.getElementById('pagination');
+
+    // 페이지네이션 초기화
+    if (itemsPerPageSelect) {
+        itemsPerPageSelect.value = itemsPerPage;
+        itemsPerPageSelect.addEventListener('change', (e) => {
+            itemsPerPage = parseInt(e.target.value);
+            localStorage.setItem('heavyMetalItemsPerPage', itemsPerPage);
+            currentPage = 1;
+            renderCurrentPage();
+        });
+    }
+
+    // 페이지네이션 버튼 이벤트
+    if (firstPageBtn) firstPageBtn.addEventListener('click', () => goToPage(1));
+    if (prevPageBtn) prevPageBtn.addEventListener('click', () => goToPage(currentPage - 1));
+    if (nextPageBtn) nextPageBtn.addEventListener('click', () => goToPage(currentPage + 1));
+    if (lastPageBtn) lastPageBtn.addEventListener('click', () => goToPage(totalPages));
+
+    function goToPage(page) {
+        if (page < 1 || page > totalPages) return;
+        currentPage = page;
+        renderCurrentPage();
+        const tableWrapper = document.querySelector('.table-wrapper');
+        if (tableWrapper) tableWrapper.scrollTop = 0;
+    }
+
+    function renderCurrentPage() {
         if (!tableBody) return;
 
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        const pageData = currentLogsData.slice(startIndex, endIndex);
+
         tableBody.innerHTML = '';
-
-        if (logsToRender.length === 0) {
-            if (emptyState) emptyState.style.display = 'block';
-            if (recordCountEl) recordCountEl.textContent = '0건';
-            return;
-        }
-
-        if (emptyState) emptyState.style.display = 'none';
-        if (recordCountEl) recordCountEl.textContent = `${logsToRender.length}건`;
-
-        logsToRender.forEach((log, idx) => {
+        pageData.forEach((logItem) => {
             const tr = document.createElement('tr');
-            tr.dataset.index = sampleLogs.indexOf(log);
+            tr.dataset.index = sampleLogs.indexOf(logItem);
 
-            // 분석항목 표시: 전체 선택시 "전체 항목", 아니면 선택된 항목 모두 표시
-            const analysisItemsStr = log.analysisItems ? log.analysisItems.join(', ') : '';
-            const isAllItems = log.analysisItems && log.analysisItems.length === ANALYSIS_ITEMS.length;
-            const analysisItemsDisplay = !log.analysisItems || log.analysisItems.length === 0
+            const analysisItemsStr = logItem.analysisItems ? logItem.analysisItems.join(', ') : '';
+            const isAllItems = logItem.analysisItems && logItem.analysisItems.length === ANALYSIS_ITEMS.length;
+            const analysisItemsDisplay = !logItem.analysisItems || logItem.analysisItems.length === 0
                 ? '-'
                 : isAllItems
                     ? '전체 항목'
@@ -1016,27 +1051,27 @@ document.addEventListener('DOMContentLoaded', async () => {
             const receptionMethodIcons = {
                 '우편': '📮', '이메일': '📧', '팩스': '📠', '직접방문': '🚶'
             };
-            const methodIcon = receptionMethodIcons[log.receptionMethod] || '-';
+            const methodIcon = receptionMethodIcons[logItem.receptionMethod] || '-';
 
             tr.innerHTML = `
                 <td><input type="checkbox" class="row-checkbox" data-index="${tr.dataset.index}"></td>
                 <td>
-                    <button class="btn-complete ${log.isCompleted ? 'completed' : ''}" title="${log.isCompleted ? '완료됨' : '미완료'}">
-                        ${log.isCompleted ? '✓' : '○'}
+                    <button class="btn-complete ${logItem.isCompleted ? 'completed' : ''}" title="${logItem.isCompleted ? '완료됨' : '미완료'}">
+                        ${logItem.isCompleted ? '✓' : '○'}
                     </button>
                 </td>
-                <td>${log.receptionNumber || '-'}</td>
-                <td>${log.date || '-'}</td>
-                <td>${log.name || '-'}</td>
-                <td title="${log.address || ''}">${(log.addressRoad || '-').substring(0, 20)}${(log.addressRoad || '').length > 20 ? '...' : ''}</td>
-                <td>${log.phoneNumber || '-'}</td>
-                <td title="${log.samplingLocation || ''}">${(log.samplingLocation || '-').substring(0, 15)}${(log.samplingLocation || '').length > 15 ? '...' : ''}</td>
-                <td>${log.cropName || '-'}${log.treeAge ? ' (' + log.treeAge + '년생)' : ''}</td>
-                <td>${log.samplingDate || '-'}</td>
+                <td>${logItem.receptionNumber || '-'}</td>
+                <td>${logItem.date || '-'}</td>
+                <td>${logItem.name || '-'}</td>
+                <td title="${logItem.address || ''}">${(logItem.addressRoad || '-').substring(0, 20)}${(logItem.addressRoad || '').length > 20 ? '...' : ''}</td>
+                <td>${logItem.phoneNumber || '-'}</td>
+                <td title="${logItem.samplingLocation || ''}">${(logItem.samplingLocation || '-').substring(0, 15)}${(logItem.samplingLocation || '').length > 15 ? '...' : ''}</td>
+                <td>${logItem.cropName || '-'}${logItem.treeAge ? ' (' + logItem.treeAge + '년생)' : ''}</td>
+                <td>${logItem.samplingDate || '-'}</td>
                 <td title="${analysisItemsStr}">${analysisItemsDisplay}</td>
-                <td>${log.purpose || '-'}</td>
-                <td title="${log.receptionMethod || ''}">${methodIcon}</td>
-                <td title="${log.note || ''}">${(log.note || '-').substring(0, 10)}${(log.note || '').length > 10 ? '...' : ''}</td>
+                <td>${logItem.purpose || '-'}</td>
+                <td title="${logItem.receptionMethod || ''}">${methodIcon}</td>
+                <td title="${logItem.note || ''}">${(logItem.note || '-').substring(0, 10)}${(logItem.note || '').length > 10 ? '...' : ''}</td>
                 <td>
                     <div class="action-btns">
                         <button class="btn-edit" title="수정">✏️</button>
@@ -1070,6 +1105,105 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             tableBody.appendChild(tr);
         });
+
+        updatePaginationUI();
+    }
+
+    function updatePaginationUI() {
+        const totalItems = currentLogsData.length;
+        totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+
+        if (currentPage > totalPages) currentPage = totalPages;
+
+        const startItem = totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
+        const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+
+        if (paginationInfo) {
+            paginationInfo.textContent = `${totalItems}건 중 ${startItem}-${endItem}`;
+        }
+
+        if (firstPageBtn) firstPageBtn.disabled = currentPage === 1;
+        if (prevPageBtn) prevPageBtn.disabled = currentPage === 1;
+        if (nextPageBtn) nextPageBtn.disabled = currentPage === totalPages;
+        if (lastPageBtn) lastPageBtn.disabled = currentPage === totalPages;
+
+        renderPageNumbers();
+    }
+
+    function renderPageNumbers() {
+        if (!pageNumbersContainer) return;
+        pageNumbersContainer.innerHTML = '';
+
+        const maxVisiblePages = 5;
+        let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+        let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+        if (endPage - startPage + 1 < maxVisiblePages) {
+            startPage = Math.max(1, endPage - maxVisiblePages + 1);
+        }
+
+        if (startPage > 1) {
+            pageNumbersContainer.appendChild(createPageButton(1));
+            if (startPage > 2) {
+                const ellipsis = document.createElement('span');
+                ellipsis.className = 'page-ellipsis';
+                ellipsis.textContent = '...';
+                pageNumbersContainer.appendChild(ellipsis);
+            }
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            pageNumbersContainer.appendChild(createPageButton(i));
+        }
+
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) {
+                const ellipsis = document.createElement('span');
+                ellipsis.className = 'page-ellipsis';
+                ellipsis.textContent = '...';
+                pageNumbersContainer.appendChild(ellipsis);
+            }
+            pageNumbersContainer.appendChild(createPageButton(totalPages));
+        }
+    }
+
+    function createPageButton(pageNum) {
+        const btn = document.createElement('button');
+        btn.className = `page-btn ${pageNum === currentPage ? 'active' : ''}`;
+        btn.textContent = pageNum;
+        btn.addEventListener('click', () => goToPage(pageNum));
+        return btn;
+    }
+
+    function renderLogs(logsToRender = sampleLogs) {
+        if (!tableBody) return;
+
+        tableBody.innerHTML = '';
+
+        if (logsToRender.length === 0) {
+            if (emptyState) emptyState.style.display = 'block';
+            if (paginationContainer) paginationContainer.style.display = 'none';
+            if (recordCountEl) recordCountEl.textContent = '0건';
+            currentLogsData = [];
+            updatePaginationUI();
+            return;
+        }
+
+        if (emptyState) emptyState.style.display = 'none';
+        if (paginationContainer) paginationContainer.style.display = 'flex';
+        if (recordCountEl) recordCountEl.textContent = `${logsToRender.length}건`;
+
+        // 접수번호 기준 오름차순 정렬
+        currentLogsData = [...logsToRender].sort((a, b) => {
+            const numA = parseInt(a.receptionNumber, 10) || 0;
+            const numB = parseInt(b.receptionNumber, 10) || 0;
+            return numA - numB;
+        });
+
+        totalPages = Math.ceil(currentLogsData.length / itemsPerPage) || 1;
+        if (currentPage > totalPages) currentPage = totalPages;
+
+        renderCurrentPage();
     }
 
     // ========================================

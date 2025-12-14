@@ -212,6 +212,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     const tableBody = document.getElementById('logTableBody');
     const emptyState = document.getElementById('emptyState');
     const dateInput = document.getElementById('date');
+    const paginationContainer = document.getElementById('pagination');
+
+    // ========================================
+    // 페이지네이션 설정
+    // ========================================
+    let currentPage = 1;
+    let itemsPerPage = parseInt(localStorage.getItem('soilItemsPerPage')) || 100;
+    let totalPages = 1;
+    let currentFlatRows = []; // 현재 표시할 평탄화된 데이터
+
+    // 페이지네이션 요소들
+    const paginationInfo = document.getElementById('paginationInfo');
+    const itemsPerPageSelect = document.getElementById('itemsPerPage');
+    const pageNumbersContainer = document.getElementById('pageNumbers');
+    const firstPageBtn = document.getElementById('firstPage');
+    const prevPageBtn = document.getElementById('prevPage');
+    const nextPageBtn = document.getElementById('nextPage');
+    const lastPageBtn = document.getElementById('lastPage');
+
+    // 페이지당 항목 수 초기화
+    if (itemsPerPageSelect) {
+        itemsPerPageSelect.value = itemsPerPage;
+    }
 
     log('✅ 기본 요소 로드 완료');
 
@@ -3414,8 +3437,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (logs.length === 0) {
             emptyState.classList.remove('hidden');
+            if (paginationContainer) paginationContainer.style.display = 'none';
         } else {
             emptyState.classList.add('hidden');
+            if (paginationContainer) paginationContainer.style.display = 'flex';
 
             // 접수번호 기준 오름차순 정렬
             const sortedLogs = [...logs].sort((a, b) => {
@@ -3425,10 +3450,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
 
             // 데이터 평탄화
-            const flatRows = flattenLogsForTable(sortedLogs);
-            let rowNum = 1;
+            currentFlatRows = flattenLogsForTable(sortedLogs);
 
-            flatRows.forEach((row) => {
+            // 페이지네이션 계산
+            totalPages = Math.ceil(currentFlatRows.length / itemsPerPage);
+            if (currentPage > totalPages) currentPage = totalPages || 1;
+
+            // 현재 페이지 데이터 추출
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const pageRows = currentFlatRows.slice(startIndex, endIndex);
+
+            pageRows.forEach((row) => {
                 // 하위 카테고리와 재배 작물을 합쳐서 표시
                 let subCategoryDisplay = row.subCategory || '';
                 if (row._cropsDisplay !== '-') {
@@ -3484,7 +3517,107 @@ document.addEventListener('DOMContentLoaded', async () => {
                 `;
                 tableBody.appendChild(tr);
             });
+
+            // 페이지네이션 UI 업데이트
+            updatePaginationUI();
         }
+    }
+
+    // ========================================
+    // 페이지네이션 함수들
+    // ========================================
+    function updatePaginationUI() {
+        const totalItems = currentFlatRows.length;
+        const startItem = totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
+        const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+
+        // 정보 텍스트 업데이트
+        if (paginationInfo) {
+            paginationInfo.textContent = `${totalItems.toLocaleString()}건 중 ${startItem.toLocaleString()}-${endItem.toLocaleString()}`;
+        }
+
+        // 버튼 상태 업데이트
+        if (firstPageBtn) firstPageBtn.disabled = currentPage === 1;
+        if (prevPageBtn) prevPageBtn.disabled = currentPage === 1;
+        if (nextPageBtn) nextPageBtn.disabled = currentPage === totalPages;
+        if (lastPageBtn) lastPageBtn.disabled = currentPage === totalPages;
+
+        // 페이지 번호 버튼 생성
+        renderPageNumbers();
+    }
+
+    function renderPageNumbers() {
+        if (!pageNumbersContainer) return;
+        pageNumbersContainer.innerHTML = '';
+
+        if (totalPages <= 1) return;
+
+        const maxVisiblePages = 5;
+        let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+        let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+        if (endPage - startPage + 1 < maxVisiblePages) {
+            startPage = Math.max(1, endPage - maxVisiblePages + 1);
+        }
+
+        // 첫 페이지 표시
+        if (startPage > 1) {
+            pageNumbersContainer.appendChild(createPageButton(1));
+            if (startPage > 2) {
+                const ellipsis = document.createElement('span');
+                ellipsis.className = 'page-ellipsis';
+                ellipsis.textContent = '...';
+                pageNumbersContainer.appendChild(ellipsis);
+            }
+        }
+
+        // 중간 페이지들
+        for (let i = startPage; i <= endPage; i++) {
+            pageNumbersContainer.appendChild(createPageButton(i));
+        }
+
+        // 마지막 페이지 표시
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) {
+                const ellipsis = document.createElement('span');
+                ellipsis.className = 'page-ellipsis';
+                ellipsis.textContent = '...';
+                pageNumbersContainer.appendChild(ellipsis);
+            }
+            pageNumbersContainer.appendChild(createPageButton(totalPages));
+        }
+    }
+
+    function createPageButton(pageNum) {
+        const btn = document.createElement('button');
+        btn.className = 'page-btn' + (pageNum === currentPage ? ' active' : '');
+        btn.textContent = pageNum;
+        btn.addEventListener('click', () => goToPage(pageNum));
+        return btn;
+    }
+
+    function goToPage(page) {
+        if (page < 1 || page > totalPages || page === currentPage) return;
+        currentPage = page;
+        renderLogs(sampleLogs);
+        // 테이블 상단으로 스크롤
+        const tableContainer = document.querySelector('.table-container');
+        if (tableContainer) tableContainer.scrollTop = 0;
+    }
+
+    // 페이지네이션 이벤트 리스너
+    if (firstPageBtn) firstPageBtn.addEventListener('click', () => goToPage(1));
+    if (prevPageBtn) prevPageBtn.addEventListener('click', () => goToPage(currentPage - 1));
+    if (nextPageBtn) nextPageBtn.addEventListener('click', () => goToPage(currentPage + 1));
+    if (lastPageBtn) lastPageBtn.addEventListener('click', () => goToPage(totalPages));
+
+    if (itemsPerPageSelect) {
+        itemsPerPageSelect.addEventListener('change', (e) => {
+            itemsPerPage = parseInt(e.target.value);
+            localStorage.setItem('soilItemsPerPage', itemsPerPage);
+            currentPage = 1;
+            renderLogs(sampleLogs);
+        });
     }
 
     // 폼 리셋 시 필지도 초기화

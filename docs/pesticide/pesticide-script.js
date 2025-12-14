@@ -9,6 +9,12 @@ const AUTO_SAVE_FILE = 'pesticide-autosave.json';
 const DEBUG = false;
 const log = (...args) => DEBUG && console.log(...args);
 
+// 페이지네이션 설정
+let currentPage = 1;
+let itemsPerPage = parseInt(localStorage.getItem('pesticideItemsPerPage')) || 100;
+let totalPages = 1;
+let currentFlatRows = [];
+
 // ========================================
 // Electron / Web 환경 감지 및 파일 API 추상화
 // ========================================
@@ -3837,6 +3843,161 @@ document.addEventListener('DOMContentLoaded', async () => {
         return rows;
     }
 
+    // 페이지네이션 DOM 요소
+    const paginationInfo = document.getElementById('paginationInfo');
+    const itemsPerPageSelect = document.getElementById('itemsPerPage');
+    const pageNumbersContainer = document.getElementById('pageNumbers');
+    const firstPageBtn = document.getElementById('firstPage');
+    const prevPageBtn = document.getElementById('prevPage');
+    const nextPageBtn = document.getElementById('nextPage');
+    const lastPageBtn = document.getElementById('lastPage');
+    const paginationContainer = document.getElementById('pagination');
+
+    // 페이지네이션 초기화
+    if (itemsPerPageSelect) {
+        itemsPerPageSelect.value = itemsPerPage;
+        itemsPerPageSelect.addEventListener('change', (e) => {
+            itemsPerPage = parseInt(e.target.value);
+            localStorage.setItem('pesticideItemsPerPage', itemsPerPage);
+            currentPage = 1;
+            renderCurrentPage();
+        });
+    }
+
+    // 페이지네이션 버튼 이벤트
+    if (firstPageBtn) firstPageBtn.addEventListener('click', () => goToPage(1));
+    if (prevPageBtn) prevPageBtn.addEventListener('click', () => goToPage(currentPage - 1));
+    if (nextPageBtn) nextPageBtn.addEventListener('click', () => goToPage(currentPage + 1));
+    if (lastPageBtn) lastPageBtn.addEventListener('click', () => goToPage(totalPages));
+
+    function goToPage(page) {
+        if (page < 1 || page > totalPages) return;
+        currentPage = page;
+        renderCurrentPage();
+        // 페이지 이동 시 테이블 상단으로 스크롤
+        const tableWrapper = document.querySelector('.table-wrapper');
+        if (tableWrapper) tableWrapper.scrollTop = 0;
+    }
+
+    function renderCurrentPage() {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        const pageRows = currentFlatRows.slice(startIndex, endIndex);
+
+        tableBody.innerHTML = '';
+        pageRows.forEach((row) => {
+            const isCompleted = row.completed || false;
+            const tr = document.createElement('tr');
+            tr.className = isCompleted ? 'row-completed' : '';
+            const methodText = row.receptionMethod || '-';
+
+            const addressFull = row.address || '';
+            const zipMatch = addressFull.match(/^\((\d{5})\)\s*/);
+            const zipcode = zipMatch ? zipMatch[1] : '';
+            const addressOnly = zipMatch ? addressFull.replace(zipMatch[0], '') : addressFull;
+
+            tr.dataset.id = row.id;
+            tr.innerHTML = `
+                <td class="col-checkbox">
+                    <input type="checkbox" class="row-checkbox" data-id="${row.id}">
+                </td>
+                <td class="col-complete">
+                    <button class="btn-complete ${isCompleted ? 'completed' : ''}" data-id="${row.id}" title="${isCompleted ? '완료 취소' : '완료'}">
+                        ${isCompleted ? '✔' : ''}
+                    </button>
+                </td>
+                <td>${row._displayNumber}</td>
+                <td>${row.date}</td>
+                <td>${row.subCategory || '-'}</td>
+                <td>${row.purpose || '-'}</td>
+                <td>${row.name}</td>
+                <td class="col-zipcode">${zipcode || '-'}</td>
+                <td title="${addressOnly || '-'}">${addressOnly || '-'}</td>
+                <td>${row.producerName || '-'}</td>
+                <td title="${row.producerAddress || '-'}">${row.producerAddress || '-'}</td>
+                <td title="${row.requestContent || '-'}"><div class="note-cell">${row.requestContent || '-'}</div></td>
+                <td>${row.phoneNumber || '-'}</td>
+                <td>${methodText}</td>
+                <td class="col-note" title="${row.note || ''}"><div class="note-cell">${row.note || '-'}</div></td>
+                <td>
+                    <div class="table-actions">
+                        <button class="btn-edit" data-id="${row.id}">수정</button>
+                        <button class="btn-delete" data-id="${row.id}">삭제</button>
+                    </div>
+                </td>
+            `;
+            tableBody.appendChild(tr);
+        });
+
+        updatePaginationUI();
+    }
+
+    function updatePaginationUI() {
+        const totalItems = currentFlatRows.length;
+        totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+
+        if (currentPage > totalPages) currentPage = totalPages;
+
+        const startItem = totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
+        const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+
+        if (paginationInfo) {
+            paginationInfo.textContent = `${totalItems}건 중 ${startItem}-${endItem}`;
+        }
+
+        if (firstPageBtn) firstPageBtn.disabled = currentPage === 1;
+        if (prevPageBtn) prevPageBtn.disabled = currentPage === 1;
+        if (nextPageBtn) nextPageBtn.disabled = currentPage === totalPages;
+        if (lastPageBtn) lastPageBtn.disabled = currentPage === totalPages;
+
+        renderPageNumbers();
+    }
+
+    function renderPageNumbers() {
+        if (!pageNumbersContainer) return;
+        pageNumbersContainer.innerHTML = '';
+
+        const maxVisiblePages = 5;
+        let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+        let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+        if (endPage - startPage + 1 < maxVisiblePages) {
+            startPage = Math.max(1, endPage - maxVisiblePages + 1);
+        }
+
+        if (startPage > 1) {
+            pageNumbersContainer.appendChild(createPageButton(1));
+            if (startPage > 2) {
+                const ellipsis = document.createElement('span');
+                ellipsis.className = 'page-ellipsis';
+                ellipsis.textContent = '...';
+                pageNumbersContainer.appendChild(ellipsis);
+            }
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            pageNumbersContainer.appendChild(createPageButton(i));
+        }
+
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) {
+                const ellipsis = document.createElement('span');
+                ellipsis.className = 'page-ellipsis';
+                ellipsis.textContent = '...';
+                pageNumbersContainer.appendChild(ellipsis);
+            }
+            pageNumbersContainer.appendChild(createPageButton(totalPages));
+        }
+    }
+
+    function createPageButton(pageNum) {
+        const btn = document.createElement('button');
+        btn.className = `page-btn ${pageNum === currentPage ? 'active' : ''}`;
+        btn.textContent = pageNum;
+        btn.addEventListener('click', () => goToPage(pageNum));
+        return btn;
+    }
+
     function renderLogs(logs) {
         tableBody.innerHTML = '';
 
@@ -3845,8 +4006,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (logs.length === 0) {
             emptyState.classList.remove('hidden');
+            if (paginationContainer) paginationContainer.style.display = 'none';
+            currentFlatRows = [];
+            updatePaginationUI();
         } else {
             emptyState.classList.add('hidden');
+            if (paginationContainer) paginationContainer.style.display = 'flex';
 
             // 접수번호 기준 오름차순 정렬
             const sortedLogs = [...logs].sort((a, b) => {
@@ -3856,65 +4021,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
 
             // 데이터 평탄화
-            const flatRows = flattenLogsForTable(sortedLogs);
-            let rowNum = 1;
+            currentFlatRows = flattenLogsForTable(sortedLogs);
 
-            flatRows.forEach((row) => {
-                // 하위 카테고리와 재배 작물을 합쳐서 표시
-                let subCategoryDisplay = row.subCategory || '';
-                if (row._cropsDisplay !== '-') {
-                    subCategoryDisplay = subCategoryDisplay
-                        ? `${subCategoryDisplay} (${row._cropsDisplay})`
-                        : row._cropsDisplay;
-                }
-                subCategoryDisplay = subCategoryDisplay || '-';
+            // 페이지 범위 체크
+            totalPages = Math.ceil(currentFlatRows.length / itemsPerPage) || 1;
+            if (currentPage > totalPages) currentPage = totalPages;
 
-                // 완료 상태 확인
-                const isCompleted = row.completed || false;
-
-                const tr = document.createElement('tr');
-                tr.className = isCompleted ? 'row-completed' : '';
-                // 수령 방법 텍스트
-                const methodText = row.receptionMethod || '-';
-
-                // 주소에서 우편번호 분리 (예: "(12345) 서울시..." -> 우편번호: "12345", 주소: "서울시...")
-                const addressFull = row.address || '';
-                const zipMatch = addressFull.match(/^\((\d{5})\)\s*/);
-                const zipcode = zipMatch ? zipMatch[1] : '';
-                const addressOnly = zipMatch ? addressFull.replace(zipMatch[0], '') : addressFull;
-
-                tr.dataset.id = row.id;
-                tr.innerHTML = `
-                    <td class="col-checkbox">
-                        <input type="checkbox" class="row-checkbox" data-id="${row.id}">
-                    </td>
-                    <td class="col-complete">
-                        <button class="btn-complete ${isCompleted ? 'completed' : ''}" data-id="${row.id}" title="${isCompleted ? '완료 취소' : '완료'}">
-                            ${isCompleted ? '✔' : ''}
-                        </button>
-                    </td>
-                    <td>${row._displayNumber}</td>
-                    <td>${row.date}</td>
-                    <td>${row.subCategory || '-'}</td>
-                    <td>${row.purpose || '-'}</td>
-                    <td>${row.name}</td>
-                    <td class="col-zipcode">${zipcode || '-'}</td>
-                    <td title="${addressOnly || '-'}">${addressOnly || '-'}</td>
-                    <td>${row.producerName || '-'}</td>
-                    <td title="${row.producerAddress || '-'}">${row.producerAddress || '-'}</td>
-                    <td title="${row.requestContent || '-'}"><div class="note-cell">${row.requestContent || '-'}</div></td>
-                    <td>${row.phoneNumber || '-'}</td>
-                    <td>${methodText}</td>
-                    <td class="col-note" title="${row.note || ''}"><div class="note-cell">${row.note || '-'}</div></td>
-                    <td>
-                        <div class="table-actions">
-                            <button class="btn-edit" data-id="${row.id}">수정</button>
-                            <button class="btn-delete" data-id="${row.id}">삭제</button>
-                        </div>
-                    </td>
-                `;
-                tableBody.appendChild(tr);
-            });
+            renderCurrentPage();
         }
     }
 

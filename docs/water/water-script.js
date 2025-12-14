@@ -189,6 +189,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     const navItems = document.querySelectorAll('.nav-btn');
     const views = document.querySelectorAll('.view');
     const recordCountEl = document.getElementById('recordCount');
+    const paginationContainer = document.getElementById('pagination');
+
+    // ========================================
+    // 페이지네이션 설정
+    // ========================================
+    let currentPage = 1;
+    let itemsPerPage = parseInt(localStorage.getItem('waterItemsPerPage')) || 100;
+    let totalPages = 1;
+    let currentDisplayLogs = [];
+
+    const paginationInfo = document.getElementById('paginationInfo');
+    const itemsPerPageSelect = document.getElementById('itemsPerPage');
+    const pageNumbersContainer = document.getElementById('pageNumbers');
+    const firstPageBtn = document.getElementById('firstPage');
+    const prevPageBtn = document.getElementById('prevPage');
+    const nextPageBtn = document.getElementById('nextPage');
+    const lastPageBtn = document.getElementById('lastPage');
+
+    if (itemsPerPageSelect) {
+        itemsPerPageSelect.value = itemsPerPage;
+    }
 
     // 오늘 날짜 설정
     dateInput.valueAsDate = new Date();
@@ -981,12 +1002,30 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (logs.length === 0) {
             emptyState.style.display = 'flex';
+            if (paginationContainer) paginationContainer.style.display = 'none';
             return;
         }
 
         emptyState.style.display = 'none';
+        if (paginationContainer) paginationContainer.style.display = 'flex';
 
-        logs.forEach(log => {
+        // 정렬된 데이터 저장
+        currentDisplayLogs = [...logs].sort((a, b) => {
+            const numA = parseInt(a.receptionNumber, 10) || 0;
+            const numB = parseInt(b.receptionNumber, 10) || 0;
+            return numA - numB;
+        });
+
+        // 페이지네이션 계산
+        totalPages = Math.ceil(currentDisplayLogs.length / itemsPerPage);
+        if (currentPage > totalPages) currentPage = totalPages || 1;
+
+        // 현재 페이지 데이터 추출
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        const pageLogs = currentDisplayLogs.slice(startIndex, endIndex);
+
+        pageLogs.forEach(log => {
             const row = document.createElement('tr');
             row.dataset.id = log.id;
 
@@ -1035,6 +1074,97 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 이벤트 바인딩
         bindTableEvents();
         updateRecordCount();
+        updatePaginationUI();
+    }
+
+    // ========================================
+    // 페이지네이션 함수들
+    // ========================================
+    function updatePaginationUI() {
+        const totalItems = currentDisplayLogs.length;
+        const startItem = totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
+        const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+
+        if (paginationInfo) {
+            paginationInfo.textContent = `${totalItems.toLocaleString()}건 중 ${startItem.toLocaleString()}-${endItem.toLocaleString()}`;
+        }
+
+        if (firstPageBtn) firstPageBtn.disabled = currentPage === 1;
+        if (prevPageBtn) prevPageBtn.disabled = currentPage === 1;
+        if (nextPageBtn) nextPageBtn.disabled = currentPage === totalPages;
+        if (lastPageBtn) lastPageBtn.disabled = currentPage === totalPages;
+
+        renderPageNumbers();
+    }
+
+    function renderPageNumbers() {
+        if (!pageNumbersContainer) return;
+        pageNumbersContainer.innerHTML = '';
+
+        if (totalPages <= 1) return;
+
+        const maxVisiblePages = 5;
+        let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+        let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+        if (endPage - startPage + 1 < maxVisiblePages) {
+            startPage = Math.max(1, endPage - maxVisiblePages + 1);
+        }
+
+        if (startPage > 1) {
+            pageNumbersContainer.appendChild(createPageButton(1));
+            if (startPage > 2) {
+                const ellipsis = document.createElement('span');
+                ellipsis.className = 'page-ellipsis';
+                ellipsis.textContent = '...';
+                pageNumbersContainer.appendChild(ellipsis);
+            }
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            pageNumbersContainer.appendChild(createPageButton(i));
+        }
+
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) {
+                const ellipsis = document.createElement('span');
+                ellipsis.className = 'page-ellipsis';
+                ellipsis.textContent = '...';
+                pageNumbersContainer.appendChild(ellipsis);
+            }
+            pageNumbersContainer.appendChild(createPageButton(totalPages));
+        }
+    }
+
+    function createPageButton(pageNum) {
+        const btn = document.createElement('button');
+        btn.className = 'page-btn' + (pageNum === currentPage ? ' active' : '');
+        btn.textContent = pageNum;
+        btn.addEventListener('click', () => goToPage(pageNum));
+        return btn;
+    }
+
+    function goToPage(page) {
+        if (page < 1 || page > totalPages || page === currentPage) return;
+        currentPage = page;
+        renderLogs(sampleLogs);
+        const tableContainer = document.querySelector('.table-container');
+        if (tableContainer) tableContainer.scrollTop = 0;
+    }
+
+    // 페이지네이션 이벤트 리스너
+    if (firstPageBtn) firstPageBtn.addEventListener('click', () => goToPage(1));
+    if (prevPageBtn) prevPageBtn.addEventListener('click', () => goToPage(currentPage - 1));
+    if (nextPageBtn) nextPageBtn.addEventListener('click', () => goToPage(currentPage + 1));
+    if (lastPageBtn) lastPageBtn.addEventListener('click', () => goToPage(totalPages));
+
+    if (itemsPerPageSelect) {
+        itemsPerPageSelect.addEventListener('change', (e) => {
+            itemsPerPage = parseInt(e.target.value);
+            localStorage.setItem('waterItemsPerPage', itemsPerPage);
+            currentPage = 1;
+            renderLogs(sampleLogs);
+        });
     }
 
     function bindTableEvents() {
