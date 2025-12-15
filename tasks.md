@@ -232,6 +232,10 @@ sample-log-electron/
 
 | 커밋 | 설명 |
 |------|------|
+| `13686bf` | refactor: TypeScript 전환 폐기 및 JavaScript 유지 |
+| `e44b6e2` | fix: 지번 검색 로직 개선 및 자동 저장 활성화 수정 |
+| `5d9bca9` | fix: 메인 화면 카드 설명 문구 수정 |
+| `c14b342` | feat: 사용 설명서 추가 및 한글 메뉴 적용 |
 | `b556efc` | feat: 연도별 자동저장 및 UI 개선 |
 | `699dc52` | feat: 모든 페이지에 년도 선택 기능 추가 및 docs 동기화 |
 | `1816feb` | feat: 잔류농약 검사 페이지 추가 및 다중 의뢰 기능 구현 |
@@ -281,9 +285,9 @@ sample-log-electron/
 - [ ] 키보드 네비게이션
 
 ### 보안
-- [ ] innerHTML XSS 위험 개선 - DOMPurify 라이브러리 도입 검토
-  - 대부분의 innerHTML 사용은 정적 템플릿이나, 사용자 입력이 포함될 경우 주의 필요
-  - 웹 버전 공개 배포 시 또는 외부 API 데이터 표시 시 적용 권장
+- [x] innerHTML XSS 위험 개선 - DOMPurify 라이브러리 도입 ✅ 완료
+  - sanitize.js 모듈 구현
+  - 모든 시료 스크립트에 적용
 
 ### 코드 구조
 - [ ] style.css 파일 분리 검토 (현재 3,984줄)
@@ -292,9 +296,26 @@ sample-log-electron/
 - [ ] ESLint 도입 검토
   - 현재 미설정 상태, 개인 프로젝트로 급하지 않음
   - 팀 협업 또는 프로젝트 확장 시 도입 권장
-- [ ] TypeScript 마이그레이션
-  - 타입 안정성 향상, IDE 지원 개선
-  - 점진적 마이그레이션 가능 (allowJs: true)
 - [ ] 단위 테스트 추가
   - Vitest 또는 Jest 도입
   - 현재 E2E 테스트(Playwright)만 있음, 개별 함수 테스트 필요
+
+---
+
+## TypeScript 마이그레이션 (❌ 폐기)
+
+### 폐기 사유 (2024-12-15)
+이 프로젝트는 **빌드 시스템 없이** HTML에서 직접 `<script src="*.js">`로 로드하는 구조입니다.
+TypeScript를 사용하려면 빌드 단계(tsc 컴파일)가 필요하지만, 현재 구조에서는 불필요한 복잡성을 추가합니다.
+
+**결정**: 순수 JavaScript + JSDoc 타입 힌트로 유지
+
+### 대안으로 적용된 사항
+- [x] JSDoc 타입 주석으로 타입 힌트 제공
+- [x] VS Code IntelliSense 지원
+- [x] 빌드 없이 바로 실행 가능한 구조 유지
+
+### 삭제된 파일
+- `tsconfig.json`
+- `src/types/global.d.ts`
+- `src/types/sample.d.ts`
