@@ -254,6 +254,16 @@
             <p>봉화군농업기술센터 안전성분석센터</p>
         </div>
     </div>
+    <script>
+        // Service Worker 등록 (웹 환경에서만)
+        if ('serviceWorker' in navigator && !window.electronAPI) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('[SW] 등록 성공:', reg.scope))
+                    .catch(err => console.error('[SW] 등록 실패:', err));
+            });
+        }
+    </script>
 </body>
 
 </html>

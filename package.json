@@ -5,6 +5,9 @@
   "description": "My Electron application description",
   "main": "src/index.js",
   "scripts": {
+    "dev": "vite src --port 3000",
+    "dev:build": "vite build src",
+    "preview": "vite preview src",
     "start": "electron-forge start",
     "package": "electron-forge package",
     "make": "electron-forge make",
@@ -31,6 +34,7 @@
     "@electron/fuses": "^1.8.0",
     "@playwright/test": "^1.57.0",
     "electron": "39.2.6",
-    "http-server": "^14.1.1"
+    "http-server": "^14.1.1",
+    "vite": "^5.4.11"
   }
 }

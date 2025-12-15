@@ -3464,7 +3464,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         const yearStorageKey = getStorageKey(selectedYear);
         localStorage.setItem(yearStorageKey, JSON.stringify(sampleLogs));
 
-        if (autoSaveFileHandle) {
+        // 자동 저장 실행 (Electron: FileAPI.autoSavePath, Web: autoSaveFileHandle)
+        const autoSaveEnabled = localStorage.getItem('autoSaveEnabled') === 'true';
+        if (autoSaveEnabled && (isElectron ? FileAPI.autoSavePath : autoSaveFileHandle)) {
             autoSaveToFile();
         }
 

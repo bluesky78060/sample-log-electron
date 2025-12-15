@@ -292,3 +292,9 @@ sample-log-electron/
 - [ ] ESLint 도입 검토
   - 현재 미설정 상태, 개인 프로젝트로 급하지 않음
   - 팀 협업 또는 프로젝트 확장 시 도입 권장
+- [ ] TypeScript 마이그레이션
+  - 타입 안정성 향상, IDE 지원 개선
+  - 점진적 마이그레이션 가능 (allowJs: true)
+- [ ] 단위 테스트 추가
+  - Vitest 또는 Jest 도입
+  - 현재 E2E 테스트(Playwright)만 있음, 개별 함수 테스트 필요
