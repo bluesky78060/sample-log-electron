@@ -476,6 +476,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const parcel = {
             id: parcelId,
             lotAddress: '',
+            isMountain: false, // 산 여부
             subLots: [], // 이제 { lotAddress: string, crops: [{name, area}] } 형태의 객체 배열
             crops: []
         };
@@ -514,14 +515,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <label for="lot-address-${parcel.id}">
                             필지 주소 (주 지번) <span class="label-hint">* 리+지번 입력 후 Enter</span>
                         </label>
-                        <div class="lot-address-autocomplete-wrapper">
-                            <input type="text" class="lot-address-input"
-                                   id="lot-address-${parcel.id}"
-                                   name="lot-address-${parcel.id}"
-                                   data-id="${parcel.id}"
-                                   placeholder="예: 문단리 224"
-                                   value="${parcel.lotAddress}">
-                            <ul class="lot-address-autocomplete-list" id="lotAutocomplete-${parcel.id}"></ul>
+                        <div class="lot-address-row">
+                            <div class="lot-address-autocomplete-wrapper">
+                                <input type="text" class="lot-address-input"
+                                       id="lot-address-${parcel.id}"
+                                       name="lot-address-${parcel.id}"
+                                       data-id="${parcel.id}"
+                                       placeholder="예: 문단리 224"
+                                       value="${parcel.lotAddress}">
+                                <ul class="lot-address-autocomplete-list" id="lotAutocomplete-${parcel.id}"></ul>
+                            </div>
+                            <label class="mountain-checkbox-label">
+                                <input type="checkbox" class="mountain-checkbox"
+                                       id="mountain-${parcel.id}"
+                                       data-id="${parcel.id}"
+                                       ${parcel.isMountain ? 'checked' : ''}>
+                                <span class="mountain-checkbox-text">산</span>
+                            </label>
                         </div>
                     </div>
                     <div class="crop-area-row">
@@ -815,30 +825,44 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else {
                 autocompleteList.classList.remove('show');
             }
+        });
 
-            // 필지 주소 파싱 시도
-            if (value.length > 0) {
-                // 완전한 주소가 아닌 경우 자동으로 변환 시도 (시/군으로 시작하지 않음)
-                if (!value.startsWith('봉화군') && !value.startsWith('영주시') && !value.startsWith('울진군')) {
-                    // parseBonghwaAddress 함수 호출 (있을 경우)
-                    if (typeof parseBonghwaAddress === 'function') {
-                        const result = parseBonghwaAddress(value);
+        // Enter 키 입력 시 자동 변환
+        subLotInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
 
-                        if (result) {
-                            // 중복 리인 경우 선택 옵션 제공
-                            if (result.alternatives && result.alternatives.length > 1) {
-                                // 중복 리 선택 UI 표시
-                                autocompleteList.innerHTML = result.alternatives.map(district => `
-                                    <li data-village="${result.village}" data-district="${district}" data-region="${result.region}" data-lot="${result.lotNumber}">
-                                        ${result.region} ${district} ${result.village} ${result.lotNumber || ''}
-                                    </li>
-                                `).join('');
-                                autocompleteList.classList.add('show');
-                            } else {
-                                // 단일 매칭 - 바로 변환
-                                subLotInput.value = result.fullAddress;
-                                autocompleteList.classList.remove('show');
-                            }
+                const value = subLotInput.value.trim();
+
+                // 이미 완전한 주소면 무시 (시/군으로 시작)
+                if (value.startsWith('봉화군') || value.startsWith('영주시') || value.startsWith('울진군')) {
+                    autocompleteList.classList.remove('show');
+                    return;
+                }
+
+                // parseParcelAddress 사용 (세 지역 통합)
+                if (typeof parseParcelAddress === 'function') {
+                    const result = parseParcelAddress(value);
+
+                    if (result) {
+                        // 세 지역 간 중복인 경우
+                        if (result.isDuplicate) {
+                            // 지역 선택 모달 표시
+                            showRegionSelectionModal(result, parcelId, subLotInput);
+                        }
+                        // 단일 지역 내 중복인 경우
+                        else if (result.alternatives && result.alternatives.length > 1) {
+                            // 같은 지역 내 중복 리 선택 UI 표시
+                            autocompleteList.innerHTML = result.alternatives.map(district => `
+                                <li data-village="${result.village}" data-district="${district}" data-lot="${result.lotNumber}" data-region="${result.region}">
+                                    ${result.region} ${district} ${result.village} ${result.lotNumber || ''}
+                                </li>
+                            `).join('');
+                            autocompleteList.classList.add('show');
+                        } else {
+                            // 단일 매칭 - 바로 변환
+                            subLotInput.value = result.fullAddress;
+                            autocompleteList.classList.remove('show');
                         }
                     }
                 }
@@ -875,13 +899,58 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // 필지 주소 업데이트
-    function updateParcelLotAddress(parcelId) {
+    // 필지 주소 업데이트 (중복 체크 포함)
+    function updateParcelLotAddress(parcelId, skipDuplicateCheck = false) {
         const parcel = parcels.find(p => p.id === parcelId);
         const lotInput = document.querySelector(`.lot-address-input[data-id="${parcelId}"]`);
 
         if (parcel && lotInput) {
-            parcel.lotAddress = lotInput.value.trim();
+            const newValue = lotInput.value.trim();
+
+            // 중복 체크 (빈 값은 체크 안함)
+            if (newValue && !skipDuplicateCheck) {
+                let isDuplicate = false;
+                let duplicateLocation = '';
+
+                for (const p of parcels) {
+                    // 자기 자신 제외
+                    if (p.id === parcelId) continue;
+
+                    // 다른 주필지와 중복 체크
+                    if (p.lotAddress === newValue) {
+                        isDuplicate = true;
+                        duplicateLocation = '다른 주필지';
+                        break;
+                    }
+                    // 하위필지와 중복 체크
+                    const subLotExists = p.subLots.some(sl =>
+                        (typeof sl === 'string' ? sl : sl.lotAddress) === newValue
+                    );
+                    if (subLotExists) {
+                        isDuplicate = true;
+                        duplicateLocation = '하위필지';
+                        break;
+                    }
+                }
+
+                // 현재 필지의 하위필지와도 중복 체크
+                const ownSubLotExists = parcel.subLots.some(sl =>
+                    (typeof sl === 'string' ? sl : sl.lotAddress) === newValue
+                );
+                if (ownSubLotExists) {
+                    isDuplicate = true;
+                    duplicateLocation = '현재 필지의 하위필지';
+                }
+
+                if (isDuplicate) {
+                    showToast(`이미 등록된 필지입니다 (${duplicateLocation})`, 'error');
+                    // 이전 값으로 되돌리기
+                    lotInput.value = parcel.lotAddress || '';
+                    return;
+                }
+            }
+
+            parcel.lotAddress = newValue;
             updateParcelsData();
             updateParcelSummary(parcelId);
         }
@@ -1071,11 +1140,32 @@ document.addEventListener('DOMContentLoaded', async () => {
             const value = input.value.trim();
             if (value) {
                 const parcel = parcels.find(p => p.id === parcelId);
-                // 중복 체크 (문자열/객체 모두 호환)
-                const exists = parcel.subLots.some(sl =>
-                    (typeof sl === 'string' ? sl : sl.lotAddress) === value
-                );
-                if (!exists) {
+
+                // 전체 필지에서 중복 체크 (모든 주필지 + 모든 하위필지)
+                let isDuplicate = false;
+                let duplicateLocation = '';
+
+                for (const p of parcels) {
+                    // 주필지와 중복 체크
+                    if (p.lotAddress === value) {
+                        isDuplicate = true;
+                        duplicateLocation = '주필지';
+                        break;
+                    }
+                    // 하위필지와 중복 체크
+                    const subLotExists = p.subLots.some(sl =>
+                        (typeof sl === 'string' ? sl : sl.lotAddress) === value
+                    );
+                    if (subLotExists) {
+                        isDuplicate = true;
+                        duplicateLocation = '하위필지';
+                        break;
+                    }
+                }
+
+                if (isDuplicate) {
+                    showToast(`이미 등록된 필지입니다 (${duplicateLocation})`, 'error');
+                } else {
                     parcel.subLots.push({
                         lotAddress: value,
                         crops: []
@@ -1146,11 +1236,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // 필지 주소 입력 이벤트
+    // 필지 주소 입력 이벤트 (실시간 저장, 중복 체크는 blur에서)
     parcelsContainer.addEventListener('input', (e) => {
         if (e.target.classList.contains('lot-address-input')) {
             const parcelId = e.target.dataset.id;
             const parcel = parcels.find(p => p.id === parcelId);
+            // 임시 저장 (중복 체크는 blur 시점에)
+            parcel._tempLotAddress = e.target.value;
             parcel.lotAddress = e.target.value;
             updateParcelsData();
         }
@@ -1159,6 +1251,71 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (e.target.classList.contains('area-direct-input')) {
             const parcelId = e.target.dataset.id;
             updateFirstCrop(parcelId);
+        }
+    });
+
+    // 필지 주소 blur 이벤트 (중복 체크)
+    parcelsContainer.addEventListener('blur', (e) => {
+        if (e.target.classList.contains('lot-address-input')) {
+            const parcelId = e.target.dataset.id;
+            const parcel = parcels.find(p => p.id === parcelId);
+            const newValue = e.target.value.trim();
+
+            if (!newValue) return;
+
+            // 중복 체크
+            let isDuplicate = false;
+            let duplicateLocation = '';
+
+            for (const p of parcels) {
+                // 자기 자신 제외
+                if (p.id === parcelId) continue;
+
+                // 다른 주필지와 중복 체크
+                if (p.lotAddress === newValue) {
+                    isDuplicate = true;
+                    duplicateLocation = '다른 주필지';
+                    break;
+                }
+                // 하위필지와 중복 체크
+                const subLotExists = p.subLots.some(sl =>
+                    (typeof sl === 'string' ? sl : sl.lotAddress) === newValue
+                );
+                if (subLotExists) {
+                    isDuplicate = true;
+                    duplicateLocation = '하위필지';
+                    break;
+                }
+            }
+
+            // 현재 필지의 하위필지와도 중복 체크
+            const ownSubLotExists = parcel.subLots.some(sl =>
+                (typeof sl === 'string' ? sl : sl.lotAddress) === newValue
+            );
+            if (ownSubLotExists) {
+                isDuplicate = true;
+                duplicateLocation = '현재 필지의 하위필지';
+            }
+
+            if (isDuplicate) {
+                showToast(`이미 등록된 필지입니다 (${duplicateLocation})`, 'error');
+                // 빈 값으로 초기화
+                e.target.value = '';
+                parcel.lotAddress = '';
+                updateParcelsData();
+            }
+        }
+    }, true);
+
+    // 산 체크박스 변경 이벤트
+    parcelsContainer.addEventListener('change', (e) => {
+        if (e.target.classList.contains('mountain-checkbox')) {
+            const parcelId = e.target.dataset.id;
+            const parcel = parcels.find(p => p.id === parcelId);
+            if (parcel) {
+                parcel.isMountain = e.target.checked;
+                updateParcelsData();
+            }
         }
     });
 
@@ -1704,6 +1861,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 parcels: validParcels.map(p => ({
                     id: p.id || crypto.randomUUID(),
                     lotAddress: p.lotAddress,
+                    isMountain: p.isMountain || false,
                     subLots: [...p.subLots],
                     crops: p.crops.map(c => ({ ...c }))
                 })),
@@ -1803,6 +1961,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             ...newLogs[newLogs.length - 1], // 첫 번째 접수번호 기준
             parcels: validParcels.map(p => ({
                 lotAddress: p.lotAddress,
+                isMountain: p.isMountain || false,
                 subLots: [...p.subLots],
                 crops: p.crops.map(c => ({ ...c }))
             })),
@@ -1817,29 +1976,131 @@ document.addEventListener('DOMContentLoaded', async () => {
     const listSearchModal = document.getElementById('listSearchModal');
     const openSearchModalBtn = document.getElementById('openSearchModalBtn');
     const closeSearchModalBtn = document.getElementById('closeSearchModal');
-    const searchDateInput = document.getElementById('searchDateInput');
-    const searchTextInput = document.getElementById('searchTextInput');
+    const searchDateFromInput = document.getElementById('searchDateFromInput');
+    const searchDateToInput = document.getElementById('searchDateToInput');
+    const searchNameInput = document.getElementById('searchNameInput');
+    const searchReceptionFromInput = document.getElementById('searchReceptionFromInput');
+    const searchReceptionToInput = document.getElementById('searchReceptionToInput');
+    const searchLotInput = document.getElementById('searchLotInput');
     const clearSearchDateBtn = document.getElementById('clearSearchDate');
+    const clearSearchReceptionBtn = document.getElementById('clearSearchReception');
+    const clearSearchLotBtn = document.getElementById('clearSearchLot');
     const resetSearchBtn = document.getElementById('resetSearchBtn');
     const applySearchBtn = document.getElementById('applySearchBtn');
 
     // 현재 검색 필터 상태
     let currentSearchFilter = {
-        date: '',
-        text: ''
+        dateFrom: '',
+        dateTo: '',
+        name: '',
+        receptionFrom: '',
+        receptionTo: '',
+        lot: ''
     };
+
+    // 접수번호에서 숫자 부분 추출 (예: "토양-2025-001" → 1)
+    function extractReceptionNumber(receptionNumber) {
+        const match = receptionNumber.match(/(\d+)$/);
+        return match ? parseInt(match[1], 10) : 0;
+    }
 
     function filterAndRenderLogs() {
         const filteredLogs = sampleLogs.filter(log => {
-            // 텍스트 검색 (성명 또는 접수번호)
-            const matchesText = !currentSearchFilter.text ||
-                log.name.toLowerCase().includes(currentSearchFilter.text) ||
-                log.receptionNumber.toLowerCase().includes(currentSearchFilter.text);
+            // 성명 검색
+            const matchesName = !currentSearchFilter.name ||
+                log.name.toLowerCase().includes(currentSearchFilter.name);
 
-            // 날짜 검색
-            const matchesDate = !currentSearchFilter.date || log.date === currentSearchFilter.date;
+            // 접수번호 범위 검색
+            let matchesReception = true;
+            if (currentSearchFilter.receptionFrom || currentSearchFilter.receptionTo) {
+                const logNum = extractReceptionNumber(log.receptionNumber);
+                const fromNum = currentSearchFilter.receptionFrom ? parseInt(currentSearchFilter.receptionFrom, 10) : 0;
+                const toNum = currentSearchFilter.receptionTo ? parseInt(currentSearchFilter.receptionTo, 10) : Infinity;
 
-            return matchesText && matchesDate;
+                if (fromNum && logNum < fromNum) {
+                    matchesReception = false;
+                }
+                if (toNum !== Infinity && logNum > toNum) {
+                    matchesReception = false;
+                }
+            }
+
+            // 날짜 범위 검색
+            let matchesDate = true;
+            if (currentSearchFilter.dateFrom || currentSearchFilter.dateTo) {
+                const logDate = log.date; // YYYY-MM-DD 형식
+                if (currentSearchFilter.dateFrom && logDate < currentSearchFilter.dateFrom) {
+                    matchesDate = false;
+                }
+                if (currentSearchFilter.dateTo && logDate > currentSearchFilter.dateTo) {
+                    matchesDate = false;
+                }
+            }
+
+            // 지번 검색 (parcels 배열의 lotAddress + subLots 조합 검색)
+            // 예: "문단리 123" → lotAddress에 "문단리" 포함 AND subLots에 "123" 포함
+            // subLots는 문자열 또는 { lotAddress: string, crops: [...] } 형태의 객체일 수 있음
+            let matchesLot = true;
+            if (currentSearchFilter.lot) {
+                matchesLot = false;
+                // 검색어를 공백으로 분리 (예: "문단리 123" → ["문단리", "123"])
+                const searchTerms = currentSearchFilter.lot.trim().toLowerCase().split(/\s+/).filter(t => t);
+
+                // subLot에서 지번 값 추출하는 헬퍼 함수
+                const getSubLotAddress = (subLot) => {
+                    if (typeof subLot === 'string') return subLot.toLowerCase();
+                    if (subLot && typeof subLot === 'object' && subLot.lotAddress) {
+                        return subLot.lotAddress.toLowerCase();
+                    }
+                    return '';
+                };
+
+                if (log.parcels && log.parcels.length > 0) {
+                    matchesLot = log.parcels.some(parcel => {
+                        // 검색어가 하나만 있는 경우: lotAddress 또는 subLots에서 검색
+                        if (searchTerms.length === 1) {
+                            const term = searchTerms[0];
+                            // lotAddress 검색
+                            if (parcel.lotAddress && parcel.lotAddress.toLowerCase().includes(term)) {
+                                return true;
+                            }
+                            // subLots 검색
+                            if (parcel.subLots && parcel.subLots.length > 0) {
+                                return parcel.subLots.some(subLot => {
+                                    const addr = getSubLotAddress(subLot);
+                                    return addr && addr.includes(term);
+                                });
+                            }
+                            return false;
+                        }
+
+                        // 검색어가 두 개 이상인 경우: 리 + 지번 조합 검색
+                        // 첫 번째 단어는 리(lotAddress), 나머지는 지번(subLots)
+                        const riTerm = searchTerms[0];
+                        const lotTerms = searchTerms.slice(1);
+
+                        // lotAddress에 리 이름이 포함되어야 함
+                        const matchesRi = parcel.lotAddress &&
+                            parcel.lotAddress.toLowerCase().includes(riTerm);
+
+                        if (!matchesRi) return false;
+
+                        // subLots에 지번이 포함되어야 함
+                        if (parcel.subLots && parcel.subLots.length > 0) {
+                            return lotTerms.every(lotTerm =>
+                                parcel.subLots.some(subLot => {
+                                    const addr = getSubLotAddress(subLot);
+                                    return addr && addr.includes(lotTerm);
+                                })
+                            );
+                        }
+
+                        return false;
+                    });
+                }
+            }
+
+            return matchesName && matchesReception && matchesDate && matchesLot;
         });
 
         renderLogs(filteredLogs);
@@ -1847,7 +2108,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function updateSearchButtonState() {
-        const hasFilter = currentSearchFilter.date || currentSearchFilter.text;
+        const hasFilter = currentSearchFilter.dateFrom || currentSearchFilter.dateTo ||
+            currentSearchFilter.name || currentSearchFilter.receptionFrom ||
+            currentSearchFilter.receptionTo || currentSearchFilter.lot;
         if (hasFilter) {
             openSearchModalBtn.classList.add('has-filter');
             openSearchModalBtn.innerHTML = '🔍 검색 중';
@@ -1859,10 +2122,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 모달 열기
     openSearchModalBtn.addEventListener('click', () => {
-        searchDateInput.value = currentSearchFilter.date;
-        searchTextInput.value = currentSearchFilter.text;
+        searchDateFromInput.value = currentSearchFilter.dateFrom;
+        searchDateToInput.value = currentSearchFilter.dateTo;
+        searchNameInput.value = currentSearchFilter.name;
+        searchReceptionFromInput.value = currentSearchFilter.receptionFrom;
+        searchReceptionToInput.value = currentSearchFilter.receptionTo;
+        searchLotInput.value = currentSearchFilter.lot;
         listSearchModal.classList.remove('hidden');
-        searchTextInput.focus();
+        searchNameInput.focus();
     });
 
     // 모달 닫기
@@ -1875,36 +2142,59 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 날짜 초기화
     clearSearchDateBtn.addEventListener('click', () => {
-        searchDateInput.value = '';
+        searchDateFromInput.value = '';
+        searchDateToInput.value = '';
     });
+
+    // 접수번호 초기화
+    if (clearSearchReceptionBtn) {
+        clearSearchReceptionBtn.addEventListener('click', () => {
+            searchReceptionFromInput.value = '';
+            searchReceptionToInput.value = '';
+        });
+    }
+
+    // 지번 초기화
+    if (clearSearchLotBtn) {
+        clearSearchLotBtn.addEventListener('click', () => {
+            searchLotInput.value = '';
+        });
+    }
 
     // 전체 초기화
     resetSearchBtn.addEventListener('click', () => {
-        searchDateInput.value = '';
-        searchTextInput.value = '';
-        currentSearchFilter = { date: '', text: '' };
+        searchDateFromInput.value = '';
+        searchDateToInput.value = '';
+        searchNameInput.value = '';
+        searchReceptionFromInput.value = '';
+        searchReceptionToInput.value = '';
+        searchLotInput.value = '';
+        currentSearchFilter = { dateFrom: '', dateTo: '', name: '', receptionFrom: '', receptionTo: '', lot: '' };
         filterAndRenderLogs();
         closeSearchModal();
     });
 
     // 검색 적용
     applySearchBtn.addEventListener('click', () => {
-        currentSearchFilter.date = searchDateInput.value;
-        currentSearchFilter.text = searchTextInput.value.toLowerCase();
+        currentSearchFilter.dateFrom = searchDateFromInput.value;
+        currentSearchFilter.dateTo = searchDateToInput.value;
+        currentSearchFilter.name = searchNameInput.value.toLowerCase();
+        currentSearchFilter.receptionFrom = searchReceptionFromInput.value;
+        currentSearchFilter.receptionTo = searchReceptionToInput.value;
+        currentSearchFilter.lot = searchLotInput.value.toLowerCase();
         filterAndRenderLogs();
         closeSearchModal();
     });
 
     // Enter 키로 검색
-    searchTextInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            applySearchBtn.click();
-        }
-    });
-
-    searchDateInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            applySearchBtn.click();
+    const searchInputs = [searchNameInput, searchReceptionFromInput, searchReceptionToInput, searchLotInput];
+    searchInputs.forEach(input => {
+        if (input) {
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    applySearchBtn.click();
+                }
+            });
         }
     });
 
@@ -2022,6 +2312,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const newParcel = {
                     id: parcelId,
                     lotAddress: parcel.lotAddress || '',
+                    isMountain: parcel.isMountain || false,
                     subLots: parcel.subLots ? [...parcel.subLots] : [],
                     crops: parcel.crops ? parcel.crops.map(c => ({ ...c })) : []
                 };
@@ -2585,7 +2876,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                         ? parcel.crops.reduce((sum, c) => sum + (parseFloat(c.area) || 0), 0)
                         : 0;
 
-                    // 메인 필지 행 추가
+                    // 메인 필지 행 추가 (산 여부 표시)
+                    const excelLotAddress = parcel.lotAddress
+                        ? (parcel.isMountain ? `${parcel.lotAddress} (산)` : parcel.lotAddress)
+                        : '-';
                     excelData.push({
                         '접수번호': log.receptionNumber,
                         '접수일자': log.date,
@@ -2594,7 +2888,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         '성명': log.name,
                         '전화번호': log.phoneNumber,
                         '주소': log.address,
-                        '필지 주소': parcel.lotAddress || '-',
+                        '필지 주소': excelLotAddress,
                         '작물': cropsDisplay,
                         '면적(m²)': totalArea > 0 ? totalArea : '-',
                         '수령 방법': log.receptionMethod || '-',
@@ -3096,13 +3390,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (pyeongTotal > 0) areaParts.push(`${pyeongTotal.toLocaleString()}평`);
                     const areaDisplay = areaParts.length > 0 ? areaParts.join(' / ') : '-';
 
-                    // 메인 필지 행 추가
+                    // 메인 필지 행 추가 (산 여부 표시)
+                    const lotAddressDisplay = parcel.lotAddress
+                        ? (parcel.isMountain ? `${parcel.lotAddress} (산)` : parcel.lotAddress)
+                        : '-';
                     rows.push({
                         ...log,
                         _isFirstRow: subLotIndex === 1,
                         _subLotIndex: subLotIndex,
                         _displayNumber: log.receptionNumber,
-                        _lotAddress: parcel.lotAddress || '-',
+                        _lotAddress: lotAddressDisplay,
                         _cropsDisplay: cropsDisplay,
                         _areaDisplay: areaDisplay
                     });

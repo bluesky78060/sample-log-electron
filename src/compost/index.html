@@ -523,15 +523,43 @@
             <div class="modal-body">
                 <div class="search-modal-form">
                     <div class="search-form-group">
-                        <label for="searchDateInput">접수일자</label>
+                        <label for="searchDateFromInput">
+                            <span class="material-icons-outlined label-icon-calendar">calendar_today</span>
+                            접수일자 (범위)
+                        </label>
                         <div class="search-input-row">
-                            <input type="date" id="searchDateInput" class="search-input">
+                            <div class="search-input-wrapper">
+                                <input type="date" id="searchDateFromInput" class="search-input" title="시작일">
+                            </div>
+                            <span class="date-range-separator">~</span>
+                            <div class="search-input-wrapper">
+                                <input type="date" id="searchDateToInput" class="search-input" title="종료일">
+                            </div>
                             <button type="button" id="clearSearchDate" class="btn-clear-field">초기화</button>
                         </div>
                     </div>
                     <div class="search-form-group">
-                        <label for="searchTextInput">성명 / 접수번호 / 농장명</label>
-                        <input type="text" id="searchTextInput" placeholder="검색어 입력..." class="search-input">
+                        <label for="searchNameInput">
+                            <span class="material-icons-outlined label-icon-calendar">person</span>
+                            성명
+                        </label>
+                        <input type="text" id="searchNameInput" placeholder="성명 입력..." class="search-input">
+                    </div>
+                    <div class="search-form-group">
+                        <label for="searchReceptionFromInput">
+                            <span class="material-icons-outlined label-icon-calendar">tag</span>
+                            접수번호 (범위)
+                        </label>
+                        <div class="search-input-row">
+                            <div class="search-input-wrapper">
+                                <input type="text" id="searchReceptionFromInput" class="search-input" placeholder="시작 번호">
+                            </div>
+                            <span class="date-range-separator">~</span>
+                            <div class="search-input-wrapper">
+                                <input type="text" id="searchReceptionToInput" class="search-input" placeholder="종료 번호">
+                            </div>
+                            <button type="button" id="clearSearchReception" class="btn-clear-field">초기화</button>
+                        </div>
                     </div>
                 </div>
             </div>

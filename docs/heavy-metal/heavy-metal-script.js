@@ -1413,14 +1413,86 @@ document.addEventListener('DOMContentLoaded', async () => {
     const listSearchModal = document.getElementById('listSearchModal');
     const openSearchModalBtn = document.getElementById('openSearchModalBtn');
     const closeSearchModal = document.getElementById('closeSearchModal');
-    const searchDateInput = document.getElementById('searchDateInput');
-    const searchTextInput = document.getElementById('searchTextInput');
+    const searchDateFromInput = document.getElementById('searchDateFromInput');
+    const searchDateToInput = document.getElementById('searchDateToInput');
+    const searchNameInput = document.getElementById('searchNameInput');
+    const searchReceptionFromInput = document.getElementById('searchReceptionFromInput');
+    const searchReceptionToInput = document.getElementById('searchReceptionToInput');
+    const clearSearchDate = document.getElementById('clearSearchDate');
+    const clearSearchReception = document.getElementById('clearSearchReception');
     const applySearchBtn = document.getElementById('applySearchBtn');
     const resetSearchBtn = document.getElementById('resetSearchBtn');
 
+    // 현재 검색 필터 상태
+    let currentSearchFilter = {
+        dateFrom: '',
+        dateTo: '',
+        name: '',
+        receptionFrom: '',
+        receptionTo: ''
+    };
+
+    // 접수번호에서 숫자 부분 추출
+    function extractReceptionNumber(receptionNumber) {
+        const match = receptionNumber.match(/(\d+)$/);
+        return match ? parseInt(match[1], 10) : 0;
+    }
+
+    function filterAndRenderLogs() {
+        const filtered = sampleLogs.filter(log => {
+            // 성명 검색
+            const matchesName = !currentSearchFilter.name ||
+                (log.name || '').toLowerCase().includes(currentSearchFilter.name);
+
+            // 접수번호 범위 검색
+            let matchesReception = true;
+            if (currentSearchFilter.receptionFrom || currentSearchFilter.receptionTo) {
+                const logNum = extractReceptionNumber(log.receptionNumber || '');
+                const fromNum = currentSearchFilter.receptionFrom ? parseInt(currentSearchFilter.receptionFrom, 10) : 0;
+                const toNum = currentSearchFilter.receptionTo ? parseInt(currentSearchFilter.receptionTo, 10) : Infinity;
+                if (fromNum && logNum < fromNum) matchesReception = false;
+                if (toNum !== Infinity && logNum > toNum) matchesReception = false;
+            }
+
+            // 날짜 범위 검색
+            let matchesDate = true;
+            if (currentSearchFilter.dateFrom || currentSearchFilter.dateTo) {
+                const logDate = log.date;
+                if (currentSearchFilter.dateFrom && logDate < currentSearchFilter.dateFrom) matchesDate = false;
+                if (currentSearchFilter.dateTo && logDate > currentSearchFilter.dateTo) matchesDate = false;
+            }
+
+            return matchesName && matchesReception && matchesDate;
+        });
+
+        renderLogs(filtered);
+        updateSearchButtonState();
+        showToast(`${filtered.length}건의 검색 결과`, 'success');
+    }
+
+    function updateSearchButtonState() {
+        const hasFilter = currentSearchFilter.dateFrom || currentSearchFilter.dateTo ||
+            currentSearchFilter.name || currentSearchFilter.receptionFrom || currentSearchFilter.receptionTo;
+        if (openSearchModalBtn) {
+            if (hasFilter) {
+                openSearchModalBtn.classList.add('has-filter');
+                openSearchModalBtn.innerHTML = '🔍 검색 중';
+            } else {
+                openSearchModalBtn.classList.remove('has-filter');
+                openSearchModalBtn.innerHTML = '🔍 검색';
+            }
+        }
+    }
+
     if (openSearchModalBtn && listSearchModal) {
         openSearchModalBtn.addEventListener('click', () => {
+            if (searchDateFromInput) searchDateFromInput.value = currentSearchFilter.dateFrom;
+            if (searchDateToInput) searchDateToInput.value = currentSearchFilter.dateTo;
+            if (searchNameInput) searchNameInput.value = currentSearchFilter.name;
+            if (searchReceptionFromInput) searchReceptionFromInput.value = currentSearchFilter.receptionFrom;
+            if (searchReceptionToInput) searchReceptionToInput.value = currentSearchFilter.receptionTo;
             listSearchModal.classList.remove('hidden');
+            if (searchNameInput) searchNameInput.focus();
         });
     }
 
@@ -1433,38 +1505,54 @@ document.addEventListener('DOMContentLoaded', async () => {
         listSearchModal.classList.add('hidden');
     });
 
+    if (clearSearchDate) {
+        clearSearchDate.addEventListener('click', () => {
+            if (searchDateFromInput) searchDateFromInput.value = '';
+            if (searchDateToInput) searchDateToInput.value = '';
+        });
+    }
+
+    if (clearSearchReception) {
+        clearSearchReception.addEventListener('click', () => {
+            if (searchReceptionFromInput) searchReceptionFromInput.value = '';
+            if (searchReceptionToInput) searchReceptionToInput.value = '';
+        });
+    }
+
     if (applySearchBtn) {
         applySearchBtn.addEventListener('click', () => {
-            const dateFilter = searchDateInput?.value;
-            const textFilter = searchTextInput?.value.toLowerCase();
-
-            let filtered = sampleLogs;
-
-            if (dateFilter) {
-                filtered = filtered.filter(log => log.date === dateFilter);
-            }
-
-            if (textFilter) {
-                filtered = filtered.filter(log =>
-                    (log.name || '').toLowerCase().includes(textFilter) ||
-                    (log.receptionNumber || '').toLowerCase().includes(textFilter)
-                );
-            }
-
-            renderLogs(filtered);
+            currentSearchFilter.dateFrom = searchDateFromInput ? searchDateFromInput.value : '';
+            currentSearchFilter.dateTo = searchDateToInput ? searchDateToInput.value : '';
+            currentSearchFilter.name = searchNameInput ? searchNameInput.value.toLowerCase() : '';
+            currentSearchFilter.receptionFrom = searchReceptionFromInput ? searchReceptionFromInput.value : '';
+            currentSearchFilter.receptionTo = searchReceptionToInput ? searchReceptionToInput.value : '';
+            filterAndRenderLogs();
             listSearchModal.classList.add('hidden');
-            showToast(`${filtered.length}건의 검색 결과`, 'success');
         });
     }
 
     if (resetSearchBtn) {
         resetSearchBtn.addEventListener('click', () => {
-            if (searchDateInput) searchDateInput.value = '';
-            if (searchTextInput) searchTextInput.value = '';
+            if (searchDateFromInput) searchDateFromInput.value = '';
+            if (searchDateToInput) searchDateToInput.value = '';
+            if (searchNameInput) searchNameInput.value = '';
+            if (searchReceptionFromInput) searchReceptionFromInput.value = '';
+            if (searchReceptionToInput) searchReceptionToInput.value = '';
+            currentSearchFilter = { dateFrom: '', dateTo: '', name: '', receptionFrom: '', receptionTo: '' };
             renderLogs();
+            updateSearchButtonState();
             listSearchModal.classList.add('hidden');
         });
     }
+
+    // Enter 키로 검색
+    [searchNameInput, searchReceptionFromInput, searchReceptionToInput].forEach(input => {
+        if (input) {
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && applySearchBtn) applySearchBtn.click();
+            });
+        }
+    });
 
     // ========================================
     // 통계 모달
