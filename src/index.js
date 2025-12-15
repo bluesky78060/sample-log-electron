@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Electron 메인 프로세스
+ * @description 앱 초기화, 창 관리, IPC 핸들러 정의
+ */
+
 const { app, BrowserWindow, Menu, ipcMain, dialog } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
@@ -7,10 +12,15 @@ if (require('electron-squirrel-startup')) {
   app.quit();
 }
 
-let mainWindow;
+/** @type {Electron.BrowserWindow | null} */
+let mainWindow = null;
 
-// 한글 메뉴 템플릿
+/**
+ * 한글 메뉴 템플릿 생성
+ * @returns {Electron.MenuItemConstructorOptions[]}
+ */
 const createMenuTemplate = () => {
+  /** @type {Electron.MenuItemConstructorOptions[]} */
   const template = [
     {
       label: '파일',
@@ -77,6 +87,10 @@ const createMenuTemplate = () => {
   return template;
 };
 
+/**
+ * 메인 윈도우 생성
+ * @returns {void}
+ */
 const createWindow = () => {
   // Create the browser window.
   mainWindow = new BrowserWindow({
@@ -192,12 +206,23 @@ ipcMain.handle('read-file', async (event, filePath) => {
     }
 });
 
-// 자동 저장 설정 파일 경로
+/**
+ * @typedef {Object} Settings
+ * @property {string} [autoSaveFolder] - 자동 저장 폴더 경로
+ */
+
+/**
+ * 자동 저장 설정 파일 경로
+ * @returns {string}
+ */
 function getSettingsPath() {
     return path.join(app.getPath('userData'), 'settings.json');
 }
 
-// 설정 로드
+/**
+ * 설정 로드
+ * @returns {Settings}
+ */
 function loadSettings() {
     try {
         const settingsPath = getSettingsPath();
@@ -211,7 +236,11 @@ function loadSettings() {
     return {};
 }
 
-// 설정 저장
+/**
+ * 설정 저장
+ * @param {Settings} settings - 저장할 설정 객체
+ * @returns {boolean}
+ */
 function saveSettings(settings) {
     try {
         const settingsPath = getSettingsPath();

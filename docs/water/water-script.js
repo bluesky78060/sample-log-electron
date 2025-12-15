@@ -1,28 +1,45 @@
+/**
+ * @fileoverview 수질분석 시료 전용 스크립트
+ * @description 수질 분석용 시료 접수/관리 기능
+ */
+
 // ========================================
-// 수질분석 시료 전용 스크립트
+// 상수 및 설정
 // ========================================
+
+/** @type {string} */
 const SAMPLE_TYPE = '물';
+
+/** @type {string} */
 const STORAGE_KEY = 'waterSampleLogs';
+
+/** @type {string} */
 const AUTO_SAVE_FILE = 'water-autosave.json';
 
-// 디버그 모드 (프로덕션에서는 false)
+/** @type {boolean} 디버그 모드 (프로덕션에서는 false) */
 const DEBUG = false;
+
+/**
+ * 디버그 로그 함수
+ * @param {...any} args - 로그 인자
+ * @returns {void}
+ */
 const log = (...args) => DEBUG && console.log(...args);
 
 // 공통 모듈에서 가져온 변수/함수 사용 (../shared/*.js)
-const isElectron = window.isElectron;
+// window.window.isElectron, window.createFileAPI 등 전역 변수 사용
 const FileAPI = window.createFileAPI('water');
 
 document.addEventListener('DOMContentLoaded', async () => {
     log('🚀 수질분석 페이지 로드 시작');
-    log(isElectron ? '🖥️ Electron 환경' : '🌐 웹 브라우저 환경');
+    log(window.window.isElectron ? '🖥️ Electron 환경' : '🌐 웹 브라우저 환경');
 
     // 파일 API 초기화 (현재 년도로)
     const currentYear = new Date().getFullYear().toString();
     await FileAPI.init(currentYear);
 
     // Electron 환경: 자동 저장 기본 활성화 및 첫 실행 시 폴더 선택
-    if (isElectron) {
+    if (window.isElectron) {
         const autoSaveToggle = document.getElementById('autoSaveToggle');
         const hasSelectedFolder = localStorage.getItem('waterAutoSaveFolderSelected') === 'true';
 
@@ -147,7 +164,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             selectedYear = e.target.value;
             loadYearData(selectedYear);
             // 자동 저장 경로도 연도별로 업데이트
-            if (isElectron) {
+            if (window.isElectron) {
                 await FileAPI.updateAutoSavePath(selectedYear);
             }
             showToast(`${selectedYear}년 데이터를 불러왔습니다.`, 'success');
@@ -734,18 +751,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     function showRegistrationResult(data) {
         if (!registrationResultModal || !resultTableBody) return;
 
+        // XSS 방지: 사용자 입력 데이터 이스케이프
+        const safeName = escapeHTML(data.name);
+        const safePhone = escapeHTML(data.phoneNumber);
+        const safeSampleName = escapeHTML(data.sampleName);
+        const safeSamplingLocation = escapeHTML(data.samplingLocation);
+        const safePurpose = escapeHTML(data.purpose);
+        const safeTestItems = escapeHTML(data.testItems);
+        const safeReceptionMethod = escapeHTML(data.receptionMethod || '-');
+        const safeNote = escapeHTML(data.note || '-');
+
+        // 테이블 행 HTML: 개별 데이터는 이미 escapeHTML로 이스케이프됨
         resultTableBody.innerHTML = `
-            <tr><th>접수번호</th><td>${data.receptionNumber}</td></tr>
-            <tr><th>접수일자</th><td>${data.date}</td></tr>
-            <tr><th>성명</th><td>${data.name}</td></tr>
-            <tr><th>연락처</th><td>${data.phoneNumber}</td></tr>
-            <tr><th>시료명</th><td>${data.sampleName}</td></tr>
-            <tr><th>시료수</th><td>${data.sampleCount}점</td></tr>
-            <tr><th>채취장소</th><td>${data.samplingLocation}</td></tr>
-            <tr><th>목적</th><td>${data.purpose}</td></tr>
-            <tr><th>검사항목</th><td>${data.testItems}</td></tr>
-            <tr><th>통보방법</th><td>${data.receptionMethod || '-'}</td></tr>
-            <tr><th>비고</th><td>${data.note || '-'}</td></tr>
+            <tr><th>접수번호</th><td>${escapeHTML(data.receptionNumber)}</td></tr>
+            <tr><th>접수일자</th><td>${escapeHTML(data.date)}</td></tr>
+            <tr><th>성명</th><td>${safeName}</td></tr>
+            <tr><th>연락처</th><td>${safePhone}</td></tr>
+            <tr><th>시료명</th><td>${safeSampleName}</td></tr>
+            <tr><th>시료수</th><td>${escapeHTML(String(data.sampleCount))}점</td></tr>
+            <tr><th>채취장소</th><td>${safeSamplingLocation}</td></tr>
+            <tr><th>목적</th><td>${safePurpose}</td></tr>
+            <tr><th>검사항목</th><td>${safeTestItems}</td></tr>
+            <tr><th>통보방법</th><td>${safeReceptionMethod}</td></tr>
+            <tr><th>비고</th><td>${safeNote}</td></tr>
         `;
 
         registrationResultModal.classList.remove('hidden');
@@ -776,7 +804,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateRecordCount();
 
         // 자동 저장 (Electron 환경)
-        if (isElectron && FileAPI.autoSavePath && document.getElementById('autoSaveToggle')?.checked) {
+        if (window.isElectron && FileAPI.autoSavePath && document.getElementById('autoSaveToggle')?.checked) {
             const autoSaveContent = JSON.stringify(sampleLogs, null, 2);
             FileAPI.autoSave(autoSaveContent);
             log('💾 수질 데이터 자동 저장');
@@ -824,32 +852,42 @@ document.addEventListener('DOMContentLoaded', async () => {
             const zipcode = zipMatch ? zipMatch[1] : (log.addressPostcode || '');
             const addressOnly = zipMatch ? addressFull.replace(zipMatch[0], '') : addressFull;
 
+            // XSS 방지: 사용자 입력 데이터 이스케이프
+            const safeName = escapeHTML(log.name || '-');
+            const safeAddress = escapeHTML(addressOnly || '-');
+            const safeSampleName = escapeHTML(log.sampleName || '-');
+            const safeSamplingLocation = escapeHTML(log.samplingLocation || '-');
+            const safeMainCrop = escapeHTML(log.mainCrop || '-');
+            const safePhone = escapeHTML(log.phoneNumber || '-');
+            const safeNote = escapeHTML(log.note || '-');
+
+            // 테이블 행 HTML: 개별 데이터는 이미 escapeHTML로 이스케이프됨
             row.innerHTML = `
                 <td class="col-checkbox">
-                    <input type="checkbox" class="row-checkbox" data-id="${log.id}">
+                    <input type="checkbox" class="row-checkbox" data-id="${escapeHTML(log.id)}">
                 </td>
                 <td class="col-complete">
-                    <button class="btn-complete ${log.isComplete ? 'completed' : ''}" data-id="${log.id}" title="${log.isComplete ? '완료됨' : '완료 표시'}">
+                    <button class="btn-complete ${log.isComplete ? 'completed' : ''}" data-id="${escapeHTML(log.id)}" title="${log.isComplete ? '완료됨' : '완료 표시'}">
                         ${log.isComplete ? '✅' : '⬜'}
                     </button>
                 </td>
-                <td>${log.receptionNumber || '-'}</td>
-                <td>${log.date || '-'}</td>
-                <td>${log.name || '-'}</td>
-                <td class="col-zipcode hidden">${zipcode || '-'}</td>
-                <td class="text-truncate" title="${addressOnly || ''}">${addressOnly || '-'}</td>
-                <td>${log.sampleName || '-'}</td>
-                <td>${log.sampleCount || 1}점</td>
-                <td class="text-truncate" title="${log.samplingLocation || ''}">${log.samplingLocation || '-'}</td>
-                <td class="text-truncate" title="${log.mainCrop || ''}">${log.mainCrop || '-'}</td>
-                <td>${log.purpose || '-'}</td>
-                <td>${log.testItems || '-'}</td>
-                <td>${log.phoneNumber || '-'}</td>
-                <td>${log.receptionMethod || '-'}</td>
-                <td class="col-note text-truncate" title="${log.note || ''}">${log.note || '-'}</td>
+                <td>${escapeHTML(log.receptionNumber || '-')}</td>
+                <td>${escapeHTML(log.date || '-')}</td>
+                <td>${safeName}</td>
+                <td class="col-zipcode hidden">${escapeHTML(zipcode || '-')}</td>
+                <td class="text-truncate" title="${safeAddress}">${safeAddress}</td>
+                <td>${safeSampleName}</td>
+                <td>${escapeHTML(String(log.sampleCount || 1))}점</td>
+                <td class="text-truncate" title="${safeSamplingLocation}">${safeSamplingLocation}</td>
+                <td class="text-truncate" title="${safeMainCrop}">${safeMainCrop}</td>
+                <td>${escapeHTML(log.purpose || '-')}</td>
+                <td>${escapeHTML(log.testItems || '-')}</td>
+                <td>${safePhone}</td>
+                <td>${escapeHTML(log.receptionMethod || '-')}</td>
+                <td class="col-note text-truncate" title="${safeNote}">${safeNote}</td>
                 <td class="col-action">
-                    <button class="btn-edit" data-id="${log.id}" title="수정">✏️</button>
-                    <button class="btn-delete" data-id="${log.id}" title="삭제">🗑️</button>
+                    <button class="btn-edit" data-id="${escapeHTML(log.id)}" title="수정">✏️</button>
+                    <button class="btn-delete" data-id="${escapeHTML(log.id)}" title="삭제">🗑️</button>
                 </td>
             `;
 
@@ -1612,7 +1650,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
         const content = JSON.stringify(dataToSave, null, 2);
 
-        if (isElectron && FileAPI.autoSavePath) {
+        if (window.isElectron && FileAPI.autoSavePath) {
             try {
                 updateAutoSaveStatus('saving');
                 const success = await FileAPI.autoSave(content);
@@ -1627,7 +1665,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 console.error('자동 저장 오류:', error);
                 updateAutoSaveStatus('error');
             }
-        } else if (!isElectron && autoSaveFileHandle) {
+        } else if (!window.isElectron && autoSaveFileHandle) {
             try {
                 updateAutoSaveStatus('saving');
                 const writable = await autoSaveFileHandle.createWritable();
@@ -1650,7 +1688,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.triggerWaterAutoSave = autoSaveToFile;
 
     // 자동 저장 폴더 선택 버튼 (Electron 전용)
-    if (selectAutoSaveFolderBtn && isElectron) {
+    if (selectAutoSaveFolderBtn && window.isElectron) {
         selectAutoSaveFolderBtn.addEventListener('click', async () => {
             try {
                 const result = await window.electronAPI.selectAutoSaveFolder();
@@ -1680,7 +1718,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 console.error('폴더 경로 조회 오류:', error);
             }
         })();
-    } else if (selectAutoSaveFolderBtn && !isElectron) {
+    } else if (selectAutoSaveFolderBtn && !window.isElectron) {
         selectAutoSaveFolderBtn.title = '자동저장 파일 선택';
         selectAutoSaveFolderBtn.addEventListener('click', async () => {
             try {
@@ -1712,7 +1750,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (autoSaveToggle && autoSaveEnabled) {
         autoSaveToggle.checked = true;
 
-        if (isElectron) {
+        if (window.isElectron) {
             updateAutoSaveStatus('active');
             autoSaveToFile();
             showToast('자동 저장이 활성화되었습니다.', 'success');
@@ -1731,7 +1769,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     return;
                 }
 
-                if (isElectron) {
+                if (window.isElectron) {
                     localStorage.setItem('waterAutoSaveEnabled', 'true');
                     updateAutoSaveStatus('active');
                     await autoSaveToFile();
@@ -1773,7 +1811,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // Electron 환경에서 자동 저장 파일 로드
-    if (isElectron && FileAPI.autoSavePath) {
+    if (window.isElectron && FileAPI.autoSavePath) {
         try {
             const content = await FileAPI.loadAutoSave();
             if (content) {

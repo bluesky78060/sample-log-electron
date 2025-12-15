@@ -1,18 +1,45 @@
+/**
+ * @fileoverview 토양 중금속 시료 전용 스크립트
+ * @description 중금속 분석용 토양 시료 접수/관리 기능
+ */
+
 // ========================================
-// 토양 중금속 시료 전용 스크립트
+// 상수 정의
 // ========================================
+
+/** @type {string} */
 const SAMPLE_TYPE = '중금속';
+
+/** @type {string} */
 const STORAGE_KEY = 'heavyMetalSampleLogs';
+
+/** @type {string} */
 const AUTO_SAVE_FILE = 'heavy-metal-autosave.json';
 
-// 디버그 모드 (프로덕션에서는 false)
+/** @type {boolean} 디버그 모드 (프로덕션에서는 false) */
 const DEBUG = false;
+
+/**
+ * 디버그 로그 함수
+ * @param {...any} args - 로그 인자
+ * @returns {void}
+ */
 const log = (...args) => DEBUG && console.log(...args);
 
-// 페이지네이션 설정
+// ========================================
+// 페이지네이션 상태
+// ========================================
+
+/** @type {number} */
 let currentPage = 1;
+
+/** @type {number} */
 let itemsPerPage = parseInt(localStorage.getItem('heavyMetalItemsPerPage')) || 100;
+
+/** @type {number} */
 let totalPages = 1;
+
+/** @type {HeavyMetalSampleLog[]} */
 let currentLogsData = [];
 
 // 중금속 분석 항목 목록
@@ -27,7 +54,7 @@ function getStorageKey(year) {
 }
 
 // 공통 모듈에서 가져온 변수/함수 사용 (../shared/*.js)
-const isElectron = window.isElectron;
+// window.window.isElectron, window.createFileAPI 등 전역 변수 사용
 const FileAPI = window.createFileAPI('heavy-metal');
 
 // heavy-metal 전용 웹 환경 자동저장 확장
@@ -35,7 +62,7 @@ FileAPI.autoSaveFolderHandle = null;
 const originalAutoSave = FileAPI.autoSave.bind(FileAPI);
 FileAPI.autoSave = async function(content) {
     // Electron 환경에서는 기본 autoSave 사용
-    if (isElectron) {
+    if (window.isElectron) {
         return originalAutoSave(content);
     }
     // 웹 환경에서 폴더 핸들이 있으면 사용
@@ -56,12 +83,12 @@ FileAPI.autoSave = async function(content) {
 
 document.addEventListener('DOMContentLoaded', async () => {
     log('🚀 중금속 페이지 로드 시작');
-    log(isElectron ? '🖥️ Electron 환경' : '🌐 웹 브라우저 환경');
+    log(window.isElectron ? '🖥️ Electron 환경' : '🌐 웹 브라우저 환경');
 
     await FileAPI.init(selectedYear);
 
     // Electron 환경: 자동 저장 기본 활성화 및 첫 실행 시 폴더 선택
-    if (isElectron) {
+    if (window.isElectron) {
         const autoSaveToggle = document.getElementById('autoSaveToggle');
         const hasSelectedFolder = localStorage.getItem('heavyMetalAutoSaveFolderSelected') === 'true';
 
@@ -206,7 +233,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             selectedYear = e.target.value;
             loadYearData(selectedYear);
             // 자동 저장 경로도 연도별로 업데이트
-            if (isElectron) {
+            if (window.isElectron) {
                 await FileAPI.updateAutoSavePath(selectedYear);
             }
             showToast(`${selectedYear}년 데이터를 불러왔습니다.`, 'success');
@@ -725,7 +752,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const content = JSON.stringify(dataToSave, null, 2);
 
-        if (isElectron) {
+        if (window.isElectron) {
             // Electron: FileAPI 사용
             try {
                 updateAutoSaveStatus('saving');
@@ -866,30 +893,38 @@ document.addEventListener('DOMContentLoaded', async () => {
                     ? '전체 항목'
                     : analysisItemsStr;
 
-            const receptionMethodIcons = {
-                '우편': '📮', '이메일': '📧', '팩스': '📠', '직접방문': '🚶'
-            };
-            const methodIcon = receptionMethodIcons[logItem.receptionMethod] || '-';
+            // 접수 방법 텍스트
+            const methodText = logItem.receptionMethod || '-';
 
+            // XSS 방지: 사용자 입력 데이터 이스케이프
+            const safeName = escapeHTML(logItem.name || '-');
+            const safeAddress = escapeHTML(logItem.address || '');
+            const safeAddressRoad = escapeHTML(logItem.addressRoad || '-');
+            const safePhone = escapeHTML(logItem.phoneNumber || '-');
+            const safeSamplingLocation = escapeHTML(logItem.samplingLocation || '-');
+            const safeCropName = escapeHTML(logItem.cropName || '-');
+            const safeNote = escapeHTML(logItem.note || '-');
+
+            // 테이블 행 HTML: 개별 데이터는 이미 escapeHTML로 이스케이프됨
             tr.innerHTML = `
-                <td><input type="checkbox" class="row-checkbox" data-index="${tr.dataset.index}"></td>
+                <td><input type="checkbox" class="row-checkbox" data-index="${escapeHTML(String(tr.dataset.index))}"></td>
                 <td>
                     <button class="btn-complete ${logItem.isCompleted ? 'completed' : ''}" title="${logItem.isCompleted ? '완료됨' : '미완료'}">
                         ${logItem.isCompleted ? '✓' : '○'}
                     </button>
                 </td>
-                <td>${logItem.receptionNumber || '-'}</td>
-                <td>${logItem.date || '-'}</td>
-                <td>${logItem.name || '-'}</td>
-                <td title="${logItem.address || ''}">${(logItem.addressRoad || '-').substring(0, 20)}${(logItem.addressRoad || '').length > 20 ? '...' : ''}</td>
-                <td>${logItem.phoneNumber || '-'}</td>
-                <td title="${logItem.samplingLocation || ''}">${(logItem.samplingLocation || '-').substring(0, 15)}${(logItem.samplingLocation || '').length > 15 ? '...' : ''}</td>
-                <td>${logItem.cropName || '-'}${logItem.treeAge ? ' (' + logItem.treeAge + '년생)' : ''}</td>
-                <td>${logItem.samplingDate || '-'}</td>
-                <td title="${analysisItemsStr}">${analysisItemsDisplay}</td>
-                <td>${logItem.purpose || '-'}</td>
-                <td title="${logItem.receptionMethod || ''}">${methodIcon}</td>
-                <td title="${logItem.note || ''}">${(logItem.note || '-').substring(0, 10)}${(logItem.note || '').length > 10 ? '...' : ''}</td>
+                <td>${escapeHTML(logItem.receptionNumber || '-')}</td>
+                <td>${escapeHTML(logItem.date || '-')}</td>
+                <td>${safeName}</td>
+                <td title="${safeAddress}">${safeAddressRoad.substring(0, 20)}${safeAddressRoad.length > 20 ? '...' : ''}</td>
+                <td>${safePhone}</td>
+                <td title="${safeSamplingLocation}">${safeSamplingLocation.substring(0, 15)}${safeSamplingLocation.length > 15 ? '...' : ''}</td>
+                <td>${safeCropName}${logItem.treeAge ? ' (' + escapeHTML(String(logItem.treeAge)) + '년생)' : ''}</td>
+                <td>${escapeHTML(logItem.samplingDate || '-')}</td>
+                <td title="${escapeHTML(analysisItemsStr)}">${escapeHTML(analysisItemsDisplay)}</td>
+                <td>${escapeHTML(logItem.purpose || '-')}</td>
+                <td>${escapeHTML(methodText)}</td>
+                <td title="${safeNote}">${safeNote.substring(0, 10)}${safeNote.length > 10 ? '...' : ''}</td>
                 <td>
                     <div class="action-btns">
                         <button class="btn-edit" title="수정">✏️</button>
@@ -1224,7 +1259,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const selectAutoSaveFolderBtn = document.getElementById('selectAutoSaveFolderBtn');
 
     // 자동 저장 폴더 선택 버튼 (Electron 전용)
-    if (selectAutoSaveFolderBtn && isElectron) {
+    if (selectAutoSaveFolderBtn && window.isElectron) {
         selectAutoSaveFolderBtn.addEventListener('click', async () => {
             try {
                 const result = await window.electronAPI.selectAutoSaveFolder();
@@ -1255,7 +1290,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 console.error('폴더 경로 조회 오류:', error);
             }
         })();
-    } else if (selectAutoSaveFolderBtn && !isElectron) {
+    } else if (selectAutoSaveFolderBtn && !window.isElectron) {
         // 웹 환경에서는 파일 선택 다이얼로그 사용
         selectAutoSaveFolderBtn.title = '자동저장 파일 선택';
         selectAutoSaveFolderBtn.addEventListener('click', async () => {
@@ -1289,7 +1324,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Electron 환경은 DOMContentLoaded 시작 부분에서 처리됨
 
     // 페이지 로드 시 Web 환경 자동 저장 상태 복원
-    if (!isElectron) {
+    if (!window.isElectron) {
         const autoSaveEnabled = localStorage.getItem('heavyMetalAutoSaveEnabled') === 'true';
         if (autoSaveToggle && autoSaveEnabled) {
             autoSaveToggle.checked = true;
@@ -1332,7 +1367,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
 
                 // 토글 ON - 자동저장 활성화
-                if (isElectron) {
+                if (window.isElectron) {
                     // Electron: 자동 저장 경로 사용
                     localStorage.setItem('heavyMetalAutoSaveEnabled', 'true');
                     updateAutoSaveStatus('active');

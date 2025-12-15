@@ -1,27 +1,54 @@
+/**
+ * @fileoverview 잔류농약 시료 전용 스크립트
+ * @description 잔류농약 분석용 시료 접수/관리 기능
+ */
+
 // ========================================
-// 잔류농약 시료 전용 스크립트
+// 상수 및 설정
 // ========================================
+
+/** @type {string} */
 const SAMPLE_TYPE = '잔류농약';
+
+/** @type {string} */
 const STORAGE_KEY = 'pesticideSampleLogs';
+
+/** @type {string} */
 const AUTO_SAVE_FILE = 'pesticide-autosave.json';
 
-// 디버그 모드 (프로덕션에서는 false)
+/** @type {boolean} 디버그 모드 (프로덕션에서는 false) */
 const DEBUG = false;
+
+/**
+ * 디버그 로그 함수
+ * @param {...any} args - 로그 인자
+ * @returns {void}
+ */
 const log = (...args) => DEBUG && console.log(...args);
 
-// 페이지네이션 설정
+// ========================================
+// 페이지네이션 상태
+// ========================================
+
+/** @type {number} */
 let currentPage = 1;
+
+/** @type {number} */
 let itemsPerPage = parseInt(localStorage.getItem('pesticideItemsPerPage')) || 100;
+
+/** @type {number} */
 let totalPages = 1;
+
+/** @type {Array<Object>} */
 let currentFlatRows = [];
 
 // 공통 모듈에서 가져온 변수/함수 사용 (../shared/*.js)
-const isElectron = window.isElectron;
+// window.window.isElectron, window.createFileAPI 등 전역 변수 사용
 const FileAPI = window.createFileAPI('pesticide');
 
 document.addEventListener('DOMContentLoaded', async () => {
     log('🚀 페이지 로드 시작 - DOMContentLoaded');
-    log(isElectron ? '🖥️ Electron 환경 감지됨' : '🌐 웹 브라우저 환경');
+    log(window.isElectron ? '🖥️ Electron 환경 감지됨' : '🌐 웹 브라우저 환경');
 
     // 파일 API 초기화 (현재 년도로)
     const currentYear = new Date().getFullYear().toString();
@@ -30,7 +57,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Electron 환경: 자동 저장 기본 활성화 및 첫 실행 시 폴더 선택
     // 자동 저장 파일에서 데이터 로드하는 함수 (나중에 sampleLogs 초기화 후 호출)
     window.loadFromAutoSaveFile = async function() {
-        if (isElectron && FileAPI.autoSavePath) {
+        if (window.isElectron && FileAPI.autoSavePath) {
             try {
                 const content = await FileAPI.loadAutoSave();
                 if (content) {
@@ -48,7 +75,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         return null;
     };
 
-    if (isElectron) {
+    if (window.isElectron) {
         const autoSaveToggle = document.getElementById('autoSaveToggle');
         const hasSelectedFolder = localStorage.getItem('autoSaveFolderSelected') === 'true';
 
@@ -747,7 +774,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             selectedYear = e.target.value;
             loadYearData(selectedYear);
             // 자동 저장 경로도 연도별로 업데이트
-            if (isElectron) {
+            if (window.isElectron) {
                 await FileAPI.updateAutoSavePath(selectedYear);
             }
             showToast(`${selectedYear}년 데이터를 불러왔습니다.`, 'success');
@@ -757,7 +784,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ========================================
     // Electron 환경: 자동 저장 파일에서 데이터 로드
     // ========================================
-    if (isElectron && FileAPI.autoSavePath) {
+    if (window.isElectron && FileAPI.autoSavePath) {
         (async () => {
             try {
                 const autoSaveData = await window.loadFromAutoSaveFile();
@@ -850,7 +877,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         log(`   - 첫 번째 작물:`, firstCrop);
         log(`   - 필지 번호: ${parcelNumber}`);
 
-        card.innerHTML = `
+        // XSS 방지: 사용자 입력 데이터 이스케이프
+        const safeLotAddressParcel = escapeHTML(parcel.lotAddress);
+        const safeCropNameFirst = escapeHTML(firstCrop.name);
+
+        card.innerHTML = sanitizeHTML(`
             <div class="parcel-card-header">
                 <h4>필지 ${parcelNumber}</h4>
                 <button type="button" class="btn-remove-parcel" data-id="${parcel.id}">삭제</button>
@@ -867,7 +898,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                    name="lot-address-${parcel.id}"
                                    data-id="${parcel.id}"
                                    placeholder="예: 문단리 224"
-                                   value="${parcel.lotAddress}">
+                                   value="${safeLotAddressParcel}">
                             <ul class="lot-address-autocomplete-list" id="lotAutocomplete-${parcel.id}"></ul>
                         </div>
                     </div>
@@ -880,7 +911,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                        name="crop-direct-${parcel.id}"
                                        data-id="${parcel.id}"
                                        placeholder="예: 고추"
-                                       value="${firstCrop.name}">
+                                       value="${safeCropNameFirst}">
                                 <ul class="crop-autocomplete-list" id="autocomplete-direct-${parcel.id}"></ul>
                             </div>
                         </div>
@@ -905,9 +936,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </button>
                     <div class="crops-area-container" id="cropsArea-${parcel.id}">
                         ${parcel.crops.slice(1).map((crop, idx) => {
+                            const safeCropNameCard = escapeHTML(crop.name);
                             return `
                                 <div class="crop-area-item" data-index="${idx + 1}">
-                                    <span class="crop-name">${crop.name}</span>
+                                    <span class="crop-name">${safeCropNameCard}</span>
                                     <span class="crop-area">${formatArea(crop.area)} m²</span>
                                     <button type="button" class="remove-crop-area">&times;</button>
                                 </div>
@@ -935,25 +967,29 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 const lotAddress = typeof subLot === 'string' ? subLot : subLot.lotAddress;
                                 const crops = typeof subLot === 'string' ? [] : (subLot.crops || []);
                                 const subLotCropsId = 'subLotCrops-' + parcel.id + '-' + idx;
+                                // XSS 방지
+                                const safeLotAddressSubLot = escapeHTML(lotAddress);
                                 return `
                                     <div class="sub-lot-card">
                                         <div class="sub-lot-card-header">
                                             <div class="sub-lot-info">
                                                 <span class="sub-lot-number">` + number + `</span>
-                                                <span class="sub-lot-value">` + lotAddress + `</span>
+                                                <span class="sub-lot-value">` + safeLotAddressSubLot + `</span>
                                             </div>
                                             <button type="button" class="remove-sub-lot" data-index="` + idx + `">&times;</button>
                                         </div>
                                         <div class="sub-lot-crops-list" id="` + subLotCropsId + `">
-                                            ` + crops.map((crop, cropIdx) => `
+                                            ` + crops.map((crop, cropIdx) => {
+                                                const safeCropNameSubLot = escapeHTML(crop.name);
+                                                return `
                                                 <div class="sub-lot-crop-item">
-                                                    <span class="crop-name">` + crop.name + `</span>
+                                                    <span class="crop-name">` + safeCropNameSubLot + `</span>
                                                     <div class="crop-area-info">
                                                         <span class="crop-area">` + formatArea(crop.area) + ` m²</span>
                                                         <button type="button" class="remove-sublot-crop" data-sublot-index="` + idx + `" data-crop-index="` + cropIdx + `">&times;</button>
                                                     </div>
                                                 </div>
-                                            `).join('') + `
+                                            `;}).join('') + `
                                         </div>
                                         <button type="button" class="btn-add-sublot-crop" data-parcel-id="` + parcel.id + `" data-sublot-index="` + idx + `">
                                             + 작물 추가
@@ -968,7 +1004,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     ${renderParcelSummary(parcel)}
                 </div>
             </div>
-        `;
+        `);
 
         if (!parcelsContainer) {
             console.error('❌ parcelsContainer를 찾을 수 없습니다!');
@@ -1567,37 +1603,41 @@ document.addEventListener('DOMContentLoaded', async () => {
         const container = document.getElementById(`subLots-${parcelId}`);
 
         // 필지번호-하위번호 형식 (예: 1-1, 1-2, 2-1, 2-2)
-        container.innerHTML = parcel.subLots.map((subLot, idx) => {
+        container.innerHTML = sanitizeHTML(parcel.subLots.map((subLot, idx) => {
             const number = `${parcelIndex}-${idx + 1}`;
             const lotAddress = typeof subLot === 'string' ? subLot : subLot.lotAddress;
             const crops = typeof subLot === 'string' ? [] : (subLot.crops || []);
             const subLotCropsId = 'subLotCrops-' + parcelId + '-' + idx;
+            // XSS 방지: 사용자 입력 데이터 이스케이프
+            const safeLotAddress = escapeHTML(lotAddress);
             return `
                 <div class="sub-lot-card bg-slate-50 dark:bg-zinc-800/50 p-3 rounded-lg border border-slate-200 dark:border-zinc-700">
                     <div class="flex items-center justify-between mb-2">
                         <div class="flex items-center gap-2">
                             <span class="sub-lot-number bg-primary text-white px-2 py-1 rounded text-xs font-bold">` + number + `</span>
-                            <span class="sub-lot-value font-medium text-slate-800 dark:text-slate-200">` + lotAddress + `</span>
+                            <span class="sub-lot-value font-medium text-slate-800 dark:text-slate-200">` + safeLotAddress + `</span>
                         </div>
                         <button type="button" class="remove-sub-lot text-slate-400 hover:text-red-500 dark:text-zinc-500 dark:hover:text-red-400 text-lg" data-index="` + idx + `">&times;</button>
                     </div>
                     <div class="sub-lot-crops-list space-y-1" id="` + subLotCropsId + `">
-                        ` + crops.map((crop, cropIdx) => `
+                        ` + crops.map((crop, cropIdx) => {
+                            const safeCropName = escapeHTML(crop.name);
+                            return `
                             <div class="flex items-center justify-between bg-white dark:bg-zinc-900 px-2 py-1.5 rounded text-xs">
-                                <span class="font-medium text-slate-700 dark:text-slate-300">` + crop.name + `</span>
+                                <span class="font-medium text-slate-700 dark:text-slate-300">` + safeCropName + `</span>
                                 <div class="flex items-center gap-2">
                                     <span class="text-slate-600 dark:text-slate-400">` + formatAreaWithUnit(crop.area, crop.unit || 'm2') + `</span>
                                     <button type="button" class="remove-sublot-crop text-slate-400 hover:text-red-500 text-sm" data-sublot-index="` + idx + `" data-crop-index="` + cropIdx + `">&times;</button>
                                 </div>
                             </div>
-                        `).join('') + `
+                        `;}).join('') + `
                     </div>
                     <button type="button" class="btn-add-sublot-crop mt-2 w-full text-xs text-primary hover:text-primary-hover font-medium py-1.5 border border-dashed border-primary rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors" data-parcel-id="` + parcelId + `" data-sublot-index="` + idx + `">
                         + 작물 추가
                     </button>
                 </div>
             `;
-        }).join('');
+        }).join(''));
     }
 
     // 작물 면적 표시 업데이트
@@ -1611,18 +1651,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!container) return;
 
         // 첫 번째 작물은 직접 입력 필드에 표시되므로 slice(1)
-        container.innerHTML = parcel.crops.slice(1).map((crop, idx) => {
+        container.innerHTML = sanitizeHTML(parcel.crops.slice(1).map((crop, idx) => {
             // 지번 정보 표시
             const subLotLabel = getSubLotLabel(crop.subLotTarget, parcel);
+            // XSS 방지: 사용자 입력 데이터 이스케이프
+            const safeCropName = escapeHTML(crop.name);
+            const safeSubLotLabel = escapeHTML(subLotLabel);
             return `
                 <div class="crop-area-item" data-index="${idx + 1}">
-                    <span class="crop-name">${crop.name}</span>
+                    <span class="crop-name">${safeCropName}</span>
                     <span class="crop-area">${formatAreaWithUnit(crop.area, crop.unit || 'm2')}</span>
-                    ${subLotLabel ? `<span class="crop-sublot">${subLotLabel}</span>` : ''}
+                    ${subLotLabel ? `<span class="crop-sublot">${safeSubLotLabel}</span>` : ''}
                     <button type="button" class="remove-crop-area">&times;</button>
                 </div>
             `;
-        }).join('');
+        }).join(''));
     }
 
     // 지번 라벨 생성
@@ -3144,7 +3187,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let autoSaveFileHandle = null;
 
     // 자동 저장 폴더 선택 버튼 (Electron 전용)
-    if (selectAutoSaveFolderBtn && isElectron) {
+    if (selectAutoSaveFolderBtn && window.isElectron) {
         selectAutoSaveFolderBtn.addEventListener('click', async () => {
             try {
                 const result = await window.electronAPI.selectAutoSaveFolder();
@@ -3175,7 +3218,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 console.error('폴더 경로 조회 오류:', error);
             }
         })();
-    } else if (selectAutoSaveFolderBtn && !isElectron) {
+    } else if (selectAutoSaveFolderBtn && !window.isElectron) {
         // 웹 환경에서는 파일 선택 다이얼로그 사용
         selectAutoSaveFolderBtn.title = '자동저장 파일 선택';
         selectAutoSaveFolderBtn.addEventListener('click', async () => {
@@ -3304,12 +3347,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 페이지 로드 시 자동 저장 상태 복원
     const autoSaveEnabled = localStorage.getItem('autoSaveEnabled') === 'true';
-    log('🔧 자동저장 상태 확인:', { autoSaveEnabled, autoSaveToggle: !!autoSaveToggle, isElectron, autoSavePath: FileAPI.autoSavePath });
+    log('🔧 자동저장 상태 확인:', { autoSaveEnabled, autoSaveToggle: !!autoSaveToggle, isElectron: window.isElectron, autoSavePath: FileAPI.autoSavePath });
     if (autoSaveToggle && autoSaveEnabled) {
         autoSaveToggle.checked = true;
         log('🔧 자동저장 토글 활성화');
 
-        if (isElectron) {
+        if (window.isElectron) {
             // Electron: 자동 저장 경로가 이미 설정됨
             log('🔧 Electron 환경에서 자동저장 활성화');
             updateAutoSaveStatus('active');
@@ -3356,7 +3399,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
 
                 // 토글 ON - 자동저장 활성화
-                if (isElectron) {
+                if (window.isElectron) {
                     // Electron: 자동 저장 경로 사용
                     localStorage.setItem('autoSaveEnabled', 'true');
                     updateAutoSaveStatus('active');
@@ -3410,7 +3453,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const content = JSON.stringify(dataToSave, null, 2);
 
-        if (isElectron) {
+        if (window.isElectron) {
             // Electron: FileAPI 사용
             try {
                 updateAutoSaveStatus('saving');
@@ -3508,7 +3551,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // 자동 저장 실행 (Electron: FileAPI.autoSavePath, Web: autoSaveFileHandle)
         const autoSaveEnabled = localStorage.getItem('autoSaveEnabled') === 'true';
-        if (autoSaveEnabled && (isElectron ? FileAPI.autoSavePath : autoSaveFileHandle)) {
+        if (autoSaveEnabled && (window.isElectron ? FileAPI.autoSavePath : autoSaveFileHandle)) {
             autoSaveToFile();
         }
 
@@ -3676,33 +3719,43 @@ document.addEventListener('DOMContentLoaded', async () => {
             const zipcode = zipMatch ? zipMatch[1] : '';
             const addressOnly = zipMatch ? addressFull.replace(zipMatch[0], '') : addressFull;
 
+            // XSS 방지: 사용자 입력 데이터 이스케이프
+            const safeName = escapeHTML(row.name);
+            const safeAddress = escapeHTML(addressOnly || '-');
+            const safeProducerName = escapeHTML(row.producerName || '-');
+            const safeProducerAddress = escapeHTML(row.producerAddress || '-');
+            const safeRequestContent = escapeHTML(row.requestContent || '-');
+            const safePhone = escapeHTML(row.phoneNumber || '-');
+            const safeNote = escapeHTML(row.note || '-');
+
             tr.dataset.id = row.id;
+            // 테이블 행 HTML: 개별 데이터는 이미 escapeHTML로 이스케이프됨
             tr.innerHTML = `
                 <td class="col-checkbox">
-                    <input type="checkbox" class="row-checkbox" data-id="${row.id}">
+                    <input type="checkbox" class="row-checkbox" data-id="${escapeHTML(row.id)}">
                 </td>
                 <td class="col-complete">
-                    <button class="btn-complete ${isCompleted ? 'completed' : ''}" data-id="${row.id}" title="${isCompleted ? '완료 취소' : '완료'}">
+                    <button class="btn-complete ${isCompleted ? 'completed' : ''}" data-id="${escapeHTML(row.id)}" title="${isCompleted ? '완료 취소' : '완료'}">
                         ${isCompleted ? '✔' : ''}
                     </button>
                 </td>
-                <td>${row._displayNumber}</td>
-                <td>${row.date}</td>
-                <td>${row.subCategory || '-'}</td>
-                <td>${row.purpose || '-'}</td>
-                <td>${row.name}</td>
-                <td class="col-zipcode">${zipcode || '-'}</td>
-                <td title="${addressOnly || '-'}">${addressOnly || '-'}</td>
-                <td>${row.producerName || '-'}</td>
-                <td title="${row.producerAddress || '-'}">${row.producerAddress || '-'}</td>
-                <td title="${row.requestContent || '-'}"><div class="note-cell">${row.requestContent || '-'}</div></td>
-                <td>${row.phoneNumber || '-'}</td>
-                <td>${methodText}</td>
-                <td class="col-note" title="${row.note || ''}"><div class="note-cell">${row.note || '-'}</div></td>
+                <td>${escapeHTML(row._displayNumber)}</td>
+                <td>${escapeHTML(row.date)}</td>
+                <td>${escapeHTML(row.subCategory || '-')}</td>
+                <td>${escapeHTML(row.purpose || '-')}</td>
+                <td>${safeName}</td>
+                <td class="col-zipcode">${escapeHTML(zipcode || '-')}</td>
+                <td title="${safeAddress}">${safeAddress}</td>
+                <td>${safeProducerName}</td>
+                <td title="${safeProducerAddress}">${safeProducerAddress}</td>
+                <td title="${safeRequestContent}"><div class="note-cell">${safeRequestContent}</div></td>
+                <td>${safePhone}</td>
+                <td>${escapeHTML(methodText)}</td>
+                <td class="col-note" title="${safeNote}"><div class="note-cell">${safeNote}</div></td>
                 <td>
                     <div class="table-actions">
-                        <button class="btn-edit" data-id="${row.id}">수정</button>
-                        <button class="btn-delete" data-id="${row.id}">삭제</button>
+                        <button class="btn-edit" data-id="${escapeHTML(row.id)}">수정</button>
+                        <button class="btn-delete" data-id="${escapeHTML(row.id)}">삭제</button>
                     </div>
                 </td>
             `;

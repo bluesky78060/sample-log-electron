@@ -1,4 +1,43 @@
+/**
+ * @fileoverview Electron Preload 스크립트
+ * @description 렌더러 프로세스에 안전한 API 노출 (Context Isolation)
+ */
+
 const { contextBridge, ipcRenderer } = require('electron');
+
+/**
+ * @typedef {Object} SaveDialogOptions
+ * @property {string} [title] - 다이얼로그 제목
+ * @property {string} [defaultPath] - 기본 경로
+ * @property {Array<{name: string, extensions: string[]}>} [filters] - 파일 필터
+ */
+
+/**
+ * @typedef {Object} OpenDialogOptions
+ * @property {string} [title] - 다이얼로그 제목
+ * @property {Array<{name: string, extensions: string[]}>} [filters] - 파일 필터
+ */
+
+/**
+ * @typedef {Object} WriteResult
+ * @property {boolean} success - 성공 여부
+ * @property {string} [error] - 에러 메시지
+ */
+
+/**
+ * @typedef {Object} ReadResult
+ * @property {boolean} success - 성공 여부
+ * @property {string} [content] - 파일 내용
+ * @property {string} [error] - 에러 메시지
+ */
+
+/**
+ * @typedef {Object} SelectFolderResult
+ * @property {boolean} success - 성공 여부
+ * @property {boolean} [canceled] - 취소 여부
+ * @property {string} [folder] - 선택된 폴더 경로
+ * @property {string} [path] - 전체 파일 경로
+ */
 
 // 렌더러 프로세스에 안전하게 API 노출
 contextBridge.exposeInMainWorld('electronAPI', {

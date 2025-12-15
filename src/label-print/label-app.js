@@ -1,11 +1,30 @@
+/**
+ * @fileoverview 라벨 인쇄 모듈
+ * @description 시료 라벨 출력 및 엑셀 변환 기능
+ */
+
 (() => {
-  // 라벨 관련 전역 변수
+  // ========================================
+  // 상태 변수
+  // ========================================
+
+  /** @type {Object[]|null} */
   let labelData = null;
+
+  /** @type {Object.<string, string>} */
   let fieldMappings = {};
+
+  /** @type {string|null} */
   let currentLabelJobId = null;
+
+  /** @type {Object|null} */
   let lastLabelStatus = null;
+
   // 모달 포커스 관리
+  /** @type {HTMLElement|null} */
   let lastFocusedElement = null;
+
+  /** @type {Function|null} */
   let modalKeydownHandler = null;
 
   // 샘플 데이터 생성

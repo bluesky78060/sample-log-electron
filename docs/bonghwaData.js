@@ -1,4 +1,10 @@
+// ========================================
 // 경상북도 전체 행정구역 데이터
+// 주의: 일부 리/동 이름이 여러 면에 중복됨 (예: 평은리 - 이산면, 평은면)
+//       이 중복은 의도된 것이며 JavaScript 런타임에서는 마지막 값 사용
+// ========================================
+
+// 지역 데이터
 const REGION_DATA = {
     // 포항시
     pohang: {
@@ -642,11 +648,35 @@ const BONGHWA_DATA = {
     }
 };
 
+// 지역명 매핑 (재사용을 위해 상수로 분리)
+const REGION_NAMES = {
+    'pohang': '포항시',
+    'gyeongju': '경주시',
+    'gimcheon': '김천시',
+    'andong': '안동시',
+    'gumi': '구미시',
+    'yeongcheon': '영천시',
+    'sangju': '상주시',
+    'mungyeong': '문경시',
+    'gyeongsan': '경산시',
+    'gunwi': '군위군',
+    'uiseong': '의성군',
+    'cheongsong': '청송군',
+    'yeongyang': '영양군',
+    'yeongdeok': '영덕군',
+    'cheongdo': '청도군',
+    'goryeong': '고령군',
+    'seongju': '성주군',
+    'chilgok': '칠곡군',
+    'yecheon': '예천군',
+    'bonghwa': '봉화군',
+    'ulleung': '울릉군',
+    'yeongju': '영주시',
+    'uljin': '울진군'
+};
+
 /**
  * 지역별 주소 파싱 (봉화군, 영주시, 울진군)
- * @param {string} input - 입력 문자열
- * @param {string} region - 'bonghwa', 'yeongju', 'uljin'
- * @returns {object|null}
  */
 function parseRegionAddress(input, region = 'bonghwa') {
     if (!input || typeof input !== 'string') return null;
@@ -665,34 +695,7 @@ function parseRegionAddress(input, region = 'bonghwa') {
     const district = regionData.villages[villageName];
     if (!district) return null;
 
-    // 지역명 설정
-    const regionNames = {
-        'pohang': '포항시',
-        'gyeongju': '경주시',
-        'gimcheon': '김천시',
-        'andong': '안동시',
-        'gumi': '구미시',
-        'yeongcheon': '영천시',
-        'sangju': '상주시',
-        'mungyeong': '문경시',
-        'gyeongsan': '경산시',
-        'gunwi': '군위군',
-        'uiseong': '의성군',
-        'cheongsong': '청송군',
-        'yeongyang': '영양군',
-        'yeongdeok': '영덕군',
-        'cheongdo': '청도군',
-        'goryeong': '고령군',
-        'seongju': '성주군',
-        'chilgok': '칠곡군',
-        'yecheon': '예천군',
-        'bonghwa': '봉화군',
-        'ulleung': '울릉군',
-        'yeongju': '영주시',
-        'uljin': '울진군'
-    };
-
-    const baseAddress = `${regionNames[region]} ${district} ${villageName}`;
+    const baseAddress = `${REGION_NAMES[region]} ${district} ${villageName}`;
     const fullAddress = lotNumber ? `${baseAddress} ${lotNumber}` : baseAddress;
 
     return {
@@ -700,7 +703,7 @@ function parseRegionAddress(input, region = 'bonghwa') {
         village: villageName,
         district,
         lotNumber,
-        region: regionNames[region],
+        region: REGION_NAMES[region],
         alternatives: regionData.duplicates[villageName] || null
     };
 }
@@ -714,9 +717,6 @@ function parseBonghwaAddress(input) {
 
 /**
  * 리 이름 자동완성 제안 목록 반환 (다중 지역 지원)
- * @param {string} input - 부분 입력 문자열
- * @param {string[]} regions - 검색할 지역 배열 (기본: ['bonghwa', 'yeongju', 'uljin'])
- * @returns {Array}
  */
 function suggestRegionVillages(input, regions = null) {
     if (!input || typeof input !== 'string') return [];
@@ -725,40 +725,12 @@ function suggestRegionVillages(input, regions = null) {
     if (trimmed.length === 0) return [];
 
     // 기본값: 경상북도 전체
-    if (!regions) {
-        regions = Object.keys(REGION_DATA);
-    }
+    const searchRegions = regions || Object.keys(REGION_DATA);
 
     const results = [];
     const villageInput = trimmed.replace(/\s*\d+[\d\-]*$/, '');
 
-    const regionNames = {
-        'pohang': '포항시',
-        'gyeongju': '경주시',
-        'gimcheon': '김천시',
-        'andong': '안동시',
-        'gumi': '구미시',
-        'yeongcheon': '영천시',
-        'sangju': '상주시',
-        'mungyeong': '문경시',
-        'gyeongsan': '경산시',
-        'gunwi': '군위군',
-        'uiseong': '의성군',
-        'cheongsong': '청송군',
-        'yeongyang': '영양군',
-        'yeongdeok': '영덕군',
-        'cheongdo': '청도군',
-        'goryeong': '고령군',
-        'seongju': '성주군',
-        'chilgok': '칠곡군',
-        'yecheon': '예천군',
-        'bonghwa': '봉화군',
-        'ulleung': '울릉군',
-        'yeongju': '영주시',
-        'uljin': '울진군'
-    };
-
-    regions.forEach(region => {
+    searchRegions.forEach(region => {
         const regionData = REGION_DATA[region];
         if (!regionData) return;
 
@@ -767,8 +739,8 @@ function suggestRegionVillages(input, regions = null) {
                 results.push({
                     village,
                     district,
-                    region: regionNames[region],
-                    displayText: `${village} (${regionNames[region]} ${district})`
+                    region: REGION_NAMES[region],
+                    displayText: `${village} (${REGION_NAMES[region]} ${district})`
                 });
             }
         }
@@ -793,38 +765,11 @@ function suggestBonghwaVillages(input) {
 
 /**
  * 세 지역 간 중복되는 리 이름인지 확인
- * @param {string} villageName - 리 이름 (예: "유곡리")
- * @returns {Array|null} - 중복이면 [{region, district}, ...], 중복 아니면 null
  */
 function checkCrossRegionDuplicate(villageName) {
     if (!villageName || typeof villageName !== 'string') return null;
 
     const locations = [];
-    const regionNames = {
-        'pohang': '포항시',
-        'gyeongju': '경주시',
-        'gimcheon': '김천시',
-        'andong': '안동시',
-        'gumi': '구미시',
-        'yeongcheon': '영천시',
-        'sangju': '상주시',
-        'mungyeong': '문경시',
-        'gyeongsan': '경산시',
-        'gunwi': '군위군',
-        'uiseong': '의성군',
-        'cheongsong': '청송군',
-        'yeongyang': '영양군',
-        'yeongdeok': '영덕군',
-        'cheongdo': '청도군',
-        'goryeong': '고령군',
-        'seongju': '성주군',
-        'chilgok': '칠곡군',
-        'yecheon': '예천군',
-        'bonghwa': '봉화군',
-        'ulleung': '울릉군',
-        'yeongju': '영주시',
-        'uljin': '울진군'
-    };
 
     // 각 지역에서 해당 리 이름 찾기
     for (const [regionKey, regionData] of Object.entries(REGION_DATA)) {
@@ -832,9 +777,9 @@ function checkCrossRegionDuplicate(villageName) {
         if (district) {
             locations.push({
                 regionKey,
-                region: regionNames[regionKey],
+                region: REGION_NAMES[regionKey] || regionKey,
                 district,
-                fullAddress: `${regionNames[regionKey]} ${district} ${villageName}`
+                fullAddress: `${REGION_NAMES[regionKey] || regionKey} ${district} ${villageName}`
             });
         }
     }
@@ -845,7 +790,7 @@ function checkCrossRegionDuplicate(villageName) {
 
 /**
  * 필지 주소 파싱 (자동 지역 감지)
- * 중복이 있으면 null을 반환하고, checkCrossRegionDuplicate로 확인해야 함
+ * 중복이 있으면 DuplicateParseResult, 아니면 SingleParseResult 반환
  */
 function parseParcelAddress(input) {
     if (!input || typeof input !== 'string') return null;
@@ -871,36 +816,11 @@ function parseParcelAddress(input) {
     }
 
     // 중복이 아니면 자동으로 지역 찾기
-    const regionNames = {
-        'pohang': '포항시',
-        'gyeongju': '경주시',
-        'gimcheon': '김천시',
-        'andong': '안동시',
-        'gumi': '구미시',
-        'yeongcheon': '영천시',
-        'sangju': '상주시',
-        'mungyeong': '문경시',
-        'gyeongsan': '경산시',
-        'gunwi': '군위군',
-        'uiseong': '의성군',
-        'cheongsong': '청송군',
-        'yeongyang': '영양군',
-        'yeongdeok': '영덕군',
-        'cheongdo': '청도군',
-        'goryeong': '고령군',
-        'seongju': '성주군',
-        'chilgok': '칠곡군',
-        'yecheon': '예천군',
-        'bonghwa': '봉화군',
-        'ulleung': '울릉군',
-        'yeongju': '영주시',
-        'uljin': '울진군'
-    };
-
     for (const [regionKey, regionData] of Object.entries(REGION_DATA)) {
         const district = regionData.villages[villageName];
         if (district) {
-            const baseAddress = `${regionNames[regionKey]} ${district} ${villageName}`;
+            const regionName = REGION_NAMES[regionKey] || regionKey;
+            const baseAddress = `${regionName} ${district} ${villageName}`;
             const fullAddress = lotNumber ? `${baseAddress} ${lotNumber}` : baseAddress;
 
             return {
@@ -909,7 +829,7 @@ function parseParcelAddress(input) {
                 village: villageName,
                 district,
                 lotNumber,
-                region: regionNames[regionKey],
+                region: regionName,
                 regionKey,
                 alternatives: regionData.duplicates[villageName] || null
             };

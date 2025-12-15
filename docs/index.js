@@ -1,4 +1,9 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+/**
+ * @fileoverview Electron 메인 프로세스
+ * @description 앱 초기화, 창 관리, IPC 핸들러 정의
+ */
+
+const { app, BrowserWindow, Menu, ipcMain, dialog } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 
@@ -7,8 +12,85 @@ if (require('electron-squirrel-startup')) {
   app.quit();
 }
 
-let mainWindow;
+/** @type {Electron.BrowserWindow | null} */
+let mainWindow = null;
 
+/**
+ * 한글 메뉴 템플릿 생성
+ * @returns {Electron.MenuItemConstructorOptions[]}
+ */
+const createMenuTemplate = () => {
+  /** @type {Electron.MenuItemConstructorOptions[]} */
+  const template = [
+    {
+      label: '파일',
+      submenu: [
+        { label: '새로고침', accelerator: 'CmdOrCtrl+R', role: 'reload' },
+        { label: '강제 새로고침', accelerator: 'CmdOrCtrl+Shift+R', role: 'forceReload' },
+        { type: 'separator' },
+        { label: '종료', accelerator: 'CmdOrCtrl+Q', click: () => app.quit() }
+      ]
+    },
+    {
+      label: '편집',
+      submenu: [
+        { label: '실행 취소', accelerator: 'CmdOrCtrl+Z', role: 'undo' },
+        { label: '다시 실행', accelerator: 'Shift+CmdOrCtrl+Z', role: 'redo' },
+        { type: 'separator' },
+        { label: '잘라내기', accelerator: 'CmdOrCtrl+X', role: 'cut' },
+        { label: '복사', accelerator: 'CmdOrCtrl+C', role: 'copy' },
+        { label: '붙여넣기', accelerator: 'CmdOrCtrl+V', role: 'paste' },
+        { label: '모두 선택', accelerator: 'CmdOrCtrl+A', role: 'selectAll' }
+      ]
+    },
+    {
+      label: '보기',
+      submenu: [
+        { label: '확대', accelerator: 'CmdOrCtrl+Plus', role: 'zoomIn' },
+        { label: '축소', accelerator: 'CmdOrCtrl+-', role: 'zoomOut' },
+        { label: '원래 크기', accelerator: 'CmdOrCtrl+0', role: 'resetZoom' },
+        { type: 'separator' },
+        { label: '전체 화면', accelerator: 'F11', role: 'togglefullscreen' },
+        { type: 'separator' },
+        { label: '개발자 도구', accelerator: 'CmdOrCtrl+Shift+I', role: 'toggleDevTools' }
+      ]
+    },
+    {
+      label: '창',
+      submenu: [
+        { label: '최소화', accelerator: 'CmdOrCtrl+M', role: 'minimize' },
+        { label: '닫기', accelerator: 'CmdOrCtrl+W', role: 'close' }
+      ]
+    }
+  ];
+
+  // macOS 앱 메뉴 추가
+  if (process.platform === 'darwin') {
+    template.unshift({
+      label: '시료 접수 대장',
+      submenu: [
+        { label: '시료 접수 대장 정보', role: 'about' },
+        { type: 'separator' },
+        { label: '환경설정...', accelerator: 'Command+,', enabled: false },
+        { type: 'separator' },
+        { label: '서비스', role: 'services', submenu: [] },
+        { type: 'separator' },
+        { label: '시료 접수 대장 숨기기', accelerator: 'Command+H', role: 'hide' },
+        { label: '기타 숨기기', accelerator: 'Command+Alt+H', role: 'hideOthers' },
+        { label: '모두 표시', role: 'unhide' },
+        { type: 'separator' },
+        { label: '종료', accelerator: 'Command+Q', role: 'quit' }
+      ]
+    });
+  }
+
+  return template;
+};
+
+/**
+ * 메인 윈도우 생성
+ * @returns {void}
+ */
 const createWindow = () => {
   // Create the browser window.
   mainWindow = new BrowserWindow({
@@ -44,6 +126,10 @@ const createWindow = () => {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 app.whenReady().then(() => {
+  // 한글 메뉴 적용
+  const menu = Menu.buildFromTemplate(createMenuTemplate());
+  Menu.setApplicationMenu(menu);
+
   createWindow();
 
   // On OS X it's common to re-create a window in the app when the
@@ -120,12 +206,23 @@ ipcMain.handle('read-file', async (event, filePath) => {
     }
 });
 
-// 자동 저장 설정 파일 경로
+/**
+ * @typedef {Object} Settings
+ * @property {string} [autoSaveFolder] - 자동 저장 폴더 경로
+ */
+
+/**
+ * 자동 저장 설정 파일 경로
+ * @returns {string}
+ */
 function getSettingsPath() {
     return path.join(app.getPath('userData'), 'settings.json');
 }
 
-// 설정 로드
+/**
+ * 설정 로드
+ * @returns {Settings}
+ */
 function loadSettings() {
     try {
         const settingsPath = getSettingsPath();
@@ -139,7 +236,11 @@ function loadSettings() {
     return {};
 }
 
-// 설정 저장
+/**
+ * 설정 저장
+ * @param {Settings} settings - 저장할 설정 객체
+ * @returns {boolean}
+ */
 function saveSettings(settings) {
     try {
         const settingsPath = getSettingsPath();
