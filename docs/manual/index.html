@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>시료 접수 대장 - 사용 설명서</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .manual-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .toc {
+            background: #f8fafc;
+            padding: 30px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .toc h2 {
+            color: #334155;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+
+        .toc ul {
+            list-style: none;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+        }
+
+        .toc li a {
+            display: block;
+            padding: 10px 15px;
+            background: white;
+            color: #6366f1;
+            text-decoration: none;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            transition: all 0.2s ease;
+        }
+
+        .toc li a:hover {
+            background: #6366f1;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .section {
+            margin-bottom: 50px;
+        }
+
+        .section h2 {
+            color: #1e293b;
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #6366f1;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section h2 .icon {
+            font-size: 1.8rem;
+        }
+
+        .section p {
+            color: #475569;
+            margin-bottom: 15px;
+        }
+
+        .screenshot {
+            margin: 20px 0;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e2e8f0;
+        }
+
+        .screenshot img {
+            width: 100%;
+            display: block;
+        }
+
+        .screenshot-caption {
+            background: #f1f5f9;
+            padding: 12px 15px;
+            color: #64748b;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        .step-list {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .step-list ol {
+            padding-left: 20px;
+        }
+
+        .step-list li {
+            color: #475569;
+            margin-bottom: 12px;
+            padding-left: 10px;
+        }
+
+        .step-list li strong {
+            color: #1e293b;
+        }
+
+        .tip-box {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border-left: 4px solid #f59e0b;
+            padding: 15px 20px;
+            border-radius: 0 12px 12px 0;
+            margin: 20px 0;
+        }
+
+        .tip-box h4 {
+            color: #92400e;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tip-box p {
+            color: #78350f;
+            margin-bottom: 0;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .feature-card {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .feature-card h4 {
+            color: #1e293b;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .feature-card p {
+            color: #64748b;
+            font-size: 0.9rem;
+            margin-bottom: 0;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #6366f1;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            text-decoration: none;
+            margin-top: 20px;
+            transition: all 0.2s ease;
+        }
+
+        .back-link:hover {
+            background: #4f46e5;
+            transform: translateY(-2px);
+        }
+
+        .footer {
+            background: #1e293b;
+            color: #94a3b8;
+            padding: 20px 30px;
+            text-align: center;
+        }
+
+        @media (max-width: 600px) {
+            .header h1 {
+                font-size: 1.6rem;
+            }
+
+            .content {
+                padding: 20px;
+            }
+
+            .toc ul {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="manual-container">
+        <div class="header">
+            <h1>시료 접수 대장 사용 설명서</h1>
+            <p>농업 시료 관리를 위한 간편한 접수 시스템</p>
+        </div>
+
+        <div class="toc">
+            <h2>목차</h2>
+            <ul>
+                <li><a href="#main">1. 메인 화면</a></li>
+                <li><a href="#soil">2. 토양 시료 접수</a></li>
+                <li><a href="#pesticide">3. 잔류농약 시료 접수</a></li>
+                <li><a href="#water">4. 수질 시료 접수</a></li>
+                <li><a href="#compost">5. 퇴·액비 시료 접수</a></li>
+                <li><a href="#heavy-metal">6. 중금속 시료 접수</a></li>
+                <li><a href="#label">7. 라벨 인쇄</a></li>
+                <li><a href="#tips">8. 유용한 팁</a></li>
+            </ul>
+        </div>
+
+        <div class="content">
+            <!-- 1. 메인 화면 -->
+            <div class="section" id="main">
+                <h2><span class="icon">🏠</span> 1. 메인 화면</h2>
+                <p>프로그램을 실행하면 메인 화면이 표시됩니다. 여기서 원하는 시료 유형을 선택하여 접수를 시작할 수 있습니다.</p>
+
+                <div class="screenshot">
+                    <img src="images/01-main.png" alt="메인 화면">
+                    <div class="screenshot-caption">메인 화면 - 시료 유형 선택</div>
+                </div>
+
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <h4>🌱 토양 시료</h4>
+                        <p>토양 분석을 위한 시료 접수. 필지별 작물 정보 관리</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>🧫 잔류농약</h4>
+                        <p>농산물 잔류농약 검사를 위한 시료 접수</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>💧 수질</h4>
+                        <p>지하수, 농업용수 등 수질 검사 시료 접수</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>🐄 퇴·액비</h4>
+                        <p>가축분뇨 퇴비 품질 검사를 위한 시료 접수</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>⚠️ 중금속</h4>
+                        <p>토양 중금속 오염 검사를 위한 시료 접수</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>🏷️ 라벨 인쇄</h4>
+                        <p>우편 발송용 주소 라벨 인쇄 기능</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. 토양 시료 접수 -->
+            <div class="section" id="soil">
+                <h2><span class="icon">🌱</span> 2. 토양 시료 접수</h2>
+                <p>토양 분석을 위한 시료를 접수합니다. 민원인 정보와 필지 정보를 입력하세요.</p>
+
+                <div class="screenshot">
+                    <img src="images/02-soil-register.png" alt="토양 시료 접수">
+                    <div class="screenshot-caption">토양 시료 접수 화면</div>
+                </div>
+
+                <div class="step-list">
+                    <h4>접수 방법</h4>
+                    <ol>
+                        <li><strong>접수일자</strong>를 선택합니다 (기본값: 오늘)</li>
+                        <li><strong>민원인 정보</strong>(성명, 전화번호, 주소)를 입력합니다</li>
+                        <li><strong>구분</strong>(논, 밭, 과수, 시설)을 선택합니다</li>
+                        <li><strong>목적</strong>(일반재배, 무농약, 유기, GAP, 저탄소)을 선택합니다</li>
+                        <li><strong>필지 추가</strong> 버튼으로 필지 정보를 입력합니다</li>
+                        <li><strong>등록</strong> 버튼을 클릭하여 접수를 완료합니다</li>
+                    </ol>
+                </div>
+
+                <div class="tip-box">
+                    <h4>💡 팁</h4>
+                    <p>필지 주소를 입력할 때 "봉화"를 입력하면 봉화군의 리 목록이 자동완성됩니다.</p>
+                </div>
+
+                <h3 style="margin-top: 30px; margin-bottom: 15px; color: #334155;">목록 보기</h3>
+                <p>상단의 "목록" 버튼을 클릭하면 접수된 시료 목록을 확인할 수 있습니다.</p>
+
+                <div class="screenshot">
+                    <img src="images/04-soil-list.png" alt="토양 시료 목록">
+                    <div class="screenshot-caption">토양 시료 목록 화면</div>
+                </div>
+            </div>
+
+            <!-- 3. 잔류농약 시료 접수 -->
+            <div class="section" id="pesticide">
+                <h2><span class="icon">🧫</span> 3. 잔류농약 시료 접수</h2>
+                <p>농산물 잔류농약 검사를 위한 시료를 접수합니다.</p>
+
+                <div class="screenshot">
+                    <img src="images/05-pesticide-register.png" alt="잔류농약 시료 접수">
+                    <div class="screenshot-caption">잔류농약 시료 접수 화면</div>
+                </div>
+
+                <div class="step-list">
+                    <h4>접수 방법</h4>
+                    <ol>
+                        <li><strong>접수일자</strong>와 <strong>민원인 정보</strong>를 입력합니다</li>
+                        <li><strong>농산물명</strong>을 선택합니다 (작물 검색 가능)</li>
+                        <li><strong>재배지 주소</strong>를 입력합니다</li>
+                        <li><strong>출하 예정일</strong>을 선택합니다</li>
+                        <li><strong>인증 종류</strong>(무농약, 유기, GAP, 저탄소, 일반)를 선택합니다</li>
+                        <li><strong>등록</strong> 버튼을 클릭합니다</li>
+                    </ol>
+                </div>
+
+                <div class="tip-box">
+                    <h4>💡 팁</h4>
+                    <p>여러 건의 시료를 한 번에 접수하려면 "의뢰 추가" 버튼을 사용하세요.</p>
+                </div>
+            </div>
+
+            <!-- 4. 수질 시료 접수 -->
+            <div class="section" id="water">
+                <h2><span class="icon">💧</span> 4. 수질 시료 접수</h2>
+                <p>지하수, 농업용수 등 수질 검사를 위한 시료를 접수합니다.</p>
+
+                <div class="screenshot">
+                    <img src="images/06-water-register.png" alt="수질 시료 접수">
+                    <div class="screenshot-caption">수질 시료 접수 화면</div>
+                </div>
+
+                <div class="step-list">
+                    <h4>접수 방법</h4>
+                    <ol>
+                        <li><strong>시료명</strong>(지하수, 하천수, 저수지, 수돗물 등)을 선택합니다</li>
+                        <li><strong>채취장소</strong>(리+지번)를 입력합니다</li>
+                        <li><strong>검사항목</strong>을 선택합니다:
+                            <ul style="margin-top: 8px; margin-left: 20px;">
+                                <li>생활용수: 20개 항목</li>
+                                <li>농업용수: 15개 항목</li>
+                            </ul>
+                        </li>
+                        <li><strong>등록</strong> 버튼을 클릭합니다</li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- 5. 퇴·액비 시료 접수 -->
+            <div class="section" id="compost">
+                <h2><span class="icon">🐄</span> 5. 퇴·액비 시료 접수</h2>
+                <p>가축분뇨 퇴비의 품질 검사를 위한 시료를 접수합니다.</p>
+
+                <div class="screenshot">
+                    <img src="images/07-compost-register.png" alt="퇴액비 시료 접수">
+                    <div class="screenshot-caption">퇴·액비 시료 접수 화면</div>
+                </div>
+
+                <div class="step-list">
+                    <h4>접수 방법</h4>
+                    <ol>
+                        <li><strong>생산자/업체명</strong>을 입력합니다</li>
+                        <li><strong>퇴비 종류</strong>(돈분, 우분, 계분, 혼합 등)를 선택합니다</li>
+                        <li><strong>생산지 주소</strong>를 입력합니다</li>
+                        <li><strong>검사 목적</strong>(품질검사, 부숙도검사, 성분분석 등)을 선택합니다</li>
+                        <li><strong>등록</strong> 버튼을 클릭합니다</li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- 6. 중금속 시료 접수 -->
+            <div class="section" id="heavy-metal">
+                <h2><span class="icon">⚠️</span> 6. 중금속 시료 접수</h2>
+                <p>토양 중금속 오염 검사를 위한 시료를 접수합니다.</p>
+
+                <div class="screenshot">
+                    <img src="images/08-heavy-metal-register.png" alt="중금속 시료 접수">
+                    <div class="screenshot-caption">중금속 시료 접수 화면</div>
+                </div>
+
+                <div class="step-list">
+                    <h4>접수 방법</h4>
+                    <ol>
+                        <li><strong>시료 종류</strong>(토양, 농산물, 용수 등)를 선택합니다</li>
+                        <li><strong>채취 위치</strong>를 입력합니다</li>
+                        <li><strong>검사 항목</strong>(납, 카드뮴, 비소, 수은, 크롬 등)을 선택합니다</li>
+                        <li><strong>오염 의심 원인</strong>을 선택합니다</li>
+                        <li><strong>등록</strong> 버튼을 클릭합니다</li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- 7. 라벨 인쇄 -->
+            <div class="section" id="label">
+                <h2><span class="icon">🏷️</span> 7. 라벨 인쇄</h2>
+                <p>검사 결과 발송을 위한 주소 라벨을 인쇄합니다.</p>
+
+                <div class="screenshot">
+                    <img src="images/09-label-print.png" alt="라벨 인쇄">
+                    <div class="screenshot-caption">라벨 인쇄 화면</div>
+                </div>
+
+                <div class="step-list">
+                    <h4>라벨 인쇄 방법</h4>
+                    <ol>
+                        <li>각 시료 접수 페이지에서 <strong>라벨 인쇄</strong> 버튼을 클릭합니다</li>
+                        <li>인쇄할 데이터를 확인합니다</li>
+                        <li><strong>시작 위치</strong>를 선택합니다 (이미 사용한 라벨지 재활용 시)</li>
+                        <li><strong>인쇄</strong> 버튼을 클릭합니다</li>
+                    </ol>
+                </div>
+
+                <div class="tip-box">
+                    <h4>💡 팁</h4>
+                    <p>A4 라벨지 2열 9행(18개) 템플릿을 사용합니다. 동일인 중복은 자동으로 제거됩니다.</p>
+                </div>
+            </div>
+
+            <!-- 8. 유용한 팁 -->
+            <div class="section" id="tips">
+                <h2><span class="icon">✨</span> 8. 유용한 팁</h2>
+
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <h4>💾 자동 저장</h4>
+                        <p>데이터는 자동으로 저장됩니다. 상단의 자동저장 토글로 켜고 끌 수 있습니다.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>📅 연도별 관리</h4>
+                        <p>상단의 연도 선택으로 연도별 데이터를 구분하여 관리할 수 있습니다.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>📥 데이터 내보내기</h4>
+                        <p>목록 화면에서 엑셀 내보내기 버튼으로 데이터를 Excel 파일로 저장할 수 있습니다.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>🔍 검색 기능</h4>
+                        <p>목록 화면의 검색 기능으로 특정 시료를 빠르게 찾을 수 있습니다.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>✅ 완료 체크</h4>
+                        <p>검사가 완료된 시료는 체크박스를 클릭하여 완료 상태로 변경할 수 있습니다.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>📍 주소 검색</h4>
+                        <p>주소 입력 시 "주소 검색" 버튼으로 도로명 주소를 쉽게 찾을 수 있습니다.</p>
+                    </div>
+                </div>
+
+                <div class="tip-box" style="margin-top: 30px;">
+                    <h4>⌨️ 단축키</h4>
+                    <p>
+                        <strong>Ctrl+S</strong>: 저장 |
+                        <strong>Ctrl+F</strong>: 검색 |
+                        <strong>Ctrl+P</strong>: 인쇄
+                    </p>
+                </div>
+            </div>
+
+            <a href="../index.html" class="back-link">
+                ← 메인 화면으로 돌아가기
+            </a>
+        </div>
+
+        <div class="footer">
+            <p>시료 접수 대장 | 봉화군 농업기술센터</p>
+        </div>
+    </div>
+</body>
+</html>
