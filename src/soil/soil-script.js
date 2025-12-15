@@ -60,6 +60,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                             localStorage.setItem('autoSaveEnabled', 'true');
                             if (autoSaveToggle) {
                                 autoSaveToggle.checked = true;
+                                // change 이벤트를 직접 트리거하여 자동 저장 활성화
+                                autoSaveToggle.dispatchEvent(new Event('change'));
                             }
                             log('📁 자동 저장 폴더 설정됨:', result.folder);
                         }
@@ -2095,13 +2097,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             // 지번 검색 (parcels 배열의 lotAddress + subLots 조합 검색)
-            // 예: "문단리 123" → lotAddress에 "문단리" 포함 AND subLots에 "123" 포함
-            // subLots는 문자열 또는 { lotAddress: string, crops: [...] } 형태의 객체일 수 있음
+            // lotAddress에는 "리+지번" 형태로 저장됨 (예: "문단리 123")
+            // subLots에는 하위 지번들이 저장됨 (예: "123-1", "123-2" 또는 객체 형태)
             let matchesLot = true;
             if (currentSearchFilter.lot) {
                 matchesLot = false;
+                // 검색어 전체를 소문자로 변환
+                const searchQuery = currentSearchFilter.lot.trim().toLowerCase();
                 // 검색어를 공백으로 분리 (예: "문단리 123" → ["문단리", "123"])
-                const searchTerms = currentSearchFilter.lot.trim().toLowerCase().split(/\s+/).filter(t => t);
+                const searchTerms = searchQuery.split(/\s+/).filter(t => t);
 
                 // subLot에서 지번 값 추출하는 헬퍼 함수
                 const getSubLotAddress = (subLot) => {
@@ -2114,42 +2118,53 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 if (log.parcels && log.parcels.length > 0) {
                     matchesLot = log.parcels.some(parcel => {
-                        // 검색어가 하나만 있는 경우: lotAddress 또는 subLots에서 검색
-                        if (searchTerms.length === 1) {
-                            const term = searchTerms[0];
-                            // lotAddress 검색
-                            if (parcel.lotAddress && parcel.lotAddress.toLowerCase().includes(term)) {
-                                return true;
-                            }
-                            // subLots 검색
-                            if (parcel.subLots && parcel.subLots.length > 0) {
-                                return parcel.subLots.some(subLot => {
-                                    const addr = getSubLotAddress(subLot);
-                                    return addr && addr.includes(term);
-                                });
-                            }
-                            return false;
+                        const lotAddrLower = parcel.lotAddress ? parcel.lotAddress.toLowerCase() : '';
+
+                        // 방법 1: 전체 검색어가 lotAddress에 포함되는지 확인
+                        // 예: "문단리 123" 검색 → lotAddress "문단리 123"에 포함됨
+                        if (lotAddrLower.includes(searchQuery)) {
+                            return true;
                         }
 
-                        // 검색어가 두 개 이상인 경우: 리 + 지번 조합 검색
-                        // 첫 번째 단어는 리(lotAddress), 나머지는 지번(subLots)
-                        const riTerm = searchTerms[0];
-                        const lotTerms = searchTerms.slice(1);
+                        // 방법 2: 모든 검색어가 lotAddress에 포함되는지 확인
+                        // 예: "문단리 123" → lotAddress에 "문단리"와 "123"이 모두 포함
+                        if (searchTerms.every(term => lotAddrLower.includes(term))) {
+                            return true;
+                        }
 
-                        // lotAddress에 리 이름이 포함되어야 함
-                        const matchesRi = parcel.lotAddress &&
-                            parcel.lotAddress.toLowerCase().includes(riTerm);
-
-                        if (!matchesRi) return false;
-
-                        // subLots에 지번이 포함되어야 함
-                        if (parcel.subLots && parcel.subLots.length > 0) {
-                            return lotTerms.every(lotTerm =>
-                                parcel.subLots.some(subLot => {
+                        // 방법 3: 검색어가 하나만 있는 경우 subLots에서도 검색
+                        if (searchTerms.length === 1) {
+                            const term = searchTerms[0];
+                            // subLots 검색
+                            if (parcel.subLots && parcel.subLots.length > 0) {
+                                if (parcel.subLots.some(subLot => {
                                     const addr = getSubLotAddress(subLot);
-                                    return addr && addr.includes(lotTerm);
-                                })
-                            );
+                                    return addr && addr.includes(term);
+                                })) {
+                                    return true;
+                                }
+                            }
+                        }
+
+                        // 방법 4: 리 + 지번 조합 검색 (lotAddress에 리, subLots에 지번)
+                        // 예: lotAddress "문단리", subLots ["123", "124"]
+                        if (searchTerms.length >= 2) {
+                            const riTerm = searchTerms[0];
+                            const lotTerms = searchTerms.slice(1);
+
+                            // lotAddress에 리 이름이 포함되어야 함
+                            const matchesRi = lotAddrLower.includes(riTerm);
+
+                            if (matchesRi && parcel.subLots && parcel.subLots.length > 0) {
+                                // subLots에서 지번 검색
+                                const matchesSubLots = lotTerms.every(lotTerm =>
+                                    parcel.subLots.some(subLot => {
+                                        const addr = getSubLotAddress(subLot);
+                                        return addr && addr.includes(lotTerm);
+                                    })
+                                );
+                                if (matchesSubLots) return true;
+                            }
                         }
 
                         return false;
