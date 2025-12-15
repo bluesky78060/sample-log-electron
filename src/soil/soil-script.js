@@ -397,17 +397,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 접수번호 자동 카운터
     // ========================================
     const receptionNumberInput = document.getElementById('receptionNumber');
+    const subCategorySelect = document.getElementById('subCategory');
 
-    // 다음 접수번호 생성
+    // 다음 접수번호 생성 (일반용)
     function generateNextReceptionNumber() {
         let maxNumber = 0;
 
-        // 기존 데이터에서 최대 번호 찾기
+        // 기존 데이터에서 최대 번호 찾기 (성토 제외)
         // 형식: 1, 2, 3 (숫자만)
         sampleLogs.forEach(log => {
-            if (log.receptionNumber) {
+            if (log.receptionNumber && log.subCategory !== '성토') {
                 // 숫자만 추출 (하위필지 번호 제외: "1-1" -> "1")
                 const baseNumber = log.receptionNumber.split('-')[0];
+                // 성토 접두사 확인 (F로 시작하면 제외)
+                if (baseNumber.startsWith('F')) return;
                 const num = parseInt(baseNumber, 10);
                 if (!isNaN(num) && num > maxNumber) {
                     maxNumber = num;
@@ -419,6 +422,60 @@ document.addEventListener('DOMContentLoaded', async () => {
         const nextNumber = maxNumber + 1;
         log(`📋 다음 접수번호 생성: ${nextNumber} (기존 최대: ${maxNumber})`);
         return String(nextNumber);
+    }
+
+    // 다음 접수번호 생성 (성토용)
+    function generateNextFillReceptionNumber() {
+        let maxNumber = 0;
+
+        // 기존 성토 데이터에서 최대 번호 찾기
+        // 형식: F1, F2, F3
+        sampleLogs.forEach(log => {
+            if (log.receptionNumber && log.subCategory === '성토') {
+                // F 접두사 제거 후 숫자 추출
+                const baseNumber = log.receptionNumber.split('-')[0];
+                const numStr = baseNumber.replace('F', '');
+                const num = parseInt(numStr, 10);
+                if (!isNaN(num) && num > maxNumber) {
+                    maxNumber = num;
+                }
+            }
+        });
+
+        // 다음 번호 생성 (F 접두사)
+        const nextNumber = maxNumber + 1;
+        log(`📋 다음 성토 접수번호 생성: F${nextNumber} (기존 최대: ${maxNumber})`);
+        return `F${nextNumber}`;
+    }
+
+    // 구분 변경 시 접수번호 및 UI 업데이트
+    subCategorySelect.addEventListener('change', (e) => {
+        const isFill = e.target.value === '성토';
+
+        // 접수번호 변경
+        if (isFill) {
+            receptionNumberInput.value = generateNextFillReceptionNumber();
+        } else {
+            receptionNumberInput.value = generateNextReceptionNumber();
+        }
+
+        // 필지 카드 UI 모드 변경
+        updateParcelCardsMode(isFill);
+    });
+
+    // 필지 카드 성토 모드 UI 업데이트
+    function updateParcelCardsMode(isFillMode) {
+        const parcelsContainer = document.getElementById('parcelsContainer');
+        log(`🏗️ 성토 모드 변경: ${isFillMode}, parcelsContainer: ${parcelsContainer ? '있음' : '없음'}`);
+        if (parcelsContainer) {
+            if (isFillMode) {
+                parcelsContainer.classList.add('fill-mode');
+                log('✅ fill-mode 클래스 추가됨');
+            } else {
+                parcelsContainer.classList.remove('fill-mode');
+                log('✅ fill-mode 클래스 제거됨');
+            }
+        }
     }
 
     // 초기 접수번호 설정

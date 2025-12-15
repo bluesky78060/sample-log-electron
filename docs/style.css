@@ -4057,3 +4057,44 @@ select {
     opacity: 0.7 !important;
     font-weight: 400 !important;
 }
+
+/* ========================================
+   성토 모드 - 필지 카드 간소화
+   ======================================== */
+/* 성토 모드일 때 하위필지 입력 영역 숨김 */
+.fill-mode .sub-lot-input-wrapper,
+.fill-mode .sub-lots-container,
+.fill-mode .parcel-form-group:has(.sub-lot-input) {
+    display: none !important;
+}
+
+/* 성토 모드일 때 추가 작물 영역 숨김 */
+.fill-mode .btn-add-crop-area,
+.fill-mode .btn-add-crop-compact,
+.fill-mode .crop-chips-container,
+.fill-mode .btn-add-direct-crop {
+    display: none !important;
+}
+
+/* 성토 모드일 때 필지 요약에서 하위필지 관련 정보 숨김 */
+.fill-mode .parcel-summary .summary-item:has(.sub-lot-count) {
+    display: none !important;
+}
+
+/* 성토 모드 표시 */
+.fill-mode .parcel-card {
+    border-left-color: #f59e0b !important;
+}
+
+.fill-mode .parcel-card::before {
+    content: '성토';
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: #f59e0b;
+    color: white;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
