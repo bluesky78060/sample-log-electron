@@ -29,6 +29,7 @@ module.exports = {
         name: 'sample-log',
         setupExe: 'sample-log-setup.exe',
         title: '시료접수대장',
+        shortcutName: '시료접수대장',
         authors: '봉화군 농업기술센터',
         description: '시료 접수 관리 프로그램'
       },
