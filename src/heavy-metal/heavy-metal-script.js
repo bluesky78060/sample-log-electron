@@ -1638,15 +1638,60 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
         renderBarChart('statsByPurpose', byPurpose);
 
-        // 월별 통계
+        // 월별 집계 (1~12월 전체, 완료/미완료 구분)
         const byMonth = {};
+        const monthNames = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
+
+        // 1~12월 초기화
+        for (let i = 1; i <= 12; i++) {
+            const monthKey = String(i).padStart(2, '0');
+            byMonth[monthKey] = {
+                count: 0,
+                completed: 0,
+                pending: 0,
+                label: monthNames[i - 1],
+                class: 'month'
+            };
+        }
+
+        // 데이터 집계
         sampleLogs.forEach(log => {
             if (log.date) {
-                const month = log.date.substring(0, 7);
-                byMonth[month] = (byMonth[month] || 0) + 1;
+                const monthNum = log.date.substring(5, 7);
+                if (byMonth[monthNum]) {
+                    byMonth[monthNum].count++;
+                    if (log.isCompleted) {
+                        byMonth[monthNum].completed++;
+                    } else {
+                        byMonth[monthNum].pending++;
+                    }
+                }
             }
         });
-        renderBarChart('statsByMonth', byMonth);
+
+        // 분기별 집계
+        const byQuarter = {
+            Q1: { count: 0, completed: 0, pending: 0, label: '1분기 (1~3월)' },
+            Q2: { count: 0, completed: 0, pending: 0, label: '2분기 (4~6월)' },
+            Q3: { count: 0, completed: 0, pending: 0, label: '3분기 (7~9월)' },
+            Q4: { count: 0, completed: 0, pending: 0, label: '4분기 (10~12월)' }
+        };
+
+        Object.entries(byMonth).forEach(([monthKey, data]) => {
+            const monthNum = parseInt(monthKey);
+            let quarter;
+            if (monthNum <= 3) quarter = 'Q1';
+            else if (monthNum <= 6) quarter = 'Q2';
+            else if (monthNum <= 9) quarter = 'Q3';
+            else quarter = 'Q4';
+
+            byQuarter[quarter].count += data.count;
+            byQuarter[quarter].completed += data.completed;
+            byQuarter[quarter].pending += data.pending;
+        });
+
+        renderMonthlyChart('statsByMonth', byMonth);
+        renderQuarterlySummary('statsQuarterly', byQuarter);
 
         // 수령방법별 통계
         const byMethod = {};
@@ -1657,6 +1702,75 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderBarChart('statsByReceptionMethod', byMethod);
     }
 
+    function renderMonthlyChart(containerId, byMonth) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        const entries = Object.entries(byMonth).sort((a, b) => a[0].localeCompare(b[0]));
+        const maxCount = Math.max(...entries.map(([, v]) => v.count), 1);
+        const totalCount = entries.reduce((sum, [, v]) => sum + v.count, 0);
+
+        if (totalCount === 0) {
+            container.innerHTML = '<div class="stats-empty">데이터가 없습니다</div>';
+            return;
+        }
+
+        container.innerHTML = `
+            <div class="monthly-chart">
+                <div class="monthly-bars">
+                    ${entries.map(([key, value]) => {
+                        const heightPercent = maxCount > 0 ? (value.count / maxCount) * 100 : 0;
+                        const completedPercent = value.count > 0 ? (value.completed / value.count) * 100 : 0;
+                        return `
+                            <div class="monthly-bar-group">
+                                <div class="monthly-bar-container">
+                                    <div class="monthly-bar-stack" style="height: ${heightPercent}%">
+                                        <div class="monthly-bar-completed" style="height: ${completedPercent}%" title="완료: ${value.completed}건"></div>
+                                        <div class="monthly-bar-pending" style="height: ${100 - completedPercent}%" title="미완료: ${value.pending}건"></div>
+                                    </div>
+                                    ${value.count > 0 ? `<span class="monthly-bar-value">${value.count}</span>` : ''}
+                                </div>
+                                <span class="monthly-bar-label">${value.label}</span>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+                <div class="monthly-legend">
+                    <span class="legend-item"><span class="legend-color completed"></span> 완료</span>
+                    <span class="legend-item"><span class="legend-color pending"></span> 미완료</span>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderQuarterlySummary(containerId, byQuarter) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        const entries = Object.entries(byQuarter).sort((a, b) => a[0].localeCompare(b[0]));
+        const totalCount = entries.reduce((sum, [, v]) => sum + v.count, 0);
+
+        if (totalCount === 0) {
+            container.innerHTML = '<div class="stats-empty">데이터가 없습니다</div>';
+            return;
+        }
+
+        container.innerHTML = `
+            <div class="quarterly-summary">
+                ${entries.map(([key, data]) => `
+                    <div class="quarterly-card">
+                        <div class="quarterly-header">${data.label}</div>
+                        <div class="quarterly-count">${data.count}<span>건</span></div>
+                        <div class="quarterly-details">
+                            <span class="detail-completed">완료 ${data.completed}</span>
+                            <span class="detail-pending">미완료 ${data.pending}</span>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+
     function renderBarChart(containerId, data) {
         const container = document.getElementById(containerId);
         if (!container) return;
@@ -1664,15 +1778,46 @@ document.addEventListener('DOMContentLoaded', async () => {
         const entries = Object.entries(data);
         const maxVal = Math.max(...entries.map(([, v]) => v), 1);
 
-        container.innerHTML = entries.map(([label, value]) => `
-            <div class="stat-bar-row">
-                <span class="stat-bar-label">${label}</span>
-                <div class="stat-bar-track">
-                    <div class="stat-bar-fill" style="width: ${(value / maxVal) * 100}%"></div>
+        // 분석항목별 클래스 매핑
+        const analysisClassMap = {
+            '납(Pb)': 'analysis-pb',
+            '카드뮴(Cd)': 'analysis-cd',
+            '비소(As)': 'analysis-as',
+            '수은(Hg)': 'analysis-hg',
+            '크롬(Cr)': 'analysis-cr',
+            '구리(Cu)': 'analysis-cu',
+            '니켈(Ni)': 'analysis-ni',
+            '아연(Zn)': 'analysis-zn'
+        };
+
+        // 목적별 클래스 매핑
+        const purposeClassMap = {
+            '농경지': 'purpose-farm',
+            '공장부지': 'purpose-factory',
+            '주거지역': 'purpose-residential',
+            '기타': 'purpose-other'
+        };
+
+        // 수령방법별 클래스 매핑
+        const methodClassMap = {
+            '우편': 'method-mail',
+            '이메일': 'method-email',
+            '팩스': 'method-fax',
+            '직접방문': 'method-visit'
+        };
+
+        container.innerHTML = entries.map(([label, value]) => {
+            const barClass = analysisClassMap[label] || purposeClassMap[label] || methodClassMap[label] || '';
+            return `
+                <div class="stat-bar-row">
+                    <span class="stat-bar-label">${label}</span>
+                    <div class="stat-bar-track">
+                        <div class="stat-bar-fill ${barClass}" style="width: ${(value / maxVal) * 100}%"></div>
+                    </div>
+                    <span class="stat-bar-value">${value}</span>
                 </div>
-                <span class="stat-bar-value">${value}</span>
-            </div>
-        `).join('');
+            `;
+        }).join('');
     }
 
     // ========================================

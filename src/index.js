@@ -6,6 +6,7 @@
 const { app, BrowserWindow, Menu, ipcMain, dialog } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
+const { autoUpdater } = require('electron-updater');
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
@@ -132,6 +133,11 @@ app.whenReady().then(() => {
 
   createWindow();
 
+  // 패키징된 앱에서만 자동 업데이트 체크
+  if (app.isPackaged) {
+    autoUpdater.checkForUpdatesAndNotify();
+  }
+
   // On OS X it's common to re-create a window in the app when the
   // dock icon is clicked and there are no other windows open.
   app.on('activate', () => {
@@ -139,6 +145,31 @@ app.whenReady().then(() => {
       createWindow();
     }
   });
+});
+
+// ========================================
+// 자동 업데이트 이벤트 핸들러
+// ========================================
+
+autoUpdater.on('update-available', (info) => {
+  console.log('업데이트 가능:', info.version);
+});
+
+autoUpdater.on('update-downloaded', (info) => {
+  dialog.showMessageBox({
+    type: 'info',
+    title: '업데이트 준비 완료',
+    message: `새 버전(${info.version})이 다운로드되었습니다.\n재시작하여 업데이트를 적용하시겠습니까?`,
+    buttons: ['재시작', '나중에']
+  }).then(result => {
+    if (result.response === 0) {
+      autoUpdater.quitAndInstall();
+    }
+  });
+});
+
+autoUpdater.on('error', (err) => {
+  console.error('업데이트 오류:', err);
 });
 
 // Quit when all windows are closed, except on macOS.

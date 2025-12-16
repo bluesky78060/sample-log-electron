@@ -2790,9 +2790,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('statPendingCount').textContent = stats.pending;
 
         // 차트 렌더링
-        renderBarChart('statsBySampleType', stats.bySampleType, 'type');
+        renderBarChart('statsByCategory', stats.bySubCategory, 'category');
         renderBarChart('statsByPurpose', stats.byPurpose, 'purpose');
-        renderBarChart('statsByMonth', stats.byMonth, 'month');
+        renderMonthlyChart('statsByMonth', stats.byMonth);
+        renderQuarterlySummary('statsQuarterly', stats.byQuarter);
         renderBarChart('statsByReceptionMethod', stats.byReceptionMethod, 'method');
 
         // 모달 표시
@@ -2804,22 +2805,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         const completed = sampleLogs.filter(log => log.isCompleted).length;
         const pending = total - completed;
 
-        // 시료 타입별 집계
-        const bySampleType = {};
-        const typeMapping = {
-            '토양': { label: '🌱 토양', class: 'type-soil' },
-            '물': { label: '💧 물', class: 'type-water' },
-            '잔류농약': { label: '🧫 잔류농약', class: 'type-pesticide' },
-            '가축분뇨퇴비': { label: '🐄 퇴비', class: 'type-compost' },
-            '기타': { label: '📦 기타', class: 'type-other' }
+        // 구분별 집계 (논/밭/과수/시설/성토)
+        const bySubCategory = {};
+        const categoryMapping = {
+            '논': { label: '🌾 논', class: 'category-rice' },
+            '밭': { label: '🥬 밭', class: 'category-field' },
+            '과수': { label: '🍎 과수', class: 'category-fruit' },
+            '시설': { label: '🏠 시설', class: 'category-facility' },
+            '성토': { label: '🏗️ 성토', class: 'category-fill' },
+            '기타': { label: '📦 기타', class: 'category-other' }
         };
 
         sampleLogs.forEach(log => {
-            const type = log.sampleType || '기타';
-            if (!bySampleType[type]) {
-                bySampleType[type] = { count: 0, ...typeMapping[type] || typeMapping['기타'] };
+            const category = log.subCategory || '기타';
+            if (!bySubCategory[category]) {
+                bySubCategory[category] = { count: 0, ...categoryMapping[category] || categoryMapping['기타'] };
             }
-            bySampleType[type].count++;
+            bySubCategory[category].count++;
         });
 
         // 목적(용도)별 집계
@@ -2840,16 +2842,56 @@ document.addEventListener('DOMContentLoaded', async () => {
             byPurpose[purpose].count++;
         });
 
-        // 월별 집계
+        // 월별 집계 (1~12월 전체, 완료/미완료 구분)
         const byMonth = {};
+        const monthNames = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
+
+        // 1~12월 초기화
+        for (let i = 1; i <= 12; i++) {
+            const monthKey = String(i).padStart(2, '0');
+            byMonth[monthKey] = {
+                count: 0,
+                completed: 0,
+                pending: 0,
+                label: monthNames[i - 1],
+                class: 'month'
+            };
+        }
+
+        // 데이터 집계
         sampleLogs.forEach(log => {
             if (log.date) {
-                const month = log.date.substring(0, 7); // YYYY-MM
-                if (!byMonth[month]) {
-                    byMonth[month] = { count: 0, label: month, class: 'month' };
+                const monthNum = log.date.substring(5, 7); // MM
+                if (byMonth[monthNum]) {
+                    byMonth[monthNum].count++;
+                    if (log.isCompleted) {
+                        byMonth[monthNum].completed++;
+                    } else {
+                        byMonth[monthNum].pending++;
+                    }
                 }
-                byMonth[month].count++;
             }
+        });
+
+        // 분기별 집계
+        const byQuarter = {
+            Q1: { count: 0, completed: 0, pending: 0, label: '1분기 (1~3월)' },
+            Q2: { count: 0, completed: 0, pending: 0, label: '2분기 (4~6월)' },
+            Q3: { count: 0, completed: 0, pending: 0, label: '3분기 (7~9월)' },
+            Q4: { count: 0, completed: 0, pending: 0, label: '4분기 (10~12월)' }
+        };
+
+        Object.entries(byMonth).forEach(([monthKey, data]) => {
+            const monthNum = parseInt(monthKey);
+            let quarter;
+            if (monthNum <= 3) quarter = 'Q1';
+            else if (monthNum <= 6) quarter = 'Q2';
+            else if (monthNum <= 9) quarter = 'Q3';
+            else quarter = 'Q4';
+
+            byQuarter[quarter].count += data.count;
+            byQuarter[quarter].completed += data.completed;
+            byQuarter[quarter].pending += data.pending;
         });
 
         // 수령 방법별 집계
@@ -2873,9 +2915,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             total,
             completed,
             pending,
-            bySampleType,
+            bySubCategory,
             byPurpose,
             byMonth,
+            byQuarter,
             byReceptionMethod
         };
     }
@@ -2908,6 +2951,84 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
             `;
         }).join('');
+    }
+
+    /**
+     * 월별 차트 렌더링 (1~12월 전체, 완료/미완료 스택)
+     */
+    function renderMonthlyChart(containerId, data) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        const entries = Object.entries(data).sort((a, b) => a[0].localeCompare(b[0]));
+        const maxCount = Math.max(...entries.map(([, v]) => v.count), 1);
+        const totalCount = entries.reduce((sum, [, v]) => sum + v.count, 0);
+
+        if (totalCount === 0) {
+            container.innerHTML = '<div class="stats-empty">데이터가 없습니다</div>';
+            return;
+        }
+
+        container.innerHTML = `
+            <div class="monthly-chart">
+                <div class="monthly-bars">
+                    ${entries.map(([key, value]) => {
+                        const heightPercent = maxCount > 0 ? (value.count / maxCount) * 100 : 0;
+                        const completedPercent = value.count > 0 ? (value.completed / value.count) * 100 : 0;
+                        return `
+                            <div class="monthly-bar-group">
+                                <div class="monthly-bar-container">
+                                    <div class="monthly-bar-stack" style="height: ${heightPercent}%">
+                                        <div class="monthly-bar-completed" style="height: ${completedPercent}%" title="완료: ${value.completed}건"></div>
+                                        <div class="monthly-bar-pending" style="height: ${100 - completedPercent}%" title="미완료: ${value.pending}건"></div>
+                                    </div>
+                                    ${value.count > 0 ? `<span class="monthly-bar-value">${value.count}</span>` : ''}
+                                </div>
+                                <span class="monthly-bar-label">${value.label}</span>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+                <div class="monthly-legend">
+                    <span class="legend-item"><span class="legend-color completed"></span> 완료</span>
+                    <span class="legend-item"><span class="legend-color pending"></span> 미완료</span>
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * 분기별 요약 렌더링
+     */
+    function renderQuarterlySummary(containerId, data) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        const totalCount = Object.values(data).reduce((sum, q) => sum + q.count, 0);
+
+        container.innerHTML = `
+            <div class="quarterly-summary">
+                ${Object.entries(data).map(([key, value]) => {
+                    const percent = totalCount > 0 ? ((value.count / totalCount) * 100).toFixed(1) : 0;
+                    const completionRate = value.count > 0 ? ((value.completed / value.count) * 100).toFixed(0) : 0;
+                    return `
+                        <div class="quarterly-item">
+                            <div class="quarterly-label">${value.label}</div>
+                            <div class="quarterly-stats">
+                                <span class="quarterly-count">${value.count}건</span>
+                                <span class="quarterly-percent">(${percent}%)</span>
+                            </div>
+                            <div class="quarterly-completion">
+                                <div class="completion-bar">
+                                    <div class="completion-fill" style="width: ${completionRate}%"></div>
+                                </div>
+                                <span class="completion-text">완료율 ${completionRate}%</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
     }
 
     // ========================================

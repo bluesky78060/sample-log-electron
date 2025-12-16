@@ -9,10 +9,24 @@ module.exports = {
     appBundleId: 'com.samplelog.app',
   },
   rebuildConfig: {},
+  publishers: [
+    {
+      name: '@electron-forge/publisher-github',
+      config: {
+        repository: {
+          owner: 'bluesky78060',
+          name: 'sample-log-electron'
+        },
+        prerelease: false
+      }
+    }
+  ],
   makers: [
     {
       name: '@electron-forge/maker-squirrel',
-      config: {},
+      config: {
+        name: 'sample-log'
+      },
     },
     {
       name: '@electron-forge/maker-zip',

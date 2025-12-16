@@ -1315,15 +1315,59 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
         renderStatsChart('statsByTestItems', byTestItems, total);
 
-        // 월별
+        // 월별 집계 (1~12월 전체, 완료/미완료 구분)
         const byMonth = {};
+        const monthNames = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
+
+        // 1~12월 초기화
+        for (let i = 1; i <= 12; i++) {
+            const monthKey = String(i).padStart(2, '0');
+            byMonth[monthKey] = {
+                count: 0,
+                completed: 0,
+                pending: 0,
+                label: monthNames[i - 1]
+            };
+        }
+
+        // 데이터 집계
         sampleLogs.forEach(l => {
             if (l.date) {
-                const month = l.date.substring(0, 7);
-                byMonth[month] = (byMonth[month] || 0) + 1;
+                const monthNum = l.date.substring(5, 7);
+                if (byMonth[monthNum]) {
+                    byMonth[monthNum].count++;
+                    if (l.isComplete) {
+                        byMonth[monthNum].completed++;
+                    } else {
+                        byMonth[monthNum].pending++;
+                    }
+                }
             }
         });
-        renderStatsChart('statsByMonth', byMonth, total);
+
+        // 분기별 집계
+        const byQuarter = {
+            Q1: { count: 0, completed: 0, pending: 0, label: '1분기 (1~3월)' },
+            Q2: { count: 0, completed: 0, pending: 0, label: '2분기 (4~6월)' },
+            Q3: { count: 0, completed: 0, pending: 0, label: '3분기 (7~9월)' },
+            Q4: { count: 0, completed: 0, pending: 0, label: '4분기 (10~12월)' }
+        };
+
+        Object.entries(byMonth).forEach(([monthKey, data]) => {
+            const monthNum = parseInt(monthKey);
+            let quarter;
+            if (monthNum <= 3) quarter = 'Q1';
+            else if (monthNum <= 6) quarter = 'Q2';
+            else if (monthNum <= 9) quarter = 'Q3';
+            else quarter = 'Q4';
+
+            byQuarter[quarter].count += data.count;
+            byQuarter[quarter].completed += data.completed;
+            byQuarter[quarter].pending += data.pending;
+        });
+
+        renderMonthlyChart('statsByMonth', byMonth);
+        renderQuarterlySummary('statsQuarterly', byQuarter);
 
         statisticsModal.classList.remove('hidden');
     }
@@ -1334,18 +1378,112 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const entries = Object.entries(data).sort((a, b) => b[1] - a[1]);
 
+        // 검사항목별 클래스 매핑
+        const testItemsClassMap = {
+            '생활용수': 'test-living',
+            '농업용수': 'test-agricultural'
+        };
+
+        // 시료명별 클래스 매핑
+        const waterTypeClassMap = {
+            '지하수': 'water-underground',
+            '하천수': 'water-river',
+            '저수지': 'water-reservoir',
+            '수돗물': 'water-tap'
+        };
+
         container.innerHTML = entries.map(([label, count]) => {
             const percentage = total > 0 ? ((count / total) * 100).toFixed(1) : 0;
+            // 검사항목별 또는 시료명별 클래스 결정
+            const barClass = testItemsClassMap[label] || waterTypeClassMap[label] || 'water-other';
             return `
                 <div class="stat-bar-item">
                     <div class="stat-bar-label">${label}</div>
                     <div class="stat-bar-wrapper">
-                        <div class="stat-bar-fill" style="width: ${percentage}%"></div>
+                        <div class="stat-bar-fill ${barClass}" style="width: ${percentage}%"></div>
                     </div>
                     <div class="stat-bar-value">${count}건 (${percentage}%)</div>
                 </div>
             `;
         }).join('');
+    }
+
+    /**
+     * 월별 차트 렌더링 (1~12월 전체, 완료/미완료 스택)
+     */
+    function renderMonthlyChart(containerId, data) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        const entries = Object.entries(data).sort((a, b) => a[0].localeCompare(b[0]));
+        const maxCount = Math.max(...entries.map(([, v]) => v.count), 1);
+        const totalCount = entries.reduce((sum, [, v]) => sum + v.count, 0);
+
+        if (totalCount === 0) {
+            container.innerHTML = '<div class="stats-empty">데이터가 없습니다</div>';
+            return;
+        }
+
+        container.innerHTML = `
+            <div class="monthly-chart">
+                <div class="monthly-bars">
+                    ${entries.map(([key, value]) => {
+                        const heightPercent = maxCount > 0 ? (value.count / maxCount) * 100 : 0;
+                        const completedPercent = value.count > 0 ? (value.completed / value.count) * 100 : 0;
+                        return `
+                            <div class="monthly-bar-group">
+                                <div class="monthly-bar-container">
+                                    <div class="monthly-bar-stack" style="height: ${heightPercent}%">
+                                        <div class="monthly-bar-completed" style="height: ${completedPercent}%" title="완료: ${value.completed}건"></div>
+                                        <div class="monthly-bar-pending" style="height: ${100 - completedPercent}%" title="미완료: ${value.pending}건"></div>
+                                    </div>
+                                    ${value.count > 0 ? `<span class="monthly-bar-value">${value.count}</span>` : ''}
+                                </div>
+                                <span class="monthly-bar-label">${value.label}</span>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+                <div class="monthly-legend">
+                    <span class="legend-item"><span class="legend-color completed"></span> 완료</span>
+                    <span class="legend-item"><span class="legend-color pending"></span> 미완료</span>
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * 분기별 요약 렌더링
+     */
+    function renderQuarterlySummary(containerId, data) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        const totalCount = Object.values(data).reduce((sum, q) => sum + q.count, 0);
+
+        container.innerHTML = `
+            <div class="quarterly-summary">
+                ${Object.entries(data).map(([key, value]) => {
+                    const percent = totalCount > 0 ? ((value.count / totalCount) * 100).toFixed(1) : 0;
+                    const completionRate = value.count > 0 ? ((value.completed / value.count) * 100).toFixed(0) : 0;
+                    return `
+                        <div class="quarterly-item">
+                            <div class="quarterly-label">${value.label}</div>
+                            <div class="quarterly-stats">
+                                <span class="quarterly-count">${value.count}건</span>
+                                <span class="quarterly-percent">(${percent}%)</span>
+                            </div>
+                            <div class="quarterly-completion">
+                                <div class="completion-bar">
+                                    <div class="completion-fill" style="width: ${completionRate}%"></div>
+                                </div>
+                                <span class="completion-text">완료율 ${completionRate}%</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
     }
 
     // ========================================
