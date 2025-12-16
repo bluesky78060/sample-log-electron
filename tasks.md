@@ -363,71 +363,92 @@ MCP 도구 및 전문 에이전트를 활용한 종합 코드 분석 결과입�
 
 ### 🟡 보안 이슈
 
-#### 5. DOMPurify CDN 의존성
+#### 5. ✅ DOMPurify CDN 의존성 - **수정 완료**
 **문제**: 외부 CDN에서 DOMPurify 로드 → 공급망 공격 위험
+**해결**: SRI(Subresource Integrity) 해시 추가
 
 ```html
-<!-- 현재: CDN 의존 -->
-<script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
+<!-- 수정 후: SRI 해시 적용 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"
+        integrity="sha384-cwS6YdhLI7XS60eoDiC+egV0qHp8zI+Cms46R0nbn8JrmoAzV9uFL60etMZhAnSu"
+        crossorigin="anonymous"></script>
 ```
 
-**권장**: 로컬 번들링 또는 SRI(Subresource Integrity) 해시 추가
-
-#### 6. localStorage 민감정보 평문 저장
+#### 6. ⏳ localStorage 민감정보 평문 저장 - **미해결**
 **저장 데이터**: 이름, 전화번호, 주소 등 개인정보
 **문제**: 암호화 없이 평문 저장 → 개인정보보호법 위반 가능
+**상태**: 추후 암호화 모듈 도입 검토
 
-#### 7. 파일 경로 검증 누락
-**파일**: `src/index.js:252-269`
+#### 7. ✅ 파일 경로 검증 누락 - **수정 완료**
+**파일**: `src/index.js`
+**해결**: `validateFilePath()` 함수 추가, Path Traversal 공격 방지
 
 ```javascript
-// ❌ 현재: 경로 검증 없음 (Path Traversal 위험)
-ipcMain.handle('write-file', async (event, filePath, content) => {
-    fs.writeFileSync(filePath, content, 'utf8');
-});
+// ✅ 수정 후: 경로 검증 적용
+function validateFilePath(filePath) {
+    // '..' 패턴 차단
+    // 허용된 디렉토리만 접근 가능 (userData, documents, downloads, desktop, home)
+}
 ```
 
 ### 🟢 코드 품질 이슈
 
-#### 8. 대규모 코드 중복
+#### 8. ✅ 대규모 코드 중복 - **부분 해결**
 **현황**: 5개 모듈에서 ~3,000줄 중복
+**해결**: `src/shared/utils.js` 공통 유틸리티 모듈 추출
 
-| 중복 기능 | 예상 중복 라인 |
-|-----------|---------------|
-| Auto-save 로직 | ~1,000줄 |
-| Excel 내보내기 | ~750줄 |
-| JSON 가져오기/내보내기 | ~500줄 |
-| 연도 선택 핸들러 | ~400줄 |
-| 뷰 전환 로직 | ~250줄 |
-| 전화번호 포맷팅 | ~75줄 |
+| 중복 기능 | 상태 |
+|-----------|------|
+| 전화번호 포맷팅 | ✅ 공통화 완료 |
+| 면적 포맷팅 | ✅ 공통화 완료 |
+| Auto-save 로직 | ✅ 공통화 완료 (전체 모듈) |
+| Excel 내보내기 | ❌ 공통화 불가 (모듈별 데이터 구조 상이) |
+| JSON 가져오기/내보내기 | ✅ 공통화 완료 (water, compost, heavy-metal) |
 
-**권장**: `BaseSampleModule` 클래스 추출 → 14,335줄 → ~6,000줄 (58% 감소)
+**Auto-save 공통 함수 (utils.js)**:
+- `initAutoSave(options)` - 초기화 및 기존 파일 로드 (Electron/Web 환경 지원)
+- `performAutoSave(options)` - 자동 저장 실행 (File System Access API 지원)
+- `setupAutoSaveToggle(options)` - 토글 이벤트 핸들러
+- `setupAutoSaveFolderButton(options)` - 폴더 선택 버튼 핸들러
+- `updateAutoSaveStatus(status)` - UI 상태 업데이트
 
-#### 9. parseInt radix 파라미터 누락
+**JSON 공통 함수 (utils.js)**:
+- `saveJSON(options)` - JSON 파일 저장 (FileAPI 사용)
+- `setupJSONSaveHandler(options)` - 저장 버튼 핸들러 설정
+- `setupJSONLoadHandler(options)` - 파일 input 불러오기 핸들러
+- `setupElectronLoadHandler(options)` - Electron 파일 메뉴 불러오기 핸들러
+
+**Excel 내보내기 공통화 불가 사유**:
+- soil/pesticide: parcels/subLots 중첩 구조, id 기반 중복 제거 로직 포함
+- water/compost/heavy-metal: 각각 고유 필드 매핑 (시료명, 농장명, 분석항목 등)
+
+**추가 권장**: `BaseSampleModule` 클래스 추출로 추가 58% 감소 가능
+
+#### 9. ✅ parseInt radix 파라미터 누락 - **수정 완료**
+**해결**: 모든 `parseInt()` 호출에 radix(10) 파라미터 추가
+
 ```javascript
-// ❌ 잘못된 코드
-const subLotIndex = parseInt(target.dataset.index);
-
-// ✅ 올바른 코드
+// ✅ 수정 완료
 const subLotIndex = parseInt(target.dataset.index, 10);
 ```
 
-#### 10. Excel 라이브러리 버전 불일치
-| 모듈 | 버전 |
-|------|------|
-| soil, water, pesticide, heavy-metal | 0.18.5 |
-| compost, label-print | 0.20.1 |
+#### 10. ✅ Excel 라이브러리 버전 불일치 - **수정 완료**
+**해결**: 모든 모듈에서 SheetJS xlsx 0.20.1로 통일
 
-### 📊 보안 점수 요약
+| 모듈 | 버전 | 상태 |
+|------|------|------|
+| 모든 모듈 | 0.20.1 | ✅ 통일 완료 |
+
+### 📊 보안 점수 요약 (수정 후)
 
 | 카테고리 | 점수 | 상태 |
 |----------|------|------|
 | Electron 설정 | 9/10 | ✅ 우수 |
-| XSS 보호 | 7/10 | 🟡 양호 (CDN 위험) |
-| 입력 검증 | 5/10 | ⚠️ 개선 필요 |
-| 데이터 저장 보안 | 3/10 | 🔴 심각 |
-| 파일 시스템 보안 | 6/10 | ⚠️ 검증 필요 |
-| **종합** | **6/10** | 🟡 **보통** |
+| XSS 보호 | 9/10 | ✅ 우수 (SRI 적용) |
+| 입력 검증 | 6/10 | 🟡 양호 |
+| 데이터 저장 보안 | 3/10 | 🔴 심각 (암호화 필요) |
+| 파일 시스템 보안 | 8/10 | ✅ 양호 (경로 검증 적용) |
+| **종합** | **7/10** | 🟡 **양호** |
 
 ### ✅ 긍정적 보안 사항
 
@@ -435,18 +456,35 @@ const subLotIndex = parseInt(target.dataset.index, 10);
 2. `escapeHTML()` 함수로 XSS 방지 일관 적용 (112+ 사용)
 3. IPC API 최소화 및 Context Bridge 안전 구현
 4. 자동 저장 경로 샌드박스 (`userData` 디렉토리)
+5. **[NEW]** DOMPurify SRI 해시 적용 (공급망 공격 방지)
+6. **[NEW]** 파일 경로 검증으로 Path Traversal 방지
 
-### 🎯 수정 우선순위
+### 🎯 수정 우선순위 (업데이트)
 
-| 우선순위 | 작업 | 예상 시간 |
-|----------|------|-----------|
-| 🔴 1 | `window.window` 타이포 수정 | 30분 |
-| 🔴 2 | localStorage 키 충돌 수정 | 1시간 |
-| 🔴 3 | JSON.parse 에러 핸들링 추가 | 2시간 |
-| 🔴 4 | 미정의 변수 (`selectedYear`) 수정 | 30분 |
-| 🟡 5 | 파일 경로 검증 추가 | 2시간 |
-| 🟡 6 | DOMPurify 로컬 번들링 | 4시간 |
-| 🟢 7 | 코드 중복 제거 (리팩토링) | 1-2주 |
+| 우선순위 | 작업 | 상태 |
+|----------|------|------|
+| ✅ 1 | `window.window` 타이포 수정 | 완료 |
+| ✅ 2 | localStorage 키 충돌 수정 | 완료 |
+| ⏳ 3 | JSON.parse 에러 핸들링 추가 | 추후 진행 |
+| ✅ 4 | 미정의 변수 (`selectedYear`) 수정 | 완료 |
+| ✅ 5 | 파일 경로 검증 추가 | 완료 |
+| ✅ 6 | DOMPurify SRI 해시 추가 | 완료 |
+| ✅ 7 | parseInt radix 추가 | 완료 |
+| ✅ 8 | Excel 라이브러리 버전 통일 | 완료 |
+| ⏳ 9 | 코드 중복 제거 (리팩토링) | 부분 완료 |
+| ⏳ 10 | localStorage 암호화 | 추후 진행 |
+
+### 📝 커밋 이력 (2024-12-16)
+
+| 커밋 | 설명 |
+|------|------|
+| `1a441ab` | fix: Critical 버그 수정 (환경 감지, localStorage 키 충돌, 미정의 변수) |
+| `7cc6a62` | refactor: 공통 유틸리티 모듈 추출로 코드 중복 제거 |
+| `6765621` | fix: parseInt radix 파라미터 추가 |
+| `a93ce1e` | chore: Excel 라이브러리 버전 통일 (0.20.1) |
+| `328d2c5` | security: 파일 경로 검증 추가 (Path Traversal 방지) |
+| `f8474cc` | security: DOMPurify CDN에 SRI 해시 추가 |
+| - | refactor: Auto-save 로직 공통화 (pesticide 모듈 적용) |
 
 ---
 

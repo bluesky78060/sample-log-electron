@@ -217,51 +217,110 @@ function migrateOldData(oldKey, newKey, log = console.log) {
 }
 
 /**
- * 자동 저장 초기화 (Electron 환경)
+ * 자동 저장 상태 UI 업데이트
+ * @param {string} status - 상태 (active, inactive, saving, error, pending, syncing)
+ */
+function updateAutoSaveStatus(status) {
+    const autoSaveStatus = document.getElementById('autoSaveStatus');
+    if (!autoSaveStatus) return;
+
+    const statusDot = autoSaveStatus.querySelector('.status-dot');
+    const statusText = autoSaveStatus.querySelector('.status-text');
+
+    autoSaveStatus.classList.remove('hidden', 'active', 'saving', 'error');
+
+    switch (status) {
+        case 'active':
+            autoSaveStatus.classList.add('active');
+            if (statusText) statusText.textContent = '자동저장 활성';
+            autoSaveStatus.classList.remove('hidden');
+            break;
+        case 'saving':
+            autoSaveStatus.classList.add('saving');
+            if (statusText) statusText.textContent = '저장 중...';
+            autoSaveStatus.classList.remove('hidden');
+            break;
+        case 'syncing':
+            autoSaveStatus.classList.add('saving');
+            if (statusText) statusText.textContent = '동기화 중...';
+            autoSaveStatus.classList.remove('hidden');
+            break;
+        case 'error':
+            autoSaveStatus.classList.add('error');
+            if (statusText) statusText.textContent = '저장 오류';
+            autoSaveStatus.classList.remove('hidden');
+            break;
+        case 'pending':
+            autoSaveStatus.classList.add('active');
+            if (statusText) statusText.textContent = '대기 중';
+            autoSaveStatus.classList.remove('hidden');
+            break;
+        case 'inactive':
+        default:
+            autoSaveStatus.classList.add('hidden');
+            if (statusText) statusText.textContent = '';
+            break;
+    }
+}
+
+/**
+ * 자동 저장 초기화 (Electron & Web 환경 지원)
  * @param {Object} options - 옵션
  * @param {string} options.moduleKey - 모듈 키 (soil, water, etc.)
  * @param {string} options.moduleName - 모듈 이름 (한글)
  * @param {Object} options.FileAPI - 파일 API 인스턴스
  * @param {string} options.currentYear - 현재 연도
  * @param {Function} [options.log] - 로그 함수
+ * @param {Function} [options.showToast] - 토스트 메시지 함수
  */
 async function initAutoSave(options) {
-    const { moduleKey, moduleName, FileAPI, currentYear, log = console.log } = options;
-
-    if (!window.isElectron) return;
+    const { moduleKey, moduleName, FileAPI, currentYear, log = console.log, showToast } = options;
 
     const autoSaveToggle = document.getElementById('autoSaveToggle');
     const folderSelectedKey = `${moduleKey}AutoSaveFolderSelected`;
     const enabledKey = `${moduleKey}AutoSaveEnabled`;
-    const hasSelectedFolder = localStorage.getItem(folderSelectedKey) === 'true';
 
-    if (!hasSelectedFolder) {
-        // 잠시 후 폴더 선택 다이얼로그 표시 (UI 로드 후)
-        setTimeout(async () => {
-            const confirmSelect = confirm(`${moduleName} 자동 저장 기능을 사용하시겠습니까?\n\n저장할 폴더를 선택해주세요.`);
-            if (confirmSelect) {
-                try {
-                    const result = await window.electronAPI.selectAutoSaveFolder();
-                    if (result.success) {
-                        FileAPI.autoSavePath = await window.electronAPI.getAutoSavePath(moduleKey, currentYear);
-                        localStorage.setItem(folderSelectedKey, 'true');
-                        localStorage.setItem(enabledKey, 'true');
-                        if (autoSaveToggle) {
-                            autoSaveToggle.checked = true;
-                            autoSaveToggle.dispatchEvent(new Event('change'));
+    if (window.isElectron) {
+        // Electron 환경
+        const hasSelectedFolder = localStorage.getItem(folderSelectedKey) === 'true';
+
+        if (!hasSelectedFolder) {
+            // 잠시 후 폴더 선택 다이얼로그 표시 (UI 로드 후)
+            setTimeout(async () => {
+                const confirmSelect = confirm(`${moduleName} 자동 저장 기능을 사용하시겠습니까?\n\n저장할 폴더를 선택해주세요.`);
+                if (confirmSelect) {
+                    try {
+                        const result = await window.electronAPI.selectAutoSaveFolder();
+                        if (result.success) {
+                            FileAPI.autoSavePath = await window.electronAPI.getAutoSavePath(moduleKey, currentYear);
+                            localStorage.setItem(folderSelectedKey, 'true');
+                            localStorage.setItem(enabledKey, 'true');
+                            if (autoSaveToggle) {
+                                autoSaveToggle.checked = true;
+                                autoSaveToggle.dispatchEvent(new Event('change'));
+                            }
+                            updateAutoSaveStatus('active');
+                            log(`📁 ${moduleName} 자동 저장 폴더 설정됨:`, result.folder);
                         }
-                        log(`📁 ${moduleName} 자동 저장 폴더 설정됨:`, result.folder);
+                    } catch (error) {
+                        console.error('폴더 선택 오류:', error);
                     }
-                } catch (error) {
-                    console.error('폴더 선택 오류:', error);
                 }
+            }, 500);
+        } else {
+            // 이전에 폴더를 선택한 경우, 자동 저장 기본 활성화
+            localStorage.setItem(enabledKey, 'true');
+            if (autoSaveToggle) {
+                autoSaveToggle.checked = true;
             }
-        }, 500);
+            updateAutoSaveStatus('active');
+        }
     } else {
-        // 이전에 폴더를 선택한 경우, 자동 저장 기본 활성화
-        localStorage.setItem(enabledKey, 'true');
-        if (autoSaveToggle) {
+        // Web 환경 - 자동저장 상태 복원
+        const autoSaveEnabled = localStorage.getItem(enabledKey) === 'true';
+        if (autoSaveToggle && autoSaveEnabled) {
             autoSaveToggle.checked = true;
+            updateAutoSaveStatus('pending');
         }
     }
 }
@@ -292,36 +351,240 @@ async function loadFromAutoSaveFile(FileAPI, log = console.log) {
 }
 
 /**
- * 자동 저장 수행
+ * 자동 저장 수행 (Electron & Web 환경 지원)
  * @param {Object} options - 옵션
  * @param {Object} options.FileAPI - 파일 API 인스턴스
  * @param {string} options.moduleKey - 모듈 키
  * @param {Array} options.data - 저장할 데이터
+ * @param {Object} [options.webFileHandle] - Web File System API 파일 핸들
  * @param {Function} [options.log] - 로그 함수
  * @returns {Promise<boolean>} 성공 여부
  */
 async function performAutoSave(options) {
-    const { FileAPI, moduleKey, data, log = console.log } = options;
+    const { FileAPI, moduleKey, data, webFileHandle, log = console.log } = options;
     const enabledKey = `${moduleKey}AutoSaveEnabled`;
 
-    if (!window.isElectron) return false;
     if (localStorage.getItem(enabledKey) !== 'true') return false;
-    if (!FileAPI.autoSavePath) return false;
+
+    const saveData = JSON.stringify({
+        version: '2.0',
+        exportDate: new Date().toISOString(),
+        totalRecords: data.length,
+        data: data
+    }, null, 2);
 
     try {
-        const saveData = JSON.stringify({
-            timestamp: new Date().toISOString(),
-            data: data
-        }, null, 2);
+        updateAutoSaveStatus('saving');
 
-        const success = await FileAPI.autoSave(saveData);
-        if (success) {
-            log('💾 자동 저장 완료');
+        if (window.isElectron) {
+            // Electron 환경
+            if (!FileAPI.autoSavePath) {
+                updateAutoSaveStatus('error');
+                return false;
+            }
+            const success = await FileAPI.autoSave(saveData);
+            if (success) {
+                log('💾 자동 저장 완료');
+                updateAutoSaveStatus('active');
+            } else {
+                updateAutoSaveStatus('error');
+            }
+            return success;
+        } else {
+            // Web 환경
+            if (!webFileHandle) {
+                updateAutoSaveStatus('error');
+                return false;
+            }
+            try {
+                const writable = await webFileHandle.createWritable();
+                await writable.write(saveData);
+                await writable.close();
+                log('💾 자동 저장 완료 (Web)');
+                updateAutoSaveStatus('active');
+                return true;
+            } catch (error) {
+                if (webFileHandle) {
+                    console.error('Web 자동 저장 오류:', error);
+                }
+                updateAutoSaveStatus('error');
+                return false;
+            }
         }
-        return success;
     } catch (error) {
         console.error('자동 저장 오류:', error);
+        updateAutoSaveStatus('error');
         return false;
+    }
+}
+
+/**
+ * 자동 저장 토글 이벤트 설정
+ * @param {Object} options - 옵션
+ * @param {string} options.moduleKey - 모듈 키
+ * @param {Object} options.FileAPI - 파일 API 인스턴스
+ * @param {Function} options.getWebFileHandle - Web 파일 핸들 getter
+ * @param {Function} options.setWebFileHandle - Web 파일 핸들 setter
+ * @param {Function} options.autoSaveCallback - 자동 저장 실행 콜백
+ * @param {Function} [options.showToast] - 토스트 메시지 함수
+ * @param {Function} [options.log] - 로그 함수
+ */
+function setupAutoSaveToggle(options) {
+    const {
+        moduleKey,
+        FileAPI,
+        getWebFileHandle,
+        setWebFileHandle,
+        autoSaveCallback,
+        showToast,
+        log = console.log
+    } = options;
+
+    const autoSaveToggle = document.getElementById('autoSaveToggle');
+    const enabledKey = `${moduleKey}AutoSaveEnabled`;
+
+    if (!autoSaveToggle) return;
+
+    autoSaveToggle.addEventListener('change', async () => {
+        try {
+            // 토글 OFF - 자동저장 비활성화
+            if (!autoSaveToggle.checked) {
+                if (setWebFileHandle) setWebFileHandle(null);
+                localStorage.setItem(enabledKey, 'false');
+                updateAutoSaveStatus('inactive');
+                return;
+            }
+
+            // 토글 ON - 자동저장 활성화
+            if (window.isElectron) {
+                // Electron: 자동 저장 경로 사용
+                localStorage.setItem(enabledKey, 'true');
+                updateAutoSaveStatus('active');
+                if (autoSaveCallback) await autoSaveCallback();
+                if (showToast) showToast('자동 저장이 활성화되었습니다.', 'success');
+            } else {
+                // Web: 파일 선택 다이얼로그
+                if (!('showSaveFilePicker' in window)) {
+                    alert('이 브라우저는 자동 저장 기능을 지원하지 않습니다.\nChrome, Edge 브라우저를 사용해주세요.');
+                    autoSaveToggle.checked = false;
+                    return;
+                }
+
+                const today = new Date().toISOString().slice(0, 10);
+                const handle = await window.showSaveFilePicker({
+                    suggestedName: `시료접수대장_${today}.json`,
+                    types: [{
+                        description: 'JSON Files',
+                        accept: { 'application/json': ['.json'] }
+                    }]
+                });
+
+                if (setWebFileHandle) setWebFileHandle(handle);
+                localStorage.setItem(enabledKey, 'true');
+                updateAutoSaveStatus('active');
+                if (autoSaveCallback) await autoSaveCallback();
+                if (showToast) showToast('자동 저장이 활성화되었습니다.', 'success');
+            }
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                autoSaveToggle.checked = false;
+                updateAutoSaveStatus('inactive');
+            } else {
+                console.error('자동 저장 설정 오류:', error);
+                alert('자동 저장 설정에 실패했습니다.');
+                autoSaveToggle.checked = false;
+                localStorage.setItem(enabledKey, 'false');
+                updateAutoSaveStatus('inactive');
+            }
+        }
+    });
+}
+
+/**
+ * 자동 저장 폴더 선택 버튼 설정
+ * @param {Object} options - 옵션
+ * @param {string} options.moduleKey - 모듈 키
+ * @param {Object} options.FileAPI - 파일 API 인스턴스
+ * @param {string} options.selectedYear - 현재 선택된 연도
+ * @param {Function} options.getWebFileHandle - Web 파일 핸들 getter
+ * @param {Function} options.setWebFileHandle - Web 파일 핸들 setter
+ * @param {Function} options.autoSaveCallback - 자동 저장 실행 콜백
+ * @param {Function} [options.showToast] - 토스트 메시지 함수
+ */
+function setupAutoSaveFolderButton(options) {
+    const {
+        moduleKey,
+        FileAPI,
+        selectedYear,
+        getWebFileHandle,
+        setWebFileHandle,
+        autoSaveCallback,
+        showToast
+    } = options;
+
+    const selectAutoSaveFolderBtn = document.getElementById('selectAutoSaveFolderBtn');
+    const autoSaveToggle = document.getElementById('autoSaveToggle');
+    const enabledKey = `${moduleKey}AutoSaveEnabled`;
+
+    if (!selectAutoSaveFolderBtn) return;
+
+    if (window.isElectron) {
+        // Electron 환경
+        selectAutoSaveFolderBtn.addEventListener('click', async () => {
+            try {
+                const result = await window.electronAPI.selectAutoSaveFolder();
+                if (result.success) {
+                    FileAPI.autoSavePath = await window.electronAPI.getAutoSavePath(moduleKey, selectedYear);
+                    if (showToast) showToast(`저장 폴더가 변경되었습니다:\n${result.folder}`, 'success');
+
+                    if (autoSaveToggle && autoSaveToggle.checked) {
+                        if (autoSaveCallback) await autoSaveCallback();
+                    }
+                } else if (!result.canceled) {
+                    if (showToast) showToast('폴더 선택에 실패했습니다.', 'error');
+                }
+            } catch (error) {
+                console.error('폴더 선택 오류:', error);
+                if (showToast) showToast('폴더 선택 중 오류가 발생했습니다.', 'error');
+            }
+        });
+
+        // 현재 폴더 경로를 툴팁에 표시
+        (async () => {
+            try {
+                const folder = await window.electronAPI.getAutoSaveFolder();
+                selectAutoSaveFolderBtn.title = `저장 폴더: ${folder}`;
+            } catch (error) {
+                console.error('폴더 경로 조회 오류:', error);
+            }
+        })();
+    } else {
+        // Web 환경
+        selectAutoSaveFolderBtn.title = '자동저장 파일 선택';
+        selectAutoSaveFolderBtn.addEventListener('click', async () => {
+            try {
+                if ('showSaveFilePicker' in window) {
+                    const handle = await window.showSaveFilePicker({
+                        suggestedName: 'sample-logs-autosave.json',
+                        types: [{ description: 'JSON Files', accept: { 'application/json': ['.json'] } }]
+                    });
+                    if (setWebFileHandle) setWebFileHandle(handle);
+                    if (showToast) showToast('자동저장 파일이 설정되었습니다.', 'success');
+                    if (autoSaveToggle) {
+                        autoSaveToggle.checked = true;
+                        localStorage.setItem(enabledKey, 'true');
+                    }
+                    if (autoSaveCallback) await autoSaveCallback();
+                } else {
+                    if (showToast) showToast('이 브라우저에서는 파일 선택을 지원하지 않습니다.', 'error');
+                }
+            } catch (error) {
+                if (error.name !== 'AbortError') {
+                    console.error('파일 선택 오류:', error);
+                    if (showToast) showToast('파일 선택 중 오류가 발생했습니다.', 'error');
+                }
+            }
+        });
     }
 }
 
@@ -387,6 +650,159 @@ function generateUUID() {
     });
 }
 
+/**
+ * JSON 파일 저장 (공통 함수)
+ * @param {Object} options - 옵션
+ * @param {string} options.sampleType - 시료 타입 이름 (예: '토양', '수질분석')
+ * @param {Array} options.data - 저장할 데이터 배열
+ * @param {Object} options.FileAPI - 파일 API 인스턴스
+ * @param {string} options.filePrefix - 파일명 접두사 (예: 'soil-samples', '토양중금속')
+ * @param {Function} [options.showToast] - 토스트 메시지 함수
+ * @returns {Promise<boolean>} 저장 성공 여부
+ */
+async function saveJSON(options) {
+    const { sampleType, data, FileAPI, filePrefix, showToast } = options;
+
+    if (!data || data.length === 0) {
+        if (showToast) showToast('저장할 데이터가 없습니다.', 'error');
+        return false;
+    }
+
+    const dataToSave = {
+        version: '2.0',
+        exportDate: new Date().toISOString(),
+        sampleType: sampleType,
+        totalRecords: data.length,
+        data: data
+    };
+
+    const content = JSON.stringify(dataToSave, null, 2);
+    const fileName = `${filePrefix}_${new Date().toISOString().split('T')[0]}.json`;
+    const success = await FileAPI.saveFile(content, fileName);
+
+    if (success && showToast) {
+        showToast('JSON 파일이 저장되었습니다.', 'success');
+    }
+
+    return success;
+}
+
+/**
+ * JSON 파일 불러오기 핸들러 설정 (파일 input 요소용)
+ * @param {Object} options - 옵션
+ * @param {HTMLInputElement} options.inputElement - 파일 input 요소
+ * @param {Function} options.getData - 현재 데이터 getter
+ * @param {Function} options.setData - 데이터 setter
+ * @param {Function} options.saveData - 데이터 저장 함수
+ * @param {Function} options.renderData - 데이터 렌더링 함수
+ * @param {Function} [options.showToast] - 토스트 메시지 함수
+ */
+function setupJSONLoadHandler(options) {
+    const { inputElement, getData, setData, saveData, renderData, showToast } = options;
+
+    if (!inputElement) return;
+
+    inputElement.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        try {
+            const text = await file.text();
+            const parsed = JSON.parse(text);
+            const loadedData = parsed.data || parsed;
+
+            if (Array.isArray(loadedData)) {
+                const currentData = getData();
+                if (confirm(`${loadedData.length}건의 데이터를 불러옵니다. 기존 데이터에 추가하시겠습니까?\n\n(취소 선택 시 기존 데이터를 대체합니다)`)) {
+                    setData([...currentData, ...loadedData]);
+                } else {
+                    setData(loadedData);
+                }
+                saveData();
+                renderData();
+                if (showToast) showToast(`${loadedData.length}건의 데이터를 불러왔습니다.`, 'success');
+            } else {
+                if (showToast) showToast('파일 형식이 올바르지 않습니다.', 'error');
+            }
+        } catch (error) {
+            console.error('JSON 파일 로드 오류:', error);
+            if (showToast) showToast('파일을 읽는 중 오류가 발생했습니다.', 'error');
+        }
+
+        inputElement.value = '';
+    });
+}
+
+/**
+ * Electron 파일 메뉴 불러오기 핸들러 설정
+ * @param {Object} options - 옵션
+ * @param {HTMLElement} options.buttonElement - 불러오기 버튼 요소
+ * @param {Object} options.FileAPI - 파일 API 인스턴스
+ * @param {Function} options.getData - 현재 데이터 getter
+ * @param {Function} options.setData - 데이터 setter
+ * @param {Function} options.saveData - 데이터 저장 함수
+ * @param {Function} options.renderData - 데이터 렌더링 함수
+ * @param {Function} [options.showToast] - 토스트 메시지 함수
+ */
+function setupElectronLoadHandler(options) {
+    const { buttonElement, FileAPI, getData, setData, saveData, renderData, showToast } = options;
+
+    if (!buttonElement) return;
+
+    buttonElement.addEventListener('click', async () => {
+        const content = await FileAPI.openFile();
+        if (!content) return;
+
+        try {
+            const parsed = JSON.parse(content);
+            const loadedData = parsed.data || parsed;
+
+            if (Array.isArray(loadedData)) {
+                const currentData = getData();
+                if (confirm(`${loadedData.length}건의 데이터를 불러옵니다. 기존 데이터에 추가하시겠습니까?\n\n(취소 선택 시 기존 데이터를 대체합니다)`)) {
+                    setData([...currentData, ...loadedData]);
+                } else {
+                    setData(loadedData);
+                }
+                saveData();
+                renderData();
+                if (showToast) showToast(`${loadedData.length}건의 데이터를 불러왔습니다.`, 'success');
+            } else {
+                if (showToast) showToast('파일 형식이 올바르지 않습니다.', 'error');
+            }
+        } catch (error) {
+            console.error('JSON 파일 로드 오류:', error);
+            if (showToast) showToast('파일을 읽는 중 오류가 발생했습니다.', 'error');
+        }
+    });
+}
+
+/**
+ * JSON 저장 버튼 핸들러 설정
+ * @param {Object} options - 옵션
+ * @param {HTMLElement} options.buttonElement - 저장 버튼 요소
+ * @param {string} options.sampleType - 시료 타입 이름
+ * @param {Function} options.getData - 데이터 getter
+ * @param {Object} options.FileAPI - 파일 API 인스턴스
+ * @param {string} options.filePrefix - 파일명 접두사
+ * @param {Function} [options.showToast] - 토스트 메시지 함수
+ */
+function setupJSONSaveHandler(options) {
+    const { buttonElement, sampleType, getData, FileAPI, filePrefix, showToast } = options;
+
+    if (!buttonElement) return;
+
+    buttonElement.addEventListener('click', async () => {
+        await saveJSON({
+            sampleType,
+            data: getData(),
+            FileAPI,
+            filePrefix,
+            showToast
+        });
+    });
+}
+
 // 전역으로 내보내기
 window.SampleUtils = {
     // 포맷팅
@@ -408,9 +824,18 @@ window.SampleUtils = {
     migrateOldData,
 
     // 자동 저장
+    updateAutoSaveStatus,
     initAutoSave,
     loadFromAutoSaveFile,
     performAutoSave,
+    setupAutoSaveToggle,
+    setupAutoSaveFolderButton,
+
+    // JSON 저장/불러오기
+    saveJSON,
+    setupJSONLoadHandler,
+    setupElectronLoadHandler,
+    setupJSONSaveHandler,
 
     // 유틸리티
     createLogger,
