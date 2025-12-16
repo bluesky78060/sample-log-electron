@@ -54,7 +54,7 @@ function getStorageKey(year) {
 }
 
 // 공통 모듈에서 가져온 변수/함수 사용 (../shared/*.js)
-// window.window.isElectron, window.createFileAPI 등 전역 변수 사용
+// window.isElectron, window.createFileAPI 등 전역 변수 사용
 const FileAPI = window.createFileAPI('heavy-metal');
 
 // heavy-metal 전용 웹 환경 자동저장 확장

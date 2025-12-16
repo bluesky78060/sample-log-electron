@@ -43,7 +43,7 @@ let totalPages = 1;
 let currentLogsData = [];
 
 // 공통 모듈에서 가져온 변수/함수 사용 (../shared/*.js)
-// window.window.isElectron, window.createFileAPI 등 전역 변수 사용
+// window.isElectron, window.createFileAPI 등 전역 변수 사용
 const FileAPI = window.createFileAPI('compost');
 
 // compost 전용 엑셀 저장 함수 추가
@@ -86,7 +86,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     try {
                         const result = await window.electronAPI.selectAutoSaveFolder();
                         if (result.success) {
-                            FileAPI.autoSavePath = await window.electronAPI.getAutoSavePath('compost', selectedYear);
+                            FileAPI.autoSavePath = await window.electronAPI.getAutoSavePath('compost', currentYear);
                             localStorage.setItem('compostAutoSaveFolderSelected', 'true');
                             localStorage.setItem('compostAutoSaveEnabled', 'true');
                             if (autoSaveToggle) {

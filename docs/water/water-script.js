@@ -27,12 +27,12 @@ const DEBUG = false;
 const log = (...args) => DEBUG && console.log(...args);
 
 // 공통 모듈에서 가져온 변수/함수 사용 (../shared/*.js)
-// window.window.isElectron, window.createFileAPI 등 전역 변수 사용
+// window.isElectron, window.createFileAPI 등 전역 변수 사용
 const FileAPI = window.createFileAPI('water');
 
 document.addEventListener('DOMContentLoaded', async () => {
     log('🚀 수질분석 페이지 로드 시작');
-    log(window.window.isElectron ? '🖥️ Electron 환경' : '🌐 웹 브라우저 환경');
+    log(window.isElectron ? '🖥️ Electron 환경' : '🌐 웹 브라우저 환경');
 
     // 파일 API 초기화 (현재 년도로)
     const currentYear = new Date().getFullYear().toString();
@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     try {
                         const result = await window.electronAPI.selectAutoSaveFolder();
                         if (result.success) {
-                            FileAPI.autoSavePath = await window.electronAPI.getAutoSavePath('water', selectedYear);
+                            FileAPI.autoSavePath = await window.electronAPI.getAutoSavePath('water', currentYear);
                             localStorage.setItem('waterAutoSaveFolderSelected', 'true');
                             localStorage.setItem('waterAutoSaveEnabled', 'true');
                             if (autoSaveToggle) {

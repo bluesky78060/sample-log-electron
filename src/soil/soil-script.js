@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (window.isElectron) {
         const autoSaveToggle = document.getElementById('autoSaveToggle');
-        const hasSelectedFolder = localStorage.getItem('autoSaveFolderSelected') === 'true';
+        const hasSelectedFolder = localStorage.getItem('soilAutoSaveFolderSelected') === 'true';
 
         // 처음 실행이거나 폴더가 선택되지 않은 경우
         if (!hasSelectedFolder) {
@@ -73,8 +73,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                         const result = await window.electronAPI.selectAutoSaveFolder();
                         if (result.success) {
                             FileAPI.autoSavePath = await window.electronAPI.getAutoSavePath('soil', currentYear);
-                            localStorage.setItem('autoSaveFolderSelected', 'true');
-                            localStorage.setItem('autoSaveEnabled', 'true');
+                            localStorage.setItem('soilAutoSaveFolderSelected', 'true');
+                            localStorage.setItem('soilAutoSaveEnabled', 'true');
                             if (autoSaveToggle) {
                                 autoSaveToggle.checked = true;
                                 // change 이벤트를 직접 트리거하여 자동 저장 활성화
@@ -89,7 +89,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }, 500);
         } else {
             // 이전에 폴더를 선택한 경우, 자동 저장 기본 활성화
-            localStorage.setItem('autoSaveEnabled', 'true');
+            localStorage.setItem('soilAutoSaveEnabled', 'true');
             if (autoSaveToggle) {
                 autoSaveToggle.checked = true;
             }
@@ -3359,7 +3359,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     showToast('자동저장 파일이 설정되었습니다.', 'success');
                     if (autoSaveToggle) {
                         autoSaveToggle.checked = true;
-                        localStorage.setItem('autoSaveEnabled', 'true');
+                        localStorage.setItem('soilAutoSaveEnabled', 'true');
                     }
                     await autoSaveToFile();
                 } else {
@@ -3474,7 +3474,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ========================================
 
     // 페이지 로드 시 자동 저장 상태 복원
-    const autoSaveEnabled = localStorage.getItem('autoSaveEnabled') === 'true';
+    const autoSaveEnabled = localStorage.getItem('soilAutoSaveEnabled') === 'true';
     if (autoSaveToggle && autoSaveEnabled) {
         autoSaveToggle.checked = true;
 
@@ -3504,7 +3504,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         if (error.name === 'AbortError') {
                             updateAutoSaveStatus('inactive');
                             autoSaveToggle.checked = false;
-                            localStorage.setItem('autoSaveEnabled', 'false');
+                            localStorage.setItem('soilAutoSaveEnabled', 'false');
                         }
                     }
                 })();
@@ -3518,7 +3518,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // 토글 OFF - 자동저장 비활성화
                 if (!autoSaveToggle.checked) {
                     autoSaveFileHandle = null;
-                    localStorage.setItem('autoSaveEnabled', 'false');
+                    localStorage.setItem('soilAutoSaveEnabled', 'false');
                     updateAutoSaveStatus('inactive');
                     return;
                 }
@@ -3526,7 +3526,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // 토글 ON - 자동저장 활성화
                 if (window.isElectron) {
                     // Electron: 자동 저장 경로 사용
-                    localStorage.setItem('autoSaveEnabled', 'true');
+                    localStorage.setItem('soilAutoSaveEnabled', 'true');
                     updateAutoSaveStatus('active');
                     await autoSaveToFile();
                     showToast('자동 저장이 활성화되었습니다.', 'success');
@@ -3547,7 +3547,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         }]
                     });
 
-                    localStorage.setItem('autoSaveEnabled', 'true');
+                    localStorage.setItem('soilAutoSaveEnabled', 'true');
                     updateAutoSaveStatus('active');
                     await autoSaveToFile();
                     showToast('자동 저장이 활성화되었습니다.', 'success');
@@ -3561,7 +3561,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     console.error('자동 저장 설정 오류:', error);
                     alert('자동 저장 설정에 실패했습니다.');
                     autoSaveToggle.checked = false;
-                    localStorage.setItem('autoSaveEnabled', 'false');
+                    localStorage.setItem('soilAutoSaveEnabled', 'false');
                     updateAutoSaveStatus('inactive');
                 }
             }
@@ -3674,7 +3674,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         localStorage.setItem(yearStorageKey, JSON.stringify(sampleLogs));
 
         // 자동 저장 실행 (Electron: FileAPI.autoSavePath, Web: autoSaveFileHandle)
-        const autoSaveEnabled = localStorage.getItem('autoSaveEnabled') === 'true';
+        const autoSaveEnabled = localStorage.getItem('soilAutoSaveEnabled') === 'true';
         if (autoSaveEnabled && (window.isElectron ? FileAPI.autoSavePath : autoSaveFileHandle)) {
             autoSaveToFile();
         }
