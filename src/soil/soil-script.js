@@ -154,24 +154,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateListViewTitle();
 
     // ========================================
-    // 면적 포맷팅 함수
+    // 면적 포맷팅 함수 - 공통 모듈 사용
     // ========================================
-    // 숫자 천 단위 구분자 포맷팅
-    function formatArea(value) {
-        const num = parseFloat(value);
-        if (isNaN(num)) return '0';
-        return num.toLocaleString('ko-KR');
-    }
-
-    // 단위 문자열 반환
-    function getUnitLabel(unit) {
-        return unit === 'pyeong' ? '평' : '㎡';
-    }
-
-    // 면적과 단위를 함께 포맷팅
-    function formatAreaWithUnit(area, unit) {
-        return `${formatArea(area)} ${getUnitLabel(unit)}`;
-    }
+    const { formatArea, getUnitLabel, formatAreaWithUnit } = window.SampleUtils;
 
     // ========================================
     // 새로운 UI - 네비게이션 시스템
@@ -266,28 +251,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const purposeSelect = document.getElementById('purpose');
 
     // ========================================
-    // Phone Number Auto Hyphen
+    // Phone Number Auto Hyphen - 공통 모듈 사용
     // ========================================
     const phoneNumberInput = document.getElementById('phoneNumber');
-
-    if (phoneNumberInput) {
-        phoneNumberInput.addEventListener('input', (e) => {
-            let value = e.target.value.replace(/[^0-9]/g, ''); // 숫자만 추출
-            let formattedValue = '';
-
-            if (value.length <= 3) {
-                formattedValue = value;
-            } else if (value.length <= 7) {
-                formattedValue = value.slice(0, 3) + '-' + value.slice(3);
-            } else if (value.length <= 11) {
-                formattedValue = value.slice(0, 3) + '-' + value.slice(3, 7) + '-' + value.slice(7);
-            } else {
-                formattedValue = value.slice(0, 3) + '-' + value.slice(3, 7) + '-' + value.slice(7, 11);
-            }
-
-            e.target.value = formattedValue;
-        });
-    }
+    window.SampleUtils.setupPhoneNumberInput(phoneNumberInput);
 
     // ========================================
     // Reception Method Selection

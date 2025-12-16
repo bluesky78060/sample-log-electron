@@ -338,23 +338,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // ========================================
-    // 전화번호 자동 하이픈
+    // 전화번호 자동 하이픈 - 공통 모듈 사용
     // ========================================
     const phoneNumberInput = document.getElementById('phoneNumber');
-    if (phoneNumberInput) {
-        phoneNumberInput.addEventListener('input', (e) => {
-            let value = e.target.value.replace(/[^0-9]/g, '');
-            let formatted = '';
-            if (value.length <= 3) {
-                formatted = value;
-            } else if (value.length <= 7) {
-                formatted = value.slice(0, 3) + '-' + value.slice(3);
-            } else {
-                formatted = value.slice(0, 3) + '-' + value.slice(3, 7) + '-' + value.slice(7, 11);
-            }
-            e.target.value = formatted;
-        });
-    }
+    window.SampleUtils.setupPhoneNumberInput(phoneNumberInput);
 
     // 주소 검색 - 공통 모듈 사용 (../shared/address.js)
     const addressManager = new window.AddressManager({
