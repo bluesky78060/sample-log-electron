@@ -34,7 +34,7 @@ const log = (...args) => DEBUG && console.log(...args);
 let currentPage = 1;
 
 /** @type {number} */
-let itemsPerPage = parseInt(localStorage.getItem('pesticideItemsPerPage')) || 100;
+let itemsPerPage = parseInt(localStorage.getItem('pesticideItemsPerPage'), 10) || 100;
 
 /** @type {number} */
 let totalPages = 1;
@@ -1455,7 +1455,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // 하위 지번 제거
         if (target.classList.contains('remove-sub-lot')) {
-            const subLotIndex = parseInt(target.dataset.index);
+            const subLotIndex = parseInt(target.dataset.index, 10);
             const container = target.closest('.sub-lots-container');
             const parcelId = container.id.replace('subLots-', '');
             const parcel = parcels.find(p => p.id === parcelId);
@@ -1468,14 +1468,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 하위 지번 작물 추가 버튼
         if (target.classList.contains('btn-add-sublot-crop')) {
             const parcelId = target.dataset.parcelId;
-            const subLotIndex = parseInt(target.dataset.sublotIndex);
+            const subLotIndex = parseInt(target.dataset.sublotIndex, 10);
             openSubLotCropModal(parcelId, subLotIndex);
         }
 
         // 하위 지번 작물 제거
         if (target.classList.contains('remove-sublot-crop')) {
-            const subLotIndex = parseInt(target.dataset.sublotIndex);
-            const cropIndex = parseInt(target.dataset.cropIndex);
+            const subLotIndex = parseInt(target.dataset.sublotIndex, 10);
+            const cropIndex = parseInt(target.dataset.cropIndex, 10);
             const container = target.closest('.sub-lots-container');
             const parcelId = container.id.replace('subLots-', '');
             const parcel = parcels.find(p => p.id === parcelId);
@@ -1500,7 +1500,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const container = target.closest('.crops-area-container');
             if (!container) return;
             const parcelId = container.id.replace('cropsArea-', '');
-            const index = parseInt(item.dataset.index);
+            const index = parseInt(item.dataset.index, 10);
             const parcel = parcels.find(p => p.id === parcelId);
             if (parcel && parcel.crops[index]) {
                 parcel.crops.splice(index, 1);
@@ -1822,7 +1822,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             input.addEventListener('input', (e) => {
                 log('✏️ INPUT EVENT FIRED!', e.target.value);
 
-                const idx = parseInt(e.target.dataset.index);
+                const idx = parseInt(e.target.dataset.index, 10);
                 const value = e.target.value.trim().toLowerCase();
                 const autocompleteList = document.getElementById(`autocomplete-${idx}`);
 
@@ -1861,7 +1861,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             // blur 이벤트
             input.addEventListener('blur', () => {
                 setTimeout(() => {
-                    const idx = parseInt(input.dataset.index);
+                    const idx = parseInt(input.dataset.index, 10);
                     const autocompleteList = document.getElementById(`autocomplete-${idx}`);
                     if (autocompleteList) {
                         autocompleteList.classList.remove('show');
@@ -1901,7 +1901,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 면적 입력 이벤트
         cropAreaList.querySelectorAll('.area-input').forEach(input => {
             input.addEventListener('input', (e) => {
-                const idx = parseInt(e.target.dataset.index);
+                const idx = parseInt(e.target.dataset.index, 10);
                 tempCropAreas[idx].area = e.target.value;
             });
         });
@@ -1912,7 +1912,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             let previousUnit = 'm2';
 
             select.addEventListener('change', (e) => {
-                const index = parseInt(e.target.dataset.index);
+                const index = parseInt(e.target.dataset.index, 10);
                 const areaInput = document.getElementById(`area-input-${index}`);
                 const currentValue = areaInput.value.trim();
                 const newUnit = e.target.value;
@@ -1940,7 +1940,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 지번 선택 이벤트
         cropAreaList.querySelectorAll('.sublot-select').forEach(select => {
             select.addEventListener('change', (e) => {
-                const idx = parseInt(e.target.dataset.index);
+                const idx = parseInt(e.target.dataset.index, 10);
                 tempCropAreas[idx].subLotTarget = e.target.value;
             });
         });
@@ -1948,7 +1948,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 행 삭제 버튼
         cropAreaList.querySelectorAll('.btn-remove-row').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                const idx = parseInt(e.target.dataset.index);
+                const idx = parseInt(e.target.dataset.index, 10);
                 if (tempCropAreas.length > 1) {
                     tempCropAreas.splice(idx, 1);
                     renderCropAreaModal();
@@ -2926,7 +2926,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         Object.entries(byMonth).forEach(([monthKey, data]) => {
-            const monthNum = parseInt(monthKey);
+            const monthNum = parseInt(monthKey, 10);
             let quarter;
             if (monthNum <= 3) quarter = 'Q1';
             else if (monthNum <= 6) quarter = 'Q2';
@@ -3750,7 +3750,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 페이지네이션 이벤트 리스너
     if (itemsPerPageSelect) {
         itemsPerPageSelect.addEventListener('change', (e) => {
-            itemsPerPage = parseInt(e.target.value);
+            itemsPerPage = parseInt(e.target.value, 10);
             localStorage.setItem('pesticideItemsPerPage', itemsPerPage);
             currentPage = 1;
             renderCurrentPage();
@@ -4127,7 +4127,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             // 옵션 클릭 이벤트
             regionOptions.querySelectorAll('.region-option').forEach(option => {
                 option.addEventListener('click', () => {
-                    const index = parseInt(option.dataset.index);
+                    const index = parseInt(option.dataset.index, 10);
                     selectRegion(index);
                 });
             });

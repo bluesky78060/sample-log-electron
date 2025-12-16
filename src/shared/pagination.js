@@ -22,7 +22,7 @@
             this.renderRow = options.renderRow;
 
             this.currentPage = 1;
-            this.itemsPerPage = parseInt(localStorage.getItem(this.storageKey)) || this.defaultItemsPerPage;
+            this.itemsPerPage = parseInt(localStorage.getItem(this.storageKey, 10)) || this.defaultItemsPerPage;
             this.totalPages = 1;
             this.data = [];
 
@@ -61,7 +61,7 @@
             if (itemsPerPageSelect) {
                 itemsPerPageSelect.value = this.itemsPerPage;
                 itemsPerPageSelect.addEventListener('change', (e) => {
-                    this.itemsPerPage = parseInt(e.target.value);
+                    this.itemsPerPage = parseInt(e.target.value, 10);
                     localStorage.setItem(this.storageKey, this.itemsPerPage);
                     this.currentPage = 1;
                     this.renderCurrentPage();

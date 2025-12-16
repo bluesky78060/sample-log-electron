@@ -34,7 +34,7 @@ const log = (...args) => DEBUG && console.log(...args);
 let currentPage = 1;
 
 /** @type {number} */
-let itemsPerPage = parseInt(localStorage.getItem('compostItemsPerPage')) || 100;
+let itemsPerPage = parseInt(localStorage.getItem('compostItemsPerPage'), 10) || 100;
 
 /** @type {number} */
 let totalPages = 1;
@@ -579,7 +579,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (itemsPerPageSelect) {
         itemsPerPageSelect.value = itemsPerPage;
         itemsPerPageSelect.addEventListener('change', (e) => {
-            itemsPerPage = parseInt(e.target.value);
+            itemsPerPage = parseInt(e.target.value, 10);
             localStorage.setItem('compostItemsPerPage', itemsPerPage);
             currentPage = 1;
             renderCurrentPage();
@@ -639,7 +639,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <td class="col-postcode col-hidden">${escapeHTML(logItem.addressPostcode || '-')}</td>
                 <td class="col-address text-truncate" title="${safeFullAddress}">${safeFullAddress}</td>
                 <td class="col-farm-address text-truncate" title="${safeFarmAddress}">${safeFarmAddress}</td>
-                <td>${logItem.farmArea ? parseInt(logItem.farmArea).toLocaleString('ko-KR') + ' ' + getUnitLabel(logItem.farmAreaUnit) : '-'}</td>
+                <td>${logItem.farmArea ? parseInt(logItem.farmArea, 10).toLocaleString('ko-KR') + ' ' + getUnitLabel(logItem.farmAreaUnit) : '-'}</td>
                 <td>${sampleTypeBadge}</td>
                 <td>${animalTypeBadge}</td>
                 <td>${escapeHTML(logItem.productionDate || '-')}</td>
@@ -1151,7 +1151,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         Object.entries(byMonth).forEach(([monthKey, data]) => {
-            const monthNum = parseInt(monthKey);
+            const monthNum = parseInt(monthKey, 10);
             let quarter;
             if (monthNum <= 3) quarter = 'Q1';
             else if (monthNum <= 6) quarter = 'Q2';

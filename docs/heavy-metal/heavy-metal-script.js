@@ -34,7 +34,7 @@ const log = (...args) => DEBUG && console.log(...args);
 let currentPage = 1;
 
 /** @type {number} */
-let itemsPerPage = parseInt(localStorage.getItem('heavyMetalItemsPerPage')) || 100;
+let itemsPerPage = parseInt(localStorage.getItem('heavyMetalItemsPerPage'), 10) || 100;
 
 /** @type {number} */
 let totalPages = 1;
@@ -839,7 +839,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (itemsPerPageSelect) {
         itemsPerPageSelect.value = itemsPerPage;
         itemsPerPageSelect.addEventListener('change', (e) => {
-            itemsPerPage = parseInt(e.target.value);
+            itemsPerPage = parseInt(e.target.value, 10);
             localStorage.setItem('heavyMetalItemsPerPage', itemsPerPage);
             currentPage = 1;
             renderCurrentPage();
@@ -922,7 +922,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // 완료 토글
             tr.querySelector('.btn-complete')?.addEventListener('click', () => {
-                const realIdx = parseInt(tr.dataset.index);
+                const realIdx = parseInt(tr.dataset.index, 10);
                 sampleLogs[realIdx].isCompleted = !sampleLogs[realIdx].isCompleted;
                 saveData();
                 renderLogs();
@@ -930,13 +930,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // 수정 버튼
             tr.querySelector('.btn-edit')?.addEventListener('click', () => {
-                editLog(parseInt(tr.dataset.index));
+                editLog(parseInt(tr.dataset.index, 10));
             });
 
             // 삭제 버튼
             tr.querySelector('.btn-delete')?.addEventListener('click', () => {
                 if (confirm('정말 삭제하시겠습니까?')) {
-                    sampleLogs.splice(parseInt(tr.dataset.index), 1);
+                    sampleLogs.splice(parseInt(tr.dataset.index, 10), 1);
                     saveData();
                     renderLogs();
                     showToast('삭제되었습니다.', 'success');
@@ -1420,7 +1420,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             if (confirm(`${checked.length}건의 데이터를 삭제하시겠습니까?`)) {
-                const indices = Array.from(checked).map(cb => parseInt(cb.dataset.index)).sort((a, b) => b - a);
+                const indices = Array.from(checked).map(cb => parseInt(cb.dataset.index, 10)).sort((a, b) => b - a);
                 indices.forEach(idx => sampleLogs.splice(idx, 1));
                 saveData();
                 renderLogs();
@@ -1665,7 +1665,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         Object.entries(byMonth).forEach(([monthKey, data]) => {
-            const monthNum = parseInt(monthKey);
+            const monthNum = parseInt(monthKey, 10);
             let quarter;
             if (monthNum <= 3) quarter = 'Q1';
             else if (monthNum <= 6) quarter = 'Q2';
@@ -1820,7 +1820,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             const selectedData = Array.from(checked).map(cb => {
-                const idx = parseInt(cb.dataset.index);
+                const idx = parseInt(cb.dataset.index, 10);
                 return sampleLogs[idx];
             });
 

@@ -90,7 +90,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 페이지네이션 설정
     // ========================================
     let currentPage = 1;
-    let itemsPerPage = parseInt(localStorage.getItem('waterItemsPerPage')) || 100;
+    let itemsPerPage = parseInt(localStorage.getItem('waterItemsPerPage'), 10) || 100;
     let totalPages = 1;
     let currentDisplayLogs = [];
 
@@ -327,7 +327,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 채취장소 필드 개수 업데이트
     function updateSamplingLocations(count) {
         const currentCount = samplingLocationsList.children.length;
-        count = Math.max(1, parseInt(count) || 1);
+        count = Math.max(1, parseInt(count, 10) || 1);
 
         // 필드 추가
         if (count > currentCount) {
@@ -351,7 +351,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 접수번호 범위 업데이트 (시료수에 따라) - 수질은 개별 번호 형식 (1, 2, 3)
     function updateReceptionNumberRange(count) {
-        count = Math.max(1, parseInt(count) || 1);
+        count = Math.max(1, parseInt(count, 10) || 1);
         const baseNumber = parseInt(receptionNumberInput.dataset.baseNumber || receptionNumberInput.value.split(',')[0].trim(), 10);
 
         if (count === 1) {
@@ -970,7 +970,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (itemsPerPageSelect) {
         itemsPerPageSelect.addEventListener('change', (e) => {
-            itemsPerPage = parseInt(e.target.value);
+            itemsPerPage = parseInt(e.target.value, 10);
             localStorage.setItem('waterItemsPerPage', itemsPerPage);
             currentPage = 1;
             renderLogs(sampleLogs);
@@ -1337,7 +1337,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         Object.entries(byMonth).forEach(([monthKey, data]) => {
-            const monthNum = parseInt(monthKey);
+            const monthNum = parseInt(monthKey, 10);
             let quarter;
             if (monthNum <= 3) quarter = 'Q1';
             else if (monthNum <= 6) quarter = 'Q2';
