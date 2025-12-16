@@ -301,42 +301,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // ========================================
-    // Electron 환경: 자동 저장 파일에서 데이터 로드
-    // ========================================
-    if (window.isElectron && FileAPI.autoSavePath) {
-        (async () => {
-            try {
-                const autoSaveData = await window.loadFromAutoSaveFile();
-                if (autoSaveData && autoSaveData.length > 0) {
-                    // localStorage에 데이터가 없거나 자동 저장 파일이 더 많은 데이터를 가진 경우
-                    if (sampleLogs.length === 0) {
-                        sampleLogs = autoSaveData;
-                        localStorage.setItem(getStorageKey(selectedYear), JSON.stringify(sampleLogs));
-                        log('📂 자동 저장 파일에서 데이터 복원 완료:', sampleLogs.length, '건');
-                    } else if (autoSaveData.length > sampleLogs.length) {
-                        // 자동 저장 파일에 더 많은 데이터가 있으면 병합 여부 확인
-                        const mergeConfirm = confirm(
-                            `자동 저장 파일에 ${autoSaveData.length}건의 데이터가 있습니다.\n` +
-                            `현재 ${sampleLogs.length}건의 데이터가 로드되어 있습니다.\n\n` +
-                            `자동 저장 파일에서 데이터를 불러오시겠습니까?`
-                        );
-                        if (mergeConfirm) {
-                            sampleLogs = autoSaveData;
-                            localStorage.setItem(getStorageKey(selectedYear), JSON.stringify(sampleLogs));
-                            log('📂 자동 저장 파일에서 데이터 교체 완료:', sampleLogs.length, '건');
-                        }
-                    }
-                    // UI 업데이트
-                    renderLogs(sampleLogs);
-                    receptionNumberInput.value = generateNextReceptionNumber();
-                }
-            } catch (error) {
-                console.error('자동 저장 파일 로드 중 오류:', error);
-            }
-        })();
-    }
-
-    // ========================================
     // 접수번호 자동 카운터
     // ========================================
     const receptionNumberInput = document.getElementById('receptionNumber');
@@ -3924,4 +3888,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 오버레이 클릭 시 닫기
     regionSelectionModal.querySelector('.modal-overlay').addEventListener('click', closeRegionSelectionModal);
+
+    // ========================================
+    // Electron 환경: 자동 저장 파일에서 데이터 로드
+    // ========================================
+    if (window.isElectron && FileAPI.autoSavePath) {
+        const autoSaveData = await window.loadFromAutoSaveFile();
+        if (autoSaveData && autoSaveData.length > 0) {
+            if (sampleLogs.length === 0) {
+                sampleLogs = autoSaveData;
+                localStorage.setItem(getStorageKey(selectedYear), JSON.stringify(sampleLogs));
+                log('📂 토양 자동 저장 파일에서 데이터 로드됨:', autoSaveData.length, '건');
+                renderLogs(sampleLogs);
+                receptionNumberInput.value = generateNextReceptionNumber();
+            }
+        }
+    }
+
+    log('✅ 토양 시료 접수 페이지 초기화 완료');
 });

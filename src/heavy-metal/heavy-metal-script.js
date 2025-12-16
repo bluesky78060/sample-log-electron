@@ -1109,6 +1109,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         log: log
     });
 
+    // Electron 환경에서 자동 저장 파일 로드
+    if (window.isElectron && FileAPI.autoSavePath) {
+        const autoSaveData = await window.loadFromAutoSaveFile();
+        if (autoSaveData && autoSaveData.length > 0) {
+            sampleLogs = autoSaveData;
+            localStorage.setItem(getStorageKey(selectedYear), JSON.stringify(sampleLogs));
+            log('📂 중금속 자동 저장 파일에서 데이터 로드됨:', autoSaveData.length, '건');
+            renderLogs();
+        }
+    }
+
     // ========================================
     // 선택 삭제
     // ========================================

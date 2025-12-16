@@ -11,6 +11,9 @@
 const DEFAULT_SAMPLE_TYPE = '가축분퇴비';
 
 /** @type {string} */
+const SAMPLE_TYPE = 'compost';
+
+/** @type {string} */
 const STORAGE_KEY = 'compostSampleLogs';
 
 /** @type {string} */
@@ -1578,14 +1581,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // Electron 환경에서 자동 저장 파일 로드
+    log('🔍 자동 저장 로드 체크:', { isElectron: window.isElectron, autoSavePath: FileAPI.autoSavePath });
     if (window.isElectron && FileAPI.autoSavePath) {
         const autoSaveData = await window.loadFromAutoSaveFile();
+        log('🔍 로드된 데이터:', autoSaveData);
         if (autoSaveData && autoSaveData.length > 0) {
             sampleLogs = autoSaveData;
             localStorage.setItem(STORAGE_KEY, JSON.stringify(sampleLogs));
             log('📂 퇴액비 자동 저장 파일에서 데이터 로드됨:', autoSaveData.length, '건');
             renderLogs(sampleLogs);
         }
+    } else {
+        log('⚠️ 자동 저장 로드 스킵됨:', { isElectron: window.isElectron, autoSavePath: FileAPI.autoSavePath });
     }
 
     // ========================================

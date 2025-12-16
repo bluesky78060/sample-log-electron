@@ -308,12 +308,14 @@ async function initAutoSave(options) {
                 }
             }, 500);
         } else {
-            // 이전에 폴더를 선택한 경우, 자동 저장 기본 활성화
+            // 이전에 폴더를 선택한 경우, 자동 저장 경로 설정 및 활성화
+            FileAPI.autoSavePath = await window.electronAPI.getAutoSavePath(moduleKey, currentYear);
             localStorage.setItem(enabledKey, 'true');
             if (autoSaveToggle) {
                 autoSaveToggle.checked = true;
             }
             updateAutoSaveStatus('active');
+            log(`📁 ${moduleName} 자동 저장 경로:`, FileAPI.autoSavePath);
         }
     } else {
         // Web 환경 - 자동저장 상태 복원
