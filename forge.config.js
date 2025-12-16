@@ -7,6 +7,7 @@ module.exports = {
     name: 'sample-log',
     executableName: 'sample-log',
     appBundleId: 'com.samplelog.app',
+    extraResource: ['./src/app-update.yml'],
   },
   rebuildConfig: {},
   publishers: [
