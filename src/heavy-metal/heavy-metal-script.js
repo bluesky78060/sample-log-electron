@@ -155,7 +155,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    let sampleLogs = JSON.parse(localStorage.getItem(getStorageKey(selectedYear))) || [];
+    // safeParseJSON 사용으로 에러 핸들링
+    let sampleLogs = SampleUtils.safeParseJSON(getStorageKey(selectedYear), []);
     let editingIndex = -1;
     let isAllSelected = false;
     let autoSaveFileHandle = null;  // Web 환경 자동저장 파일 핸들
@@ -186,7 +187,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 년도별 데이터 로드 함수
     function loadYearData(year) {
         const yearStorageKey = getStorageKey(year);
-        sampleLogs = JSON.parse(localStorage.getItem(yearStorageKey)) || [];
+        sampleLogs = SampleUtils.safeParseJSON(yearStorageKey, []);
         renderLogs(sampleLogs);
         receptionNumberInput.value = generateNextReceptionNumber();
         updateListViewTitle();

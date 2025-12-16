@@ -116,12 +116,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateListViewTitle();
 
     // ========================================
-    // 데이터 로드 (년도별)
+    // 데이터 로드 (년도별) - safeParseJSON 사용으로 에러 핸들링
     // ========================================
-    let sampleLogs = JSON.parse(localStorage.getItem(getStorageKey(selectedYear))) || [];
+    let sampleLogs = SampleUtils.safeParseJSON(getStorageKey(selectedYear), []);
 
     // 기존 데이터 마이그레이션 (년도 없는 기존 데이터를 현재 년도로 이동)
-    const oldData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    const oldData = SampleUtils.safeParseJSON(STORAGE_KEY, []);
     if (oldData.length > 0 && sampleLogs.length === 0) {
         sampleLogs = oldData;
         localStorage.setItem(getStorageKey(selectedYear), JSON.stringify(sampleLogs));
@@ -131,7 +131,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 년도별 데이터 로드 함수
     function loadYearData(year) {
         const yearStorageKey = getStorageKey(year);
-        sampleLogs = JSON.parse(localStorage.getItem(yearStorageKey)) || [];
+        sampleLogs = SampleUtils.safeParseJSON(yearStorageKey, []);
         renderLogs(sampleLogs);
         receptionNumberInput.value = generateNextReceptionNumber();
         updateListViewTitle();

@@ -688,6 +688,22 @@ async function saveJSON(options) {
 }
 
 /**
+ * JSON 데이터 병합 (ID 기반 중복 제거 지원)
+ * @param {Array} currentData - 현재 데이터
+ * @param {Array} loadedData - 불러온 데이터
+ * @param {boolean} deduplicateById - ID 기반 중복 제거 여부
+ * @returns {Array} 병합된 데이터
+ */
+function mergeJSONData(currentData, loadedData, deduplicateById) {
+    if (deduplicateById) {
+        const existingIds = new Set(currentData.map(item => item.id));
+        const newData = loadedData.filter(item => !existingIds.has(item.id));
+        return [...newData, ...currentData];
+    }
+    return [...currentData, ...loadedData];
+}
+
+/**
  * JSON 파일 불러오기 핸들러 설정 (파일 input 요소용)
  * @param {Object} options - 옵션
  * @param {HTMLInputElement} options.inputElement - 파일 input 요소
@@ -696,9 +712,10 @@ async function saveJSON(options) {
  * @param {Function} options.saveData - 데이터 저장 함수
  * @param {Function} options.renderData - 데이터 렌더링 함수
  * @param {Function} [options.showToast] - 토스트 메시지 함수
+ * @param {boolean} [options.deduplicateById=false] - ID 기반 중복 제거 여부
  */
 function setupJSONLoadHandler(options) {
-    const { inputElement, getData, setData, saveData, renderData, showToast } = options;
+    const { inputElement, getData, setData, saveData, renderData, showToast, deduplicateById = false } = options;
 
     if (!inputElement) return;
 
@@ -713,8 +730,8 @@ function setupJSONLoadHandler(options) {
 
             if (Array.isArray(loadedData)) {
                 const currentData = getData();
-                if (confirm(`${loadedData.length}건의 데이터를 불러옵니다. 기존 데이터에 추가하시겠습니까?\n\n(취소 선택 시 기존 데이터를 대체합니다)`)) {
-                    setData([...currentData, ...loadedData]);
+                if (currentData.length > 0 && confirm(`${loadedData.length}건의 데이터를 불러옵니다. 기존 데이터에 추가하시겠습니까?\n\n(취소 선택 시 기존 데이터를 대체합니다)`)) {
+                    setData(mergeJSONData(currentData, loadedData, deduplicateById));
                 } else {
                     setData(loadedData);
                 }
@@ -743,9 +760,10 @@ function setupJSONLoadHandler(options) {
  * @param {Function} options.saveData - 데이터 저장 함수
  * @param {Function} options.renderData - 데이터 렌더링 함수
  * @param {Function} [options.showToast] - 토스트 메시지 함수
+ * @param {boolean} [options.deduplicateById=false] - ID 기반 중복 제거 여부
  */
 function setupElectronLoadHandler(options) {
-    const { buttonElement, FileAPI, getData, setData, saveData, renderData, showToast } = options;
+    const { buttonElement, FileAPI, getData, setData, saveData, renderData, showToast, deduplicateById = false } = options;
 
     if (!buttonElement) return;
 
@@ -759,8 +777,8 @@ function setupElectronLoadHandler(options) {
 
             if (Array.isArray(loadedData)) {
                 const currentData = getData();
-                if (confirm(`${loadedData.length}건의 데이터를 불러옵니다. 기존 데이터에 추가하시겠습니까?\n\n(취소 선택 시 기존 데이터를 대체합니다)`)) {
-                    setData([...currentData, ...loadedData]);
+                if (currentData.length > 0 && confirm(`${loadedData.length}건의 데이터를 불러옵니다. 기존 데이터에 추가하시겠습니까?\n\n(취소 선택 시 기존 데이터를 대체합니다)`)) {
+                    setData(mergeJSONData(currentData, loadedData, deduplicateById));
                 } else {
                     setData(loadedData);
                 }
@@ -833,6 +851,7 @@ window.SampleUtils = {
 
     // JSON 저장/불러오기
     saveJSON,
+    mergeJSONData,
     setupJSONLoadHandler,
     setupElectronLoadHandler,
     setupJSONSaveHandler,

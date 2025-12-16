@@ -38,63 +38,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     const currentYear = new Date().getFullYear().toString();
     await FileAPI.init(currentYear);
 
-    // Electron 환경: 자동 저장 기본 활성화 및 첫 실행 시 폴더 선택
-    // 자동 저장 파일에서 데이터 로드하는 함수 (나중에 sampleLogs 초기화 후 호출)
+    // 자동 저장 초기화 (공통 모듈 사용)
+    await SampleUtils.initAutoSave({
+        moduleKey: 'soil',
+        moduleName: '토양',
+        FileAPI: FileAPI,
+        currentYear: currentYear,
+        log: log,
+        showToast: window.showToast
+    });
+
+    // 자동 저장 파일에서 데이터 로드하는 함수 (공통 모듈 사용)
     window.loadFromAutoSaveFile = async function() {
-        if (window.isElectron && FileAPI.autoSavePath) {
-            try {
-                const content = await FileAPI.loadAutoSave();
-                if (content) {
-                    const parsed = JSON.parse(content);
-                    const loadedData = parsed.data || parsed;
-                    if (Array.isArray(loadedData) && loadedData.length > 0) {
-                        log('📂 자동 저장 파일에서 데이터 로드:', loadedData.length, '건');
-                        return loadedData;
-                    }
-                }
-            } catch (error) {
-                console.error('자동 저장 파일 로드 오류:', error);
-            }
-        }
-        return null;
+        return await SampleUtils.loadFromAutoSaveFile(FileAPI, log);
     };
-
-    if (window.isElectron) {
-        const autoSaveToggle = document.getElementById('autoSaveToggle');
-        const hasSelectedFolder = localStorage.getItem('soilAutoSaveFolderSelected') === 'true';
-
-        // 처음 실행이거나 폴더가 선택되지 않은 경우
-        if (!hasSelectedFolder) {
-            // 잠시 후 폴더 선택 다이얼로그 표시 (UI 로드 후)
-            setTimeout(async () => {
-                const confirmSelect = confirm('자동 저장 기능을 사용하시겠습니까?\n\n저장할 폴더를 선택해주세요.');
-                if (confirmSelect) {
-                    try {
-                        const result = await window.electronAPI.selectAutoSaveFolder();
-                        if (result.success) {
-                            FileAPI.autoSavePath = await window.electronAPI.getAutoSavePath('soil', currentYear);
-                            localStorage.setItem('soilAutoSaveFolderSelected', 'true');
-                            localStorage.setItem('soilAutoSaveEnabled', 'true');
-                            if (autoSaveToggle) {
-                                autoSaveToggle.checked = true;
-                                // change 이벤트를 직접 트리거하여 자동 저장 활성화
-                                autoSaveToggle.dispatchEvent(new Event('change'));
-                            }
-                            log('📁 자동 저장 폴더 설정됨:', result.folder);
-                        }
-                    } catch (error) {
-                        console.error('폴더 선택 오류:', error);
-                    }
-                }
-            }, 500);
-        } else {
-            // 이전에 폴더를 선택한 경우, 자동 저장 기본 활성화
-            localStorage.setItem('soilAutoSaveEnabled', 'true');
-            if (autoSaveToggle) {
-                autoSaveToggle.checked = true;
-            }
-        }
-    }
 
     const form = document.getElementById('sampleForm');
     const tableBody = document.getElementById('logTableBody');
@@ -310,11 +267,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Set default date to today
     dateInput.valueAsDate = new Date();
 
-    // Load data from LocalStorage (년도별)
-    let sampleLogs = JSON.parse(localStorage.getItem(getStorageKey(selectedYear))) || [];
+    // Load data from LocalStorage (년도별) - safeParseJSON 사용으로 에러 핸들링
+    let sampleLogs = SampleUtils.safeParseJSON(getStorageKey(selectedYear), []);
 
     // 기존 데이터 마이그레이션 (년도 없는 기존 데이터를 현재 년도로 이동)
-    const oldData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    const oldData = SampleUtils.safeParseJSON(STORAGE_KEY, []);
     if (oldData.length > 0 && sampleLogs.length === 0) {
         sampleLogs = oldData;
         localStorage.setItem(getStorageKey(selectedYear), JSON.stringify(sampleLogs));
@@ -324,7 +281,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 년도별 데이터 로드 함수
     function loadYearData(year) {
         const yearStorageKey = getStorageKey(year);
-        sampleLogs = JSON.parse(localStorage.getItem(yearStorageKey)) || [];
+        sampleLogs = SampleUtils.safeParseJSON(yearStorageKey, []);
         renderLogs(sampleLogs);
         receptionNumberInput.value = generateNextReceptionNumber();
         updateListViewTitle();
@@ -2017,7 +1974,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // localStorage에서 최신 데이터 다시 로드하여 중복 확인
         const yearStorageKey = getStorageKey(selectedYear);
-        const latestLogs = JSON.parse(localStorage.getItem(yearStorageKey)) || [];
+        const latestLogs = SampleUtils.safeParseJSON(yearStorageKey, []);
 
         // 중복되는 접수번호 찾기
         const duplicateNumbers = numbersToCheck.filter(numToCheck => {
@@ -3275,149 +3232,51 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ========================================
     const saveJsonBtn = document.getElementById('saveJsonBtn');
     const loadJsonInput = document.getElementById('loadJsonInput');
-    const autoSaveToggle = document.getElementById('autoSaveToggle');
-    const autoSaveStatus = document.getElementById('autoSaveStatus');
-    const selectAutoSaveFolderBtn = document.getElementById('selectAutoSaveFolderBtn');
 
+    // 자동 저장용 Web File Handle
     let autoSaveFileHandle = null;
 
-    // 자동 저장 폴더 선택 버튼 (Electron 전용)
-    if (selectAutoSaveFolderBtn && window.isElectron) {
-        selectAutoSaveFolderBtn.addEventListener('click', async () => {
-            try {
-                const result = await window.electronAPI.selectAutoSaveFolder();
-                if (result.success) {
-                    // 폴더 선택 후 soil 타입으로 새 경로 가져오기
-                    FileAPI.autoSavePath = await window.electronAPI.getAutoSavePath('soil', selectedYear);
-                    showToast(`저장 폴더가 변경되었습니다:\n${result.folder}`, 'success');
-
-                    // 자동 저장이 활성화되어 있으면 바로 저장
-                    if (autoSaveToggle && autoSaveToggle.checked) {
-                        await autoSaveToFile();
-                    }
-                } else if (!result.canceled) {
-                    showToast('폴더 선택에 실패했습니다.', 'error');
-                }
-            } catch (error) {
-                console.error('폴더 선택 오류:', error);
-                showToast('폴더 선택 중 오류가 발생했습니다.', 'error');
-            }
-        });
-
-        // 현재 폴더 경로를 툴팁에 표시
-        (async () => {
-            try {
-                const folder = await window.electronAPI.getAutoSaveFolder();
-                selectAutoSaveFolderBtn.title = `저장 폴더: ${folder}`;
-            } catch (error) {
-                console.error('폴더 경로 조회 오류:', error);
-            }
-        })();
-    } else if (selectAutoSaveFolderBtn && !window.isElectron) {
-        // 웹 환경에서는 파일 선택 다이얼로그 사용
-        selectAutoSaveFolderBtn.title = '자동저장 파일 선택';
-        selectAutoSaveFolderBtn.addEventListener('click', async () => {
-            try {
-                if ('showSaveFilePicker' in window) {
-                    autoSaveFileHandle = await window.showSaveFilePicker({
-                        suggestedName: 'sample-logs-autosave.json',
-                        types: [{ description: 'JSON Files', accept: { 'application/json': ['.json'] } }]
-                    });
-                    showToast('자동저장 파일이 설정되었습니다.', 'success');
-                    if (autoSaveToggle) {
-                        autoSaveToggle.checked = true;
-                        localStorage.setItem('soilAutoSaveEnabled', 'true');
-                    }
-                    await autoSaveToFile();
-                } else {
-                    showToast('이 브라우저에서는 파일 선택을 지원하지 않습니다.', 'error');
-                }
-            } catch (error) {
-                if (error.name !== 'AbortError') {
-                    console.error('파일 선택 오류:', error);
-                    showToast('파일 선택 중 오류가 발생했습니다.', 'error');
-                }
-            }
+    // 자동 저장 수행 함수 (saveLogs에서 호출)
+    async function autoSaveToFile() {
+        return await SampleUtils.performAutoSave({
+            FileAPI: FileAPI,
+            moduleKey: 'soil',
+            data: sampleLogs,
+            webFileHandle: autoSaveFileHandle,
+            log: log
         });
     }
 
-    saveJsonBtn.addEventListener('click', () => {
-        if (sampleLogs.length === 0) {
-            alert('저장할 데이터가 없습니다.');
-            return;
-        }
-
-        const dataToSave = {
-            version: '2.0',
-            exportDate: new Date().toISOString(),
-            totalRecords: sampleLogs.length,
-            data: sampleLogs
-        };
-
-        const jsonString = JSON.stringify(dataToSave, null, 2);
-        const blob = new Blob([jsonString], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-
-        const today = new Date().toISOString().slice(0, 10);
-        const filename = `시료접수대장_${today}.json`;
-
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-
-        alert(`${filename} 파일이 저장되었습니다.`);
+    // 자동 저장 폴더/파일 선택 버튼 설정 (공통 모듈 사용)
+    SampleUtils.setupAutoSaveFolderButton({
+        moduleKey: 'soil',
+        FileAPI: FileAPI,
+        selectedYear: selectedYear,
+        getWebFileHandle: () => autoSaveFileHandle,
+        setWebFileHandle: (handle) => { autoSaveFileHandle = handle; },
+        autoSaveCallback: autoSaveToFile,
+        showToast: showToast
     });
 
-    loadJsonInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
+    // JSON 저장 버튼 핸들러 (공통 모듈 사용)
+    SampleUtils.setupJSONSaveHandler({
+        buttonElement: saveJsonBtn,
+        sampleType: SAMPLE_TYPE,
+        getData: () => sampleLogs,
+        FileAPI: FileAPI,
+        filePrefix: '시료접수대장',
+        showToast: showToast
+    });
 
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            try {
-                const jsonData = JSON.parse(event.target.result);
-
-                let loadedData;
-                if (jsonData.data && Array.isArray(jsonData.data)) {
-                    loadedData = jsonData.data;
-                } else if (Array.isArray(jsonData)) {
-                    loadedData = jsonData;
-                } else {
-                    throw new Error('잘못된 데이터 형식입니다.');
-                }
-
-                if (sampleLogs.length > 0) {
-                    const choice = confirm(
-                        `현재 ${sampleLogs.length}개의 데이터가 있습니다.\n` +
-                        `불러온 파일에는 ${loadedData.length}개의 데이터가 있습니다.\n\n` +
-                        `확인: 기존 데이터에 추가 (병합)\n` +
-                        `취소: 기존 데이터 대체`
-                    );
-
-                    if (choice) {
-                        const existingIds = new Set(sampleLogs.map(log => log.id));
-                        const newLogs = loadedData.filter(log => !existingIds.has(log.id));
-                        sampleLogs = [...newLogs, ...sampleLogs];
-                    } else {
-                        sampleLogs = loadedData;
-                    }
-                } else {
-                    sampleLogs = loadedData;
-                }
-
-                saveLogs();
-                renderLogs(sampleLogs);
-                alert(`${loadedData.length}개의 데이터를 불러왔습니다.`);
-            } catch (error) {
-                alert('파일을 불러오는데 실패했습니다.\n' + error.message);
-            }
-        };
-        reader.readAsText(file);
-        e.target.value = '';
+    // JSON 불러오기 핸들러 (공통 모듈 사용, ID 기반 중복 제거)
+    SampleUtils.setupJSONLoadHandler({
+        inputElement: loadJsonInput,
+        getData: () => sampleLogs,
+        setData: (data) => { sampleLogs = data; },
+        saveData: saveLogs,
+        renderData: () => renderLogs(sampleLogs),
+        showToast: showToast,
+        deduplicateById: true
     });
 
     // ========================================
@@ -3437,201 +3296,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // ========================================
-    // 자동 저장 기능 (Electron / Web 통합)
+    // 자동 저장 토글 이벤트 설정 (공통 모듈 사용)
     // ========================================
-
-    // 페이지 로드 시 자동 저장 상태 복원
-    const autoSaveEnabled = localStorage.getItem('soilAutoSaveEnabled') === 'true';
-    if (autoSaveToggle && autoSaveEnabled) {
-        autoSaveToggle.checked = true;
-
-        if (window.isElectron) {
-            // Electron: 자동 저장 경로가 이미 설정됨
-            updateAutoSaveStatus('active');
-            autoSaveToFile();
-            showToast('자동 저장이 활성화되었습니다.', 'success');
-        } else {
-            // Web: 파일 핸들 새로 설정 필요
-            updateAutoSaveStatus('pending');
-            if ('showSaveFilePicker' in window) {
-                (async () => {
-                    try {
-                        const today = new Date().toISOString().slice(0, 10);
-                        autoSaveFileHandle = await window.showSaveFilePicker({
-                            suggestedName: `시료접수대장_${today}.json`,
-                            types: [{
-                                description: 'JSON Files',
-                                accept: { 'application/json': ['.json'] }
-                            }]
-                        });
-                        updateAutoSaveStatus('active');
-                        await autoSaveToFile();
-                        showToast('자동 저장이 복원되었습니다.', 'success');
-                    } catch (error) {
-                        if (error.name === 'AbortError') {
-                            updateAutoSaveStatus('inactive');
-                            autoSaveToggle.checked = false;
-                            localStorage.setItem('soilAutoSaveEnabled', 'false');
-                        }
-                    }
-                })();
-            }
-        }
-    }
-
-    if (autoSaveToggle) {
-        autoSaveToggle.addEventListener('change', async () => {
-            try {
-                // 토글 OFF - 자동저장 비활성화
-                if (!autoSaveToggle.checked) {
-                    autoSaveFileHandle = null;
-                    localStorage.setItem('soilAutoSaveEnabled', 'false');
-                    updateAutoSaveStatus('inactive');
-                    return;
-                }
-
-                // 토글 ON - 자동저장 활성화
-                if (window.isElectron) {
-                    // Electron: 자동 저장 경로 사용
-                    localStorage.setItem('soilAutoSaveEnabled', 'true');
-                    updateAutoSaveStatus('active');
-                    await autoSaveToFile();
-                    showToast('자동 저장이 활성화되었습니다.', 'success');
-                } else {
-                    // Web: 파일 선택 다이얼로그
-                    if (!('showSaveFilePicker' in window)) {
-                        alert('이 브라우저는 자동 저장 기능을 지원하지 않습니다.\nChrome, Edge 브라우저를 사용해주세요.');
-                        autoSaveToggle.checked = false;
-                        return;
-                    }
-
-                    const today = new Date().toISOString().slice(0, 10);
-                    autoSaveFileHandle = await window.showSaveFilePicker({
-                        suggestedName: `시료접수대장_${today}.json`,
-                        types: [{
-                            description: 'JSON Files',
-                            accept: { 'application/json': ['.json'] }
-                        }]
-                    });
-
-                    localStorage.setItem('soilAutoSaveEnabled', 'true');
-                    updateAutoSaveStatus('active');
-                    await autoSaveToFile();
-                    showToast('자동 저장이 활성화되었습니다.', 'success');
-                }
-
-            } catch (error) {
-                if (error.name === 'AbortError') {
-                    autoSaveToggle.checked = false;
-                    updateAutoSaveStatus('inactive');
-                } else {
-                    console.error('자동 저장 설정 오류:', error);
-                    alert('자동 저장 설정에 실패했습니다.');
-                    autoSaveToggle.checked = false;
-                    localStorage.setItem('soilAutoSaveEnabled', 'false');
-                    updateAutoSaveStatus('inactive');
-                }
-            }
-        });
-    }
-
-    async function autoSaveToFile() {
-        const dataToSave = {
-            version: '2.0',
-            exportDate: new Date().toISOString(),
-            totalRecords: sampleLogs.length,
-            data: sampleLogs
-        };
-
-        const content = JSON.stringify(dataToSave, null, 2);
-
-        if (window.isElectron) {
-            // Electron: FileAPI 사용
-            try {
-                updateAutoSaveStatus('saving');
-                const success = await FileAPI.autoSave(content);
-                if (success) {
-                    updateAutoSaveStatus('saved');
-                    setTimeout(() => updateAutoSaveStatus('active'), 2000);
-                } else {
-                    updateAutoSaveStatus('error');
-                }
-            } catch (error) {
-                console.error('자동 저장 오류:', error);
-                updateAutoSaveStatus('error');
-            }
-        } else {
-            // Web: 기존 File System Access API
-            if (!autoSaveFileHandle) return;
-
-            try {
-                updateAutoSaveStatus('saving');
-
-                const writable = await autoSaveFileHandle.createWritable();
-                await writable.write(content);
-                await writable.close();
-
-                updateAutoSaveStatus('saved');
-
-                setTimeout(() => {
-                    if (autoSaveFileHandle) {
-                        updateAutoSaveStatus('active');
-                    }
-                }, 2000);
-
-            } catch (error) {
-                console.error('자동 저장 오류:', error);
-                updateAutoSaveStatus('error');
-            }
-        }
-    }
-
-    function updateAutoSaveStatus(status) {
-        if (!autoSaveStatus) return;
-
-        const statusDot = autoSaveStatus.querySelector('.status-dot');
-        const statusText = autoSaveStatus.querySelector('.status-text');
-
-        autoSaveStatus.classList.remove('hidden', 'active', 'saving', 'error');
-
-        switch (status) {
-            case 'active':
-                autoSaveStatus.classList.add('active');
-                if (statusDot) statusDot.style.background = '#22c55e';
-                if (statusText) statusText.textContent = '활성';
-                autoSaveStatus.classList.remove('hidden');
-                break;
-            case 'saving':
-                autoSaveStatus.classList.add('saving');
-                if (statusDot) statusDot.style.background = '#f59e0b';
-                if (statusText) statusText.textContent = '저장 중...';
-                autoSaveStatus.classList.remove('hidden');
-                break;
-            case 'saved':
-                autoSaveStatus.classList.add('active');
-                if (statusDot) statusDot.style.background = '#22c55e';
-                if (statusText) statusText.textContent = '저장 완료';
-                autoSaveStatus.classList.remove('hidden');
-                break;
-            case 'error':
-                autoSaveStatus.classList.add('error');
-                if (statusDot) statusDot.style.background = '#ef4444';
-                if (statusText) statusText.textContent = '저장 실패';
-                autoSaveStatus.classList.remove('hidden');
-                break;
-            case 'pending':
-                autoSaveStatus.classList.add('saving');
-                if (statusDot) statusDot.style.background = '#3b82f6';
-                if (statusText) statusText.textContent = '파일 선택 필요';
-                autoSaveStatus.classList.remove('hidden');
-                break;
-            case 'inactive':
-            default:
-                if (statusDot) statusDot.style.background = '#9ca3af';
-                if (statusText) statusText.textContent = '비활성';
-                break;
-        }
-    }
+    SampleUtils.setupAutoSaveToggle({
+        moduleKey: 'soil',
+        FileAPI: FileAPI,
+        getWebFileHandle: () => autoSaveFileHandle,
+        setWebFileHandle: (handle) => { autoSaveFileHandle = handle; },
+        autoSaveCallback: autoSaveToFile,
+        showToast: showToast,
+        log: log
+    });
 
     // ========================================
     // Helper Functions

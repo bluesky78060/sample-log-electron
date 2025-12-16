@@ -785,7 +785,7 @@
     try {
       const passedData = localStorage.getItem('labelPrintData');
       if (passedData) {
-        const data = JSON.parse(passedData);
+        const data = SampleUtils.safeParseJSON('labelPrintData', []);
         if (Array.isArray(data) && data.length > 0) {
           console.log('메인 앱에서 전달된 데이터:', data.length, '건');
 

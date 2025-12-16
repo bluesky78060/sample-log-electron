@@ -24,6 +24,47 @@ if (require('electron-squirrel-startup')) {
 let mainWindow = null;
 
 /**
+ * 허용된 경로인지 검증 (Path Traversal 방지)
+ * @param {string} filePath - 검증할 파일 경로
+ * @returns {{valid: boolean, error?: string}} 검증 결과
+ */
+function validateFilePath(filePath) {
+    if (!filePath || typeof filePath !== 'string') {
+        return { valid: false, error: '유효하지 않은 파일 경로입니다.' };
+    }
+
+    // 경로 정규화
+    const normalizedPath = path.normalize(filePath);
+    const resolvedPath = path.resolve(filePath);
+
+    // Path Traversal 패턴 감지 (../, ..\)
+    if (filePath.includes('..')) {
+        return { valid: false, error: '상위 디렉토리 접근이 허용되지 않습니다.' };
+    }
+
+    // 허용된 디렉토리 목록
+    const allowedDirs = [
+        app.getPath('userData'),      // 앱 데이터 폴더
+        app.getPath('documents'),     // 문서 폴더
+        app.getPath('downloads'),     // 다운로드 폴더
+        app.getPath('desktop'),       // 바탕화면
+        app.getPath('home')           // 홈 디렉토리
+    ];
+
+    // 허용된 디렉토리 내부 경로인지 확인
+    const isAllowedPath = allowedDirs.some(allowedDir => {
+        const normalizedAllowed = path.normalize(allowedDir);
+        return resolvedPath.startsWith(normalizedAllowed);
+    });
+
+    if (!isAllowedPath) {
+        return { valid: false, error: '허용되지 않은 경로입니다.' };
+    }
+
+    return { valid: true };
+}
+
+/**
  * 한글 메뉴 템플릿 생성
  * @returns {Electron.MenuItemConstructorOptions[]}
  */
@@ -248,9 +289,16 @@ ipcMain.handle('open-file-dialog', async (event, options) => {
     return null;
 });
 
-// 파일 쓰기
+// 파일 쓰기 (경로 검증 포함)
 ipcMain.handle('write-file', async (event, filePath, content) => {
     try {
+        // 경로 검증
+        const validation = validateFilePath(filePath);
+        if (!validation.valid) {
+            console.warn(`[보안] 파일 쓰기 거부: ${filePath} - ${validation.error}`);
+            return { success: false, error: validation.error };
+        }
+
         fs.writeFileSync(filePath, content, 'utf8');
         return { success: true };
     } catch (error) {
@@ -258,9 +306,16 @@ ipcMain.handle('write-file', async (event, filePath, content) => {
     }
 });
 
-// 파일 읽기
+// 파일 읽기 (경로 검증 포함)
 ipcMain.handle('read-file', async (event, filePath) => {
     try {
+        // 경로 검증
+        const validation = validateFilePath(filePath);
+        if (!validation.valid) {
+            console.warn(`[보안] 파일 읽기 거부: ${filePath} - ${validation.error}`);
+            return { success: false, error: validation.error };
+        }
+
         const content = fs.readFileSync(filePath, 'utf8');
         return { success: true, content };
     } catch (error) {

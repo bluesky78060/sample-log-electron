@@ -349,9 +349,18 @@ MCP 도구 및 전문 에이전트를 활용한 종합 코드 분석 결과입�
 | compost | `compostAutoSaveEnabled` | ✅ |
 | heavy-metal | `heavyMetalAutoSaveEnabled` | ✅ |
 
-#### 3. ⏳ JSON.parse 에러 핸들링 - **미해결** (중요도 낮음)
+#### 3. ✅ JSON.parse 에러 핸들링 - **수정 완료**
 **영향**: localStorage 손상 시 앱 크래시
-**상태**: 현재 코드에서 `|| []` 폴백으로 일부 보호됨. 추후 개선 예정.
+**해결**: 모든 모듈에서 `SampleUtils.safeParseJSON()` 공통 함수 사용
+
+| 파일 | 수정 위치 | 상태 |
+|------|----------|------|
+| `src/soil/soil-script.js` | 4곳 | ✅ |
+| `src/water/water-script.js` | 3곳 | ✅ |
+| `src/compost/compost-script.js` | 3곳 | ✅ |
+| `src/heavy-metal/heavy-metal-script.js` | 2곳 | ✅ |
+| `src/pesticide/pesticide-script.js` | 3곳 | ✅ |
+| `src/label-print/label-app.js` | 1곳 | ✅ |
 
 #### 4. ✅ 미정의 변수 사용 - **수정 완료**
 **수정 내용**: `selectedYear` → `currentYear`로 수정
@@ -403,7 +412,7 @@ function validateFilePath(filePath) {
 | 면적 포맷팅 | ✅ 공통화 완료 |
 | Auto-save 로직 | ✅ 공통화 완료 (전체 모듈) |
 | Excel 내보내기 | ❌ 공통화 불가 (모듈별 데이터 구조 상이) |
-| JSON 가져오기/내보내기 | ✅ 공통화 완료 (water, compost, heavy-metal) |
+| JSON 가져오기/내보내기 | ✅ 공통화 완료 (전체 모듈) |
 
 **Auto-save 공통 함수 (utils.js)**:
 - `initAutoSave(options)` - 초기화 및 기존 파일 로드 (Electron/Web 환경 지원)
@@ -414,9 +423,10 @@ function validateFilePath(filePath) {
 
 **JSON 공통 함수 (utils.js)**:
 - `saveJSON(options)` - JSON 파일 저장 (FileAPI 사용)
+- `mergeJSONData(currentData, loadedData, deduplicateById)` - 데이터 병합 (ID 중복 제거 지원)
 - `setupJSONSaveHandler(options)` - 저장 버튼 핸들러 설정
-- `setupJSONLoadHandler(options)` - 파일 input 불러오기 핸들러
-- `setupElectronLoadHandler(options)` - Electron 파일 메뉴 불러오기 핸들러
+- `setupJSONLoadHandler(options)` - 파일 input 불러오기 핸들러 (deduplicateById 옵션 추가)
+- `setupElectronLoadHandler(options)` - Electron 파일 메뉴 불러오기 핸들러 (deduplicateById 옵션 추가)
 
 **Excel 내보내기 공통화 불가 사유**:
 - soil/pesticide: parcels/subLots 중첩 구조, id 기반 중복 제거 로직 포함
@@ -465,7 +475,7 @@ const subLotIndex = parseInt(target.dataset.index, 10);
 |----------|------|------|
 | ✅ 1 | `window.window` 타이포 수정 | 완료 |
 | ✅ 2 | localStorage 키 충돌 수정 | 완료 |
-| ⏳ 3 | JSON.parse 에러 핸들링 추가 | 추후 진행 |
+| ✅ 3 | JSON.parse 에러 핸들링 추가 | 완료 |
 | ✅ 4 | 미정의 변수 (`selectedYear`) 수정 | 완료 |
 | ✅ 5 | 파일 경로 검증 추가 | 완료 |
 | ✅ 6 | DOMPurify SRI 해시 추가 | 완료 |
