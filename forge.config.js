@@ -25,7 +25,8 @@ module.exports = {
     {
       name: '@electron-forge/maker-squirrel',
       config: {
-        name: 'sample-log'
+        name: 'sample-log',
+        setupExe: 'sample-log-setup.exe'
       },
     },
     {
