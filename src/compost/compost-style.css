@@ -722,11 +722,17 @@
 /* 주소 컬럼 스타일 */
 .compost-navbar ~ .main-content .col-address {
     max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* 농장주소 컬럼 스타일 */
 .compost-navbar ~ .main-content .col-farm-address {
     max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* 레이아웃: form-two-column 클래스 사용 (style.css 공통 스타일) */

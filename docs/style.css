@@ -2907,6 +2907,14 @@ input[type="number"] {
     background: var(--gray-400);
 }
 
+/* 텍스트 말줄임 처리 (공통) */
+.text-truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 200px;
+}
+
 /* Table Action Buttons - ShadCN Style */
 .table-actions {
     display: flex;
