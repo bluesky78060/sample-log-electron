@@ -6,6 +6,14 @@
 const { app, BrowserWindow, Menu, ipcMain, dialog } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
+const { autoUpdater } = require('electron-updater');
+
+// GitHub 저장소에서 업데이트 확인하도록 설정
+autoUpdater.setFeedURL({
+  provider: 'github',
+  owner: 'bluesky78060',
+  repo: 'sample-log-electron'
+});
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
@@ -132,12 +140,66 @@ app.whenReady().then(() => {
 
   createWindow();
 
+  // 패키징된 앱에서만 자동 업데이트 체크
+  if (app.isPackaged) {
+    autoUpdater.checkForUpdatesAndNotify();
+  }
+
   // On OS X it's common to re-create a window in the app when the
   // dock icon is clicked and there are no other windows open.
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
     }
+  });
+});
+
+// ========================================
+// 자동 업데이트 이벤트 핸들러
+// ========================================
+
+autoUpdater.on('checking-for-update', () => {
+  console.log('업데이트 확인 중...');
+});
+
+autoUpdater.on('update-available', (info) => {
+  console.log('업데이트 가능:', info.version);
+  dialog.showMessageBox({
+    type: 'info',
+    title: '업데이트 발견',
+    message: `새 버전(${info.version})이 있습니다.\n다운로드를 시작합니다.`,
+    buttons: ['확인']
+  });
+});
+
+autoUpdater.on('update-not-available', (info) => {
+  console.log('현재 최신 버전입니다:', info.version);
+});
+
+autoUpdater.on('download-progress', (progressObj) => {
+  console.log(`다운로드 진행: ${Math.round(progressObj.percent)}%`);
+});
+
+autoUpdater.on('update-downloaded', (info) => {
+  dialog.showMessageBox({
+    type: 'info',
+    title: '업데이트 준비 완료',
+    message: `새 버전(${info.version})이 다운로드되었습니다.\n재시작하여 업데이트를 적용하시겠습니까?`,
+    buttons: ['재시작', '나중에']
+  }).then(result => {
+    if (result.response === 0) {
+      autoUpdater.quitAndInstall();
+    }
+  });
+});
+
+autoUpdater.on('error', (err) => {
+  console.error('업데이트 오류:', err);
+  dialog.showMessageBox({
+    type: 'error',
+    title: '업데이트 오류',
+    message: `업데이트 확인 중 오류가 발생했습니다.\n${err.message}`,
+    buttons: ['확인']
   });
 });
 

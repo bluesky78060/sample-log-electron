@@ -585,9 +585,34 @@ document.addEventListener('DOMContentLoaded', async () => {
         const safeCropName = escapeHTML(firstCrop.name);
         const safeCropArea = escapeHTML(firstCrop.area);
 
+        // 필지별 구분 (논/밭/과수/시설)
+        const parcelCategory = parcel.category || '';
+
         card.innerHTML = sanitizeHTML(`
             <div class="parcel-card-header">
                 <h4>필지 ${parcelNumber}</h4>
+                <div class="parcel-category-radios" data-id="${parcel.id}">
+                    <label class="parcel-category-label">
+                        <input type="radio" name="parcel-category-${parcel.id}" value="" ${parcelCategory === '' ? 'checked' : ''}>
+                        <span>-</span>
+                    </label>
+                    <label class="parcel-category-label">
+                        <input type="radio" name="parcel-category-${parcel.id}" value="논" ${parcelCategory === '논' ? 'checked' : ''}>
+                        <span>논</span>
+                    </label>
+                    <label class="parcel-category-label">
+                        <input type="radio" name="parcel-category-${parcel.id}" value="밭" ${parcelCategory === '밭' ? 'checked' : ''}>
+                        <span>밭</span>
+                    </label>
+                    <label class="parcel-category-label">
+                        <input type="radio" name="parcel-category-${parcel.id}" value="과수" ${parcelCategory === '과수' ? 'checked' : ''}>
+                        <span>과수</span>
+                    </label>
+                    <label class="parcel-category-label">
+                        <input type="radio" name="parcel-category-${parcel.id}" value="시설" ${parcelCategory === '시설' ? 'checked' : ''}>
+                        <span>시설</span>
+                    </label>
+                </div>
                 <button type="button" class="btn-remove-parcel" data-id="${parcel.id}">삭제</button>
             </div>
             <div class="parcel-form-grid">
@@ -735,8 +760,30 @@ document.addEventListener('DOMContentLoaded', async () => {
         bindSubLotAutocomplete(parcel.id);
         // 면적 단위 변환 이벤트 바인딩
         bindAreaUnitConversion(parcel.id);
+        // 필지별 구분 라디오 버튼 이벤트 바인딩
+        bindParcelCategoryRadio(parcel.id);
 
         log(`   ✅ 모든 이벤트 바인딩 완료`);
+    }
+
+    // 필지별 구분 라디오 버튼 이벤트 바인딩
+    function bindParcelCategoryRadio(parcelId) {
+        const radioContainer = document.querySelector(`.parcel-category-radios[data-id="${parcelId}"]`);
+        if (!radioContainer) return;
+
+        const radios = radioContainer.querySelectorAll('input[type="radio"]');
+        radios.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                const category = e.target.value;
+                const parcel = parcels.find(p => p.id === parcelId);
+                if (parcel) {
+                    parcel.category = category;
+                    log(`📍 필지 ${parcelId} 구분 변경: ${category || '없음'}`);
+                    updateSummary();
+                    triggerAutoSave();
+                }
+            });
+        });
     }
 
     // 면적 단위 변환 이벤트 바인딩
@@ -1940,6 +1987,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             const existingLog = sampleLogs[logIndex];
+            // 첫 번째 필지의 구분이 있으면 해당 값 사용
+            const firstParcelCategory = validParcels[0]?.category;
+            const mainSubCategory = formData.get('subCategory') || '-';
+            const effectiveSubCategory = firstParcelCategory || mainSubCategory;
+
             const updatedLog = {
                 ...existingLog,
                 receptionNumber: formData.get('receptionNumber'),
@@ -1947,7 +1999,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 name: formData.get('name'),
                 phoneNumber: formData.get('phoneNumber'),
                 address: formData.get('address'),
-                subCategory: formData.get('subCategory') || '-',
+                subCategory: effectiveSubCategory,
                 purpose: formData.get('purpose'),
                 receptionMethod: formData.get('receptionMethod') || '-',
                 note: formData.get('note') || '',
@@ -1956,7 +2008,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     lotAddress: p.lotAddress,
                     isMountain: p.isMountain || false,
                     subLots: [...p.subLots],
-                    crops: p.crops.map(c => ({ ...c }))
+                    crops: p.crops.map(c => ({ ...c })),
+                    category: p.category || '' // 필지별 구분 저장
                 })),
                 updatedAt: new Date().toISOString()
             };
@@ -1983,6 +2036,45 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // 신규 등록 모드 - 각 필지마다 별도의 접수번호 부여
         const baseReceptionNumber = formData.get('receptionNumber');
+
+        // 접수번호 중복 검증 (localStorage에서 최신 데이터 확인)
+        const isFillNumber = baseReceptionNumber.startsWith('F');
+        const baseNumber = isFillNumber
+            ? parseInt(baseReceptionNumber.replace('F', ''), 10) || 1
+            : parseInt(baseReceptionNumber, 10) || 1;
+
+        const numbersToCheck = validParcels.map((_, index) => {
+            const num = baseNumber + index;
+            return isFillNumber ? `F${num}` : String(num);
+        });
+
+        // localStorage에서 최신 데이터 다시 로드하여 중복 확인
+        const yearStorageKey = getStorageKey(selectedYear);
+        const latestLogs = JSON.parse(localStorage.getItem(yearStorageKey)) || [];
+
+        // 중복되는 접수번호 찾기
+        const duplicateNumbers = numbersToCheck.filter(numToCheck => {
+            return latestLogs.some(log => {
+                const logBaseNumber = (log.receptionNumber || '').split('-')[0];
+                return logBaseNumber === numToCheck;
+            });
+        });
+
+        if (duplicateNumbers.length > 0) {
+            // 메모리의 sampleLogs도 최신 상태로 동기화
+            sampleLogs = latestLogs;
+            renderLogs(sampleLogs);
+
+            // 다음 사용 가능한 번호 찾기
+            const nextAvailable = isFillNumber
+                ? generateNextFillReceptionNumber()
+                : generateNextReceptionNumber();
+            receptionNumberInput.value = nextAvailable;
+
+            showToast(`접수번호 ${duplicateNumbers.join(', ')}이(가) 이미 존재합니다. ${nextAvailable}번으로 변경되었습니다.`, 'warning');
+            return;
+        }
+
         const commonData = {
             date: formData.get('date'),
             name: formData.get('name'),
@@ -1999,15 +2091,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         const groupId = crypto.randomUUID();
 
         // 각 필지별로 별도 레코드 생성 (각 필지는 독립적인 접수번호)
-        const baseNumber = parseInt(baseReceptionNumber, 10) || 1;
+        // baseNumber, isFillNumber는 위에서 중복 검증 시 이미 계산됨
         const newLogs = validParcels.map((parcel, index) => {
-            // 각 필지는 순차적인 접수번호 (1, 2, 3...)
-            const receptionNumber = String(baseNumber + index);
+            // 각 필지는 순차적인 접수번호 (1, 2, 3... 또는 F1, F2, F3...)
+            const num = baseNumber + index;
+            const receptionNumber = isFillNumber ? `F${num}` : String(num);
+
+            // 필지별 구분이 있으면 필지별 구분 사용, 없으면 메인 구분 사용
+            const parcelSubCategory = parcel.category || commonData.subCategory;
 
             return {
                 id: crypto.randomUUID(),
                 receptionNumber,
                 ...commonData,
+                subCategory: parcelSubCategory, // 필지별 구분 우선 적용
                 groupId, // 같은 접수건임을 표시
                 parcelIndex: index + 1,
                 totalParcels: validParcels.length,
@@ -2015,7 +2112,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     id: crypto.randomUUID(),
                     lotAddress: parcel.lotAddress,
                     subLots: [...parcel.subLots],
-                    crops: parcel.crops.map(c => ({ ...c }))
+                    crops: parcel.crops.map(c => ({ ...c })),
+                    category: parcel.category || '' // 필지별 구분 저장
                 }],
                 // 호환성을 위한 기존 필드
                 lotAddress: parcel.lotAddress,
