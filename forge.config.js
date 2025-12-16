@@ -4,7 +4,7 @@ const { FuseV1Options, FuseVersion } = require('@electron/fuses');
 module.exports = {
   packagerConfig: {
     asar: true,
-    name: '시료접수대장',
+    name: 'sample-log',
     executableName: 'sample-log',
     appBundleId: 'com.samplelog.app',
   },
