@@ -95,6 +95,28 @@ body {
     background-color: var(--gray-100);
     display: flex;
     flex-direction: column;
+    position: relative;
+}
+
+/* 시료 타입별 은은한 배경 그라디언트 */
+body.soil-page {
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 30%, #f0fdf4 60%, #ecfdf5 100%);
+}
+
+body.water-page {
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 30%, #eff6ff 60%, #f0f9ff 100%);
+}
+
+body.pesticide-page {
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 30%, #fffbeb 60%, #fefce8 100%);
+}
+
+body.compost-page {
+    background: linear-gradient(135deg, #fefce8 0%, #fef9c3 30%, #fefce8 60%, #fffbeb 100%);
+}
+
+body.heavy-metal-page {
+    background: linear-gradient(135deg, #fef2f2 0%, #fecaca 30%, #fef2f2 60%, #fff1f2 100%);
 }
 
 /* =============================================
@@ -114,7 +136,7 @@ body {
     z-index: 100;
 }
 
-/* Custom Tooltip */
+/* Custom Tooltip - Enhanced Design */
 .navbar [title] {
     position: relative;
 }
@@ -122,22 +144,23 @@ body {
 .navbar [title]::after {
     content: attr(title);
     position: absolute;
-    top: calc(100% + 8px);
+    top: calc(100% + 10px);
     left: 50%;
-    transform: translateX(-50%) translateY(-4px);
-    padding: 0.5rem 0.75rem;
-    background: var(--gray-800);
+    transform: translateX(-50%) translateY(-8px) scale(0.95);
+    padding: 0.6rem 1rem;
+    background: linear-gradient(135deg, var(--gray-800) 0%, var(--gray-900) 100%);
     color: white;
     font-size: 0.75rem;
     font-weight: 500;
     white-space: nowrap;
-    border-radius: var(--radius-md);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
     opacity: 0;
     visibility: hidden;
-    transition: all 0.2s ease;
+    transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     z-index: 1000;
     pointer-events: none;
+    letter-spacing: 0.02em;
 }
 
 .navbar [title]::before {
@@ -145,25 +168,26 @@ body {
     position: absolute;
     top: calc(100% + 4px);
     left: 50%;
-    transform: translateX(-50%);
-    border: 5px solid transparent;
+    transform: translateX(-50%) scale(0);
+    border: 6px solid transparent;
     border-bottom-color: var(--gray-800);
     opacity: 0;
     visibility: hidden;
-    transition: all 0.2s ease;
+    transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     z-index: 1000;
     pointer-events: none;
 }
 
-.navbar [title]:hover::after,
-.navbar [title]:hover::before {
+.navbar [title]:hover::after {
     opacity: 1;
     visibility: visible;
-    transform: translateX(-50%) translateY(0);
+    transform: translateX(-50%) translateY(0) scale(1);
 }
 
 .navbar [title]:hover::before {
-    transform: translateX(-50%);
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) scale(1);
 }
 
 /* Brand/Logo with Dropdown */
@@ -339,27 +363,60 @@ body {
     border: none;
     border-radius: var(--radius-md);
     cursor: pointer;
-    transition: var(--transition);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+    overflow: hidden;
+}
+
+/* 언더라인 애니메이션 */
+.nav-btn::after {
+    content: '';
+    position: absolute;
+    bottom: 4px;
+    left: 50%;
+    width: 0;
+    height: 3px;
+    background: linear-gradient(90deg, hsl(var(--primary)), #60a5fa);
+    border-radius: 2px;
+    transform: translateX(-50%);
+    transition: width 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .nav-btn:hover {
     background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-2px);
+}
+
+.nav-btn:hover::after {
+    width: 20px;
 }
 
 .nav-btn.active {
     background: hsl(var(--primary));
-    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.5);
+    transform: translateY(-2px);
+}
+
+.nav-btn.active::after {
+    width: 24px;
+    background: white;
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
 }
 
 .nav-btn-icon {
     font-size: 1.25rem;
     filter: grayscale(0.3) opacity(0.7);
-    transition: var(--transition);
+    transition: all 0.3s ease;
 }
 
-.nav-btn:hover .nav-btn-icon,
+.nav-btn:hover .nav-btn-icon {
+    filter: grayscale(0) opacity(1);
+    transform: scale(1.1);
+}
+
 .nav-btn.active .nav-btn-icon {
     filter: grayscale(0) opacity(1);
+    transform: scale(1.15);
 }
 
 /* Divider */
@@ -568,6 +625,214 @@ body {
     box-shadow: 0 0 8px var(--success);
 }
 
+/* =============================================
+   Sample Type Color Highlights (Enhanced)
+   ============================================= */
+
+/* 시료 타입별 색상 변수 */
+:root {
+    --soil-color: #22C55E;
+    --soil-color-light: rgba(34, 197, 94, 0.15);
+    --soil-glow: rgba(34, 197, 94, 0.4);
+
+    --water-color: #3B82F6;
+    --water-color-light: rgba(59, 130, 246, 0.15);
+    --water-glow: rgba(59, 130, 246, 0.4);
+
+    --pesticide-color: #F59E0B;
+    --pesticide-color-light: rgba(245, 158, 11, 0.15);
+    --pesticide-glow: rgba(245, 158, 11, 0.4);
+
+    --compost-color: #A16207;
+    --compost-color-light: rgba(161, 98, 7, 0.15);
+    --compost-glow: rgba(161, 98, 7, 0.4);
+
+    --heavy-metal-color: #EF4444;
+    --heavy-metal-color-light: rgba(239, 68, 68, 0.15);
+    --heavy-metal-glow: rgba(239, 68, 68, 0.4);
+}
+
+/* 네비게이션 바 상단 악센트 라인 */
+.navbar::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, hsl(var(--primary)), #60a5fa);
+    opacity: 0.8;
+}
+
+/* 시료 타입별 네비게이션 바 악센트 */
+.navbar.soil-navbar::before {
+    background: linear-gradient(90deg, var(--soil-color), #4ade80);
+}
+
+.navbar.water-navbar::before {
+    background: linear-gradient(90deg, var(--water-color), #60a5fa);
+}
+
+.navbar.pesticide-navbar::before {
+    background: linear-gradient(90deg, var(--pesticide-color), #fbbf24);
+}
+
+.navbar.compost-navbar::before {
+    background: linear-gradient(90deg, var(--compost-color), #ca8a04);
+}
+
+.navbar.heavy-metal-navbar::before {
+    background: linear-gradient(90deg, var(--heavy-metal-color), #f87171);
+}
+
+/* 브랜드 드롭다운 트리거 - 시료 타입별 하이라이트 */
+.soil-navbar .brand-dropdown-trigger {
+    background: var(--soil-color-light);
+    border-color: var(--soil-color);
+}
+
+.soil-navbar .brand-dropdown-trigger:hover {
+    background: rgba(34, 197, 94, 0.25);
+    box-shadow: 0 0 15px var(--soil-glow);
+}
+
+.water-navbar .brand-dropdown-trigger {
+    background: var(--water-color-light);
+    border-color: var(--water-color);
+}
+
+.water-navbar .brand-dropdown-trigger:hover {
+    background: rgba(59, 130, 246, 0.25);
+    box-shadow: 0 0 15px var(--water-glow);
+}
+
+.pesticide-navbar .brand-dropdown-trigger {
+    background: var(--pesticide-color-light);
+    border-color: var(--pesticide-color);
+}
+
+.pesticide-navbar .brand-dropdown-trigger:hover {
+    background: rgba(245, 158, 11, 0.25);
+    box-shadow: 0 0 15px var(--pesticide-glow);
+}
+
+.compost-navbar .brand-dropdown-trigger {
+    background: var(--compost-color-light);
+    border-color: var(--compost-color);
+}
+
+.compost-navbar .brand-dropdown-trigger:hover {
+    background: rgba(161, 98, 7, 0.25);
+    box-shadow: 0 0 15px var(--compost-glow);
+}
+
+.heavy-metal-navbar .brand-dropdown-trigger {
+    background: var(--heavy-metal-color-light);
+    border-color: var(--heavy-metal-color);
+}
+
+.heavy-metal-navbar .brand-dropdown-trigger:hover {
+    background: rgba(239, 68, 68, 0.25);
+    box-shadow: 0 0 15px var(--heavy-metal-glow);
+}
+
+/* 네비게이션 버튼 - 시료 타입별 활성 상태 */
+.soil-navbar .nav-btn.active {
+    background: var(--soil-color);
+    box-shadow: 0 4px 12px var(--soil-glow);
+}
+
+.soil-navbar .nav-btn.active::after {
+    background: white;
+}
+
+.water-navbar .nav-btn.active {
+    background: var(--water-color);
+    box-shadow: 0 4px 12px var(--water-glow);
+}
+
+.water-navbar .nav-btn.active::after {
+    background: white;
+}
+
+.pesticide-navbar .nav-btn.active {
+    background: var(--pesticide-color);
+    box-shadow: 0 4px 12px var(--pesticide-glow);
+}
+
+.pesticide-navbar .nav-btn.active::after {
+    background: white;
+}
+
+.compost-navbar .nav-btn.active {
+    background: var(--compost-color);
+    box-shadow: 0 4px 12px var(--compost-glow);
+}
+
+.compost-navbar .nav-btn.active::after {
+    background: white;
+}
+
+.heavy-metal-navbar .nav-btn.active {
+    background: var(--heavy-metal-color);
+    box-shadow: 0 4px 12px var(--heavy-metal-glow);
+}
+
+.heavy-metal-navbar .nav-btn.active::after {
+    background: white;
+}
+
+/* 액션 버튼 - 시료 타입별 */
+.soil-navbar .action-btn-icon.submit {
+    background: var(--soil-color);
+    box-shadow: 0 2px 6px var(--soil-glow);
+}
+
+.soil-navbar .action-btn-icon.submit:hover {
+    background: #16A34A;
+    box-shadow: 0 4px 10px var(--soil-glow);
+}
+
+.water-navbar .action-btn-icon.submit {
+    background: var(--water-color);
+    box-shadow: 0 2px 6px var(--water-glow);
+}
+
+.water-navbar .action-btn-icon.submit:hover {
+    background: #2563EB;
+    box-shadow: 0 4px 10px var(--water-glow);
+}
+
+.pesticide-navbar .action-btn-icon.submit {
+    background: var(--pesticide-color);
+    box-shadow: 0 2px 6px var(--pesticide-glow);
+}
+
+.pesticide-navbar .action-btn-icon.submit:hover {
+    background: #D97706;
+    box-shadow: 0 4px 10px var(--pesticide-glow);
+}
+
+.compost-navbar .action-btn-icon.submit {
+    background: var(--compost-color);
+    box-shadow: 0 2px 6px var(--compost-glow);
+}
+
+.compost-navbar .action-btn-icon.submit:hover {
+    background: #854D0E;
+    box-shadow: 0 4px 10px var(--compost-glow);
+}
+
+.heavy-metal-navbar .action-btn-icon.submit {
+    background: var(--heavy-metal-color);
+    box-shadow: 0 2px 6px var(--heavy-metal-glow);
+}
+
+.heavy-metal-navbar .action-btn-icon.submit:hover {
+    background: #DC2626;
+    box-shadow: 0 4px 10px var(--heavy-metal-glow);
+}
+
 /* Legacy support for action-btn in other places */
 .action-btn {
     display: inline-flex;
@@ -607,7 +872,9 @@ body {
     margin-top: 52px;
     height: calc(100vh - 52px);
     overflow-y: auto;
-    background-color: var(--gray-50);
+    background-color: transparent;
+    position: relative;
+    z-index: 1;
 }
 
 /* View Container */
@@ -4406,4 +4673,268 @@ select {
     font-weight: 600;
     padding: 2px 6px;
     border-radius: 4px;
+}
+
+/* ========================================
+   폼 UI 개선 - 플로팅 레이블 & 애니메이션
+   ======================================== */
+
+/* 플로팅 레이블 컨테이너 */
+.form-field.floating {
+    position: relative;
+    margin-top: 0.5rem;
+}
+
+.form-field.floating label {
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.875rem;
+    color: var(--gray-400);
+    pointer-events: none;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    background: transparent;
+    padding: 0 0.25rem;
+    z-index: 1;
+}
+
+/* 플로팅 레이블 - textarea용 */
+.form-field.floating:has(textarea) label {
+    top: 1rem;
+    transform: none;
+}
+
+/* 플로팅 레이블 활성화 상태 */
+.form-field.floating input:focus ~ label,
+.form-field.floating input:not(:placeholder-shown) ~ label,
+.form-field.floating select:focus ~ label,
+.form-field.floating select:not([value=""]) ~ label,
+.form-field.floating textarea:focus ~ label,
+.form-field.floating textarea:not(:placeholder-shown) ~ label,
+.form-field.floating .has-value ~ label {
+    top: 0;
+    transform: translateY(-50%);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: hsl(var(--primary));
+    background: white;
+}
+
+/* 플로팅 레이블 - focus 상태에서 input 스타일 */
+.form-field.floating input,
+.form-field.floating select,
+.form-field.floating textarea {
+    padding-top: 0.875rem;
+    padding-bottom: 0.5rem;
+}
+
+/* 입력 애니메이션 효과 */
+.form-field input,
+.form-field select,
+.form-field textarea {
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 포커스 시 확대 효과 */
+.form-field input:focus,
+.form-field select:focus,
+.form-field textarea:focus {
+    transform: scale(1.01);
+    border-color: hsl(var(--primary));
+    box-shadow:
+        0 0 0 3px rgba(59, 130, 246, 0.15),
+        0 4px 12px rgba(59, 130, 246, 0.1);
+}
+
+/* 입력 중 하이라이트 애니메이션 */
+@keyframes inputHighlight {
+    0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+    70% { box-shadow: 0 0 0 6px rgba(59, 130, 246, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+}
+
+.form-field input:focus,
+.form-field select:focus {
+    animation: inputHighlight 0.5s ease-out;
+}
+
+/* 검증 상태 스타일 - 성공 */
+.form-field.valid input,
+.form-field.valid select,
+.form-field.valid textarea {
+    border-color: var(--success);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%2322c55e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M22 11.08V12a10 10 0 1 1-5.93-9.14'/%3E%3Cpath d='m9 11 3 3L22 4'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1.125rem;
+    padding-right: 2.5rem;
+}
+
+.form-field.valid input:focus,
+.form-field.valid select:focus,
+.form-field.valid textarea:focus {
+    box-shadow:
+        0 0 0 3px rgba(34, 197, 94, 0.15),
+        0 4px 12px rgba(34, 197, 94, 0.1);
+}
+
+/* 검증 상태 스타일 - 오류 */
+.form-field.invalid input,
+.form-field.invalid select,
+.form-field.invalid textarea {
+    border-color: var(--danger);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23ef4444' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cline x1='12' x2='12' y1='8' y2='12'/%3E%3Cline x1='12' x2='12.01' y1='16' y2='16'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1.125rem;
+    padding-right: 2.5rem;
+    animation: shake 0.4s ease-in-out;
+}
+
+.form-field.invalid input:focus,
+.form-field.invalid select:focus,
+.form-field.invalid textarea:focus {
+    box-shadow:
+        0 0 0 3px rgba(239, 68, 68, 0.15),
+        0 4px 12px rgba(239, 68, 68, 0.1);
+}
+
+/* 흔들림 애니메이션 - 오류 시 */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-4px); }
+    40% { transform: translateX(4px); }
+    60% { transform: translateX(-4px); }
+    80% { transform: translateX(4px); }
+}
+
+/* 검증 상태 스타일 - 경고 */
+.form-field.warning input,
+.form-field.warning select,
+.form-field.warning textarea {
+    border-color: var(--warning);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23f59e0b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3'/%3E%3Cpath d='M12 9v4'/%3E%3Cpath d='M12 17h.01'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1.125rem;
+    padding-right: 2.5rem;
+}
+
+.form-field.warning input:focus,
+.form-field.warning select:focus,
+.form-field.warning textarea:focus {
+    box-shadow:
+        0 0 0 3px rgba(245, 158, 11, 0.15),
+        0 4px 12px rgba(245, 158, 11, 0.1);
+}
+
+/* 검증 메시지 */
+.form-field .validation-message {
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    opacity: 0;
+    transform: translateY(-5px);
+    transition: all 0.2s ease;
+}
+
+.form-field.valid .validation-message,
+.form-field.invalid .validation-message,
+.form-field.warning .validation-message {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.form-field.valid .validation-message {
+    color: var(--success);
+}
+
+.form-field.invalid .validation-message {
+    color: var(--danger);
+}
+
+.form-field.warning .validation-message {
+    color: var(--warning);
+}
+
+/* 로딩/검증 중 상태 */
+.form-field.validating input,
+.form-field.validating select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='M21 12a9 9 0 1 1-6.219-8.56'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1.125rem;
+    padding-right: 2.5rem;
+    animation: spinIcon 1s linear infinite;
+}
+
+@keyframes spinIcon {
+    from { background-position: right 0.75rem center; }
+}
+
+/* 입력 필드 글로우 효과 - 호버 */
+.form-field input:hover:not(:focus):not(:disabled),
+.form-field select:hover:not(:focus):not(:disabled),
+.form-field textarea:hover:not(:focus):not(:disabled) {
+    border-color: var(--gray-300);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* 비활성화 상태 */
+.form-field input:disabled,
+.form-field select:disabled,
+.form-field textarea:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background-color: var(--gray-100);
+}
+
+/* 필수 필드 표시 강화 */
+.form-field label .required {
+    color: var(--danger);
+    font-weight: 700;
+    animation: pulse-required 2s ease-in-out infinite;
+}
+
+@keyframes pulse-required {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* 폼 카드 내부 입력 필드 간격 조정 */
+.card-body .form-field {
+    margin-bottom: 0.25rem;
+}
+
+/* Select 드롭다운 화살표 커스텀 */
+.form-field select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1rem;
+    padding-right: 2.5rem;
+}
+
+.form-field select:focus {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+
+/* 입력 완료 체크 애니메이션 */
+@keyframes checkBounce {
+    0% { transform: scale(0); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+.form-field.valid::after {
+    content: '';
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    animation: checkBounce 0.3s ease-out;
 }
