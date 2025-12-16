@@ -1,7 +1,7 @@
 {
   "name": "sample-log",
-  "productName": "sample-log",
-  "version": "1.4.12",
+  "productName": "시료접수대장",
+  "version": "1.4.13",
   "description": "My Electron application description",
   "main": "src/index.js",
   "scripts": {
