@@ -779,3 +779,270 @@ textarea:focus {
     color: var(--water-primary-dark);
     font-weight: 500;
 }
+
+/* ========================================
+   다크 모드 스타일
+   ======================================== */
+
+/* 다크 모드 네비게이션 바 */
+[data-theme="dark"] .water-navbar {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border-bottom-color: rgba(59, 130, 246, 0.3);
+}
+
+[data-theme="dark"] .water-navbar .brand-text {
+    color: #93c5fd;
+}
+
+[data-theme="dark"] .back-btn {
+    background: rgba(59, 130, 246, 0.15);
+    color: #93c5fd;
+    border-color: rgba(59, 130, 246, 0.3);
+}
+
+[data-theme="dark"] .back-btn:hover {
+    background: var(--water-primary);
+    color: white;
+}
+
+/* 다크 모드 카드 헤더 */
+[data-theme="dark"] .water-navbar ~ .main-content .form-card .card-header {
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%);
+    border-bottom-color: rgba(59, 130, 246, 0.2);
+}
+
+[data-theme="dark"] .water-navbar ~ .main-content .form-card .card-header h3 {
+    color: #93c5fd;
+}
+
+/* 다크 모드 목적(용도) 옵션 */
+[data-theme="dark"] .purpose-label {
+    background: rgba(30, 41, 59, 0.9);
+    border-color: rgba(148, 163, 184, 0.2);
+}
+
+[data-theme="dark"] .purpose-option:hover .purpose-label {
+    background: rgba(59, 130, 246, 0.15);
+    border-color: rgba(59, 130, 246, 0.4);
+}
+
+[data-theme="dark"] .purpose-option input[type="radio"]:checked + .purpose-label {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(37, 99, 235, 0.3));
+    border-color: var(--water-primary);
+}
+
+[data-theme="dark"] .purpose-text {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .purpose-option input[type="radio"]:checked + .purpose-label .purpose-text {
+    color: #93c5fd;
+}
+
+/* 다크 모드 검사항목 옵션 */
+[data-theme="dark"] .test-item-label {
+    background: rgba(30, 41, 59, 0.9);
+    border-color: rgba(148, 163, 184, 0.2);
+}
+
+[data-theme="dark"] .test-item-option:hover .test-item-label {
+    background: rgba(59, 130, 246, 0.15);
+    border-color: rgba(59, 130, 246, 0.4);
+}
+
+[data-theme="dark"] .test-item-option input[type="radio"]:checked + .test-item-label {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(37, 99, 235, 0.3));
+    border-color: var(--water-primary);
+}
+
+[data-theme="dark"] .test-item-name {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .test-item-count {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .test-item-option input[type="radio"]:checked + .test-item-label .test-item-name {
+    color: #93c5fd;
+}
+
+/* 다크 모드 검사항목 상세 정보 */
+[data-theme="dark"] .test-items-info {
+    background: rgba(30, 41, 59, 0.9);
+    border-left-color: var(--water-primary);
+}
+
+[data-theme="dark"] .test-items-info h4 {
+    color: #93c5fd;
+}
+
+[data-theme="dark"] .test-items-list {
+    color: #94a3b8;
+}
+
+/* 다크 모드 textarea */
+[data-theme="dark"] textarea {
+    background: rgba(30, 41, 59, 0.9);
+    border-color: rgba(148, 163, 184, 0.2);
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] textarea:focus {
+    border-color: var(--water-primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+[data-theme="dark"] textarea::placeholder {
+    color: #64748b;
+}
+
+/* 다크 모드 채취장소 */
+[data-theme="dark"] .sampling-locations-container {
+    border-top-color: rgba(148, 163, 184, 0.2);
+}
+
+[data-theme="dark"] .sampling-location-header label {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .location-number {
+    background: rgba(59, 130, 246, 0.2);
+    color: #93c5fd;
+}
+
+[data-theme="dark"] .sampling-location-item .sampling-location-input,
+[data-theme="dark"] .sampling-crop-input {
+    background: rgba(30, 41, 59, 0.9);
+    border-color: rgba(148, 163, 184, 0.2);
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .sampling-location-item .sampling-location-input:focus,
+[data-theme="dark"] .sampling-crop-input:focus {
+    border-color: var(--water-primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+[data-theme="dark"] .sampling-location-item .sampling-location-input::placeholder,
+[data-theme="dark"] .sampling-crop-input::placeholder {
+    color: #64748b;
+}
+
+[data-theme="dark"] .btn-add-location {
+    background: rgba(59, 130, 246, 0.2);
+    color: #93c5fd;
+}
+
+[data-theme="dark"] .btn-add-location:hover {
+    background: var(--water-primary);
+    color: white;
+}
+
+[data-theme="dark"] .btn-remove-location {
+    background: rgba(239, 68, 68, 0.15);
+    color: #fca5a5;
+}
+
+[data-theme="dark"] .btn-remove-location:hover {
+    background: #dc2626;
+    color: white;
+}
+
+/* 다크 모드 자동완성 리스트 */
+[data-theme="dark"] .location-autocomplete-list {
+    background: #1e293b;
+    border-color: rgba(148, 163, 184, 0.2);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .location-autocomplete-list li {
+    border-bottom-color: rgba(148, 163, 184, 0.1);
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .location-autocomplete-list li:hover {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.2));
+    color: #93c5fd;
+}
+
+/* 다크 모드 스크롤바 */
+[data-theme="dark"] .sampling-locations-list::-webkit-scrollbar-track,
+[data-theme="dark"] .water-navbar ~ .main-content .form-right-column::-webkit-scrollbar-track {
+    background: rgba(30, 41, 59, 0.5);
+}
+
+[data-theme="dark"] .sampling-locations-list::-webkit-scrollbar-thumb,
+[data-theme="dark"] .water-navbar ~ .main-content .form-right-column::-webkit-scrollbar-thumb {
+    background: rgba(59, 130, 246, 0.3);
+}
+
+[data-theme="dark"] .sampling-locations-list::-webkit-scrollbar-thumb:hover,
+[data-theme="dark"] .water-navbar ~ .main-content .form-right-column::-webkit-scrollbar-thumb:hover {
+    background: var(--water-primary);
+}
+
+/* 다크 모드 년도 선택 */
+[data-theme="dark"] .year-select {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-color: rgba(59, 130, 246, 0.15) !important;
+    color: #93c5fd !important;
+    border-color: rgba(59, 130, 246, 0.4) !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2393c5fd' d='M6 8L2 4h8z'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 8px center !important;
+}
+
+[data-theme="dark"] .year-select:hover {
+    background-color: rgba(59, 130, 246, 0.25) !important;
+}
+
+[data-theme="dark"] .year-select:focus {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+[data-theme="dark"] .year-select option {
+    background-color: #1e293b !important;
+    color: #93c5fd !important;
+}
+
+/* 다크 모드 select 공통 (sampleName 등) */
+[data-theme="dark"] .water-navbar ~ .main-content select,
+[data-theme="dark"] .water-navbar ~ .main-content .form-field select {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-color: rgba(30, 41, 59, 0.9) !important;
+    color: #e2e8f0 !important;
+    border-color: rgba(59, 130, 246, 0.3) !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2393c5fd' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 12px center !important;
+    background-size: 16px !important;
+}
+
+[data-theme="dark"] .water-navbar ~ .main-content select:focus,
+[data-theme="dark"] .water-navbar ~ .main-content .form-field select:focus {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+[data-theme="dark"] .water-navbar ~ .main-content select option {
+    background-color: #1e293b !important;
+    color: #93c5fd !important;
+}
+
+/* 다크 모드 items-per-page */
+[data-theme="dark"] .water-navbar ~ .main-content .items-per-page {
+    background-color: rgba(30, 41, 59, 0.9) !important;
+    color: #93c5fd !important;
+    border-color: rgba(59, 130, 246, 0.3) !important;
+}
+
+/* 다크 모드 시료수 단위 */
+[data-theme="dark"] .sample-count-unit {
+    color: #94a3b8;
+}

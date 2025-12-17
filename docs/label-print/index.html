@@ -768,6 +768,168 @@
                 width: 100%;
             }
         }
+
+        /* ========================================
+           다크 모드 스타일
+           ======================================== */
+        [data-theme="dark"] {
+            color-scheme: dark;
+        }
+
+        [data-theme="dark"] body {
+            background: linear-gradient(135deg, #1e1b4b 0%, #312e81 45%, #581c87 100%);
+        }
+
+        [data-theme="dark"] .section-card {
+            background: rgba(30, 27, 46, 0.95);
+            border-color: rgba(99, 102, 241, 0.2);
+        }
+
+        [data-theme="dark"] .section-header {
+            background: linear-gradient(120deg, rgba(79, 70, 229, 0.15), rgba(236, 72, 153, 0.08));
+            border-bottom-color: rgba(99, 102, 241, 0.15);
+        }
+
+        [data-theme="dark"] .section-header h3 {
+            color: #c4b5fd;
+        }
+
+        [data-theme="dark"] .section-header p {
+            color: #94a3b8;
+        }
+
+        [data-theme="dark"] .form-group label,
+        [data-theme="dark"] .field-section-title {
+            color: #e2e8f0;
+        }
+
+        [data-theme="dark"] .form-group select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-color: rgba(30, 27, 46, 0.9) !important;
+            color: #e2e8f0 !important;
+            border-color: rgba(99, 102, 241, 0.3) !important;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23c4b5fd' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+            background-repeat: no-repeat !important;
+            background-position: right 12px center !important;
+            background-size: 16px !important;
+        }
+
+        [data-theme="dark"] .form-group select:focus {
+            border-color: #6366f1 !important;
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2);
+            background-color: rgba(30, 27, 46, 0.95) !important;
+        }
+
+        [data-theme="dark"] .form-group select option {
+            background-color: #1e1b2e !important;
+            color: #c4b5fd !important;
+        }
+
+        [data-theme="dark"] .file-upload {
+            background: linear-gradient(135deg, rgba(236, 72, 153, 0.1), rgba(124, 58, 237, 0.08));
+            border-color: rgba(236, 72, 153, 0.35);
+        }
+
+        [data-theme="dark"] .file-upload:hover {
+            background: linear-gradient(135deg, rgba(79, 70, 229, 0.12), rgba(236, 72, 153, 0.12));
+        }
+
+        [data-theme="dark"] .upload-title {
+            color: #e2e8f0;
+        }
+
+        [data-theme="dark"] .upload-sub {
+            color: #94a3b8;
+        }
+
+        [data-theme="dark"] .btn-outline {
+            background: rgba(30, 27, 46, 0.9);
+            color: #c4b5fd;
+            border-color: rgba(99, 102, 241, 0.4);
+        }
+
+        [data-theme="dark"] .btn-outline:hover {
+            background: rgba(99, 102, 241, 0.15);
+        }
+
+        [data-theme="dark"] .data-preview,
+        [data-theme="dark"] .preview-card {
+            background: rgba(30, 27, 46, 0.95);
+            border-color: rgba(99, 102, 241, 0.2);
+        }
+
+        [data-theme="dark"] .preview-heading h3,
+        [data-theme="dark"] .preview-card h3 {
+            color: #c4b5fd;
+        }
+
+        [data-theme="dark"] .data-table {
+            background: rgba(20, 17, 36, 0.9);
+        }
+
+        [data-theme="dark"] .data-table th {
+            background: rgba(99, 102, 241, 0.15);
+            color: #c4b5fd;
+        }
+
+        [data-theme="dark"] .data-table td {
+            color: #e2e8f0;
+            border-color: rgba(99, 102, 241, 0.1);
+        }
+
+        [data-theme="dark"] .data-table tr:hover td {
+            background: rgba(99, 102, 241, 0.08);
+        }
+
+        [data-theme="dark"] .progress-card {
+            background: rgba(30, 27, 46, 0.95);
+            border-color: rgba(99, 102, 241, 0.2);
+        }
+
+        [data-theme="dark"] .progress-label,
+        [data-theme="dark"] .progress-text {
+            color: #e2e8f0;
+        }
+
+        [data-theme="dark"] .modal-content {
+            background: rgba(30, 27, 46, 0.98);
+        }
+
+        [data-theme="dark"] .modal-header {
+            background: linear-gradient(120deg, rgba(79, 70, 229, 0.15), rgba(236, 72, 153, 0.08));
+            border-bottom-color: rgba(99, 102, 241, 0.2);
+        }
+
+        [data-theme="dark"] .modal-header h2 {
+            color: #c4b5fd;
+        }
+
+        [data-theme="dark"] .legend-item {
+            color: #94a3b8;
+        }
+
+        [data-theme="dark"] #labelFieldMapping select {
+            background-color: rgba(30, 27, 46, 0.9) !important;
+            color: #e2e8f0 !important;
+            border-color: rgba(99, 102, 241, 0.3) !important;
+        }
+
+        [data-theme="dark"] .label-grid-preview .label-cell {
+            background: rgba(30, 27, 46, 0.8);
+            color: #94a3b8;
+            border-color: rgba(99, 102, 241, 0.2);
+        }
+
+        [data-theme="dark"] .label-grid-preview .label-cell.used {
+            background: rgba(156, 163, 175, 0.2);
+        }
+
+        [data-theme="dark"] .label-grid-preview .label-cell.start {
+            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-mid));
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -909,6 +1071,8 @@
     <!-- DOMPurify for XSS prevention -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js" integrity="sha384-cwS6YdhLI7XS60eoDiC+egV0qHp8zI+Cms46R0nbn8JrmoAzV9uFL60etMZhAnSu" crossorigin="anonymous"></script>
     <script src="../shared/sanitize.js"></script>
+    <!-- 다크 모드 테마 -->
+    <script src="../shared/theme.js"></script>
 
     <script src="label-app.js"></script>
 </body>

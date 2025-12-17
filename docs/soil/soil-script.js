@@ -442,7 +442,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             lotAddress: '',
             isMountain: false, // 산 여부
             subLots: [], // 이제 { lotAddress: string, crops: [{name, area}] } 형태의 객체 배열
-            crops: []
+            crops: [],
+            note: '' // 필지별 비고
         };
         parcels.push(parcel);
         log(`   - 생성된 필지 ID: ${parcelId}`);
@@ -499,6 +500,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <label class="parcel-category-label">
                         <input type="radio" name="parcel-category-${parcel.id}" value="시설" ${parcelCategory === '시설' ? 'checked' : ''}>
                         <span>시설</span>
+                    </label>
+                    <label class="parcel-category-label">
+                        <input type="radio" name="parcel-category-${parcel.id}" value="임야" ${parcelCategory === '임야' ? 'checked' : ''}>
+                        <span>임야</span>
                     </label>
                 </div>
                 <button type="button" class="btn-remove-parcel" data-id="${parcel.id}">삭제</button>
@@ -624,6 +629,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 `;
                             }).join('')}
                         </div>
+                    </div>
+                </div>
+                <div class="parcel-note-row">
+                    <div class="parcel-form-group parcel-note-group">
+                        <label for="parcel-note-${parcel.id}">비고</label>
+                        <input type="text" class="parcel-note-input"
+                               id="parcel-note-${parcel.id}"
+                               name="parcel-note-${parcel.id}"
+                               data-id="${parcel.id}"
+                               placeholder="필지 관련 메모"
+                               value="${escapeHTML(parcel.note || '')}">
                     </div>
                 </div>
                 <div class="parcel-summary" id="summary-${parcel.id}">
@@ -1273,7 +1289,30 @@ document.addEventListener('DOMContentLoaded', async () => {
             const parcelId = e.target.dataset.id;
             updateFirstCrop(parcelId);
         }
+
+        // 필지별 비고 입력 이벤트
+        if (e.target.classList.contains('parcel-note-input')) {
+            const parcelId = e.target.dataset.id;
+            const parcel = parcels.find(p => p.id === parcelId);
+            if (parcel) {
+                parcel.note = e.target.value;
+                updateParcelsData();
+                log(`📝 필지 비고 업데이트: ${parcelId} = "${e.target.value}"`);
+            }
+        }
     });
+
+    // 필지별 비고 blur 이벤트 (확실한 저장)
+    parcelsContainer.addEventListener('blur', (e) => {
+        if (e.target.classList.contains('parcel-note-input')) {
+            const parcelId = e.target.dataset.id;
+            const parcel = parcels.find(p => p.id === parcelId);
+            if (parcel) {
+                parcel.note = e.target.value;
+                updateParcelsData();
+            }
+        }
+    }, true);
 
     // 필지 주소 blur 이벤트 (중복 체크)
     parcelsContainer.addEventListener('blur', (e) => {
@@ -1897,7 +1936,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     isMountain: p.isMountain || false,
                     subLots: [...p.subLots],
                     crops: p.crops.map(c => ({ ...c })),
-                    category: p.category || '' // 필지별 구분 저장
+                    category: p.category || '', // 필지별 구분 저장
+                    note: p.note || '' // 필지별 비고 저장
                 })),
                 updatedAt: new Date().toISOString()
             };
@@ -2001,7 +2041,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     lotAddress: parcel.lotAddress,
                     subLots: [...parcel.subLots],
                     crops: parcel.crops.map(c => ({ ...c })),
-                    category: parcel.category || '' // 필지별 구분 저장
+                    category: parcel.category || '', // 필지별 구분 저장
+                    note: parcel.note || '' // 필지별 비고 저장
                 }],
                 // 호환성을 위한 기존 필드
                 lotAddress: parcel.lotAddress,
@@ -2310,8 +2351,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         form.reset();
         const subCatSelect = document.getElementById('subCategory');
         if (subCatSelect) {
-            subCatSelect.disabled = true;
-            subCatSelect.innerHTML = '<option value="">상위 카테고리를 먼저 선택하세요</option>';
+            subCatSelect.disabled = false;
+            subCatSelect.innerHTML = `
+                <option value="">선택하세요</option>
+                <option value="논">🌾 논</option>
+                <option value="밭">🥬 밭</option>
+                <option value="과수">🍎 과수</option>
+                <option value="시설">🏠 시설</option>
+                <option value="임야">🌲 임야</option>
+                <option value="성토">🚜 성토</option>
+            `;
+            subCatSelect.value = '';
         }
         dateInput.valueAsDate = new Date();
 
@@ -2366,6 +2416,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 구분 (하위 카테고리) 선택
         const subCategorySelect = document.getElementById('subCategory');
         if (subCategorySelect) {
+            // 수정 모드에서 활성화하고 옵션 설정
+            subCategorySelect.disabled = false;
+            subCategorySelect.innerHTML = `
+                <option value="">선택하세요</option>
+                <option value="논">🌾 논</option>
+                <option value="밭">🥬 밭</option>
+                <option value="과수">🍎 과수</option>
+                <option value="시설">🏠 시설</option>
+                <option value="임야">🌲 임야</option>
+                <option value="성토">🚜 성토</option>
+            `;
             subCategorySelect.value = log.subCategory || '';
         }
 
@@ -2406,7 +2467,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     lotAddress: parcel.lotAddress || '',
                     isMountain: parcel.isMountain || false,
                     subLots: parcel.subLots ? [...parcel.subLots] : [],
-                    crops: parcel.crops ? parcel.crops.map(c => ({ ...c })) : []
+                    crops: parcel.crops ? parcel.crops.map(c => ({ ...c })) : [],
+                    category: parcel.category || '', // 필지별 구분 불러오기
+                    note: parcel.note || '' // 필지별 비고 불러오기
                 };
                 parcels.push(newParcel);
                 renderParcelCard(newParcel, parcels.length);
@@ -2791,13 +2854,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         const completed = sampleLogs.filter(log => log.isCompleted).length;
         const pending = total - completed;
 
-        // 구분별 집계 (논/밭/과수/시설/성토)
+        // 구분별 집계 (논/밭/과수/시설/임야/성토)
         const bySubCategory = {};
         const categoryMapping = {
             '논': { label: '🌾 논', class: 'category-rice' },
             '밭': { label: '🥬 밭', class: 'category-field' },
             '과수': { label: '🍎 과수', class: 'category-fruit' },
             '시설': { label: '🏠 시설', class: 'category-facility' },
+            '임야': { label: '🌲 임야', class: 'category-forest' },
             '성토': { label: '🏗️ 성토', class: 'category-fill' },
             '기타': { label: '📦 기타', class: 'category-other' }
         };
@@ -3472,7 +3536,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const safeLotAddress = escapeHTML(row._lotAddress);
                 const safeCrops = escapeHTML(row._cropsDisplay);
                 const safePhone = escapeHTML(row.phoneNumber || '-');
-                const safeNote = escapeHTML(row.note || '-');
+                // 비고: 전체 비고 + 필지별 비고 결합
+                const parcelNote = row.parcels && row.parcels[0] && row.parcels[0].note ? row.parcels[0].note : '';
+                const combinedNote = [row.note, parcelNote].filter(n => n && n.trim()).join(' / ') || '-';
+                const safeNote = escapeHTML(combinedNote);
                 const safeMethod = escapeHTML(methodText);
 
                 tr.dataset.id = row.id;

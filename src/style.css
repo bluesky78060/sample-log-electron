@@ -2767,11 +2767,12 @@ input[type="number"] {
 .stat-bar.type-compost { background: linear-gradient(90deg, #f59e0b, #d97706); }
 .stat-bar.type-other { background: linear-gradient(90deg, #6b7280, #4b5563); }
 
-/* 토양 구분별 (논/밭/과수/시설/성토) */
+/* 토양 구분별 (논/밭/과수/시설/임야/성토) */
 .stat-bar.category-rice { background: linear-gradient(90deg, #84cc16, #65a30d); }
 .stat-bar.category-field { background: linear-gradient(90deg, #f59e0b, #d97706); }
 .stat-bar.category-fruit { background: linear-gradient(90deg, #ef4444, #dc2626); }
 .stat-bar.category-facility { background: linear-gradient(90deg, #06b6d4, #0891b2); }
+.stat-bar.category-forest { background: linear-gradient(90deg, #22c55e, #15803d); }
 .stat-bar.category-fill { background: linear-gradient(90deg, #8b5cf6, #7c3aed); }
 .stat-bar.category-other { background: linear-gradient(90deg, #6b7280, #4b5563); }
 
@@ -4937,4 +4938,964 @@ select {
     top: 50%;
     transform: translateY(-50%);
     animation: checkBounce 0.3s ease-out;
+}
+
+/* =============================================
+   Dark Mode Support
+   ============================================= */
+
+/* 다크 모드 토글 스위치 스타일 */
+.theme-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: 0.5rem;
+}
+
+.theme-toggle-btn {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    background: var(--gray-600);
+    border: none;
+    border-radius: 24px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    padding: 0;
+}
+
+.theme-toggle-btn::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 20px;
+    height: 20px;
+    background: white;
+    border-radius: 50%;
+    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.theme-toggle-btn.dark::before {
+    transform: translateX(20px);
+}
+
+.theme-toggle-btn.dark {
+    background: #6366f1;
+}
+
+.theme-icon {
+    font-size: 1rem;
+    transition: opacity 0.3s ease;
+}
+
+.theme-icon.sun {
+    color: #fbbf24;
+}
+
+.theme-icon.moon {
+    color: #a5b4fc;
+}
+
+/* 다크 모드 기본 변수 */
+[data-theme="dark"] {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 48%;
+
+    /* 다크 모드 Neutral Colors */
+    --gray-50: #18181b;
+    --gray-100: #27272a;
+    --gray-200: #3f3f46;
+    --gray-300: #52525b;
+    --gray-400: #71717a;
+    --gray-500: #a1a1aa;
+    --gray-600: #d4d4d8;
+    --gray-700: #e4e4e7;
+    --gray-800: #f4f4f5;
+    --gray-900: #fafafa;
+
+    /* 다크 모드 Semantic Colors */
+    --success: #4ade80;
+    --success-light: rgba(74, 222, 128, 0.15);
+    --warning: #fbbf24;
+    --warning-light: rgba(251, 191, 36, 0.15);
+    --danger: #f87171;
+    --danger-light: rgba(248, 113, 113, 0.15);
+
+    --primary-light: rgba(99, 102, 241, 0.15);
+    --primary-hover: #818cf8;
+    --primary-dark: #a5b4fc;
+}
+
+/* 다크 모드 body 배경 */
+[data-theme="dark"] body {
+    background-color: #0f0f0f;
+    color: var(--gray-800);
+}
+
+/* 다크 모드 시료 타입별 배경 */
+[data-theme="dark"] body.soil-page {
+    background: linear-gradient(135deg, #052e16 0%, #064e3b 30%, #052e16 60%, #022c22 100%);
+}
+
+[data-theme="dark"] body.water-page {
+    background: linear-gradient(135deg, #0c1929 0%, #172554 30%, #0c1929 60%, #0f172a 100%);
+}
+
+[data-theme="dark"] body.pesticide-page {
+    background: linear-gradient(135deg, #1c1917 0%, #292524 30%, #1c1917 60%, #171412 100%);
+}
+
+[data-theme="dark"] body.compost-page {
+    background: linear-gradient(135deg, #1a1a0f 0%, #2a2a1a 30%, #1a1a0f 60%, #151510 100%);
+}
+
+[data-theme="dark"] body.heavy-metal-page {
+    background: linear-gradient(135deg, #1f1315 0%, #2a1a1c 30%, #1f1315 60%, #1a1012 100%);
+}
+
+/* 다크 모드 네비게이션 바 */
+[data-theme="dark"] .navbar {
+    background: #0a0a0a;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+/* 다크 모드 메인 콘텐츠 */
+[data-theme="dark"] .main-content {
+    background-color: transparent;
+}
+
+/* 다크 모드 뷰 헤더 */
+[data-theme="dark"] .view-header h2 {
+    color: var(--gray-900);
+}
+
+[data-theme="dark"] .view-desc {
+    color: var(--gray-500);
+}
+
+/* 다크 모드 폼 카드 */
+[data-theme="dark"] .form-card {
+    background: rgba(30, 30, 35, 0.95);
+    border-color: var(--gray-200);
+    backdrop-filter: blur(10px);
+}
+
+[data-theme="dark"] .card-header {
+    background: rgba(20, 20, 25, 0.8);
+    border-color: var(--gray-200);
+}
+
+[data-theme="dark"] .card-header h3 {
+    color: var(--gray-800);
+}
+
+[data-theme="dark"] .card-body {
+    color: var(--gray-800);
+}
+
+/* 다크 모드 폼 필드 */
+[data-theme="dark"] .form-field label {
+    color: var(--gray-700);
+}
+
+[data-theme="dark"] .form-field input,
+[data-theme="dark"] .form-field select,
+[data-theme="dark"] .form-field textarea {
+    background: rgba(40, 40, 45, 0.9);
+    border-color: var(--gray-300);
+    color: var(--gray-800);
+}
+
+[data-theme="dark"] .form-field input:focus,
+[data-theme="dark"] .form-field select:focus,
+[data-theme="dark"] .form-field textarea:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+[data-theme="dark"] .form-field input::placeholder {
+    color: var(--gray-400);
+}
+
+[data-theme="dark"] .form-field input[readonly] {
+    background-color: rgba(30, 30, 35, 0.7);
+    color: var(--gray-500);
+}
+
+/* 다크 모드 color-scheme 설정 - 네이티브 컨트롤(select 등)에 영향 */
+[data-theme="dark"] {
+    color-scheme: dark;
+}
+
+/* 다크 모드 select 드롭다운 스타일 - 모든 select 요소 */
+[data-theme="dark"] select,
+[data-theme="dark"] .form-field select,
+[data-theme="dark"] .modal select,
+[data-theme="dark"] .search-filter-row select,
+[data-theme="dark"] .year-selector select,
+[data-theme="dark"] .crop-area-input-row select,
+[data-theme="dark"] .items-per-page,
+[data-theme="dark"] .parcel-form-group select,
+[data-theme="dark"] .sublot-select,
+[data-theme="dark"] #cropCategoryFilter,
+[data-theme="dark"] #subCategory,
+[data-theme="dark"] #purpose,
+[data-theme="dark"] #sampleName,
+[data-theme="dark"] .form-group select {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-color: #2a2a2e !important;
+    color: #e2e8f0 !important;
+    border-color: #4a4a50 !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 12px center !important;
+    background-size: 16px !important;
+    padding-right: 40px !important;
+}
+
+[data-theme="dark"] select:focus,
+[data-theme="dark"] .form-field select:focus,
+[data-theme="dark"] .items-per-page:focus,
+[data-theme="dark"] .form-group select:focus {
+    background-color: #2a2a2e !important;
+    border-color: #6366f1 !important;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236366f1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+}
+
+/* 다크 모드 select option 스타일 */
+[data-theme="dark"] select option,
+[data-theme="dark"] .form-field select option,
+[data-theme="dark"] .form-group select option {
+    background-color: #2a2a2e !important;
+    color: #e2e8f0 !important;
+    padding: 8px 12px;
+}
+
+[data-theme="dark"] select option:checked,
+[data-theme="dark"] select option:hover {
+    background-color: #3a3a40 !important;
+    color: #ffffff !important;
+}
+
+/* 다크 모드 select 비활성화 옵션 */
+[data-theme="dark"] select option:disabled {
+    color: #6b7280 !important;
+    background-color: #1f1f23 !important;
+}
+
+/* 다크 모드 필지 카드 */
+[data-theme="dark"] .parcel-card {
+    background: rgba(35, 35, 40, 0.95);
+    border-color: var(--gray-200);
+}
+
+[data-theme="dark"] .parcel-card-header {
+    border-color: var(--gray-200);
+}
+
+[data-theme="dark"] .parcel-card-header h4 {
+    color: var(--gray-800);
+}
+
+/* 다크 모드 빈 필지 상태 */
+[data-theme="dark"] .empty-parcels {
+    background: rgba(25, 25, 30, 0.8);
+    border-color: var(--gray-300);
+}
+
+[data-theme="dark"] .empty-parcels:hover {
+    background: rgba(35, 35, 40, 0.9);
+}
+
+[data-theme="dark"] .empty-parcels p {
+    color: var(--gray-500);
+}
+
+/* 다크 모드 라디오 버튼 */
+[data-theme="dark"] .parcel-category-label span {
+    background: var(--gray-100);
+    border-color: var(--gray-200);
+    color: var(--gray-500);
+}
+
+/* 다크 모드 검색 버튼 */
+[data-theme="dark"] .btn-search-open {
+    background: rgba(35, 35, 40, 0.9);
+    border-color: var(--gray-200);
+    color: var(--gray-700);
+}
+
+[data-theme="dark"] .btn-search-open:hover {
+    background: rgba(45, 45, 50, 0.9);
+    border-color: var(--gray-300);
+}
+
+/* 다크 모드 검색 모달 */
+[data-theme="dark"] .modal-search {
+    border-color: var(--gray-200);
+}
+
+[data-theme="dark"] .modal-search .modal-header {
+    background: rgba(25, 25, 30, 0.98);
+    border-color: var(--gray-200);
+}
+
+[data-theme="dark"] .modal-search .modal-header h3 {
+    color: var(--gray-900);
+}
+
+[data-theme="dark"] .modal-search .modal-body {
+    background: rgba(30, 30, 35, 0.98);
+}
+
+[data-theme="dark"] .modal-search .modal-footer {
+    background: rgba(20, 20, 25, 0.98);
+    border-color: var(--gray-200);
+}
+
+[data-theme="dark"] .search-form-group label {
+    color: var(--gray-800);
+}
+
+[data-theme="dark"] .search-input {
+    background: rgba(40, 40, 45, 0.9);
+    border-color: var(--gray-300);
+    color: var(--gray-800);
+}
+
+[data-theme="dark"] .search-input:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+[data-theme="dark"] .search-input::placeholder {
+    color: var(--gray-400);
+}
+
+[data-theme="dark"] .btn-clear-field {
+    background: var(--gray-100);
+    border-color: var(--gray-200);
+    color: var(--gray-600);
+}
+
+[data-theme="dark"] .btn-clear-field:hover {
+    background: var(--gray-200);
+    border-color: var(--gray-300);
+}
+
+[data-theme="dark"] .btn-reset {
+    color: var(--gray-600);
+}
+
+[data-theme="dark"] .btn-reset:hover {
+    color: var(--gray-800);
+}
+
+/* 다크 모드 리스트 뷰 헤더 */
+[data-theme="dark"] #listView .view-header-top {
+    background: rgba(30, 30, 35, 0.95);
+    border-color: var(--gray-200);
+}
+
+[data-theme="dark"] #listView .view-header-top h2 {
+    color: var(--gray-900);
+}
+
+/* 다크 모드 검색 래퍼 */
+[data-theme="dark"] .search-wrapper input {
+    background: rgba(40, 40, 45, 0.9);
+    border-color: var(--gray-200);
+    color: var(--gray-800);
+}
+
+[data-theme="dark"] .search-wrapper input:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+/* 다크 모드 레코드 카운트 */
+[data-theme="dark"] .record-count {
+    background: rgba(99, 102, 241, 0.15);
+    color: #a5b4fc;
+}
+
+/* 다크 모드 테이블 래퍼 */
+[data-theme="dark"] .table-wrapper {
+    background: rgba(30, 30, 35, 0.95);
+    border-color: var(--gray-200);
+}
+
+/* 다크 모드 데이터 테이블 */
+[data-theme="dark"] .data-table {
+    border-color: #3f3f46;
+}
+
+[data-theme="dark"] .data-table thead {
+    background: linear-gradient(to bottom, #1f1f23 0%, #18181b 100%);
+    color: var(--gray-800);
+}
+
+[data-theme="dark"] .data-table th {
+    border-color: #3f3f46;
+    color: var(--gray-800);
+}
+
+[data-theme="dark"] .data-table tbody tr {
+    background: rgba(25, 25, 30, 0.9);
+    border-color: #3f3f46;
+}
+
+[data-theme="dark"] .data-table tbody tr:nth-child(even) {
+    background: rgba(35, 35, 40, 0.9);
+}
+
+[data-theme="dark"] .data-table tbody tr:hover {
+    background: rgba(99, 102, 241, 0.15);
+}
+
+[data-theme="dark"] .data-table tbody tr.row-completed {
+    background: rgba(74, 222, 128, 0.1);
+}
+
+[data-theme="dark"] .data-table tbody tr.row-completed:hover {
+    background: rgba(74, 222, 128, 0.2);
+}
+
+[data-theme="dark"] .data-table td {
+    border-color: #3f3f46;
+    color: var(--gray-800);
+}
+
+/* 다크 모드 테이블 액션 버튼 */
+[data-theme="dark"] .btn-edit {
+    background: rgba(99, 102, 241, 0.15);
+    color: #a5b4fc;
+}
+
+[data-theme="dark"] .btn-edit:hover {
+    background: rgba(99, 102, 241, 0.25);
+}
+
+[data-theme="dark"] .btn-delete {
+    background: rgba(248, 113, 113, 0.15);
+    color: #fca5a5;
+}
+
+[data-theme="dark"] .btn-delete:hover {
+    background: rgba(248, 113, 113, 0.25);
+}
+
+/* 다크 모드 모달 */
+[data-theme="dark"] .modal-overlay {
+    background: rgba(0, 0, 0, 0.7);
+}
+
+[data-theme="dark"] .modal-content {
+    background: rgba(25, 25, 30, 0.98);
+    border: 1px solid var(--gray-200);
+}
+
+[data-theme="dark"] .modal-header {
+    border-color: var(--gray-200);
+}
+
+[data-theme="dark"] .modal-header h3 {
+    color: var(--gray-900);
+}
+
+[data-theme="dark"] .modal-close {
+    background: var(--gray-100);
+    color: var(--gray-500);
+}
+
+[data-theme="dark"] .modal-close:hover {
+    background: var(--gray-200);
+    color: var(--gray-700);
+}
+
+[data-theme="dark"] .modal-body {
+    color: var(--gray-800);
+}
+
+[data-theme="dark"] .modal-footer {
+    background: rgba(20, 20, 25, 0.95);
+    border-color: var(--gray-200);
+}
+
+[data-theme="dark"] .btn-cancel {
+    background: transparent;
+    border-color: var(--gray-300);
+    color: var(--gray-800);
+}
+
+[data-theme="dark"] .btn-cancel:hover {
+    background: var(--gray-100);
+    border-color: var(--gray-400);
+}
+
+/* 다크 모드 드롭다운 메뉴 */
+[data-theme="dark"] .brand-dropdown-menu {
+    background: #18181b;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .brand-dropdown-menu::before {
+    border-bottom-color: #18181b;
+}
+
+[data-theme="dark"] .dropdown-item {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+[data-theme="dark"] .dropdown-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: white;
+}
+
+/* 다크 모드 툴팁 */
+[data-theme="dark"] .navbar [title]::after {
+    background: linear-gradient(135deg, #27272a 0%, #18181b 100%);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+}
+
+[data-theme="dark"] .navbar [title]::before {
+    border-bottom-color: #27272a;
+}
+
+/* 다크 모드 autosave 상태 */
+[data-theme="dark"] .toggle-track {
+    background-color: var(--gray-300);
+}
+
+[data-theme="dark"] .autosave-toggle input:checked + .toggle-track {
+    background-color: var(--success);
+}
+
+/* 다크 모드 빈 상태 */
+[data-theme="dark"] .empty-state {
+    color: var(--gray-500);
+}
+
+[data-theme="dark"] .empty-state-icon {
+    color: var(--gray-400);
+}
+
+/* 다크 모드 토스트/알림 */
+[data-theme="dark"] .toast {
+    background: rgba(30, 30, 35, 0.98);
+    border-color: var(--gray-200);
+    color: var(--gray-800);
+}
+
+/* 다크 모드 결과 테이블 */
+[data-theme="dark"] .result-table tbody tr {
+    background: rgba(25, 25, 30, 0.9);
+}
+
+[data-theme="dark"] .result-table tbody tr:nth-child(even) {
+    background: rgba(35, 35, 40, 0.9);
+}
+
+[data-theme="dark"] .result-table tbody tr:hover {
+    background: rgba(99, 102, 241, 0.15);
+}
+
+/* 다크 모드 주소 검색 버튼 */
+[data-theme="dark"] .btn-search {
+    background: var(--gray-200);
+    color: var(--gray-900);
+}
+
+[data-theme="dark"] .btn-search:hover {
+    background: var(--gray-300);
+}
+
+/* 다크 모드 액션 버튼 (navbar) */
+[data-theme="dark"] .action-btn {
+    color: rgba(255, 255, 255, 0.7);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .action-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: white;
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* 다크 모드 스크롤바 */
+[data-theme="dark"] ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-track {
+    background: var(--gray-100);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+    background: var(--gray-300);
+    border-radius: 4px;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+    background: var(--gray-400);
+}
+
+/* 다크 모드 선택 영역 */
+[data-theme="dark"] ::selection {
+    background: rgba(99, 102, 241, 0.3);
+    color: white;
+}
+
+/* 다크 모드 포커스 링 */
+[data-theme="dark"] :focus-visible {
+    outline-color: #6366f1;
+}
+
+/* 다크 모드 접수 방법 버튼 */
+[data-theme="dark"] .card-header .reception-method-btn {
+    background: rgba(40, 40, 45, 0.8);
+    border-color: var(--gray-300);
+}
+
+[data-theme="dark"] .card-header .reception-method-btn:hover {
+    background: rgba(99, 102, 241, 0.15);
+    border-color: #6366f1;
+}
+
+[data-theme="dark"] .card-header .reception-method-btn.active {
+    background: #6366f1;
+    border-color: #6366f1;
+}
+
+/* 다크 모드 날짜 범위 구분자 */
+[data-theme="dark"] .date-range-separator {
+    color: var(--gray-500);
+}
+
+/* 다크 모드 년도 선택기 */
+[data-theme="dark"] .year-selector select {
+    background: rgba(40, 40, 45, 0.9);
+    border-color: var(--gray-300);
+    color: var(--gray-800);
+}
+
+/* 다크 모드 필수 필드 표시 */
+[data-theme="dark"] .form-field label .required {
+    color: #f87171;
+}
+
+/* 다크 모드 완료 체크박스 */
+[data-theme="dark"] .data-table th.col-checkbox input[type="checkbox"],
+[data-theme="dark"] .data-table td.col-checkbox input[type="checkbox"] {
+    accent-color: #6366f1;
+}
+
+/* 다크 모드 노트 셀 스크롤바 */
+[data-theme="dark"] .note-cell {
+    scrollbar-color: var(--gray-400) transparent;
+}
+
+/* 다크 모드 삭제 확인 모달 */
+[data-theme="dark"] .confirm-delete-text {
+    color: var(--gray-700);
+}
+
+/* 다크 모드 플로팅 레이블 */
+[data-theme="dark"] .form-field.floating label {
+    color: var(--gray-500);
+    background: transparent;
+}
+
+[data-theme="dark"] .form-field.floating input:focus + label,
+[data-theme="dark"] .form-field.floating input:not(:placeholder-shown) + label {
+    color: #a5b4fc;
+    background: rgba(30, 30, 35, 0.95);
+}
+
+/* 다크 모드 유효성 검사 피드백 */
+[data-theme="dark"] .form-field.valid input {
+    border-color: var(--success);
+}
+
+[data-theme="dark"] .form-field.invalid input {
+    border-color: var(--danger);
+}
+
+[data-theme="dark"] .form-field.warning input {
+    border-color: var(--warning);
+}
+
+/* ========================================
+   다크 모드 추가 스타일 (모달 및 폼 요소)
+   ======================================== */
+
+/* 다크 모드 작물+면적 입력 모달 */
+[data-theme="dark"] #cropAreaModal .modal-body,
+[data-theme="dark"] #cropModal .modal-body {
+    background: rgba(30, 30, 35, 0.98);
+}
+
+[data-theme="dark"] .crop-area-list,
+[data-theme="dark"] .crop-list-wrapper {
+    background: rgba(25, 25, 30, 0.9);
+    border-color: var(--gray-200);
+}
+
+[data-theme="dark"] .crop-area-input-row {
+    background: rgba(35, 35, 40, 0.9);
+    border-color: var(--gray-200);
+}
+
+[data-theme="dark"] .crop-area-input-row input,
+[data-theme="dark"] .crop-area-input-row select,
+[data-theme="dark"] #cropAreaModal input,
+[data-theme="dark"] #cropAreaModal select {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-color: #2a2a2e !important;
+    color: #e2e8f0 !important;
+    border-color: #4a4a50 !important;
+}
+
+[data-theme="dark"] .crop-area-input-row input:focus,
+[data-theme="dark"] .crop-area-input-row select:focus,
+[data-theme="dark"] #cropAreaModal input:focus,
+[data-theme="dark"] #cropAreaModal select:focus {
+    border-color: #6366f1 !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+[data-theme="dark"] .crop-area-input-row input::placeholder {
+    color: #71717a;
+}
+
+/* 다크 모드 작물 검색 모달 */
+[data-theme="dark"] #cropModal .search-filter-row input,
+[data-theme="dark"] #cropSearchInput {
+    background-color: #2a2a2e !important;
+    color: #e2e8f0 !important;
+    border-color: #4a4a50 !important;
+}
+
+[data-theme="dark"] #cropModal .search-filter-row input:focus,
+[data-theme="dark"] #cropSearchInput:focus {
+    border-color: #6366f1 !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+[data-theme="dark"] .crop-list li {
+    background: rgba(35, 35, 40, 0.9);
+    border-color: var(--gray-200);
+    color: var(--gray-800);
+}
+
+[data-theme="dark"] .crop-list li:hover {
+    background: rgba(99, 102, 241, 0.15);
+}
+
+[data-theme="dark"] .crop-list li.selected {
+    background: rgba(99, 102, 241, 0.25);
+    border-color: #6366f1;
+}
+
+[data-theme="dark"] .results-info {
+    color: var(--gray-600);
+    border-color: var(--gray-200);
+}
+
+[data-theme="dark"] .selected-section {
+    background: rgba(25, 25, 30, 0.9);
+    border-color: var(--gray-200);
+}
+
+[data-theme="dark"] .selected-section h4 {
+    color: var(--gray-800);
+}
+
+[data-theme="dark"] .tag-container .tag {
+    background: rgba(99, 102, 241, 0.2);
+    color: #a5b4fc;
+    border-color: rgba(99, 102, 241, 0.3);
+}
+
+[data-theme="dark"] .tag-container .no-selection {
+    color: var(--gray-500);
+}
+
+/* 다크 모드 주소 검색 모달 (카카오 우편번호 서비스) */
+[data-theme="dark"] #addressModal .modal-content {
+    background: rgba(25, 25, 30, 0.98);
+}
+
+[data-theme="dark"] #addressModal .modal-body {
+    background: rgba(30, 30, 35, 0.98);
+}
+
+[data-theme="dark"] .postcode-container {
+    background: #ffffff;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+[data-theme="dark"] #daumPostcodeContainer {
+    background: #ffffff;
+    border-radius: 8px;
+}
+
+/* 다크 모드 지역 선택 모달 */
+[data-theme="dark"] #regionSelectionModal .region-selection-info {
+    color: var(--gray-700);
+}
+
+[data-theme="dark"] #regionSelectionModal .region-selection-info p {
+    color: var(--gray-700);
+}
+
+[data-theme="dark"] .region-options {
+    background: rgba(25, 25, 30, 0.9);
+}
+
+[data-theme="dark"] .region-option-btn {
+    background: rgba(35, 35, 40, 0.9);
+    border-color: var(--gray-200);
+    color: var(--gray-800);
+}
+
+[data-theme="dark"] .region-option-btn:hover {
+    background: rgba(99, 102, 241, 0.15);
+    border-color: #6366f1;
+}
+
+/* 다크 모드 폼 필드 select - 더 강력한 선택자 */
+[data-theme="dark"] .form-field select,
+[data-theme="dark"] .card-body select,
+[data-theme="dark"] .modal select,
+[data-theme="dark"] #subCategory,
+[data-theme="dark"] #purpose,
+[data-theme="dark"] #sampleName,
+[data-theme="dark"] #cropCategoryFilter,
+[data-theme="dark"] .sublot-select,
+[data-theme="dark"] .form-group select {
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    appearance: none !important;
+    background-color: #2a2a2e !important;
+    color: #e2e8f0 !important;
+    border-color: #4a4a50 !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 12px center !important;
+    background-size: 16px !important;
+    padding-right: 40px !important;
+}
+
+/* 다크 모드 목적/구분 select 직접 타겟팅 */
+[data-theme="dark"] select[name="purpose"],
+[data-theme="dark"] select[name="subCategory"],
+[data-theme="dark"] select[name="sampleName"] {
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    appearance: none !important;
+    background-color: #2a2a2e !important;
+    color: #e2e8f0 !important;
+    border-color: #4a4a50 !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 12px center !important;
+    background-size: 16px !important;
+    padding-right: 40px !important;
+}
+
+/* 다크 모드 작물 추가 버튼 */
+[data-theme="dark"] .btn-add-row {
+    background: rgba(99, 102, 241, 0.15);
+    color: #a5b4fc;
+    border-color: rgba(99, 102, 241, 0.3);
+}
+
+[data-theme="dark"] .btn-add-row:hover {
+    background: rgba(99, 102, 241, 0.25);
+    border-color: #6366f1;
+}
+
+/* 다크 모드 삭제 버튼 (작물 행) */
+[data-theme="dark"] .btn-remove-row {
+    background: rgba(248, 113, 113, 0.15);
+    color: #fca5a5;
+}
+
+[data-theme="dark"] .btn-remove-row:hover {
+    background: rgba(248, 113, 113, 0.25);
+}
+
+/* 시스템 다크 모드 설정 감지 (기본값) */
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --background: 222.2 84% 4.9%;
+        --foreground: 210 40% 98%;
+        --card: 222.2 84% 4.9%;
+        --card-foreground: 210 40% 98%;
+        --popover: 222.2 84% 4.9%;
+        --popover-foreground: 210 40% 98%;
+        --primary: 217.2 91.2% 59.8%;
+        --primary-foreground: 222.2 47.4% 11.2%;
+        --secondary: 217.2 32.6% 17.5%;
+        --secondary-foreground: 210 40% 98%;
+        --muted: 217.2 32.6% 17.5%;
+        --muted-foreground: 215 20.2% 65.1%;
+        --accent: 217.2 32.6% 17.5%;
+        --accent-foreground: 210 40% 98%;
+        --destructive: 0 62.8% 30.6%;
+        --destructive-foreground: 210 40% 98%;
+        --border: 217.2 32.6% 17.5%;
+        --input: 217.2 32.6% 17.5%;
+        --ring: 224.3 76.3% 48%;
+
+        --gray-50: #18181b;
+        --gray-100: #27272a;
+        --gray-200: #3f3f46;
+        --gray-300: #52525b;
+        --gray-400: #71717a;
+        --gray-500: #a1a1aa;
+        --gray-600: #d4d4d8;
+        --gray-700: #e4e4e7;
+        --gray-800: #f4f4f5;
+        --gray-900: #fafafa;
+
+        --success: #4ade80;
+        --success-light: rgba(74, 222, 128, 0.15);
+        --warning: #fbbf24;
+        --warning-light: rgba(251, 191, 36, 0.15);
+        --danger: #f87171;
+        --danger-light: rgba(248, 113, 113, 0.15);
+
+        --primary-light: rgba(99, 102, 241, 0.15);
+        --primary-hover: #818cf8;
+        --primary-dark: #a5b4fc;
+    }
 }

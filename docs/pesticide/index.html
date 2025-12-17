@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" data-theme="light">
 
 <head>
     <meta charset="UTF-8">
@@ -10,10 +10,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
     <script>
         tailwind.config = {
-            darkMode: "class",
+            darkMode: ['selector', '[data-theme="dark"]'],
             theme: {
                 extend: {
                     colors: {
@@ -33,6 +33,32 @@
     </script>
     <link rel="stylesheet" href="../style.css">
     <link rel="stylesheet" href="pesticide-style.css">
+    <style>
+        /* 다크 모드 select 강제 적용 - 최우선 */
+        [data-theme="dark"] select#subCategory,
+        [data-theme="dark"] select#purpose,
+        [data-theme="dark"] select#sampleName,
+        [data-theme="dark"] .form-card .card-body select {
+            -webkit-appearance: none !important;
+            -moz-appearance: none !important;
+            appearance: none !important;
+            background-color: rgba(59, 7, 100, 0.95) !important;
+            color: #e9d5ff !important;
+            border-color: rgba(168, 85, 247, 0.4) !important;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23e9d5ff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+            background-repeat: no-repeat !important;
+            background-position: right 12px center !important;
+            background-size: 16px !important;
+            padding-right: 40px !important;
+        }
+        [data-theme="dark"] select#subCategory option,
+        [data-theme="dark"] select#purpose option,
+        [data-theme="dark"] select#sampleName option,
+        [data-theme="dark"] .form-card .card-body select option {
+            background-color: #3b0764 !important;
+            color: #e9d5ff !important;
+        }
+    </style>
 </head>
 
 <body class="pesticide-page">
@@ -126,6 +152,16 @@
             <span id="autoSaveStatus" class="autosave-status">
                 <span class="status-indicator"></span>
             </span>
+        </div>
+
+        <div class="navbar-divider"></div>
+
+        <!-- 다크 모드 토글 -->
+        <div class="theme-toggle" id="themeToggleContainer">
+            <span class="theme-icon sun">☀️</span>
+            <button class="theme-toggle-btn" id="themeToggleBtn" title="다크 모드 전환">
+            </button>
+            <span class="theme-icon moon">🌙</span>
         </div>
     </nav>
 
@@ -652,6 +688,7 @@
     <script src="../shared/toast.js"></script>
     <script src="../shared/pagination.js"></script>
     <script src="../shared/address.js"></script>
+    <script src="../shared/theme.js"></script>
     <script src="pesticide-script.js"></script>
 </body>
 

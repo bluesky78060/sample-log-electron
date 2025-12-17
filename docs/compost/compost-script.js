@@ -617,6 +617,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                         ${logItem.isComplete ? '✅' : '⬜'}
                     </button>
                 </td>
+                <td class="col-result">
+                    <button class="btn-result ${logItem.testResult === 'pass' ? 'pass' : logItem.testResult === 'fail' ? 'fail' : ''}"
+                            data-id="${escapeHTML(logItem.id)}"
+                            title="${logItem.testResult === 'pass' ? '적합' : logItem.testResult === 'fail' ? '부적합' : '미판정 (클릭하여 변경)'}">
+                        ${logItem.testResult === 'pass' ? '적합' : logItem.testResult === 'fail' ? '부적합' : '-'}
+                    </button>
+                </td>
                 <td>${escapeHTML(logItem.receptionNumber || '-')}</td>
                 <td>${escapeHTML(logItem.date || '-')}</td>
                 <td>${safeFarmName}</td>
@@ -772,6 +779,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         });
 
+        // 판정 버튼 (적합/부적합 토글)
+        document.querySelectorAll('.btn-result').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const id = btn.dataset.id;
+                toggleTestResult(id);
+            });
+        });
+
         // 삭제 버튼
         document.querySelectorAll('.btn-delete').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -795,6 +810,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         const log = sampleLogs.find(l => l.id === id);
         if (log) {
             log.isComplete = !log.isComplete;
+            saveLogs();
+            renderLogs(sampleLogs);
+        }
+    }
+
+    // 판정 결과 토글 (미판정 → 적합 → 부적합 → 미판정)
+    function toggleTestResult(id) {
+        const log = sampleLogs.find(l => l.id === id);
+        if (log) {
+            if (!log.testResult || log.testResult === '') {
+                log.testResult = 'pass';  // 미판정 → 적합
+            } else if (log.testResult === 'pass') {
+                log.testResult = 'fail';  // 적합 → 부적합
+            } else {
+                log.testResult = '';      // 부적합 → 미판정
+            }
             saveLogs();
             renderLogs(sampleLogs);
         }

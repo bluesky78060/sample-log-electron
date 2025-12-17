@@ -512,3 +512,194 @@
     color: var(--heavy-metal-primary-dark);
     padding: 0.5rem;
 }
+
+/* ========================================
+   다크 모드 스타일
+   ======================================== */
+
+/* 다크 모드 네비게이션 바 */
+[data-theme="dark"] .heavy-metal-navbar {
+    background: linear-gradient(135deg, #1e1b2e 0%, #0f0d1a 100%);
+    border-bottom-color: rgba(139, 92, 246, 0.3);
+}
+
+[data-theme="dark"] .heavy-metal-navbar .brand-text {
+    color: #c4b5fd;
+}
+
+[data-theme="dark"] .heavy-metal-navbar .back-btn {
+    background: rgba(139, 92, 246, 0.15);
+    color: #c4b5fd;
+    border-color: rgba(139, 92, 246, 0.3);
+}
+
+[data-theme="dark"] .heavy-metal-navbar .back-btn:hover {
+    background: var(--heavy-metal-primary);
+    color: white;
+}
+
+/* 다크 모드 카드 헤더 */
+[data-theme="dark"] .heavy-metal-navbar ~ .main-content .form-card .card-header {
+    background: linear-gradient(135deg, rgba(30, 27, 46, 0.95) 0%, rgba(15, 13, 26, 0.95) 100%);
+    border-bottom-color: rgba(139, 92, 246, 0.2);
+}
+
+[data-theme="dark"] .heavy-metal-navbar ~ .main-content .form-card .card-header h3 {
+    color: #c4b5fd;
+}
+
+/* 다크 모드 분석항목 그리드 */
+[data-theme="dark"] .analysis-item .item-box {
+    background: rgba(30, 27, 46, 0.9);
+    border-color: rgba(148, 163, 184, 0.2);
+}
+
+[data-theme="dark"] .analysis-item .item-symbol,
+[data-theme="dark"] .analysis-item .item-name {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .analysis-item:hover .item-box {
+    background: rgba(139, 92, 246, 0.15);
+    border-color: rgba(139, 92, 246, 0.4);
+}
+
+[data-theme="dark"] .analysis-item input:checked + .item-box {
+    background: var(--heavy-metal-gradient);
+    border-color: var(--heavy-metal-primary);
+}
+
+[data-theme="dark"] .analysis-item input:checked + .item-box .item-symbol,
+[data-theme="dark"] .analysis-item input:checked + .item-box .item-name {
+    color: white;
+}
+
+/* 다크 모드 선택된 항목 요약 */
+[data-theme="dark"] .selected-items-summary {
+    background: rgba(30, 27, 46, 0.9);
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .selected-items-summary #selectedItemsCount {
+    color: #c4b5fd;
+}
+
+/* 다크 모드 목적(용도) 옵션 */
+[data-theme="dark"] .purpose-option .option-box {
+    background: rgba(30, 27, 46, 0.9);
+    border-color: rgba(148, 163, 184, 0.2);
+}
+
+[data-theme="dark"] .purpose-option .option-text {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .purpose-option:hover .option-box {
+    background: rgba(139, 92, 246, 0.15);
+    border-color: rgba(139, 92, 246, 0.4);
+}
+
+[data-theme="dark"] .purpose-option input:checked + .option-box {
+    background: var(--heavy-metal-gradient);
+    border-color: var(--heavy-metal-primary);
+}
+
+[data-theme="dark"] .purpose-option input:checked + .option-box .option-text {
+    color: white;
+}
+
+/* 다크 모드 인증용 안내 메시지 */
+[data-theme="dark"] .certification-notice {
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(245, 158, 11, 0.15) 100%);
+    border-color: rgba(245, 158, 11, 0.4);
+    color: #fbbf24;
+}
+
+/* 다크 모드 자동완성 리스트 */
+[data-theme="dark"] .lot-address-autocomplete-list {
+    background: #1e1b2e;
+    border-color: rgba(148, 163, 184, 0.2);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .lot-address-autocomplete-list li {
+    border-bottom-color: rgba(148, 163, 184, 0.1);
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .lot-address-autocomplete-list li:hover {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(124, 58, 237, 0.2));
+    color: #c4b5fd;
+}
+
+/* 다크 모드 작물 검색 버튼 */
+[data-theme="dark"] .btn-search-crop {
+    background: rgba(30, 27, 46, 0.9);
+    border-color: rgba(148, 163, 184, 0.2);
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .btn-search-crop:hover {
+    background: rgba(139, 92, 246, 0.15);
+    border-color: var(--heavy-metal-primary);
+}
+
+/* 다크 모드 년도 선택 */
+[data-theme="dark"] .year-select {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-color: rgba(139, 92, 246, 0.15) !important;
+    color: #c4b5fd !important;
+    border-color: rgba(139, 92, 246, 0.4) !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23c4b5fd' d='M2 4l4 4 4-4'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 8px center !important;
+}
+
+[data-theme="dark"] .year-select:hover {
+    background-color: rgba(139, 92, 246, 0.25) !important;
+}
+
+[data-theme="dark"] .year-select:focus {
+    border-color: #8b5cf6 !important;
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+}
+
+[data-theme="dark"] .year-select option {
+    background-color: #1e1b2e !important;
+    color: #c4b5fd !important;
+}
+
+/* 다크 모드 select 공통 */
+[data-theme="dark"] .heavy-metal-navbar ~ .main-content select,
+[data-theme="dark"] .heavy-metal-navbar ~ .main-content .form-field select {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-color: rgba(30, 27, 46, 0.9) !important;
+    color: #e2e8f0 !important;
+    border-color: rgba(139, 92, 246, 0.3) !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23c4b5fd' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 12px center !important;
+    background-size: 16px !important;
+}
+
+[data-theme="dark"] .heavy-metal-navbar ~ .main-content select:focus,
+[data-theme="dark"] .heavy-metal-navbar ~ .main-content .form-field select:focus {
+    border-color: #8b5cf6 !important;
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+}
+
+[data-theme="dark"] .heavy-metal-navbar ~ .main-content select option {
+    background-color: #1e1b2e !important;
+    color: #c4b5fd !important;
+}
+
+/* 다크 모드 items-per-page */
+[data-theme="dark"] .heavy-metal-navbar ~ .main-content .items-per-page {
+    background-color: rgba(30, 27, 46, 0.9) !important;
+    color: #c4b5fd !important;
+    border-color: rgba(139, 92, 246, 0.3) !important;
+}

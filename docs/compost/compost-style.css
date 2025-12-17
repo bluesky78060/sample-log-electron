@@ -806,3 +806,473 @@ div.animal-type-options label.checkbox-card.small div.checkbox-content {
     color: var(--compost-primary-dark);
     font-weight: 500;
 }
+
+/* ========================================
+   다크 모드 스타일
+   ======================================== */
+
+/* 다크 모드 네비게이션 바 */
+[data-theme="dark"] .compost-navbar {
+    background: linear-gradient(135deg, #451a03 0%, #292524 100%);
+    border-bottom-color: rgba(161, 98, 7, 0.3);
+}
+
+[data-theme="dark"] .compost-navbar .brand-text {
+    color: #fcd34d;
+}
+
+[data-theme="dark"] .back-btn {
+    background: rgba(161, 98, 7, 0.15);
+    color: #fcd34d;
+    border-color: rgba(161, 98, 7, 0.3);
+}
+
+[data-theme="dark"] .back-btn:hover {
+    background: var(--compost-primary);
+    color: white;
+}
+
+/* 다크 모드 카드 헤더 */
+[data-theme="dark"] .compost-navbar ~ .main-content .form-card .card-header {
+    background: linear-gradient(135deg, rgba(69, 26, 3, 0.95) 0%, rgba(41, 37, 36, 0.95) 100%);
+    border-bottom-color: rgba(161, 98, 7, 0.2);
+}
+
+[data-theme="dark"] .compost-navbar ~ .main-content .form-card .card-header h3 {
+    color: #fcd34d;
+}
+
+/* 다크 모드 시료종류/축종 옵션 */
+[data-theme="dark"] .sample-type-options label,
+[data-theme="dark"] .animal-type-options label {
+    background: rgba(41, 37, 36, 0.9);
+    border-color: rgba(148, 163, 184, 0.2);
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .sample-type-options label:hover,
+[data-theme="dark"] .animal-type-options label:hover {
+    background: rgba(161, 98, 7, 0.15);
+    border-color: rgba(161, 98, 7, 0.4);
+}
+
+[data-theme="dark"] .sample-type-options input:checked + label,
+[data-theme="dark"] .animal-type-options input:checked + label {
+    background: var(--compost-gradient);
+    border-color: var(--compost-primary);
+    color: white;
+}
+
+/* 다크 모드 년도 선택 */
+[data-theme="dark"] .year-select {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-color: rgba(161, 98, 7, 0.15) !important;
+    color: #fcd34d !important;
+    border-color: rgba(161, 98, 7, 0.4) !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23fcd34d' d='M6 8L2 4h8z'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 8px center !important;
+}
+
+[data-theme="dark"] .year-select:hover {
+    background-color: rgba(161, 98, 7, 0.25) !important;
+}
+
+[data-theme="dark"] .year-select:focus {
+    border-color: #d97706 !important;
+    box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.2);
+}
+
+[data-theme="dark"] .year-select option {
+    background-color: #451a03 !important;
+    color: #fcd34d !important;
+}
+
+/* 다크 모드 select 공통 */
+[data-theme="dark"] .compost-navbar ~ .main-content select,
+[data-theme="dark"] .compost-navbar ~ .main-content .form-field select {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-color: rgba(69, 26, 3, 0.9) !important;
+    color: #e2e8f0 !important;
+    border-color: rgba(217, 119, 6, 0.3) !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23fcd34d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 12px center !important;
+    background-size: 16px !important;
+}
+
+[data-theme="dark"] .compost-navbar ~ .main-content select:focus,
+[data-theme="dark"] .compost-navbar ~ .main-content .form-field select:focus {
+    border-color: #d97706 !important;
+    box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.2);
+}
+
+[data-theme="dark"] .compost-navbar ~ .main-content select option {
+    background-color: #451a03 !important;
+    color: #fcd34d !important;
+}
+
+/* 다크 모드 items-per-page */
+[data-theme="dark"] .compost-navbar ~ .main-content .items-per-page {
+    background-color: rgba(69, 26, 3, 0.9) !important;
+    color: #fcd34d !important;
+    border-color: rgba(217, 119, 6, 0.3) !important;
+}
+
+/* 다크 모드 select 강제 적용 (ID 직접 타겟팅) */
+[data-theme="dark"] .compost-navbar ~ .main-content #subCategory,
+[data-theme="dark"] .compost-navbar ~ .main-content #purpose,
+[data-theme="dark"] .compost-navbar ~ .main-content #sampleName {
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    appearance: none !important;
+    background-color: rgba(69, 26, 3, 0.9) !important;
+    color: #e2e8f0 !important;
+    border-color: rgba(217, 119, 6, 0.3) !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23fcd34d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 12px center !important;
+    background-size: 16px !important;
+    padding-right: 40px !important;
+}
+
+[data-theme="dark"] .compost-navbar ~ .main-content #subCategory:focus,
+[data-theme="dark"] .compost-navbar ~ .main-content #purpose:focus,
+[data-theme="dark"] .compost-navbar ~ .main-content #sampleName:focus {
+    border-color: #d97706 !important;
+    box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.2);
+}
+
+[data-theme="dark"] .compost-navbar ~ .main-content #subCategory option,
+[data-theme="dark"] .compost-navbar ~ .main-content #purpose option,
+[data-theme="dark"] .compost-navbar ~ .main-content #sampleName option {
+    background-color: #451a03 !important;
+    color: #fcd34d !important;
+}
+
+/* ========================================
+   다크 모드 의뢰내용 카드 스타일
+   ======================================== */
+
+/* 다크 모드 카드 본문 배경 */
+[data-theme="dark"] .compost-navbar ~ .main-content .form-card .card-body {
+    background-color: rgba(41, 37, 36, 0.95) !important;
+}
+
+/* 다크 모드 라벨 */
+[data-theme="dark"] .compost-navbar ~ .main-content .form-field label {
+    color: #fcd34d !important;
+}
+
+/* 다크 모드 필수 표시 */
+[data-theme="dark"] .compost-navbar ~ .main-content .required {
+    color: #f87171 !important;
+}
+
+/* 다크 모드 시료종류/축종 버튼 (checkbox-card) */
+[data-theme="dark"] .checkbox-card .checkbox-content {
+    background-color: rgba(69, 26, 3, 0.9) !important;
+    border-color: rgba(161, 98, 7, 0.4) !important;
+}
+
+[data-theme="dark"] .checkbox-card .checkbox-label {
+    color: #fcd34d !important;
+}
+
+[data-theme="dark"] .checkbox-card:hover .checkbox-content {
+    background-color: rgba(161, 98, 7, 0.3) !important;
+    border-color: rgba(161, 98, 7, 0.6) !important;
+}
+
+[data-theme="dark"] .checkbox-card input:checked + .checkbox-content {
+    background: var(--compost-gradient) !important;
+    border-color: var(--compost-primary) !important;
+}
+
+[data-theme="dark"] .checkbox-card input:checked + .checkbox-content .checkbox-label {
+    color: #ffffff !important;
+}
+
+/* 다크 모드 입력 필드 공통 */
+[data-theme="dark"] .compost-navbar ~ .main-content input[type="text"],
+[data-theme="dark"] .compost-navbar ~ .main-content input[type="number"],
+[data-theme="dark"] .compost-navbar ~ .main-content input[type="date"],
+[data-theme="dark"] .compost-navbar ~ .main-content input[type="tel"],
+[data-theme="dark"] .compost-navbar ~ .main-content input[type="email"] {
+    background-color: rgba(69, 26, 3, 0.9) !important;
+    color: #e2e8f0 !important;
+    border-color: rgba(161, 98, 7, 0.4) !important;
+}
+
+[data-theme="dark"] .compost-navbar ~ .main-content input[type="text"]::placeholder,
+[data-theme="dark"] .compost-navbar ~ .main-content input[type="number"]::placeholder,
+[data-theme="dark"] .compost-navbar ~ .main-content input[type="tel"]::placeholder,
+[data-theme="dark"] .compost-navbar ~ .main-content input[type="email"]::placeholder {
+    color: rgba(252, 211, 77, 0.5) !important;
+}
+
+[data-theme="dark"] .compost-navbar ~ .main-content input[type="text"]:focus,
+[data-theme="dark"] .compost-navbar ~ .main-content input[type="number"]:focus,
+[data-theme="dark"] .compost-navbar ~ .main-content input[type="date"]:focus,
+[data-theme="dark"] .compost-navbar ~ .main-content input[type="tel"]:focus,
+[data-theme="dark"] .compost-navbar ~ .main-content input[type="email"]:focus {
+    border-color: #d97706 !important;
+    box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.2) !important;
+}
+
+/* 다크 모드 textarea */
+[data-theme="dark"] .compost-navbar ~ .main-content textarea {
+    background-color: rgba(69, 26, 3, 0.9) !important;
+    color: #e2e8f0 !important;
+    border-color: rgba(161, 98, 7, 0.4) !important;
+}
+
+[data-theme="dark"] .compost-navbar ~ .main-content textarea::placeholder {
+    color: rgba(252, 211, 77, 0.5) !important;
+}
+
+[data-theme="dark"] .compost-navbar ~ .main-content textarea:focus {
+    border-color: #d97706 !important;
+    box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.2) !important;
+}
+
+/* 다크 모드 검사항목 정보 박스 */
+[data-theme="dark"] .test-items-info {
+    background: linear-gradient(135deg, rgba(69, 26, 3, 0.9) 0%, rgba(41, 37, 36, 0.9) 100%) !important;
+    border-color: rgba(161, 98, 7, 0.4) !important;
+}
+
+[data-theme="dark"] .test-items-label {
+    color: #fcd34d !important;
+}
+
+[data-theme="dark"] .test-items-list {
+    color: #d6d3d1 !important;
+}
+
+/* 다크 모드 안내 문구 */
+[data-theme="dark"] .form-notice {
+    background: linear-gradient(135deg, rgba(69, 26, 3, 0.9) 0%, rgba(41, 37, 36, 0.9) 100%) !important;
+    border-color: rgba(161, 98, 7, 0.4) !important;
+}
+
+[data-theme="dark"] .form-notice p {
+    color: #fcd34d !important;
+}
+
+/* 다크 모드 접수번호/날짜 입력 */
+[data-theme="dark"] .reception-info .reception-input,
+[data-theme="dark"] .reception-info .date-input {
+    background-color: rgba(69, 26, 3, 0.9) !important;
+    color: #e2e8f0 !important;
+    border-color: rgba(161, 98, 7, 0.4) !important;
+}
+
+[data-theme="dark"] .reception-info .label {
+    color: #fcd34d !important;
+}
+
+/* 다크 모드 날짜 입력 아이콘 색상 */
+[data-theme="dark"] .compost-navbar ~ .main-content input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1) brightness(0.8) sepia(1) saturate(5) hue-rotate(10deg);
+}
+
+/* 다크 모드 시료수 단위 텍스트 */
+[data-theme="dark"] .sample-count-unit {
+    color: #d6d3d1 !important;
+}
+
+/* 다크 모드 자동완성 드롭다운 */
+[data-theme="dark"] .compost-navbar ~ .main-content .lot-address-autocomplete-list {
+    background-color: #451a03 !important;
+    border-color: rgba(161, 98, 7, 0.4) !important;
+}
+
+[data-theme="dark"] .compost-navbar ~ .main-content .lot-address-autocomplete-list li {
+    color: #fcd34d !important;
+}
+
+[data-theme="dark"] .compost-navbar ~ .main-content .lot-address-autocomplete-list li:hover {
+    background-color: rgba(161, 98, 7, 0.3) !important;
+}
+
+/* 다크 모드 면적 단위 토글 */
+[data-theme="dark"] .area-unit-toggle {
+    background-color: rgba(69, 26, 3, 0.5) !important;
+    border-color: rgba(161, 98, 7, 0.4) !important;
+}
+
+[data-theme="dark"] .area-unit-toggle .unit-btn {
+    background-color: transparent !important;
+    color: rgba(252, 211, 77, 0.7) !important;
+}
+
+[data-theme="dark"] .area-unit-toggle .unit-btn.active {
+    background-color: rgba(161, 98, 7, 0.8) !important;
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .area-unit-toggle .unit-btn:hover:not(.active) {
+    background-color: rgba(161, 98, 7, 0.3) !important;
+    color: #fcd34d !important;
+}
+
+/* 다크 모드 주소 검색 버튼 */
+[data-theme="dark"] .btn-address-search {
+    background: var(--compost-gradient) !important;
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .btn-address-search:hover {
+    background: linear-gradient(135deg, #854D0E, #713F12) !important;
+}
+
+/* ========================================
+   다크 모드 주소 검색 모달 (카카오 우편번호)
+   ======================================== */
+
+/* 퇴·액비 페이지 주소 검색 모달 배경 */
+[data-theme="dark"] .compost-navbar ~ #addressModal .modal-content,
+[data-theme="dark"] .compost-page #addressModal .modal-content {
+    background: linear-gradient(135deg, #451a03 0%, #292524 100%) !important;
+    border: 1px solid rgba(217, 119, 6, 0.4) !important;
+}
+
+/* 모달 헤더 */
+[data-theme="dark"] .compost-navbar ~ #addressModal .modal-header,
+[data-theme="dark"] .compost-page #addressModal .modal-header {
+    background: linear-gradient(135deg, rgba(69, 26, 3, 0.95) 0%, rgba(41, 37, 36, 0.95) 100%) !important;
+    border-bottom: 1px solid rgba(217, 119, 6, 0.3) !important;
+}
+
+[data-theme="dark"] .compost-navbar ~ #addressModal .modal-header h3,
+[data-theme="dark"] .compost-page #addressModal .modal-header h3 {
+    color: #fcd34d !important;
+}
+
+/* 모달 닫기 버튼 */
+[data-theme="dark"] .compost-navbar ~ #addressModal .modal-close,
+[data-theme="dark"] .compost-page #addressModal .modal-close {
+    background: rgba(217, 119, 6, 0.2) !important;
+    color: #fcd34d !important;
+    border: 1px solid rgba(217, 119, 6, 0.3) !important;
+}
+
+[data-theme="dark"] .compost-navbar ~ #addressModal .modal-close:hover,
+[data-theme="dark"] .compost-page #addressModal .modal-close:hover {
+    background: rgba(217, 119, 6, 0.4) !important;
+    color: #ffffff !important;
+}
+
+/* 모달 본문 */
+[data-theme="dark"] .compost-navbar ~ #addressModal .modal-body,
+[data-theme="dark"] .compost-page #addressModal .modal-body {
+    background: rgba(41, 37, 36, 0.95) !important;
+    padding: 1rem !important;
+}
+
+/* 카카오 우편번호 컨테이너 - iframe은 외부 서비스라 내부 스타일 변경 불가 */
+/* 컨테이너에 둥근 모서리와 테두리 추가 */
+[data-theme="dark"] .compost-navbar ~ #addressModal .postcode-container,
+[data-theme="dark"] .compost-page #addressModal .postcode-container,
+[data-theme="dark"] .compost-navbar ~ #addressModal #daumPostcodeContainer,
+[data-theme="dark"] .compost-page #addressModal #daumPostcodeContainer {
+    background: #ffffff !important;
+    border-radius: 8px !important;
+    overflow: hidden !important;
+    border: 2px solid rgba(217, 119, 6, 0.5) !important;
+}
+
+/* 모달 오버레이 */
+[data-theme="dark"] .compost-navbar ~ #addressModal .modal-overlay,
+[data-theme="dark"] .compost-page #addressModal .modal-overlay {
+    background: rgba(0, 0, 0, 0.8) !important;
+}
+
+/* ========================================
+   판정 버튼 스타일 (적합/부적합 토글)
+   ======================================== */
+
+.btn-result {
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    border: 1px solid #e5e7eb;
+    background: #f9fafb;
+    color: #6b7280;
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    min-width: 50px;
+}
+
+.btn-result:hover {
+    border-color: #d1d5db;
+    background: #f3f4f6;
+}
+
+.btn-result.pass {
+    background: #dcfce7;
+    color: #166534;
+    border-color: #86efac;
+}
+
+.btn-result.pass:hover {
+    background: #bbf7d0;
+    border-color: #4ade80;
+}
+
+.btn-result.fail {
+    background: #fee2e2;
+    color: #dc2626;
+    border-color: #fca5a5;
+}
+
+.btn-result.fail:hover {
+    background: #fecaca;
+    border-color: #f87171;
+}
+
+/* 판정 컬럼 너비 */
+.col-result {
+    width: 60px;
+    text-align: center;
+}
+
+/* 다크 모드 판정 버튼 */
+[data-theme="dark"] .btn-result {
+    background: rgba(69, 26, 3, 0.6);
+    color: #d6d3d1;
+    border-color: rgba(161, 98, 7, 0.4);
+}
+
+[data-theme="dark"] .btn-result:hover {
+    background: rgba(69, 26, 3, 0.8);
+    border-color: rgba(161, 98, 7, 0.6);
+}
+
+[data-theme="dark"] .btn-result.pass {
+    background: rgba(22, 101, 52, 0.4);
+    color: #86efac;
+    border-color: rgba(134, 239, 172, 0.5);
+}
+
+[data-theme="dark"] .btn-result.pass:hover {
+    background: rgba(22, 101, 52, 0.6);
+    border-color: rgba(134, 239, 172, 0.7);
+}
+
+[data-theme="dark"] .btn-result.fail {
+    background: rgba(220, 38, 38, 0.3);
+    color: #fca5a5;
+    border-color: rgba(252, 165, 165, 0.5);
+}
+
+[data-theme="dark"] .btn-result.fail:hover {
+    background: rgba(220, 38, 38, 0.5);
+    border-color: rgba(252, 165, 165, 0.7);
+}
