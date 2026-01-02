@@ -283,7 +283,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         const yearStorageKey = getStorageKey(year);
         sampleLogs = SampleUtils.safeParseJSON(yearStorageKey, []);
         renderLogs(sampleLogs);
-        receptionNumberInput.value = generateNextReceptionNumber();
+        // receptionNumberInput이 정의된 후에 호출되므로 DOM에서 직접 참조
+        const receptionInput = document.getElementById('receptionNumber');
+        if (receptionInput) {
+            receptionInput.value = generateNextReceptionNumber();
+        }
         updateListViewTitle();
     }
 
