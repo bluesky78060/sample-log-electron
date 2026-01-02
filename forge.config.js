@@ -8,6 +8,7 @@ module.exports = {
     executableName: 'sample-log',
     appBundleId: 'com.samplelog.app',
     extraResource: ['./src/app-update.yml'],
+    icon: './assets/icon',
   },
   rebuildConfig: {},
   publishers: [
@@ -28,6 +29,8 @@ module.exports = {
       config: {
         name: 'sample-log',
         setupExe: 'sample-log-setup.exe',
+        setupIcon: './assets/icon.ico',
+        iconUrl: 'https://raw.githubusercontent.com/bluesky78060/sample-log-electron/main/assets/icon.ico',
         title: '시료접수대장',
         shortcutName: '시료접수대장',
         authors: '봉화군 농업기술센터',
