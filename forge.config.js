@@ -1,5 +1,6 @@
 const { FusesPlugin } = require('@electron-forge/plugin-fuses');
 const { FuseV1Options, FuseVersion } = require('@electron/fuses');
+const path = require('path');
 
 module.exports = {
   packagerConfig: {
@@ -8,9 +9,22 @@ module.exports = {
     executableName: 'sample-log',
     appBundleId: 'com.samplelog.app',
     extraResource: ['./src/app-update.yml'],
-    icon: './assets/icon',
+    icon: path.resolve(__dirname, 'assets', 'icon'),
   },
   rebuildConfig: {},
+  hooks: {
+    postPackage: async (config, packageResult) => {
+      const fs = require('fs');
+      const iconPath = path.resolve(__dirname, 'assets', 'icon.icns');
+      for (const outputPath of packageResult.outputPaths) {
+        const resourcesPath = path.join(outputPath, 'sample-log.app', 'Contents', 'Resources', 'electron.icns');
+        if (fs.existsSync(resourcesPath)) {
+          fs.copyFileSync(iconPath, resourcesPath);
+          console.log('Icon copied to:', resourcesPath);
+        }
+      }
+    }
+  },
   publishers: [
     {
       name: '@electron-forge/publisher-github',
@@ -29,7 +43,7 @@ module.exports = {
       config: {
         name: 'sample-log',
         setupExe: 'sample-log-setup.exe',
-        setupIcon: './assets/icon.ico',
+        setupIcon: path.resolve(__dirname, 'assets', 'icon.ico'),
         iconUrl: 'https://raw.githubusercontent.com/bluesky78060/sample-log-electron/main/assets/icon.ico',
         title: '시료접수대장',
         shortcutName: '시료접수대장',

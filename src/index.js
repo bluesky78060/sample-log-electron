@@ -235,13 +235,12 @@ autoUpdater.on('update-downloaded', (info) => {
 });
 
 autoUpdater.on('error', (err) => {
+  // 404 오류 (릴리스 파일 없음)는 무시 - macOS 빌드가 없을 때 발생
+  if (err.message && err.message.includes('404')) {
+    console.log('업데이트 파일 없음 (정상):', err.message);
+    return;
+  }
   console.error('업데이트 오류:', err);
-  dialog.showMessageBox({
-    type: 'error',
-    title: '업데이트 오류',
-    message: `업데이트 확인 중 오류가 발생했습니다.\n${err.message}`,
-    buttons: ['확인']
-  });
 });
 
 // Quit when all windows are closed, except on macOS.
