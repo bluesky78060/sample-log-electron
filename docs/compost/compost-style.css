@@ -771,7 +771,8 @@ div.animal-type-options label.checkbox-card.small div.checkbox-content {
     margin-right: 0.75rem;
 }
 
-.year-select {
+.year-select,
+.list-year-select {
     background: white;
     color: var(--compost-primary-dark);
     border: 2px solid var(--compost-primary);
@@ -790,18 +791,25 @@ div.animal-type-options label.checkbox-card.small div.checkbox-content {
     transition: all 0.2s ease;
 }
 
-.year-select:hover {
+.list-year-select {
+    margin-left: 0.75rem;
+}
+
+.year-select:hover,
+.list-year-select:hover {
     background: var(--compost-primary-light);
     transform: translateY(-1px);
     box-shadow: 0 2px 8px rgba(161, 98, 7, 0.3);
 }
 
-.year-select:focus {
+.year-select:focus,
+.list-year-select:focus {
     outline: none;
     box-shadow: 0 0 0 3px rgba(161, 98, 7, 0.2);
 }
 
-.year-select option {
+.year-select option,
+.list-year-select option {
     background: white;
     color: var(--compost-primary-dark);
     font-weight: 500;
@@ -864,7 +872,8 @@ div.animal-type-options label.checkbox-card.small div.checkbox-content {
 }
 
 /* 다크 모드 년도 선택 */
-[data-theme="dark"] .year-select {
+[data-theme="dark"] .year-select,
+[data-theme="dark"] .list-year-select {
     -webkit-appearance: none;
     -moz-appearance: none;
     appearance: none;
@@ -876,16 +885,19 @@ div.animal-type-options label.checkbox-card.small div.checkbox-content {
     background-position: right 8px center !important;
 }
 
-[data-theme="dark"] .year-select:hover {
+[data-theme="dark"] .year-select:hover,
+[data-theme="dark"] .list-year-select:hover {
     background-color: rgba(161, 98, 7, 0.25) !important;
 }
 
-[data-theme="dark"] .year-select:focus {
+[data-theme="dark"] .year-select:focus,
+[data-theme="dark"] .list-year-select:focus {
     border-color: #d97706 !important;
     box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.2);
 }
 
-[data-theme="dark"] .year-select option {
+[data-theme="dark"] .year-select option,
+[data-theme="dark"] .list-year-select option {
     background-color: #451a03 !important;
     color: #fcd34d !important;
 }

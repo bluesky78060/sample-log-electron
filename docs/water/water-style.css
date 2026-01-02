@@ -744,7 +744,8 @@ textarea:focus {
     margin-right: 0.75rem;
 }
 
-.year-select {
+.year-select,
+.list-year-select {
     background: white;
     color: var(--water-primary-dark);
     border: 2px solid var(--water-primary);
@@ -763,18 +764,25 @@ textarea:focus {
     transition: all 0.2s ease;
 }
 
-.year-select:hover {
+.list-year-select {
+    margin-left: 0.75rem;
+}
+
+.year-select:hover,
+.list-year-select:hover {
     background: var(--water-primary-light);
     transform: translateY(-1px);
     box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
 }
 
-.year-select:focus {
+.year-select:focus,
+.list-year-select:focus {
     outline: none;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
 }
 
-.year-select option {
+.year-select option,
+.list-year-select option {
     background: white;
     color: var(--water-primary-dark);
     font-weight: 500;
@@ -983,7 +991,8 @@ textarea:focus {
 }
 
 /* 다크 모드 년도 선택 */
-[data-theme="dark"] .year-select {
+[data-theme="dark"] .year-select,
+[data-theme="dark"] .list-year-select {
     -webkit-appearance: none;
     -moz-appearance: none;
     appearance: none;
@@ -995,16 +1004,19 @@ textarea:focus {
     background-position: right 8px center !important;
 }
 
-[data-theme="dark"] .year-select:hover {
+[data-theme="dark"] .year-select:hover,
+[data-theme="dark"] .list-year-select:hover {
     background-color: rgba(59, 130, 246, 0.25) !important;
 }
 
-[data-theme="dark"] .year-select:focus {
+[data-theme="dark"] .year-select:focus,
+[data-theme="dark"] .list-year-select:focus {
     border-color: #3b82f6 !important;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
 }
 
-[data-theme="dark"] .year-select option {
+[data-theme="dark"] .year-select option,
+[data-theme="dark"] .list-year-select option {
     background-color: #1e293b !important;
     color: #93c5fd !important;
 }

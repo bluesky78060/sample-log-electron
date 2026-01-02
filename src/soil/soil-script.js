@@ -87,12 +87,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 년도 선택 기능
     // ========================================
     const yearSelect = document.getElementById('yearSelect');
+    const listYearSelect = document.getElementById('listYearSelect');
     const listViewTitle = document.getElementById('listViewTitle');
     let selectedYear = new Date().getFullYear().toString();
 
     // 현재 년도로 드롭다운 기본값 설정
     if (yearSelect) {
         yearSelect.value = selectedYear;
+    }
+    if (listYearSelect) {
+        listYearSelect.value = selectedYear;
     }
 
     // 년도별 스토리지 키 생성
@@ -103,8 +107,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 년도 선택 시 제목 업데이트
     function updateListViewTitle() {
         if (listViewTitle) {
-            listViewTitle.textContent = `${selectedYear}년 토양 접수 목록`;
+            listViewTitle.textContent = `토양 접수 목록`;
         }
+    }
+
+    // 두 연도 선택 드롭다운 동기화
+    function syncYearSelects(newYear) {
+        if (yearSelect) yearSelect.value = newYear;
+        if (listYearSelect) listYearSelect.value = newYear;
     }
 
     // 초기 제목 설정
@@ -291,10 +301,25 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateListViewTitle();
     }
 
-    // 년도 선택 이벤트
+    // 년도 선택 이벤트 (접수 폼)
     if (yearSelect) {
         yearSelect.addEventListener('change', async (e) => {
             selectedYear = e.target.value;
+            syncYearSelects(selectedYear);
+            loadYearData(selectedYear);
+            // 자동 저장 경로도 연도별로 업데이트
+            if (window.isElectron) {
+                await FileAPI.updateAutoSavePath(selectedYear);
+            }
+            showToast(`${selectedYear}년 데이터를 불러왔습니다.`, 'success');
+        });
+    }
+
+    // 년도 선택 이벤트 (조회 뷰)
+    if (listYearSelect) {
+        listYearSelect.addEventListener('change', async (e) => {
+            selectedYear = e.target.value;
+            syncYearSelects(selectedYear);
             loadYearData(selectedYear);
             // 자동 저장 경로도 연도별로 업데이트
             if (window.isElectron) {

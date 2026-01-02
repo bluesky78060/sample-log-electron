@@ -5047,34 +5047,34 @@ select {
 
 /* 다크 모드 body 배경 */
 [data-theme="dark"] body {
-    background-color: #0f0f0f;
+    background-color: #2d2d2d;
     color: var(--gray-800);
 }
 
-/* 다크 모드 시료 타입별 배경 */
+/* 다크 모드 시료 타입별 배경 - 더 연한 버전 */
 [data-theme="dark"] body.soil-page {
-    background: linear-gradient(135deg, #052e16 0%, #064e3b 30%, #052e16 60%, #022c22 100%);
+    background: linear-gradient(135deg, #1f5035 0%, #2a6a55 30%, #1f5035 60%, #1c5540 100%);
 }
 
 [data-theme="dark"] body.water-page {
-    background: linear-gradient(135deg, #0c1929 0%, #172554 30%, #0c1929 60%, #0f172a 100%);
+    background: linear-gradient(135deg, #243a50 0%, #305575 30%, #243a50 60%, #284560 100%);
 }
 
 [data-theme="dark"] body.pesticide-page {
-    background: linear-gradient(135deg, #1c1917 0%, #292524 30%, #1c1917 60%, #171412 100%);
+    background: linear-gradient(135deg, #403a35 0%, #554d45 30%, #403a35 60%, #3a3530 100%);
 }
 
 [data-theme="dark"] body.compost-page {
-    background: linear-gradient(135deg, #1a1a0f 0%, #2a2a1a 30%, #1a1a0f 60%, #151510 100%);
+    background: linear-gradient(135deg, #424235 0%, #555545 30%, #424235 60%, #3d3d30 100%);
 }
 
 [data-theme="dark"] body.heavy-metal-page {
-    background: linear-gradient(135deg, #1f1315 0%, #2a1a1c 30%, #1f1315 60%, #1a1012 100%);
+    background: linear-gradient(135deg, #453540 0%, #554550 30%, #453540 60%, #403038 100%);
 }
 
 /* 다크 모드 네비게이션 바 */
 [data-theme="dark"] .navbar {
-    background: #0a0a0a;
+    background: #2a2a2a;
     border-bottom: 1px solid var(--gray-200);
 }
 
@@ -5094,13 +5094,13 @@ select {
 
 /* 다크 모드 폼 카드 */
 [data-theme="dark"] .form-card {
-    background: rgba(30, 30, 35, 0.95);
+    background: rgba(50, 50, 55, 0.92);
     border-color: var(--gray-200);
     backdrop-filter: blur(10px);
 }
 
 [data-theme="dark"] .card-header {
-    background: rgba(20, 20, 25, 0.8);
+    background: rgba(40, 40, 45, 0.85);
     border-color: var(--gray-200);
 }
 
@@ -5120,7 +5120,7 @@ select {
 [data-theme="dark"] .form-field input,
 [data-theme="dark"] .form-field select,
 [data-theme="dark"] .form-field textarea {
-    background: rgba(40, 40, 45, 0.9);
+    background: rgba(55, 55, 60, 0.9);
     border-color: var(--gray-300);
     color: var(--gray-800);
 }
@@ -5137,7 +5137,7 @@ select {
 }
 
 [data-theme="dark"] .form-field input[readonly] {
-    background-color: rgba(30, 30, 35, 0.7);
+    background-color: rgba(45, 45, 50, 0.7);
     color: var(--gray-500);
 }
 
@@ -5164,9 +5164,9 @@ select {
     -webkit-appearance: none;
     -moz-appearance: none;
     appearance: none;
-    background-color: #2a2a2e !important;
+    background-color: #3a3a40 !important;
     color: #e2e8f0 !important;
-    border-color: #4a4a50 !important;
+    border-color: #5a5a60 !important;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
     background-repeat: no-repeat !important;
     background-position: right 12px center !important;
@@ -5178,7 +5178,7 @@ select {
 [data-theme="dark"] .form-field select:focus,
 [data-theme="dark"] .items-per-page:focus,
 [data-theme="dark"] .form-group select:focus {
-    background-color: #2a2a2e !important;
+    background-color: #3a3a40 !important;
     border-color: #6366f1 !important;
     outline: none;
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
@@ -5189,26 +5189,26 @@ select {
 [data-theme="dark"] select option,
 [data-theme="dark"] .form-field select option,
 [data-theme="dark"] .form-group select option {
-    background-color: #2a2a2e !important;
+    background-color: #3a3a40 !important;
     color: #e2e8f0 !important;
     padding: 8px 12px;
 }
 
 [data-theme="dark"] select option:checked,
 [data-theme="dark"] select option:hover {
-    background-color: #3a3a40 !important;
+    background-color: #4a4a50 !important;
     color: #ffffff !important;
 }
 
 /* 다크 모드 select 비활성화 옵션 */
 [data-theme="dark"] select option:disabled {
     color: #6b7280 !important;
-    background-color: #1f1f23 !important;
+    background-color: #2f2f35 !important;
 }
 
 /* 다크 모드 필지 카드 */
 [data-theme="dark"] .parcel-card {
-    background: rgba(35, 35, 40, 0.95);
+    background: rgba(55, 55, 60, 0.92);
     border-color: var(--gray-200);
 }
 
@@ -5222,12 +5222,12 @@ select {
 
 /* 다크 모드 빈 필지 상태 */
 [data-theme="dark"] .empty-parcels {
-    background: rgba(25, 25, 30, 0.8);
+    background: rgba(45, 45, 50, 0.8);
     border-color: var(--gray-300);
 }
 
 [data-theme="dark"] .empty-parcels:hover {
-    background: rgba(35, 35, 40, 0.9);
+    background: rgba(55, 55, 60, 0.9);
 }
 
 [data-theme="dark"] .empty-parcels p {
@@ -5243,13 +5243,13 @@ select {
 
 /* 다크 모드 검색 버튼 */
 [data-theme="dark"] .btn-search-open {
-    background: rgba(35, 35, 40, 0.9);
+    background: rgba(50, 50, 55, 0.9);
     border-color: var(--gray-200);
     color: var(--gray-700);
 }
 
 [data-theme="dark"] .btn-search-open:hover {
-    background: rgba(45, 45, 50, 0.9);
+    background: rgba(60, 60, 65, 0.9);
     border-color: var(--gray-300);
 }
 
@@ -5259,7 +5259,7 @@ select {
 }
 
 [data-theme="dark"] .modal-search .modal-header {
-    background: rgba(25, 25, 30, 0.98);
+    background: rgba(45, 45, 50, 0.98);
     border-color: var(--gray-200);
 }
 
@@ -5268,11 +5268,11 @@ select {
 }
 
 [data-theme="dark"] .modal-search .modal-body {
-    background: rgba(30, 30, 35, 0.98);
+    background: rgba(50, 50, 55, 0.98);
 }
 
 [data-theme="dark"] .modal-search .modal-footer {
-    background: rgba(20, 20, 25, 0.98);
+    background: rgba(40, 40, 45, 0.98);
     border-color: var(--gray-200);
 }
 
@@ -5281,7 +5281,7 @@ select {
 }
 
 [data-theme="dark"] .search-input {
-    background: rgba(40, 40, 45, 0.9);
+    background: rgba(55, 55, 60, 0.9);
     border-color: var(--gray-300);
     color: var(--gray-800);
 }
@@ -5316,7 +5316,7 @@ select {
 
 /* 다크 모드 리스트 뷰 헤더 */
 [data-theme="dark"] #listView .view-header-top {
-    background: rgba(30, 30, 35, 0.95);
+    background: rgba(50, 50, 55, 0.95);
     border-color: var(--gray-200);
 }
 
@@ -5326,7 +5326,7 @@ select {
 
 /* 다크 모드 검색 래퍼 */
 [data-theme="dark"] .search-wrapper input {
-    background: rgba(40, 40, 45, 0.9);
+    background: rgba(55, 55, 60, 0.9);
     border-color: var(--gray-200);
     color: var(--gray-800);
 }
@@ -5344,32 +5344,32 @@ select {
 
 /* 다크 모드 테이블 래퍼 */
 [data-theme="dark"] .table-wrapper {
-    background: rgba(30, 30, 35, 0.95);
+    background: rgba(50, 50, 55, 0.95);
     border-color: var(--gray-200);
 }
 
 /* 다크 모드 데이터 테이블 */
 [data-theme="dark"] .data-table {
-    border-color: #3f3f46;
+    border-color: #4f4f56;
 }
 
 [data-theme="dark"] .data-table thead {
-    background: linear-gradient(to bottom, #1f1f23 0%, #18181b 100%);
+    background: linear-gradient(to bottom, #3a3a40 0%, #2f2f35 100%);
     color: var(--gray-800);
 }
 
 [data-theme="dark"] .data-table th {
-    border-color: #3f3f46;
+    border-color: #4f4f56;
     color: var(--gray-800);
 }
 
 [data-theme="dark"] .data-table tbody tr {
-    background: rgba(25, 25, 30, 0.9);
-    border-color: #3f3f46;
+    background: rgba(45, 45, 50, 0.9);
+    border-color: #4f4f56;
 }
 
 [data-theme="dark"] .data-table tbody tr:nth-child(even) {
-    background: rgba(35, 35, 40, 0.9);
+    background: rgba(55, 55, 60, 0.9);
 }
 
 [data-theme="dark"] .data-table tbody tr:hover {
@@ -5385,7 +5385,7 @@ select {
 }
 
 [data-theme="dark"] .data-table td {
-    border-color: #3f3f46;
+    border-color: #4f4f56;
     color: var(--gray-800);
 }
 
@@ -5505,18 +5505,18 @@ select {
 
 /* 다크 모드 토스트/알림 */
 [data-theme="dark"] .toast {
-    background: rgba(30, 30, 35, 0.98);
+    background: rgba(50, 50, 55, 0.98);
     border-color: var(--gray-200);
     color: var(--gray-800);
 }
 
 /* 다크 모드 결과 테이블 */
 [data-theme="dark"] .result-table tbody tr {
-    background: rgba(25, 25, 30, 0.9);
+    background: rgba(45, 45, 50, 0.9);
 }
 
 [data-theme="dark"] .result-table tbody tr:nth-child(even) {
-    background: rgba(35, 35, 40, 0.9);
+    background: rgba(55, 55, 60, 0.9);
 }
 
 [data-theme="dark"] .result-table tbody tr:hover {
@@ -5577,7 +5577,7 @@ select {
 
 /* 다크 모드 접수 방법 버튼 */
 [data-theme="dark"] .card-header .reception-method-btn {
-    background: rgba(40, 40, 45, 0.8);
+    background: rgba(55, 55, 60, 0.8);
     border-color: var(--gray-300);
 }
 
@@ -5598,7 +5598,7 @@ select {
 
 /* 다크 모드 년도 선택기 */
 [data-theme="dark"] .year-selector select {
-    background: rgba(40, 40, 45, 0.9);
+    background: rgba(55, 55, 60, 0.9);
     border-color: var(--gray-300);
     color: var(--gray-800);
 }
@@ -5633,7 +5633,7 @@ select {
 [data-theme="dark"] .form-field.floating input:focus + label,
 [data-theme="dark"] .form-field.floating input:not(:placeholder-shown) + label {
     color: #a5b4fc;
-    background: rgba(30, 30, 35, 0.95);
+    background: rgba(50, 50, 55, 0.95);
 }
 
 /* 다크 모드 유효성 검사 피드백 */
@@ -5656,17 +5656,17 @@ select {
 /* 다크 모드 작물+면적 입력 모달 */
 [data-theme="dark"] #cropAreaModal .modal-body,
 [data-theme="dark"] #cropModal .modal-body {
-    background: rgba(30, 30, 35, 0.98);
+    background: rgba(50, 50, 55, 0.98);
 }
 
 [data-theme="dark"] .crop-area-list,
 [data-theme="dark"] .crop-list-wrapper {
-    background: rgba(25, 25, 30, 0.9);
+    background: rgba(45, 45, 50, 0.9);
     border-color: var(--gray-200);
 }
 
 [data-theme="dark"] .crop-area-input-row {
-    background: rgba(35, 35, 40, 0.9);
+    background: rgba(55, 55, 60, 0.9);
     border-color: var(--gray-200);
 }
 
@@ -5677,9 +5677,9 @@ select {
     -webkit-appearance: none;
     -moz-appearance: none;
     appearance: none;
-    background-color: #2a2a2e !important;
+    background-color: #3a3a40 !important;
     color: #e2e8f0 !important;
-    border-color: #4a4a50 !important;
+    border-color: #5a5a60 !important;
 }
 
 [data-theme="dark"] .crop-area-input-row input:focus,
@@ -5697,9 +5697,9 @@ select {
 /* 다크 모드 작물 검색 모달 */
 [data-theme="dark"] #cropModal .search-filter-row input,
 [data-theme="dark"] #cropSearchInput {
-    background-color: #2a2a2e !important;
+    background-color: #3a3a40 !important;
     color: #e2e8f0 !important;
-    border-color: #4a4a50 !important;
+    border-color: #5a5a60 !important;
 }
 
 [data-theme="dark"] #cropModal .search-filter-row input:focus,
@@ -5709,7 +5709,7 @@ select {
 }
 
 [data-theme="dark"] .crop-list li {
-    background: rgba(35, 35, 40, 0.9);
+    background: rgba(55, 55, 60, 0.9);
     border-color: var(--gray-200);
     color: var(--gray-800);
 }
@@ -5729,7 +5729,7 @@ select {
 }
 
 [data-theme="dark"] .selected-section {
-    background: rgba(25, 25, 30, 0.9);
+    background: rgba(45, 45, 50, 0.9);
     border-color: var(--gray-200);
 }
 
@@ -5749,11 +5749,11 @@ select {
 
 /* 다크 모드 주소 검색 모달 (카카오 우편번호 서비스) */
 [data-theme="dark"] #addressModal .modal-content {
-    background: rgba(25, 25, 30, 0.98);
+    background: rgba(45, 45, 50, 0.98);
 }
 
 [data-theme="dark"] #addressModal .modal-body {
-    background: rgba(30, 30, 35, 0.98);
+    background: rgba(50, 50, 55, 0.98);
 }
 
 [data-theme="dark"] .postcode-container {
@@ -5777,11 +5777,11 @@ select {
 }
 
 [data-theme="dark"] .region-options {
-    background: rgba(25, 25, 30, 0.9);
+    background: rgba(45, 45, 50, 0.9);
 }
 
 [data-theme="dark"] .region-option-btn {
-    background: rgba(35, 35, 40, 0.9);
+    background: rgba(55, 55, 60, 0.9);
     border-color: var(--gray-200);
     color: var(--gray-800);
 }
@@ -5804,9 +5804,9 @@ select {
     -webkit-appearance: none !important;
     -moz-appearance: none !important;
     appearance: none !important;
-    background-color: #2a2a2e !important;
+    background-color: #3a3a40 !important;
     color: #e2e8f0 !important;
-    border-color: #4a4a50 !important;
+    border-color: #5a5a60 !important;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
     background-repeat: no-repeat !important;
     background-position: right 12px center !important;
@@ -5821,9 +5821,9 @@ select {
     -webkit-appearance: none !important;
     -moz-appearance: none !important;
     appearance: none !important;
-    background-color: #2a2a2e !important;
+    background-color: #3a3a40 !important;
     color: #e2e8f0 !important;
-    border-color: #4a4a50 !important;
+    border-color: #5a5a60 !important;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
     background-repeat: no-repeat !important;
     background-position: right 12px center !important;

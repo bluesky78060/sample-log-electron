@@ -195,11 +195,23 @@ const ThemeManager = {
     }
 };
 
-// DOM 로드 시 자동 초기화
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => ThemeManager.init());
-} else {
+// DOM 로드 시 자동 초기화 및 토글 버튼 이벤트 연결
+function initThemeWithToggle() {
     ThemeManager.init();
+    ThemeManager.updateToggleButton();
+
+    // 토글 버튼 클릭 이벤트 연결
+    const toggleBtn = document.getElementById('themeToggleBtn');
+    if (toggleBtn && !toggleBtn.dataset.themeListenerAdded) {
+        toggleBtn.addEventListener('click', () => ThemeManager.toggle());
+        toggleBtn.dataset.themeListenerAdded = 'true';
+    }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initThemeWithToggle);
+} else {
+    initThemeWithToggle();
 }
 
 // 전역 접근 가능하도록 노출
