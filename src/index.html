@@ -500,6 +500,7 @@
             border-radius: 50%;
             transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            pointer-events: none;
         }
 
         .theme-toggle-btn.dark::before {
@@ -687,23 +688,8 @@
             <p>봉화군농업기술센터 안전성분석센터</p>
         </div>
     </div>
-    <!-- 다크 모드 스크립트 -->
+    <!-- 다크 모드 스크립트 (theme.js가 자동으로 이벤트 리스너 등록) -->
     <script src="shared/theme.js"></script>
-    <script>
-        // 테마 초기화
-        document.addEventListener('DOMContentLoaded', function() {
-            if (window.ThemeManager) {
-                ThemeManager.init();
-                ThemeManager.updateToggleButton();
-
-                // 토글 버튼 클릭 이벤트 연결
-                const toggleBtn = document.getElementById('themeToggleBtn');
-                if (toggleBtn) {
-                    toggleBtn.addEventListener('click', () => ThemeManager.toggle());
-                }
-            }
-        });
-    </script>
 </body>
 
 </html>

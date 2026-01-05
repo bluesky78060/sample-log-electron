@@ -203,7 +203,9 @@ function initThemeWithToggle() {
     // 토글 버튼 클릭 이벤트 연결
     const toggleBtn = document.getElementById('themeToggleBtn');
     if (toggleBtn && !toggleBtn.dataset.themeListenerAdded) {
-        toggleBtn.addEventListener('click', () => ThemeManager.toggle());
+        toggleBtn.addEventListener('click', () => {
+            ThemeManager.toggle();
+        });
         toggleBtn.dataset.themeListenerAdded = 'true';
     }
 }
