@@ -2736,8 +2736,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // 전체 데이터로 라벨 인쇄
                 openLabelPrintWithData(sampleLogs);
             } else {
-                // 선택된 데이터만 라벨 인쇄
-                const selectedLogs = sampleLogs.filter(log => selectedIds.includes(log.id));
+                // 선택된 데이터만 라벨 인쇄 (ID 타입 일치를 위해 문자열로 변환)
+                const selectedLogs = sampleLogs.filter(log => selectedIds.includes(String(log.id)));
                 openLabelPrintWithData(selectedLogs);
             }
         });
@@ -2802,7 +2802,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             // 선택된 항목 삭제
-            sampleLogs = sampleLogs.filter(log => !selectedIds.includes(log.id));
+            sampleLogs = sampleLogs.filter(log => !selectedIds.includes(String(log.id)));
             saveLogs();
             renderLogs(sampleLogs);
 
