@@ -2513,7 +2513,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 완료 버튼
         if (e.target.classList.contains('btn-complete')) {
             const id = e.target.dataset.id;
-            const log = sampleLogs.find(l => l.id === id);
+            const log = sampleLogs.find(l => String(l.id) === id);
             if (log) {
                 // 완료 상태 토글
                 const newCompletedStatus = !log.completed;
@@ -2584,7 +2584,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 수정 버튼
         if (e.target.classList.contains('btn-edit')) {
             const id = e.target.dataset.id;
-            const log = sampleLogs.find(l => l.id === id);
+            const log = sampleLogs.find(l => String(l.id) === id);
             if (log) {
                 populateFormForEdit(log);
             }

@@ -836,7 +836,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function toggleComplete(id) {
-        const log = sampleLogs.find(l => l.id === id);
+        const log = sampleLogs.find(l => String(l.id) === id);
         if (log) {
             log.isComplete = !log.isComplete;
             saveLogs();
@@ -846,7 +846,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 판정 결과 토글 (미판정 → 적합 → 부적합 → 미판정)
     function toggleTestResult(id) {
-        const log = sampleLogs.find(l => l.id === id);
+        const log = sampleLogs.find(l => String(l.id) === id);
         if (log) {
             if (!log.testResult || log.testResult === '') {
                 log.testResult = 'pass';  // 미판정 → 적합
@@ -861,14 +861,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function deleteSample(id) {
-        sampleLogs = sampleLogs.filter(l => l.id !== id);
+        sampleLogs = sampleLogs.filter(l => String(l.id) !== id);
         saveLogs();
         renderLogs(sampleLogs);
         showToast('삭제되었습니다.', 'success');
     }
 
     function editSample(id) {
-        const log = sampleLogs.find(l => l.id === id);
+        const log = sampleLogs.find(l => String(l.id) === id);
         if (!log) return;
 
         editingId = id;
