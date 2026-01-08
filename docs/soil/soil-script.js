@@ -965,55 +965,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // 필지 주소 업데이트 (중복 체크 포함)
-    function updateParcelLotAddress(parcelId, skipDuplicateCheck = false) {
+    /**
+     * 필지 주소 업데이트 (중복 허용 - 비고로 구분)
+     * @description 같은 필지에 여러 시료 접수 가능. 비고 필드로 구분.
+     * @param {string} parcelId - 필지 고유 ID
+     * @returns {void}
+     */
+    function updateParcelLotAddress(parcelId) {
         const parcel = parcels.find(p => p.id === parcelId);
         const lotInput = document.querySelector(`.lot-address-input[data-id="${parcelId}"]`);
 
         if (parcel && lotInput) {
             const newValue = lotInput.value.trim();
 
-            // 중복 체크 (빈 값은 체크 안함)
-            if (newValue && !skipDuplicateCheck) {
-                let isDuplicate = false;
-                let duplicateLocation = '';
-
-                for (const p of parcels) {
-                    // 자기 자신 제외
-                    if (p.id === parcelId) continue;
-
-                    // 다른 주필지와 중복 체크
-                    if (p.lotAddress === newValue) {
-                        isDuplicate = true;
-                        duplicateLocation = '다른 주필지';
-                        break;
-                    }
-                    // 하위필지와 중복 체크
-                    const subLotExists = p.subLots.some(sl =>
-                        (typeof sl === 'string' ? sl : sl.lotAddress) === newValue
-                    );
-                    if (subLotExists) {
-                        isDuplicate = true;
-                        duplicateLocation = '하위필지';
-                        break;
-                    }
-                }
-
-                // 현재 필지의 하위필지와도 중복 체크
-                const ownSubLotExists = parcel.subLots.some(sl =>
-                    (typeof sl === 'string' ? sl : sl.lotAddress) === newValue
-                );
-                if (ownSubLotExists) {
-                    isDuplicate = true;
-                    duplicateLocation = '현재 필지의 하위필지';
-                }
-
-                if (isDuplicate) {
-                    showToast(`이미 등록된 필지입니다 (${duplicateLocation})`, 'error');
-                    // 이전 값으로 되돌리기
-                    lotInput.value = parcel.lotAddress || '';
-                    return;
-                }
+            // 빈 필지 주소 검증
+            if (!newValue) {
+                showToast('필지 주소를 입력해주세요.', 'warning');
+                lotInput.focus();
+                return;
             }
 
             parcel.lotAddress = newValue;
@@ -1199,47 +1168,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
-        // 하위 필지 추가
+        // 하위 필지 추가 (중복 허용 - 비고로 구분)
         if (target.classList.contains('btn-add-sub-lot-icon')) {
             const parcelId = target.dataset.id;
             const input = document.querySelector(`.sub-lot-input[data-id="${parcelId}"]`);
             const value = input.value.trim();
             if (value) {
                 const parcel = parcels.find(p => p.id === parcelId);
-
-                // 전체 필지에서 중복 체크 (모든 주필지 + 모든 하위필지)
-                let isDuplicate = false;
-                let duplicateLocation = '';
-
-                for (const p of parcels) {
-                    // 주필지와 중복 체크
-                    if (p.lotAddress === value) {
-                        isDuplicate = true;
-                        duplicateLocation = '주필지';
-                        break;
-                    }
-                    // 하위필지와 중복 체크
-                    const subLotExists = p.subLots.some(sl =>
-                        (typeof sl === 'string' ? sl : sl.lotAddress) === value
-                    );
-                    if (subLotExists) {
-                        isDuplicate = true;
-                        duplicateLocation = '하위필지';
-                        break;
-                    }
-                }
-
-                if (isDuplicate) {
-                    showToast(`이미 등록된 필지입니다 (${duplicateLocation})`, 'error');
-                } else {
-                    parcel.subLots.push({
-                        lotAddress: value,
-                        crops: []
-                    });
-                    updateSubLotsDisplay(parcelId);
-                    updateParcelSummary(parcelId);
-                    updateParcelsData();
-                }
+                parcel.subLots.push({
+                    lotAddress: value,
+                    crops: []
+                });
+                updateSubLotsDisplay(parcelId);
+                updateParcelSummary(parcelId);
+                updateParcelsData();
                 input.value = '';
             }
         }
@@ -1343,54 +1285,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }, true);
 
-    // 필지 주소 blur 이벤트 (중복 체크)
+    // 필지 주소 blur 이벤트 (중복 허용 - 값 저장만 수행)
     parcelsContainer.addEventListener('blur', (e) => {
         if (e.target.classList.contains('lot-address-input')) {
             const parcelId = e.target.dataset.id;
             const parcel = parcels.find(p => p.id === parcelId);
-            const newValue = e.target.value.trim();
-
-            if (!newValue) return;
-
-            // 중복 체크
-            let isDuplicate = false;
-            let duplicateLocation = '';
-
-            for (const p of parcels) {
-                // 자기 자신 제외
-                if (p.id === parcelId) continue;
-
-                // 다른 주필지와 중복 체크
-                if (p.lotAddress === newValue) {
-                    isDuplicate = true;
-                    duplicateLocation = '다른 주필지';
-                    break;
-                }
-                // 하위필지와 중복 체크
-                const subLotExists = p.subLots.some(sl =>
-                    (typeof sl === 'string' ? sl : sl.lotAddress) === newValue
-                );
-                if (subLotExists) {
-                    isDuplicate = true;
-                    duplicateLocation = '하위필지';
-                    break;
-                }
-            }
-
-            // 현재 필지의 하위필지와도 중복 체크
-            const ownSubLotExists = parcel.subLots.some(sl =>
-                (typeof sl === 'string' ? sl : sl.lotAddress) === newValue
-            );
-            if (ownSubLotExists) {
-                isDuplicate = true;
-                duplicateLocation = '현재 필지의 하위필지';
-            }
-
-            if (isDuplicate) {
-                showToast(`이미 등록된 필지입니다 (${duplicateLocation})`, 'error');
-                // 빈 값으로 초기화
-                e.target.value = '';
-                parcel.lotAddress = '';
+            if (parcel) {
+                parcel.lotAddress = e.target.value.trim();
                 updateParcelsData();
             }
         }
@@ -2541,7 +2442,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 완료 버튼
         if (e.target.classList.contains('btn-complete')) {
             const id = e.target.dataset.id;
-            const log = sampleLogs.find(l => l.id === id);
+            const log = sampleLogs.find(l => String(l.id) === id);
             if (log) {
                 // 완료 상태 토글
                 const newCompletedStatus = !log.completed;
@@ -2612,7 +2513,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 수정 버튼
         if (e.target.classList.contains('btn-edit')) {
             const id = e.target.dataset.id;
-            const log = sampleLogs.find(l => l.id === id);
+            const log = sampleLogs.find(l => String(l.id) === id);
             if (log) {
                 populateFormForEdit(log);
             }
@@ -2736,8 +2637,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // 전체 데이터로 라벨 인쇄
                 openLabelPrintWithData(sampleLogs);
             } else {
-                // 선택된 데이터만 라벨 인쇄
-                const selectedLogs = sampleLogs.filter(log => selectedIds.includes(log.id));
+                // 선택된 데이터만 라벨 인쇄 (ID 타입 일치를 위해 문자열로 변환)
+                const selectedLogs = sampleLogs.filter(log => selectedIds.includes(String(log.id)));
                 openLabelPrintWithData(selectedLogs);
             }
         });
@@ -2760,10 +2661,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             };
         });
 
-        // 중복 제거 (성명 + 주소 기준)
+        // 중복 제거 (주소 기준)
         const uniqueMap = new Map();
         labelData.forEach(item => {
-            const key = `${item.name}|${item.address}|${item.postalCode}`;
+            const key = `${item.address}|${item.postalCode}`;
             if (!uniqueMap.has(key)) {
                 uniqueMap.set(key, item);
             }
@@ -2773,7 +2674,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 중복이 있었으면 알림
         const duplicateCount = labelData.length - uniqueLabelData.length;
         if (duplicateCount > 0) {
-            showToast(`중복 ${duplicateCount}건 제거됨 (총 ${uniqueLabelData.length}건)`, 'info');
+            showToast(`주소 중복 ${duplicateCount}건 제거됨 (총 ${uniqueLabelData.length}건)`, 'info');
         }
 
         // localStorage에 데이터 저장
@@ -2802,7 +2703,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             // 선택된 항목 삭제
-            sampleLogs = sampleLogs.filter(log => !selectedIds.includes(log.id));
+            sampleLogs = sampleLogs.filter(log => !selectedIds.includes(String(log.id)));
             saveLogs();
             renderLogs(sampleLogs);
 

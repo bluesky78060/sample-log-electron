@@ -2513,7 +2513,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 완료 버튼
         if (e.target.classList.contains('btn-complete')) {
             const id = e.target.dataset.id;
-            const log = sampleLogs.find(l => l.id === id);
+            const log = sampleLogs.find(l => String(l.id) === id);
             if (log) {
                 // 완료 상태 토글
                 const newCompletedStatus = !log.completed;
@@ -2584,7 +2584,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 수정 버튼
         if (e.target.classList.contains('btn-edit')) {
             const id = e.target.dataset.id;
-            const log = sampleLogs.find(l => l.id === id);
+            const log = sampleLogs.find(l => String(l.id) === id);
             if (log) {
                 populateFormForEdit(log);
             }
@@ -2708,8 +2708,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // 전체 데이터로 라벨 인쇄
                 openLabelPrintWithData(sampleLogs);
             } else {
-                // 선택된 데이터만 라벨 인쇄
-                const selectedLogs = sampleLogs.filter(log => selectedIds.includes(log.id));
+                // 선택된 데이터만 라벨 인쇄 (ID 타입 일치를 위해 문자열로 변환)
+                const selectedLogs = sampleLogs.filter(log => selectedIds.includes(String(log.id)));
                 openLabelPrintWithData(selectedLogs);
             }
         });
@@ -2732,10 +2732,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             };
         });
 
-        // 중복 제거 (성명 + 주소 기준)
+        // 중복 제거 (주소 기준)
         const uniqueMap = new Map();
         labelData.forEach(item => {
-            const key = `${item.name}|${item.address}|${item.postalCode}`;
+            const key = `${item.address}|${item.postalCode}`;
             if (!uniqueMap.has(key)) {
                 uniqueMap.set(key, item);
             }
@@ -2745,7 +2745,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 중복이 있었으면 알림
         const duplicateCount = labelData.length - uniqueLabelData.length;
         if (duplicateCount > 0) {
-            showToast(`중복 ${duplicateCount}건 제거됨 (총 ${uniqueLabelData.length}건)`, 'info');
+            showToast(`주소 중복 ${duplicateCount}건 제거됨 (총 ${uniqueLabelData.length}건)`, 'info');
         }
 
         // localStorage에 데이터 저장
@@ -2774,7 +2774,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             // 선택된 항목 삭제
-            sampleLogs = sampleLogs.filter(log => !selectedIds.includes(log.id));
+            sampleLogs = sampleLogs.filter(log => !selectedIds.includes(String(log.id)));
             saveLogs();
             renderLogs(sampleLogs);
 

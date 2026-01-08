@@ -730,3 +730,32 @@
     border-color: #22c55e !important;
     box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2) !important;
 }
+
+/* ========================================
+   안내 배너 스타일
+   ======================================== */
+
+.info-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 0.875rem;
+    margin-bottom: 0.75rem;
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    border: 1px solid var(--soil-primary-light);
+    border-radius: 8px;
+    font-size: 0.8125rem;
+    color: var(--soil-primary-dark);
+}
+
+.info-banner .info-icon {
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+/* 다크 모드 안내 배너 */
+[data-theme="dark"] .info-banner {
+    background: linear-gradient(135deg, rgba(20, 83, 45, 0.4) 0%, rgba(22, 163, 74, 0.2) 100%);
+    border-color: rgba(34, 197, 94, 0.4);
+    color: #86efac;
+}

@@ -20,6 +20,12 @@ const AUTO_SAVE_FILE = 'water-autosave.json';
 const DEBUG = false;
 
 /**
+ * 고유 ID 생성 함수 (충돌 방지)
+ * @returns {string} 고유 ID
+ */
+const generateId = () => Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+
+/**
  * 디버그 로그 함수
  * @param {...any} args - 로그 인자
  * @returns {void}
@@ -662,7 +668,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         for (let i = 0; i < samplingLocations.length; i++) {
             const data = {
                 ...commonData,
-                id: Date.now().toString() + '_' + i,
+                id: generateId(),
                 receptionNumber: receptionNumbers[i] || String(parseInt(receptionNumbers[0], 10) + i),
                 sampleCount: '1', // 각 행은 시료 1개
                 samplingLocation: samplingLocations[i] || '',
@@ -1209,10 +1215,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             };
         });
 
-        // 중복 제거 (성명 + 주소 기준)
+        // 중복 제거 (주소 기준)
         const uniqueMap = new Map();
         labelData.forEach(item => {
-            const key = `${item.name}|${item.address}|${item.postalCode}`;
+            const key = `${item.address}|${item.postalCode}`;
             if (!uniqueMap.has(key)) {
                 uniqueMap.set(key, item);
             }
@@ -1222,7 +1228,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 중복이 있었으면 알림
         const duplicateCount = labelData.length - uniqueLabelData.length;
         if (duplicateCount > 0) {
-            showToast(`중복 ${duplicateCount}건 제거됨 (총 ${uniqueLabelData.length}건)`, 'info');
+            showToast(`주소 중복 ${duplicateCount}건 제거됨 (총 ${uniqueLabelData.length}건)`, 'info');
         }
 
         // localStorage에 데이터 저장

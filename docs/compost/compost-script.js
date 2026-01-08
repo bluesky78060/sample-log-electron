@@ -23,6 +23,12 @@ const AUTO_SAVE_FILE = 'compost-autosave.json';
 const DEBUG = false;
 
 /**
+ * 고유 ID 생성 함수 (충돌 방지)
+ * @returns {string} 고유 ID
+ */
+const generateId = () => Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+
+/**
  * 디버그 로그 함수
  * @param {...any} args - 로그 인자
  * @returns {void}
@@ -416,7 +422,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         const data = {
-            id: Date.now().toString(),
+            id: generateId(),
             receptionNumber: formData.get('receptionNumber'),
             date: formData.get('date'),
             // 의뢰자 정보
@@ -836,7 +842,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function toggleComplete(id) {
-        const log = sampleLogs.find(l => l.id === id);
+        const log = sampleLogs.find(l => String(l.id) === id);
         if (log) {
             log.isComplete = !log.isComplete;
             saveLogs();
@@ -846,7 +852,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 판정 결과 토글 (미판정 → 적합 → 부적합 → 미판정)
     function toggleTestResult(id) {
-        const log = sampleLogs.find(l => l.id === id);
+        const log = sampleLogs.find(l => String(l.id) === id);
         if (log) {
             if (!log.testResult || log.testResult === '') {
                 log.testResult = 'pass';  // 미판정 → 적합
@@ -861,14 +867,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function deleteSample(id) {
-        sampleLogs = sampleLogs.filter(l => l.id !== id);
+        sampleLogs = sampleLogs.filter(l => String(l.id) !== id);
         saveLogs();
         renderLogs(sampleLogs);
         showToast('삭제되었습니다.', 'success');
     }
 
     function editSample(id) {
-        const log = sampleLogs.find(l => l.id === id);
+        const log = sampleLogs.find(l => String(l.id) === id);
         if (!log) return;
 
         editingId = id;
@@ -1035,8 +1041,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // 전체 데이터로 라벨 인쇄
                 openLabelPrintWithData(sampleLogs);
             } else {
-                // 선택된 데이터만 라벨 인쇄
-                const selectedLogs = sampleLogs.filter(log => selectedIds.includes(log.id));
+                // 선택된 데이터만 라벨 인쇄 (ID 타입 일치를 위해 문자열로 변환)
+                const selectedLogs = sampleLogs.filter(log => selectedIds.includes(String(log.id)));
                 openLabelPrintWithData(selectedLogs);
             }
         });
@@ -1059,10 +1065,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             };
         });
 
-        // 중복 제거 (성명 + 주소 기준)
+        // 중복 제거 (주소 기준)
         const uniqueMap = new Map();
         labelData.forEach(item => {
-            const key = `${item.name}|${item.address}|${item.postalCode}`;
+            const key = `${item.address}|${item.postalCode}`;
             if (!uniqueMap.has(key)) {
                 uniqueMap.set(key, item);
             }
@@ -1072,7 +1078,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 중복이 있었으면 알림
         const duplicateCount = labelData.length - uniqueLabelData.length;
         if (duplicateCount > 0) {
-            showToast(`중복 ${duplicateCount}건 제거됨 (총 ${uniqueLabelData.length}건)`, 'info');
+            showToast(`주소 중복 ${duplicateCount}건 제거됨 (총 ${uniqueLabelData.length}건)`, 'info');
         }
 
         // localStorage에 데이터 저장
@@ -1092,7 +1098,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             if (confirm(`선택한 ${selectedIds.length}건을 삭제하시겠습니까?`)) {
-                sampleLogs = sampleLogs.filter(log => !selectedIds.includes(log.id));
+                sampleLogs = sampleLogs.filter(log => !selectedIds.includes(String(log.id)));
                 saveLogs();
                 renderLogs(sampleLogs);
                 selectAllCheckbox.checked = false;
