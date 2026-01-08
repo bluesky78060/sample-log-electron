@@ -3619,13 +3619,36 @@ document.addEventListener('DOMContentLoaded', async () => {
         }, 0);
     });
 
+    /**
+     * 폼 초기화 (접수번호, 접수일자 유지)
+     * @description 접수번호와 접수일자를 제외한 모든 입력 필드를 초기화
+     */
+    function resetFormKeepReceptionInfo() {
+        // 접수번호와 접수일자 값 저장
+        const receptionNumber = document.getElementById('receptionNumber')?.value;
+        const date = document.getElementById('date')?.value;
+
+        // 폼 초기화
+        form.reset();
+
+        // 접수번호와 접수일자 복원
+        setTimeout(() => {
+            if (receptionNumber) {
+                document.getElementById('receptionNumber').value = receptionNumber;
+            }
+            if (date) {
+                document.getElementById('date').value = date;
+            }
+        }, 10);
+    }
+
     // 네비게이션 바 초기화/접수등록 버튼
     const navResetBtn = document.getElementById('navResetBtn');
     const navSubmitBtn = document.getElementById('navSubmitBtn');
 
     if (navResetBtn) {
         navResetBtn.addEventListener('click', () => {
-            form.reset();
+            resetFormKeepReceptionInfo();
         });
     }
 

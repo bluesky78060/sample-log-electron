@@ -3665,7 +3665,21 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (navResetBtn) {
         navResetBtn.addEventListener('click', () => {
+            // 접수번호와 접수일자 값 저장
+            const receptionNumber = document.getElementById('receptionNumber')?.value;
+            const date = document.getElementById('date')?.value;
+
             form.reset();
+
+            // 접수번호와 접수일자 복원
+            setTimeout(() => {
+                if (receptionNumber) {
+                    document.getElementById('receptionNumber').value = receptionNumber;
+                }
+                if (date) {
+                    document.getElementById('date').value = date;
+                }
+            }, 10);
         });
     }
 

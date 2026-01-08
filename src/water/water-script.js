@@ -698,8 +698,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function resetForm() {
+        // 접수번호와 접수일자 값 저장
+        const receptionNumber = receptionNumberInput?.value;
+        const date = dateInput?.value;
+
         form.reset();
-        dateInput.valueAsDate = new Date();
+
+        // 접수번호와 접수일자 복원
+        if (receptionNumber) {
+            receptionNumberInput.value = receptionNumber;
+        }
+        if (date) {
+            dateInput.value = date;
+        } else {
+            dateInput.valueAsDate = new Date();
+        }
         receptionMethodBtns.forEach(b => b.classList.remove('active'));
         receptionMethodInput.value = '';
 
