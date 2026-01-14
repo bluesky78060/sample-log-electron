@@ -427,3 +427,8 @@ ipcMain.handle('get-auto-save-folder', async () => {
 ipcMain.handle('get-app-path', async () => {
     return app.getPath('userData');
 });
+
+// 앱 버전 가져오기
+ipcMain.handle('get-app-version', async () => {
+    return app.getVersion();
+});

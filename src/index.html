@@ -387,6 +387,72 @@
             text-decoration: underline;
         }
 
+        .version-info {
+            font-size: 0.75rem;
+            color: #b0b8c4;
+            margin-top: 0.25rem;
+        }
+
+        /* 설정 버튼 */
+        .settings-btn {
+            position: fixed;
+            top: 20px;
+            right: 220px;
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #64748b, #475569);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            box-shadow: 0 4px 15px rgba(100, 116, 139, 0.4);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 1000;
+            animation: fadeIn 1s ease-out 0.9s both;
+        }
+
+        .settings-btn:hover {
+            transform: scale(1.15) rotate(90deg);
+            box-shadow: 0 8px 25px rgba(100, 116, 139, 0.5);
+        }
+
+        .settings-btn span {
+            font-size: 1.5rem;
+            transition: transform 0.3s ease;
+        }
+
+        .settings-btn .tooltip {
+            position: absolute;
+            right: 60px;
+            background: #1e293b;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform: translateX(10px);
+        }
+
+        .settings-btn .tooltip::after {
+            content: '';
+            position: absolute;
+            right: -6px;
+            top: 50%;
+            transform: translateY(-50%);
+            border: 6px solid transparent;
+            border-left-color: #1e293b;
+        }
+
+        .settings-btn:hover .tooltip {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(0);
+        }
+
         /* 사용 설명서 버튼 - 오른쪽 상단 (토글 버튼 왼쪽) */
         .help-btn {
             position: fixed;
@@ -583,6 +649,10 @@
             color: #64748b;
         }
 
+        [data-theme="dark"] .version-info {
+            color: #475569;
+        }
+
         [data-theme="dark"] .help-btn {
             background: linear-gradient(135deg, #6366f1, #8b5cf6);
             box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
@@ -603,6 +673,38 @@
         [data-theme="dark"] .theme-toggle-container {
             background: rgba(30, 41, 59, 0.9);
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        [data-theme="dark"] .settings-btn {
+            background: linear-gradient(135deg, #475569, #334155);
+            box-shadow: 0 4px 15px rgba(71, 85, 105, 0.4);
+        }
+
+        [data-theme="dark"] .settings-btn:hover {
+            box-shadow: 0 8px 25px rgba(71, 85, 105, 0.5);
+        }
+
+        [data-theme="dark"] .settings-btn .tooltip {
+            background: #1e293b;
+        }
+
+        [data-theme="dark"] .settings-btn .tooltip::after {
+            border-left-color: #1e293b;
+        }
+
+        /* 클라우드 동기화 상태 */
+        .sync-status {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.25rem;
+            font-size: 0.75rem;
+            margin-top: 0.5rem;
+            transition: color 0.3s ease;
+        }
+
+        .sync-icon {
+            font-size: 0.875rem;
         }
     </style>
 </head>
@@ -628,6 +730,12 @@
         <button class="theme-toggle-btn" id="themeToggleBtn" title="다크 모드 전환"></button>
         <span class="theme-icon">🌙</span>
     </div>
+
+    <!-- 설정 버튼 -->
+    <a href="settings/index.html" class="settings-btn">
+        <span>⚙️</span>
+        <div class="tooltip">설정</div>
+    </a>
 
     <!-- 사용 설명서 버튼 -->
     <a href="manual/index.html" class="help-btn">
@@ -686,10 +794,72 @@
 
         <div class="footer">
             <p>봉화군농업기술센터 안전성분석센터</p>
+            <p class="version-info" id="appVersion">v1.7.0</p>
+            <!-- 클라우드 동기화 상태 -->
+            <p class="sync-status" id="syncStatus" style="display: none;">
+                <span class="sync-icon">☁️</span>
+                <span class="sync-text">동기화됨</span>
+            </p>
         </div>
     </div>
+
+    <!-- Firebase 스크립트 -->
+    <script src="shared/firebase-config.js"></script>
+    <script src="shared/firestore-db.js"></script>
+    <script src="shared/storage-manager.js"></script>
+
     <!-- 다크 모드 스크립트 (theme.js가 자동으로 이벤트 리스너 등록) -->
     <script src="shared/theme.js"></script>
+    <script>
+        // 버전 정보 자동 표시
+        (async function() {
+            const versionEl = document.getElementById('appVersion');
+            if (window.electronAPI?.getVersion) {
+                try {
+                    const version = await window.electronAPI.getVersion();
+                    if (version) versionEl.textContent = 'v' + version;
+                } catch (e) {
+                    console.log('버전 정보 가져오기 실패:', e);
+                }
+            }
+        })();
+
+        // 스토리지 매니저 초기화 및 동기화 상태 표시
+        (async function() {
+            const syncStatusEl = document.getElementById('syncStatus');
+            if (window.storageManager) {
+                const mode = await window.storageManager.init();
+                if (mode === 'cloud') {
+                    syncStatusEl.style.display = 'block';
+                    updateSyncStatus();
+                }
+            }
+        })();
+
+        // 동기화 상태 업데이트
+        function updateSyncStatus() {
+            const syncStatusEl = document.getElementById('syncStatus');
+            if (!syncStatusEl || !window.storageManager) return;
+
+            const status = window.storageManager.getStatus();
+            const iconEl = syncStatusEl.querySelector('.sync-icon');
+            const textEl = syncStatusEl.querySelector('.sync-text');
+
+            if (status.isOnline) {
+                iconEl.textContent = '☁️';
+                textEl.textContent = '클라우드 동기화';
+                syncStatusEl.style.color = '#22c55e';
+            } else {
+                iconEl.textContent = '📴';
+                textEl.textContent = '오프라인 모드';
+                syncStatusEl.style.color = '#f59e0b';
+            }
+        }
+
+        // 온라인/오프라인 상태 변경 감지
+        window.addEventListener('online', updateSyncStatus);
+        window.addEventListener('offline', updateSyncStatus);
+    </script>
 </body>
 
 </html>

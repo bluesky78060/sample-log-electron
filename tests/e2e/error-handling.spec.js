@@ -70,13 +70,13 @@ test.describe('에러 처리 및 유효성 검사', () => {
             // 접수번호 확인
             const receptionNumber = await page.inputValue('#receptionNumber');
 
-            // 폼 초기화 후 같은 접수번호로 등록 시도 (시스템이 자동 증가함)
+            // 폼 초기화 후 접수번호가 유지되는지 확인 (v1.6.9 변경사항)
             await page.click('#navResetBtn');
             await page.waitForTimeout(300);
 
-            // 새 접수번호가 이전과 다른지 확인
+            // 초기화 후에도 접수번호가 유지되는지 확인
             const newReceptionNumber = await page.inputValue('#receptionNumber');
-            expect(newReceptionNumber).not.toBe(receptionNumber);
+            expect(newReceptionNumber).toBe(receptionNumber);
         });
 
         test('날짜 필드 형식 검증', async ({ page }) => {

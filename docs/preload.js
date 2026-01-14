@@ -65,6 +65,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // 앱 데이터 경로 가져오기
     getAppPath: () => ipcRenderer.invoke('get-app-path'),
 
+    // 앱 버전 가져오기
+    getVersion: () => ipcRenderer.invoke('get-app-version'),
+
     // Electron 환경 여부
     isElectron: true
 });

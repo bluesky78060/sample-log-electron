@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>설정 - 시료 접수 대장</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+    <script>
+        tailwind.config = {
+            darkMode: ['selector', '[data-theme="dark"]'],
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#3B82F6",
+                        "background-light": "#F8FAFC",
+                        "background-dark": "#18181B",
+                    },
+                    fontFamily: {
+                        display: ["Noto Sans KR", "sans-serif"],
+                    },
+                }
+            }
+        };
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            height: 100%;
+            overflow-y: auto;
+        }
+
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #f0fdf4 100%);
+            min-height: 100%;
+            padding: 2rem;
+            overflow-y: auto;
+        }
+
+        .settings-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .settings-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .settings-card h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .settings-card h2 span {
+            font-size: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #475569;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .form-group input::placeholder {
+            color: #94a3b8;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: none;
+            position: relative;
+            z-index: 1;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: white;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+        }
+
+        .btn-warning:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+        }
+
+        .btn-secondary {
+            background: #64748b;
+            color: white;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .status-badge.connected {
+            background: #dcfce7;
+            color: #16a34a;
+        }
+
+        .status-badge.disconnected {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+        .status-badge.error {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .migration-list {
+            display: grid;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .migration-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            background: #f8fafc;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .migration-item-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .migration-item-icon {
+            font-size: 1.5rem;
+        }
+
+        .migration-item-name {
+            font-weight: 500;
+            color: #1e293b;
+        }
+
+        .migration-item-count {
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #64748b;
+            text-decoration: none;
+            font-size: 0.875rem;
+            margin-bottom: 1.5rem;
+            transition: color 0.2s ease;
+        }
+
+        .back-link:hover {
+            color: #3b82f6;
+        }
+
+        .help-text {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            margin-top: 0.5rem;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
+        }
+
+        .alert-info {
+            background: #dbeafe;
+            color: #1d4ed8;
+            border: 1px solid #bfdbfe;
+        }
+
+        .alert-warning {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fde68a;
+        }
+
+        .alert-success {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+
+        /* 다크 모드 */
+        [data-theme="dark"] body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0c4a6e 100%);
+        }
+
+        [data-theme="dark"] .settings-card {
+            background: rgba(30, 41, 59, 0.95);
+        }
+
+        [data-theme="dark"] .settings-card h2 {
+            color: #f1f5f9;
+        }
+
+        [data-theme="dark"] .form-group label {
+            color: #94a3b8;
+        }
+
+        [data-theme="dark"] .form-group input {
+            background: #1e293b;
+            border-color: #334155;
+            color: #f1f5f9;
+        }
+
+        [data-theme="dark"] .form-group input:focus {
+            border-color: #60a5fa;
+        }
+
+        [data-theme="dark"] .migration-item {
+            background: #1e293b;
+            border-color: #334155;
+        }
+
+        [data-theme="dark"] .migration-item-name {
+            color: #f1f5f9;
+        }
+
+        [data-theme="dark"] .back-link {
+            color: #94a3b8;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="settings-container">
+        <a href="../index.html" class="back-link">
+            ← 메인으로 돌아가기
+        </a>
+
+        <h1 style="font-size: 2rem; font-weight: 700; color: #1e293b; margin-bottom: 2rem;">
+            ⚙️ 설정
+        </h1>
+
+        <!-- Firebase 설정 -->
+        <div class="settings-card">
+            <h2>
+                <span>☁️</span>
+                Firebase 클라우드 동기화
+                <span id="connectionStatus" class="status-badge disconnected">● 미연결</span>
+            </h2>
+
+            <div class="alert alert-info">
+                <strong>클라우드 동기화란?</strong><br>
+                Firebase를 설정하면 여러 컴퓨터에서 같은 데이터를 사용할 수 있고,
+                인터넷이 끊겨도 오프라인으로 작업 후 자동 동기화됩니다.
+            </div>
+
+            <form id="firebaseForm">
+                <div class="form-group">
+                    <label for="apiKey">API Key</label>
+                    <input type="text" id="apiKey" placeholder="AIzaSy...">
+                </div>
+
+                <div class="form-group">
+                    <label for="projectId">Project ID</label>
+                    <input type="text" id="projectId" placeholder="your-project-id">
+                </div>
+
+                <div class="form-group">
+                    <label for="authDomain">Auth Domain</label>
+                    <input type="text" id="authDomain" placeholder="your-project-id.firebaseapp.com">
+                </div>
+
+                <div class="form-group">
+                    <label for="storageBucket">Storage Bucket</label>
+                    <input type="text" id="storageBucket" placeholder="your-project-id.appspot.com">
+                </div>
+
+                <div class="form-group">
+                    <label for="messagingSenderId">Messaging Sender ID</label>
+                    <input type="text" id="messagingSenderId" placeholder="123456789">
+                </div>
+
+                <div class="form-group">
+                    <label for="appId">App ID</label>
+                    <input type="text" id="appId" placeholder="1:123456789:web:abcdef">
+                </div>
+
+                <p class="help-text">
+                    Firebase Console에서 프로젝트를 생성하고 웹 앱 설정값을 복사해서 입력하세요.
+                    <a href="https://console.firebase.google.com/" target="_blank" style="color: #3b82f6;">Firebase Console 열기</a>
+                </p>
+
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                    <button type="submit" class="btn btn-primary">설정 저장</button>
+                    <button type="button" id="testConnectionBtn" class="btn btn-secondary">연결 테스트</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- 데이터 마이그레이션 -->
+        <div class="settings-card">
+            <h2>
+                <span>📤</span>
+                데이터 마이그레이션
+            </h2>
+
+            <div class="alert alert-warning">
+                <strong>주의:</strong> 마이그레이션은 현재 컴퓨터의 localStorage 데이터를 Firebase로 업로드합니다.
+                기존 클라우드 데이터가 있으면 덮어쓰기됩니다.
+            </div>
+
+            <div class="migration-list" id="migrationList">
+                <!-- 동적으로 생성 -->
+            </div>
+
+            <div style="margin-top: 1.5rem;">
+                <button id="migrateAllBtn" class="btn btn-warning" disabled>
+                    🔄 전체 마이그레이션
+                </button>
+            </div>
+        </div>
+
+        <!-- 로컬 데이터 관리 -->
+        <div class="settings-card">
+            <h2>
+                <span>💾</span>
+                로컬 데이터 관리
+            </h2>
+
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                <button id="exportAllBtn" class="btn btn-success">
+                    📥 전체 데이터 내보내기
+                </button>
+                <button id="clearCacheBtn" class="btn btn-secondary">
+                    🗑️ 캐시 정리
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../shared/firebase-config.js"></script>
+    <script src="../shared/firestore-db.js"></script>
+    <script src="../shared/storage-manager.js"></script>
+    <script src="../shared/theme.js"></script>
+    <script>
+        // SETTINGS_FIREBASE_KEY는 firebase-config.js에서 이미 정의됨
+        const SETTINGS_FIREBASE_KEY = 'firebase_config';
+        const SAMPLE_TYPES = [
+            { key: 'soil', name: '토양', icon: '🌱', storagePrefix: 'soil_samples' },
+            { key: 'water', name: '수질분석', icon: '💧', storagePrefix: 'water_samples' },
+            { key: 'pesticide', name: '잔류농약', icon: '🧪', storagePrefix: 'pesticide_samples' },
+            { key: 'compost', name: '가축분뇨퇴비', icon: '🐄', storagePrefix: 'compost_samples' },
+            { key: 'heavyMetal', name: '토양 중금속', icon: '⚗️', storagePrefix: 'heavyMetal_samples' }
+        ];
+
+        // 저장된 설정 로드
+        function loadSavedConfig() {
+            const saved = localStorage.getItem(SETTINGS_FIREBASE_KEY);
+            if (saved) {
+                const config = JSON.parse(saved);
+                document.getElementById('apiKey').value = config.apiKey || '';
+                document.getElementById('projectId').value = config.projectId || '';
+                document.getElementById('authDomain').value = config.authDomain || '';
+                document.getElementById('storageBucket').value = config.storageBucket || '';
+                document.getElementById('messagingSenderId').value = config.messagingSenderId || '';
+                document.getElementById('appId').value = config.appId || '';
+            }
+        }
+
+        // 설정 저장
+        document.getElementById('firebaseForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const config = {
+                apiKey: document.getElementById('apiKey').value.trim(),
+                projectId: document.getElementById('projectId').value.trim(),
+                authDomain: document.getElementById('authDomain').value.trim(),
+                storageBucket: document.getElementById('storageBucket').value.trim(),
+                messagingSenderId: document.getElementById('messagingSenderId').value.trim(),
+                appId: document.getElementById('appId').value.trim()
+            };
+
+            localStorage.setItem(SETTINGS_FIREBASE_KEY, JSON.stringify(config));
+
+            const statusEl = document.getElementById('connectionStatus');
+            statusEl.className = 'status-badge';
+            statusEl.style.background = '#e0f2fe';
+            statusEl.style.color = '#0369a1';
+            statusEl.textContent = '● 저장됨';
+
+            alert('설정이 저장되었습니다. "연결 테스트" 버튼을 눌러 연결을 확인하세요.');
+        });
+
+        // 연결 테스트
+        document.getElementById('testConnectionBtn').addEventListener('click', async () => {
+            // 먼저 현재 폼 값을 저장
+            const config = {
+                apiKey: document.getElementById('apiKey').value.trim(),
+                projectId: document.getElementById('projectId').value.trim(),
+                authDomain: document.getElementById('authDomain').value.trim(),
+                storageBucket: document.getElementById('storageBucket').value.trim(),
+                messagingSenderId: document.getElementById('messagingSenderId').value.trim(),
+                appId: document.getElementById('appId').value.trim()
+            };
+
+            // 값이 비어있으면 경고
+            if (!config.apiKey || !config.projectId) {
+                alert('API Key와 Project ID는 필수입니다.');
+                return;
+            }
+
+            localStorage.setItem(SETTINGS_FIREBASE_KEY, JSON.stringify(config));
+
+            const statusEl = document.getElementById('connectionStatus');
+            statusEl.className = 'status-badge';
+            statusEl.style.background = '#fef3c7';
+            statusEl.style.color = '#92400e';
+            statusEl.textContent = '● 연결 중...';
+
+            try {
+                // Firebase 초기화 시도
+                const initialized = await window.firebaseConfig.initialize();
+
+                if (initialized) {
+                    statusEl.className = 'status-badge connected';
+                    statusEl.style.background = '#dcfce7';
+                    statusEl.style.color = '#16a34a';
+                    statusEl.textContent = '● 연결됨';
+                    document.getElementById('migrateAllBtn').disabled = false;
+                    renderMigrationList();
+                    alert('Firebase 연결 성공!');
+                } else {
+                    statusEl.className = 'status-badge disconnected';
+                    statusEl.style.background = '#fef3c7';
+                    statusEl.style.color = '#d97706';
+                    statusEl.textContent = '● 미연결';
+                    alert('Firebase 연결 실패. 설정값을 확인해주세요.');
+                }
+            } catch (error) {
+                statusEl.className = 'status-badge error';
+                statusEl.style.background = '#fee2e2';
+                statusEl.style.color = '#dc2626';
+                statusEl.textContent = '● 연결 실패';
+                console.error('연결 테스트 실패:', error);
+                alert('연결 실패: ' + error.message);
+            }
+        });
+
+        // 마이그레이션 목록 렌더링
+        function renderMigrationList() {
+            const container = document.getElementById('migrationList');
+            const currentYear = new Date().getFullYear();
+
+            let html = '';
+            SAMPLE_TYPES.forEach(type => {
+                const storageKey = `${type.storagePrefix}_${currentYear}`;
+                const data = localStorage.getItem(storageKey);
+                const count = data ? JSON.parse(data).length : 0;
+
+                html += `
+                    <div class="migration-item">
+                        <div class="migration-item-info">
+                            <span class="migration-item-icon">${type.icon}</span>
+                            <div>
+                                <div class="migration-item-name">${type.name}</div>
+                                <div class="migration-item-count">${count}건 (${currentYear}년)</div>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary btn-sm"
+                                onclick="migrateType('${type.key}', ${currentYear}, '${storageKey}')"
+                                ${count === 0 ? 'disabled' : ''}>
+                            마이그레이션
+                        </button>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        // 개별 타입 마이그레이션
+        async function migrateType(sampleType, year, storageKey) {
+            if (!window.storageManager?.isCloudEnabled()) {
+                alert('Firebase가 연결되지 않았습니다.');
+                return;
+            }
+
+            try {
+                const result = await window.storageManager.migrate(sampleType, year, storageKey);
+                if (result.success) {
+                    alert(`${result.count}건의 데이터가 마이그레이션되었습니다.`);
+                } else {
+                    alert('마이그레이션 실패: ' + (result.message || '알 수 없는 오류'));
+                }
+            } catch (error) {
+                alert('마이그레이션 중 오류 발생: ' + error.message);
+            }
+        }
+
+        // 전체 마이그레이션
+        document.getElementById('migrateAllBtn').addEventListener('click', async () => {
+            if (!confirm('모든 데이터를 Firebase로 마이그레이션하시겠습니까?')) {
+                return;
+            }
+
+            const currentYear = new Date().getFullYear();
+            let totalCount = 0;
+
+            for (const type of SAMPLE_TYPES) {
+                const storageKey = `${type.storagePrefix}_${currentYear}`;
+                try {
+                    const result = await window.storageManager.migrate(type.key, currentYear, storageKey);
+                    if (result.success) {
+                        totalCount += result.count;
+                    }
+                } catch (error) {
+                    console.error(`${type.name} 마이그레이션 실패:`, error);
+                }
+            }
+
+            alert(`전체 마이그레이션 완료: ${totalCount}건`);
+        });
+
+        // 전체 데이터 내보내기
+        document.getElementById('exportAllBtn').addEventListener('click', () => {
+            const currentYear = new Date().getFullYear();
+            const allData = {};
+
+            SAMPLE_TYPES.forEach(type => {
+                const storageKey = `${type.storagePrefix}_${currentYear}`;
+                const data = localStorage.getItem(storageKey);
+                if (data) {
+                    allData[type.key] = JSON.parse(data);
+                }
+            });
+
+            const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `sample-log-backup-${currentYear}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        // 캐시 정리
+        document.getElementById('clearCacheBtn').addEventListener('click', () => {
+            if (!confirm('임시 캐시 데이터를 정리하시겠습니까? 저장된 시료 데이터는 유지됩니다.')) {
+                return;
+            }
+
+            // 캐시 관련 키만 삭제 (시료 데이터는 유지)
+            const keysToRemove = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && (key.startsWith('cache_') || key.startsWith('temp_'))) {
+                    keysToRemove.push(key);
+                }
+            }
+
+            keysToRemove.forEach(key => localStorage.removeItem(key));
+            alert('캐시가 정리되었습니다.');
+        });
+
+        // 초기화
+        loadSavedConfig();
+        renderMigrationList();
+
+        // 연결 상태 확인
+        (async function() {
+            if (window.storageManager) {
+                const mode = await window.storageManager.init();
+                const statusEl = document.getElementById('connectionStatus');
+                if (mode === 'cloud') {
+                    statusEl.className = 'status-badge connected';
+                    statusEl.textContent = '● 연결됨';
+                    document.getElementById('migrateAllBtn').disabled = false;
+                }
+            }
+        })();
+    </script>
+</body>
+
+</html>
