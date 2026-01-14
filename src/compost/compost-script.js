@@ -118,19 +118,38 @@ document.addEventListener('DOMContentLoaded', async () => {
     const yearSelect = document.getElementById('yearSelect');
     const listYearSelect = document.getElementById('listYearSelect');
     const listViewTitle = document.getElementById('listViewTitle');
-    let selectedYear = new Date().getFullYear().toString();
 
-    // 현재 년도로 드롭다운 기본값 설정
+    // 년도별 스토리지 키 생성
+    function getStorageKey(year) {
+        return `${STORAGE_KEY}_${year}`;
+    }
+
+    // 데이터가 있는 연도 자동 감지 (현재 연도부터 과거로 검색)
+    function findYearWithData() {
+        const currentYear = new Date().getFullYear();
+        for (let year = currentYear; year >= 2020; year--) {
+            const key = getStorageKey(year);
+            const data = localStorage.getItem(key);
+            if (data) {
+                try {
+                    const parsed = JSON.parse(data);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        return year.toString();
+                    }
+                } catch (e) {}
+            }
+        }
+        return currentYear.toString();
+    }
+
+    let selectedYear = findYearWithData();
+
+    // 감지된 년도로 드롭다운 기본값 설정
     if (yearSelect) {
         yearSelect.value = selectedYear;
     }
     if (listYearSelect) {
         listYearSelect.value = selectedYear;
-    }
-
-    // 년도별 스토리지 키 생성
-    function getStorageKey(year) {
-        return `${STORAGE_KEY}_${year}`;
     }
 
     // 년도 선택 시 제목 업데이트
@@ -175,6 +194,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateListViewTitle();
     }
 
+    // 연도 전환 시 자동 저장 파일 복원
+    async function loadAutoSaveForSelectedYear() {
+        if (!window.isElectron || !FileAPI.autoSavePath || sampleLogs.length > 0) return;
+
+        const autoSaveData = await window.loadFromAutoSaveFile();
+        if (autoSaveData && autoSaveData.length > 0) {
+            sampleLogs = autoSaveData;
+            localStorage.setItem(getStorageKey(selectedYear), JSON.stringify(sampleLogs));
+            renderLogs(sampleLogs);
+            const receptionInput = document.getElementById('receptionNumber');
+            if (receptionInput) {
+                receptionInput.value = generateNextReceptionNumber();
+            }
+            log(`📂 ${selectedYear}년 자동 저장 데이터 로드:`, autoSaveData.length, '건');
+        }
+    }
+
     // 년도 선택 이벤트 (접수 폼)
     if (yearSelect) {
         yearSelect.addEventListener('change', async (e) => {
@@ -184,6 +220,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             // 자동 저장 경로도 연도별로 업데이트
             if (window.isElectron) {
                 await FileAPI.updateAutoSavePath(selectedYear);
+                await loadAutoSaveForSelectedYear();
             }
             showToast(`${selectedYear}년 데이터를 불러왔습니다.`, 'success');
         });
@@ -198,6 +235,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             // 자동 저장 경로도 연도별로 업데이트
             if (window.isElectron) {
                 await FileAPI.updateAutoSavePath(selectedYear);
+                await loadAutoSaveForSelectedYear();
             }
             showToast(`${selectedYear}년 데이터를 불러왔습니다.`, 'success');
         });

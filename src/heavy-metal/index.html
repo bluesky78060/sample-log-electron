@@ -179,6 +179,16 @@
                             <div class="card-header">
                                 <span class="card-icon">👤</span>
                                 <h3>의뢰인 정보</h3>
+                                <div class="year-select-wrapper">
+                                    <select id="yearSelect" class="year-select">
+                                        <option value="2025">2025년</option>
+                                        <option value="2026">2026년</option>
+                                        <option value="2027">2027년</option>
+                                        <option value="2028">2028년</option>
+                                        <option value="2029">2029년</option>
+                                        <option value="2030">2030년</option>
+                                    </select>
+                                </div>
                                 <div class="reception-method-group">
                                     <button type="button" class="reception-method-btn" data-method="우편" title="우편">
                                         <span class="method-icon">📮</span>
@@ -427,15 +437,15 @@
 
         <!-- 접수 목록 뷰 -->
         <div id="listView" class="view">
-            <div class="view-header-top">
-                <div class="header-left">
-                    <div class="year-select-wrapper">
-                        <select id="yearSelect" class="year-select">
-                            <option value="2025">2025년</option>
-                            <option value="2026">2026년</option>
-                            <option value="2027">2027년</option>
-                            <option value="2028">2028년</option>
-                            <option value="2029">2029년</option>
+                    <div class="view-header-top">
+                        <div class="header-left">
+                            <div class="year-select-wrapper">
+                                <select id="listYearSelect" class="year-select">
+                                    <option value="2025">2025년</option>
+                                    <option value="2026">2026년</option>
+                                    <option value="2027">2027년</option>
+                                    <option value="2028">2028년</option>
+                                    <option value="2029">2029년</option>
                             <option value="2030">2030년</option>
                         </select>
                     </div>

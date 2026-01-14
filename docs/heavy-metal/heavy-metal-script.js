@@ -45,13 +45,31 @@ let currentLogsData = [];
 // 중금속 분석 항목 목록
 const ANALYSIS_ITEMS = ['구리', '납', '니켈', '비소', '수은', '아연', '카드뮴', '6가크롬'];
 
-// 년도 선택 관련 변수
-let selectedYear = new Date().getFullYear().toString();
-
 // 년도별 스토리지 키 생성
 function getStorageKey(year) {
     return `${STORAGE_KEY}_${year}`;
 }
+
+// 데이터가 있는 연도 자동 감지 (현재 연도부터 과거로 검색)
+function findYearWithData() {
+    const currentYear = new Date().getFullYear();
+    for (let year = currentYear; year >= 2020; year--) {
+        const key = getStorageKey(year);
+        const data = localStorage.getItem(key);
+        if (data) {
+            try {
+                const parsed = JSON.parse(data);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    return year.toString();
+                }
+            } catch (e) {}
+        }
+    }
+    return currentYear.toString();
+}
+
+// 년도 선택 관련 변수
+let selectedYear = findYearWithData();
 
 // 공통 모듈에서 가져온 변수/함수 사용 (../shared/*.js)
 // window.isElectron, window.createFileAPI 등 전역 변수 사용
@@ -170,11 +188,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 년도 선택 기능
     // ========================================
     const yearSelect = document.getElementById('yearSelect');
+    const listYearSelect = document.getElementById('listYearSelect');
     const listViewTitle = document.getElementById('listViewTitle');
 
     // 현재 년도 선택
     if (yearSelect) {
         yearSelect.value = selectedYear;
+    }
+    if (listYearSelect) {
+        listYearSelect.value = selectedYear;
+    }
+
+    // 두 연도 선택 드롭다운 동기화
+    function syncYearSelects(newYear) {
+        if (yearSelect) yearSelect.value = newYear;
+        if (listYearSelect) listYearSelect.value = newYear;
     }
 
     // 목록 뷰 타이틀 업데이트
@@ -197,14 +225,47 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateListViewTitle();
     }
 
+    // 연도 전환 시 자동 저장 파일 복원
+    async function loadAutoSaveForSelectedYear() {
+        if (!window.isElectron || !FileAPI.autoSavePath || sampleLogs.length > 0) return;
+
+        const autoSaveData = await window.loadFromAutoSaveFile();
+        if (autoSaveData && autoSaveData.length > 0) {
+            sampleLogs = autoSaveData;
+            localStorage.setItem(getStorageKey(selectedYear), JSON.stringify(sampleLogs));
+            renderLogs(sampleLogs);
+            const receptionInput = document.getElementById('receptionNumber');
+            if (receptionInput) {
+                receptionInput.value = generateNextReceptionNumber();
+            }
+            log(`📂 ${selectedYear}년 자동 저장 데이터 로드:`, autoSaveData.length, '건');
+        }
+    }
+
     // 년도 선택 변경 이벤트
     if (yearSelect) {
         yearSelect.addEventListener('change', async (e) => {
             selectedYear = e.target.value;
+            syncYearSelects(selectedYear);
             loadYearData(selectedYear);
             // 자동 저장 경로도 연도별로 업데이트
             if (window.isElectron) {
                 await FileAPI.updateAutoSavePath(selectedYear);
+                await loadAutoSaveForSelectedYear();
+            }
+            showToast(`${selectedYear}년 데이터를 불러왔습니다.`, 'success');
+        });
+    }
+
+    if (listYearSelect) {
+        listYearSelect.addEventListener('change', async (e) => {
+            selectedYear = e.target.value;
+            syncYearSelects(selectedYear);
+            loadYearData(selectedYear);
+            // 자동 저장 경로도 연도별로 업데이트
+            if (window.isElectron) {
+                await FileAPI.updateAutoSavePath(selectedYear);
+                await loadAutoSaveForSelectedYear();
             }
             showToast(`${selectedYear}년 데이터를 불러왔습니다.`, 'success');
         });
