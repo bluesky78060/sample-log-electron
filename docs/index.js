@@ -15,7 +15,7 @@ autoUpdater.setFeedURL({
   repo: 'sample-log-electron'
 });
 
-// Handle creating/removing shortcuts on Windows when installing/uninstalling.
+// Windows 설치/제거 시 바로가기 생성/삭제 처리
 if (require('electron-squirrel-startup')) {
   app.quit();
 }
@@ -141,7 +141,7 @@ const createMenuTemplate = () => {
  * @returns {void}
  */
 const createWindow = () => {
-  // Create the browser window.
+  // 브라우저 창 생성
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -166,14 +166,13 @@ const createWindow = () => {
     }
   });
 
-  // Open the DevTools in dev mode
+  // 개발 모드에서 DevTools 열기
   if (process.argv.includes('--dev')) {
     mainWindow.webContents.openDevTools();
   }
 };
 
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
+// Electron 초기화 완료 후 브라우저 창 생성 준비
 app.whenReady().then(() => {
   // 한글 메뉴 적용
   const menu = Menu.buildFromTemplate(createMenuTemplate());
@@ -186,8 +185,7 @@ app.whenReady().then(() => {
     autoUpdater.checkForUpdatesAndNotify();
   }
 
-  // On OS X it's common to re-create a window in the app when the
-  // dock icon is clicked and there are no other windows open.
+  // macOS에서 dock 아이콘 클릭 시 창이 없으면 새로 생성
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
@@ -243,7 +241,7 @@ autoUpdater.on('error', (err) => {
   console.error('업데이트 오류:', err);
 });
 
-// Quit when all windows are closed, except on macOS.
+// 모든 창이 닫히면 앱 종료 (macOS 제외)
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();

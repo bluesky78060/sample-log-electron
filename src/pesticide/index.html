@@ -219,6 +219,23 @@
                                 </div>
                                 <div class="form-row">
                                     <div class="form-field">
+                                        <label for="applicantType">법인여부 <span class="required">*</span></label>
+                                        <select id="applicantType" name="applicantType" required>
+                                            <option value="개인">개인</option>
+                                            <option value="법인">법인</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-field" id="birthDateField">
+                                        <label for="birthDate">생년월일</label>
+                                        <input type="text" id="birthDate" name="birthDate" placeholder="YYMMDD (예: 850315)" maxlength="6" pattern="[0-9]{6}">
+                                    </div>
+                                    <div class="form-field hidden" id="corpNumberField">
+                                        <label for="corpNumber">법인번호</label>
+                                        <input type="text" id="corpNumber" name="corpNumber" placeholder="법인등록번호 13자리" maxlength="14">
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-field">
                                         <label for="name">성명 <span class="required">*</span></label>
                                         <input type="text" id="name" name="name" required placeholder="민원인 성명" autocomplete="name">
                                     </div>
@@ -387,10 +404,12 @@
                             <th class="col-complete">완료</th>
                             <th>접수번호</th>
                             <th>접수일자</th>
+                            <th class="col-applicant-type col-hidden">법인여부</th>
+                            <th class="col-birth-corp col-hidden">생년월일/법인번호</th>
                             <th>구분</th>
                             <th>목적(용도)</th>
                             <th>성명</th>
-                            <th class="col-zipcode">우편번호</th>
+                            <th class="col-zipcode col-hidden">우편번호</th>
                             <th>주소</th>
                             <th>생산자 성명</th>
                             <th>생산지 주소</th>
@@ -691,11 +710,15 @@
     <!-- DOMPurify for XSS prevention -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js" integrity="sha384-cwS6YdhLI7XS60eoDiC+egV0qHp8zI+Cms46R0nbn8JrmoAzV9uFL60etMZhAnSu" crossorigin="anonymous"></script>
     <script src="../shared/sanitize.js"></script>
+    <script src="../shared/constants.js"></script>
     <script src="../shared/file-api.js"></script>
     <script src="../shared/utils.js"></script>
     <script src="../shared/toast.js"></script>
     <script src="../shared/pagination.js"></script>
     <script src="../shared/address.js"></script>
+    <script src="../shared/address-parser.js"></script>
+    <script src="../shared/search-filter.js"></script>
+    <script src="../shared/form-validator.js"></script>
     <script src="../shared/theme.js"></script>
     <script src="pesticide-script.js"></script>
 </body>

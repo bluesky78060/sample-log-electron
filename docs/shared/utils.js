@@ -3,6 +3,46 @@
 // 모든 시료 모듈에서 공통으로 사용하는 함수들
 // ========================================
 
+// ========================================
+// 전역 에러 핸들러
+// ========================================
+
+/**
+ * 전역 에러 핸들러 설정
+ * 처리되지 않은 Promise rejection 및 일반 에러 캐치
+ */
+function setupGlobalErrorHandler() {
+    // 처리되지 않은 Promise rejection 캐치
+    window.addEventListener('unhandledrejection', (event) => {
+        console.error('처리되지 않은 Promise rejection:', event.reason);
+
+        // 네트워크 에러인 경우 사용자에게 알림
+        if (event.reason?.message?.includes('network') ||
+            event.reason?.message?.includes('fetch') ||
+            event.reason?.code === 'unavailable') {
+            if (window.showToast) {
+                window.showToast('네트워크 연결을 확인해주세요.', 'error');
+            }
+        }
+
+        // 기본 동작 방지 (콘솔 에러 중복 방지)
+        event.preventDefault();
+    });
+
+    // 전역 에러 캐치
+    window.addEventListener('error', (event) => {
+        console.error('전역 에러:', event.error || event.message);
+
+        // 스크립트 로드 실패
+        if (event.target?.tagName === 'SCRIPT') {
+            console.error('스크립트 로드 실패:', event.target.src);
+        }
+    });
+}
+
+// 글로벌 에러 핸들러 자동 설정
+setupGlobalErrorHandler();
+
 /**
  * 전화번호 자동 포맷팅
  * @param {string} value - 입력값
@@ -192,6 +232,72 @@ function safeParseJSON(key, defaultValue = []) {
     } catch (error) {
         console.error(`JSON 파싱 오류 (${key}):`, error);
         return defaultValue;
+    }
+}
+
+/**
+ * localStorage 사용량 확인
+ * @returns {Object} { used: number, total: number, percent: number }
+ */
+function getLocalStorageUsage() {
+    let used = 0;
+    for (let key in localStorage) {
+        if (localStorage.hasOwnProperty(key)) {
+            used += (localStorage[key].length + key.length) * 2; // UTF-16
+        }
+    }
+    const total = window.STORAGE?.LOCAL_STORAGE_LIMIT_BYTES || 5 * 1024 * 1024;
+    return {
+        used,
+        total,
+        percent: Math.round((used / total) * 100),
+        usedMB: (used / (1024 * 1024)).toFixed(2),
+        totalMB: (total / (1024 * 1024)).toFixed(0)
+    };
+}
+
+/**
+ * localStorage에 안전하게 JSON 저장 (용량 초과 방지)
+ * @param {string} key - localStorage 키
+ * @param {*} data - 저장할 데이터
+ * @param {Object} [options] - 옵션
+ * @param {Function} [options.onQuotaExceeded] - 용량 초과 시 콜백
+ * @param {Function} [options.showToast] - 토스트 메시지 함수
+ * @returns {boolean} 저장 성공 여부
+ */
+function safeSetJSON(key, data, options = {}) {
+    const { onQuotaExceeded, showToast } = options;
+
+    try {
+        const jsonString = JSON.stringify(data);
+        localStorage.setItem(key, jsonString);
+        return true;
+    } catch (error) {
+        if (error.name === 'QuotaExceededError' ||
+            error.code === 22 || // Chrome
+            error.code === 1014 || // Firefox
+            error.message.includes('quota')) {
+
+            console.error('localStorage 용량 초과:', error);
+
+            const usage = getLocalStorageUsage();
+            const message = `저장 공간이 부족합니다.\n현재 사용량: ${usage.usedMB}MB / ${usage.totalMB}MB (${usage.percent}%)\n\n오래된 데이터를 삭제하거나 JSON 파일로 백업 후 정리해주세요.`;
+
+            if (showToast) {
+                showToast('저장 공간이 부족합니다. 오래된 데이터를 정리해주세요.', 'error');
+            } else {
+                alert(message);
+            }
+
+            if (onQuotaExceeded) {
+                onQuotaExceeded(usage);
+            }
+
+            return false;
+        }
+
+        console.error('localStorage 저장 오류:', error);
+        return false;
     }
 }
 
@@ -841,6 +947,8 @@ window.SampleUtils = {
     // 연도 & 데이터
     createYearHandler,
     safeParseJSON,
+    safeSetJSON,
+    getLocalStorageUsage,
     migrateOldData,
 
     // 자동 저장

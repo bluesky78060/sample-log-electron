@@ -992,6 +992,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ========================================
     // 엑셀 내보내기
     // ========================================
+
+    // parseAddressParts는 ../shared/address-parser.js에서 전역으로 제공됨
+
     const exportBtn = document.getElementById('exportBtn');
     if (exportBtn) {
         exportBtn.addEventListener('click', () => {
@@ -1009,15 +1012,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                         ? '전체 항목'
                         : log.analysisItems.join(', ');
 
+                // 주소 파싱 (시도, 시군구, 읍면동, 나머지주소 분리)
+                const addressParts = parseAddressParts(log.addressRoad || log.address || '');
+
                 return {
                     '접수번호': log.receptionNumber || '-',
                     '접수일자': log.date || '-',
                     '성명': log.name || '-',
                     '연락처': log.phoneNumber || '-',
                     '우편번호': log.addressPostcode || '-',
-                    '도로명주소': log.addressRoad || '-',
-                    '상세주소': log.addressDetail || '-',
-                    '전체주소': log.address || '-',
+                    '시도': addressParts.sido || '-',
+                    '시군구': addressParts.sigungu || '-',
+                    '읍면동': addressParts.eupmyeondong || '-',
+                    '나머지주소': (addressParts.rest + (log.addressDetail ? ' ' + log.addressDetail : '')).trim() || '-',
                     '시료채취장소': log.samplingLocation || '-',
                     '재배작물': log.cropName || '-',
                     '과수년생': log.treeAge || '-',
@@ -1042,9 +1049,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 { wch: 10 },  // 성명
                 { wch: 15 },  // 연락처
                 { wch: 8 },   // 우편번호
-                { wch: 30 },  // 도로명주소
-                { wch: 20 },  // 상세주소
-                { wch: 40 },  // 전체주소
+                { wch: 12 },  // 시도
+                { wch: 10 },  // 시군구
+                { wch: 10 },  // 읍면동
+                { wch: 25 },  // 나머지주소
                 { wch: 25 },  // 시료채취장소
                 { wch: 12 },  // 재배작물
                 { wch: 10 },  // 과수년생

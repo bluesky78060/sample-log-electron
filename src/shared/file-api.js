@@ -3,7 +3,7 @@
 // Electron과 Web 환경 모두 지원
 // ========================================
 
-// Electron 환경 감지
+// Electron 환경 여부 감지
 const isElectron = window.electronAPI?.isElectron === true;
 
 /**
@@ -58,7 +58,7 @@ function createFileAPI(sampleType) {
                 }
                 return false;
             } else {
-                // Web File System Access API
+                // Web 환경: File System Access API 사용
                 if ('showSaveFilePicker' in window && window.showSaveFilePicker) {
                     try {
                         const handle = await window.showSaveFilePicker({
@@ -111,7 +111,7 @@ function createFileAPI(sampleType) {
                 }
                 return null;
             } else {
-                // Web File System Access API
+                // Web 환경: File System Access API 사용
                 if ('showOpenFilePicker' in window && window.showOpenFilePicker) {
                     try {
                         const [handle] = await window.showOpenFilePicker({

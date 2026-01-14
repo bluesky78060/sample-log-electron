@@ -21,6 +21,12 @@ const STORAGE_MODE = {
 // 현재 모드
 let currentMode = STORAGE_MODE.LOCAL_ONLY;
 
+/** @type {boolean} 디버그 모드 (프로덕션에서는 false) */
+const DEBUG_STORAGE = false;
+
+/** 조건부 로깅 */
+const logStorage = (...args) => DEBUG_STORAGE && console.log('[Storage]', ...args);
+
 // 동기화 상태
 let syncStatus = {
     lastSyncTime: null,
@@ -31,13 +37,13 @@ let syncStatus = {
 // 온라인/오프라인 이벤트 리스너
 window.addEventListener('online', () => {
     syncStatus.isOnline = true;
-    console.log('네트워크 연결됨 - 동기화 시작');
+    logStorage('네트워크 연결됨 - 동기화 시작');
     triggerSync();
 });
 
 window.addEventListener('offline', () => {
     syncStatus.isOnline = false;
-    console.log('오프라인 모드 - 로컬 저장소 사용');
+    logStorage('오프라인 모드 - 로컬 저장소 사용');
 });
 
 /**
@@ -51,12 +57,12 @@ async function initStorageManager() {
         if (initialized) {
             await window.firestoreDb?.init();
             currentMode = STORAGE_MODE.CLOUD_SYNC;
-            console.log('스토리지 매니저: 클라우드 동기화 모드');
+            logStorage('클라우드 동기화 모드');
         }
     }
 
     if (currentMode === STORAGE_MODE.LOCAL_ONLY) {
-        console.log('스토리지 매니저: 로컬 전용 모드');
+        logStorage('로컬 전용 모드');
     }
 
     return currentMode;
@@ -74,7 +80,7 @@ async function saveData(sampleType, year, localStorageKey, data) {
     try {
         // 1. localStorage에 항상 저장 (백업 및 오프라인 지원)
         localStorage.setItem(localStorageKey, JSON.stringify(data));
-        console.log(`localStorage 저장: ${localStorageKey}`);
+        logStorage(`localStorage 저장: ${localStorageKey}`);
 
         // 2. 클라우드 동기화 모드면 Firestore에도 저장
         if (currentMode === STORAGE_MODE.CLOUD_SYNC && window.firestoreDb?.isEnabled()) {

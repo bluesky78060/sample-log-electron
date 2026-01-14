@@ -13,6 +13,12 @@
 // Firestore 모듈 참조
 let firestore = null;
 
+/** @type {boolean} 디버그 모드 (프로덕션에서는 false) */
+const DEBUG_FIRESTORE = false;
+
+/** 조건부 로깅 */
+const logFirestore = (...args) => DEBUG_FIRESTORE && console.log('[Firestore]', ...args);
+
 // 컬렉션 이름 매핑
 const COLLECTION_MAP = {
     'soil': 'soilSamples',
@@ -28,16 +34,16 @@ const COLLECTION_MAP = {
  */
 async function initFirestore() {
     if (!window.firebaseConfig?.isEnabled()) {
-        console.log('Firebase가 비활성화 상태입니다.');
+        logFirestore('Firebase가 비활성화 상태입니다.');
         return false;
     }
 
     try {
         firestore = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-        console.log('Firestore 모듈 로드 완료');
+        logFirestore('모듈 로드 완료');
         return true;
     } catch (error) {
-        console.error('Firestore 모듈 로드 실패:', error);
+        console.error('[Firestore] 모듈 로드 실패:', error);
         return false;
     }
 }
@@ -79,7 +85,7 @@ async function saveDocument(sampleType, year, docId, data) {
             syncedAt: serverTimestamp()
         }, { merge: true });
 
-        console.log(`Firestore 저장 완료: ${collectionName}/${docId}`);
+        logFirestore(`저장 완료: ${collectionName}/${docId}`);
         return true;
     } catch (error) {
         console.error('Firestore 저장 실패:', error);
@@ -141,7 +147,7 @@ async function getAllDocuments(sampleType, year) {
             documents.push({ id: doc.id, ...doc.data() });
         });
 
-        console.log(`Firestore 조회 완료: ${collectionName} (${documents.length}건)`);
+        logFirestore(`조회 완료: ${collectionName} (${documents.length}건)`);
         return documents;
     } catch (error) {
         console.error('Firestore 전체 조회 실패:', error);
@@ -168,7 +174,7 @@ async function deleteDocument(sampleType, year, docId) {
         const { doc, deleteDoc } = firestore;
         await deleteDoc(doc(db, collectionName, docId));
 
-        console.log(`Firestore 삭제 완료: ${collectionName}/${docId}`);
+        logFirestore(`삭제 완료: ${collectionName}/${docId}`);
         return true;
     } catch (error) {
         console.error('Firestore 삭제 실패:', error);
@@ -205,7 +211,7 @@ async function batchSave(sampleType, year, documents) {
         });
 
         await batch.commit();
-        console.log(`Firestore 배치 저장 완료: ${collectionName} (${documents.length}건)`);
+        logFirestore(`배치 저장 완료: ${collectionName} (${documents.length}건)`);
         return true;
     } catch (error) {
         console.error('Firestore 배치 저장 실패:', error);
@@ -228,7 +234,7 @@ async function migrateFromLocalStorage(sampleType, year, localStorageKey) {
     try {
         const localData = localStorage.getItem(localStorageKey);
         if (!localData) {
-            console.log('마이그레이션할 데이터가 없습니다.');
+            logFirestore('마이그레이션할 데이터가 없습니다.');
             return { success: true, count: 0 };
         }
 
@@ -245,7 +251,7 @@ async function migrateFromLocalStorage(sampleType, year, localStorageKey) {
 
         await batchSave(sampleType, year, documentsWithId);
 
-        console.log(`마이그레이션 완료: ${localStorageKey} → Firestore (${documentsWithId.length}건)`);
+        logFirestore(`마이그레이션 완료: ${localStorageKey} → Firestore (${documentsWithId.length}건)`);
         return { success: true, count: documentsWithId.length };
     } catch (error) {
         console.error('마이그레이션 실패:', error);
@@ -290,7 +296,7 @@ function subscribeToChanges(sampleType, year, callback) {
             console.error('실시간 동기화 에러:', error);
         });
 
-        console.log(`실시간 동기화 시작: ${collectionName}`);
+        logFirestore(`실시간 동기화 시작: ${collectionName}`);
         return unsubscribe;
     } catch (error) {
         console.error('실시간 동기화 설정 실패:', error);

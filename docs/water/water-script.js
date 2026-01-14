@@ -235,6 +235,67 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.SampleUtils.setupPhoneNumberInput(phoneNumberInput);
 
     // ========================================
+    // 개인/법인 선택 전환
+    // ========================================
+    const applicantTypeSelect = document.getElementById('applicantType');
+    const birthDateField = document.getElementById('birthDateField');
+    const corpNumberField = document.getElementById('corpNumberField');
+    const birthDateInput = document.getElementById('birthDate');
+    const corpNumberInput = document.getElementById('corpNumber');
+
+    if (applicantTypeSelect) {
+        applicantTypeSelect.addEventListener('change', () => {
+            const isCorpSelected = applicantTypeSelect.value === '법인';
+            if (isCorpSelected) {
+                birthDateField.classList.add('hidden');
+                corpNumberField.classList.remove('hidden');
+                birthDateInput.value = '';
+            } else {
+                birthDateField.classList.remove('hidden');
+                corpNumberField.classList.add('hidden');
+                corpNumberInput.value = '';
+            }
+        });
+    }
+
+    // 법인번호 자동 하이픈 (######-#######)
+    if (corpNumberInput) {
+        corpNumberInput.addEventListener('input', (e) => {
+            let value = e.target.value.replace(/[^0-9]/g, '');
+            if (value.length > 13) value = value.slice(0, 13);
+            if (value.length > 6) {
+                value = value.slice(0, 6) + '-' + value.slice(6);
+            }
+            e.target.value = value;
+        });
+    }
+
+    // ========================================
+    // 전체 보기 토글 (숨김 컬럼 표시)
+    // ========================================
+    const viewToggleBtn = document.getElementById('viewToggleBtn');
+    let isFullView = false;
+
+    if (viewToggleBtn) {
+        viewToggleBtn.addEventListener('click', () => {
+            isFullView = !isFullView;
+            const hiddenCols = document.querySelectorAll('.col-zipcode, .col-applicant-type, .col-birth-corp');
+            hiddenCols.forEach(col => {
+                if (isFullView) {
+                    col.classList.remove('hidden');
+                } else {
+                    col.classList.add('hidden');
+                }
+            });
+            // 버튼 텍스트 변경
+            const toggleText = viewToggleBtn.querySelector('.toggle-text');
+            if (toggleText) {
+                toggleText.textContent = isFullView ? '기본 보기' : '전체 보기';
+            }
+        });
+    }
+
+    // ========================================
     // 통보방법 선택
     // ========================================
     const receptionMethodBtns = document.querySelectorAll('.reception-method-btn');
@@ -645,9 +706,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         const receptionNumbers = receptionNumberStr.split(',').map(n => n.trim()).filter(n => n);
 
         // 공통 데이터 (신청자 정보)
+        const applicantType = formData.get('applicantType') || '개인';
         const commonData = {
             sampleType: SAMPLE_TYPE,
             date: formData.get('date'),
+            applicantType: applicantType,
+            birthDate: applicantType === '개인' ? formData.get('birthDate') : '',
+            corpNumber: applicantType === '법인' ? formData.get('corpNumber') : '',
             name: formData.get('name'),
             phoneNumber: formData.get('phoneNumber'),
             address: formData.get('address'),
@@ -715,6 +780,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         receptionMethodBtns.forEach(b => b.classList.remove('active'));
         receptionMethodInput.value = '';
+
+        // 개인/법인 초기화
+        if (applicantTypeSelect) {
+            applicantTypeSelect.value = '개인';
+            birthDateField.classList.remove('hidden');
+            corpNumberField.classList.add('hidden');
+        }
+        if (birthDateInput) birthDateInput.value = '';
+        if (corpNumberInput) corpNumberInput.value = '';
 
         // 검사항목 초기화
         const livingWaterRadio = document.querySelector('input[name="testItems"][value="생활용수"]');
@@ -871,6 +945,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             const safePhone = escapeHTML(log.phoneNumber || '-');
             const safeNote = escapeHTML(log.note || '-');
 
+            // 법인여부 및 생년월일/법인번호
+            const applicantType = log.applicantType || '개인';
+            const birthOrCorp = applicantType === '법인' ? (log.corpNumber || '-') : (log.birthDate || '-');
+
             // 테이블 행 HTML: 개별 데이터는 이미 escapeHTML로 이스케이프됨
             row.innerHTML = `
                 <td class="col-checkbox">
@@ -883,6 +961,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </td>
                 <td>${escapeHTML(log.receptionNumber || '-')}</td>
                 <td>${escapeHTML(log.date || '-')}</td>
+                <td class="col-applicant-type hidden">${escapeHTML(applicantType)}</td>
+                <td class="col-birth-corp hidden">${escapeHTML(birthOrCorp)}</td>
                 <td>${safeName}</td>
                 <td class="col-zipcode hidden">${escapeHTML(zipcode || '-')}</td>
                 <td class="text-truncate" title="${safeAddress}">${safeAddress}</td>
@@ -1075,6 +1155,23 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (sampleCountEl) sampleCountEl.value = log.sampleCount || 1;
             if (noteEl) noteEl.value = log.note || '';
 
+            // 법인여부/생년월일/법인번호 설정
+            const applicantType = log.applicantType || '개인';
+            if (applicantTypeSelect) {
+                applicantTypeSelect.value = applicantType;
+                if (applicantType === '법인') {
+                    birthDateField.classList.add('hidden');
+                    corpNumberField.classList.remove('hidden');
+                    if (corpNumberInput) corpNumberInput.value = log.corpNumber || '';
+                    if (birthDateInput) birthDateInput.value = '';
+                } else {
+                    birthDateField.classList.remove('hidden');
+                    corpNumberField.classList.add('hidden');
+                    if (birthDateInput) birthDateInput.value = log.birthDate || '';
+                    if (corpNumberInput) corpNumberInput.value = '';
+                }
+            }
+
             // 채취장소 및 주작목 설정 (배열 또는 문자열)
             const crops = log.samplingCrops || [];
             if (log.samplingLocations && Array.isArray(log.samplingLocations)) {
@@ -1133,6 +1230,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (log) {
             log.receptionNumber = formData.get('receptionNumber');
             log.date = formData.get('date');
+            const applicantType = formData.get('applicantType') || '개인';
+            log.applicantType = applicantType;
+            log.birthDate = applicantType === '개인' ? formData.get('birthDate') : '';
+            log.corpNumber = applicantType === '법인' ? formData.get('corpNumber') : '';
             log.name = formData.get('name');
             log.phoneNumber = formData.get('phoneNumber');
             log.address = formData.get('address');
@@ -1660,6 +1761,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ========================================
     const exportBtn = document.getElementById('exportBtn');
 
+    // parseAddressParts는 ../shared/address-parser.js에서 전역으로 제공됨
+
     if (exportBtn) {
         exportBtn.addEventListener('click', () => {
             if (sampleLogs.length === 0) {
@@ -1667,26 +1770,38 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            const exportData = sampleLogs.map(log => ({
-                '접수번호': log.receptionNumber || '-',
-                '접수일자': log.date || '-',
-                '성명': log.name || '-',
-                '연락처': log.phoneNumber || '-',
-                '우편번호': log.addressPostcode || '-',
-                '도로명주소': log.addressRoad || '-',
-                '상세주소': log.addressDetail || '-',
-                '전체주소': log.address || '-',
-                '시료명': log.sampleName || '-',
-                '시료수': log.sampleCount || '-',
-                '채취장소': log.samplingLocation || '-',
-                '주작목': log.mainCrop || '-',
-                '목적': log.purpose || '-',
-                '검사항목': log.testItems || '-',
-                '통보방법': log.receptionMethod || '-',
-                '비고': log.note || '-',
-                '완료여부': log.isComplete ? '완료' : '미완료',
-                '등록일시': log.createdAt ? new Date(log.createdAt).toLocaleString('ko-KR') : '-'
-            }));
+            const exportData = sampleLogs.map(log => {
+                // 도로명주소에서 시도/시군구/읍면동 분리
+                const addressParts = parseAddressParts(log.addressRoad || log.address || '');
+
+                // 법인여부에 따라 생년월일 또는 법인번호 결정
+                const applicantType = log.applicantType || '개인';
+                const birthOrCorp = applicantType === '법인' ? (log.corpNumber || '-') : (log.birthDate || '-');
+
+                return {
+                    '접수번호': log.receptionNumber || '-',
+                    '접수일자': log.date || '-',
+                    '법인여부': applicantType,
+                    '생년월일/법인번호': birthOrCorp,
+                    '성명': log.name || '-',
+                    '연락처': log.phoneNumber || '-',
+                    '시도': addressParts.sido || '-',
+                    '시군구': addressParts.sigungu || '-',
+                    '읍면동': addressParts.eupmyeondong || '-',
+                    '나머지주소': (addressParts.rest + (log.addressDetail ? ' ' + log.addressDetail : '')).trim() || '-',
+                    '우편번호': log.addressPostcode || '-',
+                    '시료명': log.sampleName || '-',
+                    '시료수': log.sampleCount || '-',
+                    '채취장소': log.samplingLocation || '-',
+                    '주작목': log.mainCrop || '-',
+                    '목적': log.purpose || '-',
+                    '검사항목': log.testItems || '-',
+                    '통보방법': log.receptionMethod || '-',
+                    '비고': log.note || '-',
+                    '완료여부': log.isComplete ? '완료' : '미완료',
+                    '등록일시': log.createdAt ? new Date(log.createdAt).toLocaleString('ko-KR') : '-'
+                };
+            });
 
             const wb = XLSX.utils.book_new();
             const ws = XLSX.utils.json_to_sheet(exportData);
@@ -1695,12 +1810,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             ws['!cols'] = [
                 { wch: 10 },  // 접수번호
                 { wch: 12 },  // 접수일자
+                { wch: 8 },   // 법인여부
+                { wch: 15 },  // 생년월일/법인번호
                 { wch: 10 },  // 성명
                 { wch: 15 },  // 연락처
+                { wch: 12 },  // 시도
+                { wch: 12 },  // 시군구
+                { wch: 10 },  // 읍면동
+                { wch: 30 },  // 나머지주소
                 { wch: 8 },   // 우편번호
-                { wch: 30 },  // 도로명주소
-                { wch: 20 },  // 상세주소
-                { wch: 40 },  // 전체주소
                 { wch: 15 },  // 시료명
                 { wch: 8 },   // 시료수
                 { wch: 25 },  // 채취장소

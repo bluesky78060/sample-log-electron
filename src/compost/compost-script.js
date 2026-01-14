@@ -253,6 +253,42 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.SampleUtils.setupPhoneNumberInput(phoneNumberInput);
 
     // ========================================
+    // 개인/법인 선택 전환
+    // ========================================
+    const applicantTypeSelect = document.getElementById('applicantType');
+    const birthDateField = document.getElementById('birthDateField');
+    const corpNumberField = document.getElementById('corpNumberField');
+    const birthDateInput = document.getElementById('birthDate');
+    const corpNumberInput = document.getElementById('corpNumber');
+
+    if (applicantTypeSelect) {
+        applicantTypeSelect.addEventListener('change', () => {
+            const isCorpSelected = applicantTypeSelect.value === '법인';
+            if (isCorpSelected) {
+                birthDateField.classList.add('hidden');
+                corpNumberField.classList.remove('hidden');
+                birthDateInput.value = '';
+            } else {
+                birthDateField.classList.remove('hidden');
+                corpNumberField.classList.add('hidden');
+                corpNumberInput.value = '';
+            }
+        });
+    }
+
+    // 법인번호 자동 하이픈 (######-#######)
+    if (corpNumberInput) {
+        corpNumberInput.addEventListener('input', (e) => {
+            let value = e.target.value.replace(/[^0-9]/g, '');
+            if (value.length > 13) value = value.slice(0, 13);
+            if (value.length > 6) {
+                value = value.slice(0, 6) + '-' + value.slice(6);
+            }
+            e.target.value = value;
+        });
+    }
+
+    // ========================================
     // 통보방법 선택
     // ========================================
     const receptionMethodBtns = document.querySelectorAll('.reception-method-btn');
@@ -421,10 +457,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             animalType = animalTypeOtherInput.value || '기타';
         }
 
+        // 법인여부
+        const applicantType = formData.get('applicantType') || '개인';
+
         const data = {
             id: generateId(),
             receptionNumber: formData.get('receptionNumber'),
             date: formData.get('date'),
+            // 법인여부/생년월일/법인번호
+            applicantType: applicantType,
+            birthDate: applicantType === '개인' ? formData.get('birthDate') : '',
+            corpNumber: applicantType === '법인' ? formData.get('corpNumber') : '',
             // 의뢰자 정보
             farmName: formData.get('farmName'),
             name: formData.get('name'),
@@ -433,7 +476,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             addressPostcode: formData.get('addressPostcode'),
             addressRoad: formData.get('addressRoad'),
             addressDetail: formData.get('addressDetail'),
-            farmName: formData.get('farmName'),
             farmAddress: formData.get('farmAddressFull'),
             farmArea: parseFormattedNumber(formData.get('farmArea') || ''),
             farmAreaUnit: formData.get('farmAreaUnit') || 'm2',
@@ -480,6 +522,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 통보방법 초기화
         receptionMethodBtns.forEach(b => b.classList.remove('active'));
         receptionMethodInput.value = '';
+
+        // 개인/법인 초기화
+        if (applicantTypeSelect) {
+            applicantTypeSelect.value = '개인';
+            birthDateField.classList.remove('hidden');
+            corpNumberField.classList.add('hidden');
+        }
+        if (birthDateInput) birthDateInput.value = '';
+        if (corpNumberInput) corpNumberInput.value = '';
 
         // 시료종류 초기화 (첫 번째 라디오 선택)
         const sampleTypeRadios = document.querySelectorAll('input[name="sampleType"]');
@@ -655,6 +706,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             const safePhone = escapeHTML(logItem.phoneNumber || '-');
             const safeNote = escapeHTML(logItem.note || '-');
 
+            // 법인여부 및 생년월일/법인번호
+            const applicantType = logItem.applicantType || '개인';
+            const birthOrCorp = applicantType === '법인' ? (logItem.corpNumber || '-') : (logItem.birthDate || '-');
+
             // 테이블 행 HTML: 개별 데이터는 이미 escapeHTML로 이스케이프됨
             row.innerHTML = `
                 <td class="col-checkbox">
@@ -674,6 +729,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </td>
                 <td>${escapeHTML(logItem.receptionNumber || '-')}</td>
                 <td>${escapeHTML(logItem.date || '-')}</td>
+                <td class="col-applicant-type col-hidden">${escapeHTML(applicantType)}</td>
+                <td class="col-birth-corp col-hidden">${escapeHTML(birthOrCorp)}</td>
                 <td>${safeFarmName}</td>
                 <td>${safeName}</td>
                 <td class="col-postcode col-hidden">${escapeHTML(logItem.addressPostcode || '-')}</td>
@@ -896,6 +953,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         receptionNumberInput.value = log.receptionNumber || '';
         dateInput.value = log.date || '';
 
+        // 법인여부/생년월일/법인번호 설정
+        const applicantType = log.applicantType || '개인';
+        if (applicantTypeSelect) {
+            applicantTypeSelect.value = applicantType;
+            if (applicantType === '법인') {
+                birthDateField.classList.add('hidden');
+                corpNumberField.classList.remove('hidden');
+                if (corpNumberInput) corpNumberInput.value = log.corpNumber || '';
+                if (birthDateInput) birthDateInput.value = '';
+            } else {
+                birthDateField.classList.remove('hidden');
+                corpNumberField.classList.add('hidden');
+                if (birthDateInput) birthDateInput.value = log.birthDate || '';
+                if (corpNumberInput) corpNumberInput.value = '';
+            }
+        }
+
         // 의뢰자 정보
         document.getElementById('farmName').value = log.farmName || '';
         document.getElementById('name').value = log.name || '';
@@ -978,6 +1052,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (log) {
             log.receptionNumber = formData.get('receptionNumber');
             log.date = formData.get('date');
+            // 법인여부/생년월일/법인번호
+            const applicantType = formData.get('applicantType') || '개인';
+            log.applicantType = applicantType;
+            log.birthDate = applicantType === '개인' ? formData.get('birthDate') : '';
+            log.corpNumber = applicantType === '법인' ? formData.get('corpNumber') : '';
             // 의뢰자 정보
             log.farmName = formData.get('farmName');
             log.name = formData.get('name');
@@ -986,7 +1065,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             log.addressPostcode = formData.get('addressPostcode');
             log.addressRoad = formData.get('addressRoad');
             log.addressDetail = formData.get('addressDetail');
-            log.farmName = formData.get('farmName');
             log.farmAddress = formData.get('farmAddressFull');
             log.farmArea = parseFormattedNumber(formData.get('farmArea') || '');
             log.farmAreaUnit = formData.get('farmAreaUnit') || 'm2';
@@ -1499,6 +1577,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 엑셀 내보내기
     // ========================================
     const exportBtn = document.getElementById('exportBtn');
+
+    // parseAddressParts는 ../shared/address-parser.js에서 전역으로 제공됨
+
     if (exportBtn) {
         exportBtn.addEventListener('click', () => {
             if (sampleLogs.length === 0) {
@@ -1514,16 +1595,26 @@ document.addEventListener('DOMContentLoaded', async () => {
                     areaDisplay = `${log.farmArea} ${unit}`;
                 }
 
+                // 법인여부에 따라 생년월일 또는 법인번호 결정
+                const applicantType = log.applicantType || '개인';
+                const birthOrCorp = applicantType === '법인' ? (log.corpNumber || '-') : (log.birthDate || '-');
+
+                // 도로명주소에서 시도/시군구/읍면동 분리
+                const addressParts = parseAddressParts(log.addressRoad || log.address || '');
+
                 return {
                     '접수번호': log.receptionNumber || '-',
                     '접수일자': log.date || '-',
+                    '법인여부': applicantType,
+                    '생년월일/법인번호': birthOrCorp,
                     '농장명': log.farmName || '-',
                     '대표자': log.name || '-',
                     '연락처': log.phoneNumber || '-',
                     '우편번호': log.addressPostcode || '-',
-                    '도로명주소': log.addressRoad || '-',
-                    '상세주소': log.addressDetail || '-',
-                    '전체주소': log.address || '-',
+                    '시도': addressParts.sido || '-',
+                    '시군구': addressParts.sigungu || '-',
+                    '읍면동': addressParts.eupmyeondong || '-',
+                    '나머지주소': (addressParts.rest + (log.addressDetail ? ' ' + log.addressDetail : '')).trim() || '-',
                     '농장주소': log.farmAddress || '-',
                     '농장면적': areaDisplay,
                     '시료종류': log.sampleType || '-',
@@ -1546,13 +1637,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             ws['!cols'] = [
                 { wch: 10 },  // 접수번호
                 { wch: 12 },  // 접수일자
+                { wch: 8 },   // 법인여부
+                { wch: 15 },  // 생년월일/법인번호
                 { wch: 15 },  // 농장명
                 { wch: 10 },  // 대표자
                 { wch: 15 },  // 연락처
                 { wch: 8 },   // 우편번호
-                { wch: 30 },  // 도로명주소
-                { wch: 20 },  // 상세주소
-                { wch: 40 },  // 전체주소
+                { wch: 12 },  // 시도
+                { wch: 10 },  // 시군구
+                { wch: 10 },  // 읍면동
+                { wch: 25 },  // 나머지주소
                 { wch: 30 },  // 농장주소
                 { wch: 12 },  // 농장면적
                 { wch: 12 },  // 시료종류

@@ -13,6 +13,13 @@
 // ========================================
 // Firebase 초기화 상태
 // ========================================
+
+/** @type {boolean} 디버그 모드 (프로덕션에서는 false) */
+const DEBUG_FIREBASE = false;
+
+/** 조건부 로깅 */
+const logFirebase = (...args) => DEBUG_FIREBASE && console.log('[Firebase]', ...args);
+
 let app = null;
 let db = null;
 let isFirebaseEnabled = false;
@@ -22,8 +29,19 @@ let firebaseConfig = null;
 // localStorage 키
 const FIREBASE_CONFIG_KEY = 'firebase_config';
 
+// 기본 Firebase 설정 (내장)
+const DEFAULT_FIREBASE_CONFIG = {
+    apiKey: "AIzaSyAe8PmU_xPmUCPC7Ift9BYtp7Reib4cWLQ",
+    authDomain: "sample-log-electron.firebaseapp.com",
+    projectId: "sample-log-electron",
+    storageBucket: "sample-log-electron.firebasestorage.app",
+    messagingSenderId: "714729425268",
+    appId: "1:714729425268:web:dcd6eaa5b64ab227378421",
+    measurementId: "G-5ET4E14885"
+};
+
 /**
- * localStorage에서 Firebase 설정 로드
+ * localStorage에서 Firebase 설정 로드 (없으면 기본값 사용)
  * @returns {Object|null}
  */
 function loadFirebaseConfig() {
@@ -35,7 +53,8 @@ function loadFirebaseConfig() {
     } catch (e) {
         console.error('Firebase 설정 로드 실패:', e);
     }
-    return null;
+    // localStorage에 설정이 없으면 기본 설정 사용
+    return DEFAULT_FIREBASE_CONFIG;
 }
 
 /**
@@ -59,50 +78,50 @@ function isFirebaseConfigValid() {
  * @returns {Promise<boolean>} 초기화 성공 여부
  */
 async function initializeFirebase() {
-    console.log('[Firebase] 초기화 시작...');
+    logFirebase('초기화 시작...');
 
     // 이미 초기화되어 있으면 true 반환
     if (isFirebaseEnabled && db) {
-        console.log('[Firebase] 이미 초기화됨');
+        logFirebase('이미 초기화됨');
         return true;
     }
 
     firebaseConfig = loadFirebaseConfig();
-    console.log('[Firebase] 로드된 설정:', firebaseConfig ? '있음' : '없음');
+    logFirebase('로드된 설정:', firebaseConfig ? '있음' : '없음');
 
     if (!firebaseConfig) {
-        console.log('[Firebase] 설정이 없습니다. localStorage 모드로 동작합니다.');
+        logFirebase('설정이 없습니다. localStorage 모드로 동작합니다.');
         return false;
     }
 
-    console.log('[Firebase] 설정값 확인:', {
+    logFirebase('설정값 확인:', {
         apiKey: firebaseConfig.apiKey ? firebaseConfig.apiKey.substring(0, 10) + '...' : '없음',
         projectId: firebaseConfig.projectId || '없음',
         authDomain: firebaseConfig.authDomain || '없음'
     });
 
     if (!isFirebaseConfigValid()) {
-        console.log('[Firebase] 설정이 유효하지 않습니다.');
+        logFirebase('설정이 유효하지 않습니다.');
         return false;
     }
 
     try {
-        console.log('[Firebase] SDK 로드 중...');
+        logFirebase('SDK 로드 중...');
         // Firebase 앱 초기화
         const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
         const { getFirestore, enableIndexedDbPersistence } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
 
-        console.log('[Firebase] SDK 로드 완료, 앱 초기화 중...');
+        logFirebase('SDK 로드 완료, 앱 초기화 중...');
         app = initializeApp(firebaseConfig);
         db = getFirestore(app);
 
-        console.log('[Firebase] Firestore 연결됨');
+        logFirebase('Firestore 연결됨');
 
         // 오프라인 지원 활성화
         try {
             await enableIndexedDbPersistence(db);
             isOfflineEnabled = true;
-            console.log('[Firebase] 오프라인 지원 활성화됨');
+            logFirebase('오프라인 지원 활성화됨');
         } catch (err) {
             console.warn('[Firebase] 오프라인 지원 에러:', err.code, err.message);
             if (err.code === 'failed-precondition') {
@@ -113,7 +132,7 @@ async function initializeFirebase() {
         }
 
         isFirebaseEnabled = true;
-        console.log('[Firebase] 초기화 완료:', firebaseConfig.projectId);
+        logFirebase('초기화 완료:', firebaseConfig.projectId);
         return true;
     } catch (error) {
         console.error('[Firebase] 초기화 실패:', error);

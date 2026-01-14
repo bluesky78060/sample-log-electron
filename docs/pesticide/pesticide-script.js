@@ -178,45 +178,69 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 잔류농약 페이지에서는 필지 기능 미사용
     }
 
-    // Purpose (목적) select element
+    // 목적 선택 요소
     const purposeSelect = document.getElementById('purpose');
 
     // ========================================
-    // Phone Number Auto Hyphen - 공통 모듈 사용
+    // 전화번호 자동 하이픈 - 공통 모듈 사용
     // ========================================
     const phoneNumberInput = document.getElementById('phoneNumber');
     window.SampleUtils.setupPhoneNumberInput(phoneNumberInput);
 
     // ========================================
-    // Reception Method Selection
+    // 법인여부 선택 (개인/법인)
+    // ========================================
+    const applicantTypeSelect = document.getElementById('applicantType');
+    const birthDateField = document.getElementById('birthDateField');
+    const corpNumberField = document.getElementById('corpNumberField');
+    const birthDateInput = document.getElementById('birthDate');
+    const corpNumberInput = document.getElementById('corpNumber');
+
+    if (applicantTypeSelect) {
+        applicantTypeSelect.addEventListener('change', () => {
+            const isCorpSelected = applicantTypeSelect.value === '법인';
+            if (isCorpSelected) {
+                birthDateField.classList.add('hidden');
+                corpNumberField.classList.remove('hidden');
+                birthDateInput.value = '';
+            } else {
+                birthDateField.classList.remove('hidden');
+                corpNumberField.classList.add('hidden');
+                corpNumberInput.value = '';
+            }
+        });
+    }
+
+    // ========================================
+    // 수령 방법 선택
     // ========================================
     const receptionMethodBtns = document.querySelectorAll('.reception-method-btn');
     const receptionMethodInput = document.getElementById('receptionMethod');
 
     receptionMethodBtns.forEach(btn => {
         btn.addEventListener('click', () => {
-            // Remove active class from all buttons
+            // 모든 버튼에서 active 클래스 제거
             receptionMethodBtns.forEach(b => b.classList.remove('active'));
-            // Add active class to clicked button
+            // 클릭된 버튼에 active 클래스 추가
             btn.classList.add('active');
-            // Set value to hidden input
+            // hidden input에 값 설정
             receptionMethodInput.value = btn.dataset.method;
         });
     });
 
     // ========================================
-    // Sample Type Navigation Selection (토양 전용)
+    // 시료 타입 네비게이션 선택
     // ========================================
     const sampleTypeBtns = document.querySelectorAll('.type-btn');
 
     sampleTypeBtns.forEach(btn => {
         btn.addEventListener('click', () => {
-            // Remove active class from all buttons
+            // 모든 버튼에서 active 클래스 제거
             sampleTypeBtns.forEach(b => b.classList.remove('active'));
-            // Add active class to clicked button
+            // 클릭된 버튼에 active 클래스 추가
             btn.classList.add('active');
 
-            // Switch to form view if not already there
+            // 접수 뷰가 아니면 접수 뷰로 전환
             switchView('form');
         });
     });
@@ -612,7 +636,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateRemoveButtonsVisibility();
     }
 
-    // Set default date to today
+    // 오늘 날짜를 기본값으로 설정
     dateInput.valueAsDate = new Date();
 
     // ========================================
@@ -1963,7 +1987,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // ========================================
-    // Sub-lot Crop Modal (하위 지번 작물 추가)
+    // 하위 지번 작물 추가 모달
     // ========================================
     let currentSubLotParcelId = null;
     let currentSubLotIndex = null;
@@ -2052,7 +2076,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // ========================================
-    // Form Submit Handler
+    // 폼 제출 핸들러
     // ========================================
     form.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -2073,10 +2097,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             const requestItems = getRequestItems();
             const firstItem = requestItems[0] || { producerAddress: '', cropName: '' };
 
+            // 법인여부 데이터 가져오기
+            const applicantType = formData.get('applicantType') || '개인';
+
             const updatedLog = {
                 ...existingLog,
                 receptionNumber: formData.get('receptionNumber'),
                 date: formData.get('date'),
+                applicantType: applicantType,
+                birthDate: applicantType === '개인' ? formData.get('birthDate') : '',
+                corpNumber: applicantType === '법인' ? formData.get('corpNumber') : '',
                 name: formData.get('name'),
                 phoneNumber: formData.get('phoneNumber'),
                 address: formData.get('address'),
@@ -2117,6 +2147,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         const baseReceptionNumber = parseInt(formData.get('receptionNumber'), 10);
         const createdLogs = [];
 
+        // 법인여부 데이터 가져오기
+        const applicantType = formData.get('applicantType') || '개인';
+
         // 각 의뢰 항목별로 레코드 생성
         requestItems.forEach((item, idx) => {
             // 접수번호: 의뢰물품명 기준으로 별도 번호 부여
@@ -2127,6 +2160,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 id: crypto.randomUUID(),
                 receptionNumber: itemReceptionNumber,
                 date: formData.get('date'),
+                applicantType: applicantType,
+                birthDate: applicantType === '개인' ? formData.get('birthDate') : '',
+                corpNumber: applicantType === '법인' ? formData.get('corpNumber') : '',
                 name: formData.get('name'),
                 phoneNumber: formData.get('phoneNumber'),
                 address: formData.get('address'),
@@ -2220,7 +2256,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         modal.classList.remove('hidden');
     }
 
-    // Search Modal Handler
+    // 검색 모달 핸들러
     const listSearchModal = document.getElementById('listSearchModal');
     const openSearchModalBtn = document.getElementById('openSearchModalBtn');
     const closeSearchModalBtn = document.getElementById('closeSearchModal');
@@ -2412,6 +2448,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('name').value = log.name || '';
         document.getElementById('phoneNumber').value = log.phoneNumber || '';
 
+        // 법인여부/생년월일/법인번호 설정
+        const applicantType = log.applicantType || '개인';
+        if (applicantTypeSelect) {
+            applicantTypeSelect.value = applicantType;
+            if (applicantType === '법인') {
+                birthDateField.classList.add('hidden');
+                corpNumberField.classList.remove('hidden');
+                if (corpNumberInput) corpNumberInput.value = log.corpNumber || '';
+                if (birthDateInput) birthDateInput.value = '';
+            } else {
+                birthDateField.classList.remove('hidden');
+                corpNumberField.classList.add('hidden');
+                if (birthDateInput) birthDateInput.value = log.birthDate || '';
+                if (corpNumberInput) corpNumberInput.value = '';
+            }
+        }
+
         // 주소 필드 처리
         if (log.address) {
             // 주소 파싱 시도: "(우편번호) 도로명주소 상세주소" 형식
@@ -2508,7 +2561,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }, 100);
     }
 
-    // Delete & Edit Handler (Event Delegation)
+    // 삭제 및 수정 핸들러 (이벤트 위임)
     tableBody.addEventListener('click', (e) => {
         // 완료 버튼
         if (e.target.classList.contains('btn-complete')) {
@@ -3109,10 +3162,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (cropModal) cropModal.querySelector('.modal-overlay').addEventListener('click', closeModal);
 
     // ========================================
-    // Excel Export Handler
+    // 엑셀 내보내기 핸들러
     // ========================================
     const exportBtn = document.getElementById('exportBtn');
-    exportBtn.addEventListener('click', () => {
+
+    // parseAddressParts는 ../shared/address-parser.js에서 전역으로 제공됨
+
+    if (exportBtn) exportBtn.addEventListener('click', () => {
         if (sampleLogs.length === 0) {
             alert('내보낼 데이터가 없습니다.');
             return;
@@ -3124,6 +3180,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         const excelData = [];
 
         reversedLogs.forEach(log => {
+            // 법인여부 및 생년월일/법인번호
+            const applicantType = log.applicantType || '개인';
+            const birthOrCorp = applicantType === '법인' ? (log.corpNumber || '-') : (log.birthDate || '-');
+
+            // 도로명주소에서 시도/시군구/읍면동 분리
+            const addressParts = parseAddressParts(log.addressRoad || log.address || '');
+
             if (log.parcels && log.parcels.length > 0) {
                 log.parcels.forEach((parcel, pIdx) => {
                     // 메인 필지의 작물 정보
@@ -3138,11 +3201,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                     excelData.push({
                         '접수번호': log.receptionNumber,
                         '접수일자': log.date,
+                        '법인여부': applicantType,
+                        '생년월일/법인번호': birthOrCorp,
                         '구분': log.subCategory || '-',
                         '목적(용도)': log.purpose || '-',
                         '성명': log.name,
                         '전화번호': log.phoneNumber,
-                        '주소': log.address,
+                        '우편번호': log.addressPostcode || '-',
+                        '시도': addressParts.sido || '-',
+                        '시군구': addressParts.sigungu || '-',
+                        '읍면동': addressParts.eupmyeondong || '-',
+                        '나머지주소': (addressParts.rest + (log.addressDetail ? ' ' + log.addressDetail : '')).trim() || '-',
                         '필지 주소': parcel.lotAddress || '-',
                         '작물': cropsDisplay,
                         '면적(m²)': totalArea > 0 ? totalArea : '-',
@@ -3168,11 +3237,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                             excelData.push({
                                 '접수번호': `${log.receptionNumber}-${sIdx + 1}`,
                                 '접수일자': log.date,
+                                '법인여부': applicantType,
+                                '생년월일/법인번호': birthOrCorp,
                                 '구분': log.subCategory || '-',
                                 '목적(용도)': log.purpose || '-',
                                 '성명': log.name,
                                 '전화번호': log.phoneNumber,
-                                '주소': log.address,
+                                '우편번호': log.addressPostcode || '-',
+                                '시도': addressParts.sido || '-',
+                                '시군구': addressParts.sigungu || '-',
+                                '읍면동': addressParts.eupmyeondong || '-',
+                                '나머지주소': (addressParts.rest + (log.addressDetail ? ' ' + log.addressDetail : '')).trim() || '-',
                                 '필지 주소': subLotAddress,
                                 '작물': subLotCropsDisplay,
                                 '면적(m²)': subLotTotalArea > 0 ? subLotTotalArea : '-',
@@ -3189,11 +3264,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                 excelData.push({
                     '접수번호': log.receptionNumber,
                     '접수일자': log.date,
+                    '법인여부': applicantType,
+                    '생년월일/법인번호': birthOrCorp,
                     '구분': log.subCategory || '-',
                     '목적(용도)': log.purpose || '-',
                     '성명': log.name,
                     '전화번호': log.phoneNumber,
-                    '주소': log.address,
+                    '우편번호': log.addressPostcode || '-',
+                    '시도': addressParts.sido || '-',
+                    '시군구': addressParts.sigungu || '-',
+                    '읍면동': addressParts.eupmyeondong || '-',
+                    '나머지주소': (addressParts.rest + (log.addressDetail ? ' ' + log.addressDetail : '')).trim() || '-',
                     '필지 주소': log.lotAddress || '-',
                     '작물': log.cropsDisplay || '-',
                     '면적(m²)': log.area || '-',
@@ -3211,11 +3292,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         ws['!cols'] = [
             { wch: 14 },  // 접수번호
             { wch: 12 },  // 접수일자
+            { wch: 8 },   // 법인여부
+            { wch: 15 },  // 생년월일/법인번호
             { wch: 8 },   // 구분
             { wch: 12 },  // 목적(용도)
             { wch: 10 },  // 성명
             { wch: 15 },  // 전화번호
-            { wch: 35 },  // 주소
+            { wch: 8 },   // 우편번호
+            { wch: 12 },  // 시도
+            { wch: 10 },  // 시군구
+            { wch: 10 },  // 읍면동
+            { wch: 25 },  // 나머지주소
             { wch: 30 },  // 필지 주소
             { wch: 15 },  // 작물
             { wch: 10 },  // 면적
@@ -3326,7 +3413,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // ========================================
-    // Helper Functions
+    // 헬퍼 함수들
     // ========================================
     function saveLogs() {
         // 년도별 스토리지에 저장
@@ -3503,6 +3590,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             const zipcode = zipMatch ? zipMatch[1] : '';
             const addressOnly = zipMatch ? addressFull.replace(zipMatch[0], '') : addressFull;
 
+            // 법인여부 및 생년월일/법인번호
+            const applicantType = row.applicantType || '개인';
+            const birthOrCorp = applicantType === '법인' ? (row.corpNumber || '-') : (row.birthDate || '-');
+
             // XSS 방지: 사용자 입력 데이터 이스케이프
             const safeName = escapeHTML(row.name);
             const safeAddress = escapeHTML(addressOnly || '-');
@@ -3525,10 +3616,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </td>
                 <td>${escapeHTML(row._displayNumber)}</td>
                 <td>${escapeHTML(row.date)}</td>
+                <td class="col-applicant-type col-hidden">${escapeHTML(applicantType)}</td>
+                <td class="col-birth-corp col-hidden">${escapeHTML(birthOrCorp)}</td>
                 <td>${escapeHTML(row.subCategory || '-')}</td>
                 <td>${escapeHTML(row.purpose || '-')}</td>
                 <td>${safeName}</td>
-                <td class="col-zipcode">${escapeHTML(zipcode || '-')}</td>
+                <td class="col-zipcode col-hidden">${escapeHTML(zipcode || '-')}</td>
                 <td title="${safeAddress}">${safeAddress}</td>
                 <td>${safeProducerName}</td>
                 <td title="${safeProducerAddress}">${safeProducerAddress}</td>

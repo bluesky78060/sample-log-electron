@@ -4,13 +4,17 @@
 (function() {
     'use strict';
 
+    // 상수 참조 (constants.js에서 로드)
+    const TOAST_DURATION = window.TIMER?.TOAST_DURATION || 3000;
+    const TOAST_FADE_OUT = window.TIMER?.TOAST_FADE_OUT || 300;
+
     /**
      * Toast 알림 표시
      * @param {string} message - 표시할 메시지
      * @param {string} type - 타입 (success, error, warning, info)
-     * @param {number} duration - 표시 시간 (ms), 기본값 3000
+     * @param {number} duration - 표시 시간 (ms), 기본값 TOAST_DURATION
      */
-    function showToast(message, type = 'success', duration = 3000) {
+    function showToast(message, type = 'success', duration = TOAST_DURATION) {
         const container = document.getElementById('toastContainer');
         if (!container) {
             console.warn('Toast container not found');
@@ -35,8 +39,8 @@
 
         // 지정된 시간 후 자동 제거
         setTimeout(() => {
-            toast.style.animation = 'toastIn 0.3s ease reverse';
-            setTimeout(() => toast.remove(), 300);
+            toast.style.animation = `toastIn ${TOAST_FADE_OUT}ms ease reverse`;
+            setTimeout(() => toast.remove(), TOAST_FADE_OUT);
         }, duration);
     }
 

@@ -8,6 +8,12 @@
   // 상태 변수
   // ========================================
 
+  /** @type {boolean} 디버그 모드 (프로덕션에서는 false) */
+  const DEBUG_LABEL = false;
+
+  /** 조건부 로깅 */
+  const log = (...args) => DEBUG_LABEL && console.log('[Label]', ...args);
+
   /** @type {Object[]|null} */
   let labelData = null;
 
@@ -134,7 +140,7 @@
     }
     lastLabelStatus = null;
 
-    console.log('라벨 파일 처리 시작:', file.name);
+    log('파일 처리 시작:', file.name);
 
     // 진행 상황 표시
     document.getElementById('labelUploadProgress').classList.remove('hidden');
@@ -170,7 +176,7 @@
       labelData = { headers, rows };
       currentLabelJobId = 'client_' + Date.now();
 
-      console.log('라벨 데이터 생성 완료:', { headers, rowCount: rows.length });
+      log('데이터 생성 완료:', { headers, rowCount: rows.length });
 
       // 완료
       updateProgressCard({ progress: 100, steps: cloneProgressSteps('export') }, '처리 완료!');
@@ -186,7 +192,7 @@
       alert('파일 처리 중 오류가 발생했습니다: ' + error.message);
 
       // 오류 발생 시 샘플 데이터로 대체
-      console.log('샘플 데이터로 대체');
+      log('샘플 데이터로 대체');
       lastLabelStatus = null;
       labelData = generateSampleData();
       showLabelDataPreview();
@@ -787,7 +793,7 @@
       if (passedData) {
         const data = JSON.parse(passedData);
         if (Array.isArray(data) && data.length > 0) {
-          console.log('메인 앱에서 전달된 데이터:', data.length, '건');
+          log('메인 앱에서 전달된 데이터:', data.length, '건');
 
           // 데이터 저장 후 localStorage 클리어
           labelData = data;
