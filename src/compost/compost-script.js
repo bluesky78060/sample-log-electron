@@ -83,6 +83,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     const currentYear = new Date().getFullYear().toString();
     await FileAPI.init(currentYear);
 
+    // Firebase 초기화 (백그라운드에서 실행)
+    if (window.firebaseConfig?.initialize) {
+        window.firebaseConfig.initialize().then(() => {
+            if (window.firestoreDb?.init) {
+                window.firestoreDb.init().then(() => {
+                    log('☁️ Firebase 초기화 완료');
+                }).catch(err => console.warn('Firestore init failed:', err));
+            }
+        }).catch(err => console.warn('Firebase init failed:', err));
+    }
+
     // 자동 저장 초기화 (공통 모듈 사용)
     await SampleUtils.initAutoSave({
         moduleKey: 'compost',
