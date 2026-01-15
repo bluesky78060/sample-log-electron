@@ -210,17 +210,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         return null;
     }
 
-    // 년도별 데이터 로드 함수 (Firebase 우선)
+    // 년도별 데이터 로드 함수 (로컬 우선, Firebase 백업)
     async function loadYearData(year) {
         const yearStorageKey = getStorageKey(year);
 
-        // Firebase에서 먼저 로드 시도
-        const cloudData = await loadFromFirebase(year);
-        if (cloudData && cloudData.length > 0) {
-            sampleLogs = cloudData;
-        } else {
-            // Firebase에 데이터가 없으면 localStorage에서 로드
-            sampleLogs = SampleUtils.safeParseJSON(yearStorageKey, []);
+        // 1. localStorage에서 먼저 로드
+        sampleLogs = SampleUtils.safeParseJSON(yearStorageKey, []);
+
+        // 2. 로컬에 데이터가 없으면 Firebase에서 로드 시도
+        if (sampleLogs.length === 0) {
+            const cloudData = await loadFromFirebase(year);
+            if (cloudData && cloudData.length > 0) {
+                sampleLogs = cloudData;
+                localStorage.setItem(yearStorageKey, JSON.stringify(sampleLogs));
+                log('☁️ Firebase에서 데이터 복원:', sampleLogs.length, '건');
+            }
         }
 
         renderLogs(sampleLogs);
@@ -710,25 +714,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ========================================
     function saveLogs() {
         const yearStorageKey = getStorageKey(selectedYear);
+
+        // 1. ID가 없는 항목에 ID 추가 (로컬 저장 전에 처리)
+        sampleLogs = sampleLogs.map(item => ({
+            ...item,
+            id: item.id || (Date.now().toString(36) + Math.random().toString(36).substr(2, 9))
+        }));
+
+        // 2. 로컬(localStorage)에 먼저 저장
         localStorage.setItem(yearStorageKey, JSON.stringify(sampleLogs));
         updateRecordCount();
+        log('💾 로컬 저장 완료:', sampleLogs.length, '건');
 
-        // Firebase 클라우드 동기화
+        // 3. Firebase 클라우드에 마이그레이션 (백그라운드)
         if (window.firestoreDb?.isEnabled()) {
-            const dataWithIds = sampleLogs.map(item => ({
-                ...item,
-                id: item.id || (Date.now().toString(36) + Math.random().toString(36).substr(2, 9))
-            }));
-            window.firestoreDb.batchSave('compost', parseInt(selectedYear), dataWithIds)
-                .then(() => log('☁️ Firebase 동기화 완료'))
-                .catch(err => console.error('Firebase 동기화 실패:', err));
+            window.firestoreDb.batchSave('compost', parseInt(selectedYear), sampleLogs)
+                .then(() => log('☁️ Firebase 마이그레이션 완료'))
+                .catch(err => {
+                    console.error('Firebase 마이그레이션 실패:', err);
+                    showToast('클라우드 동기화 실패', 'error');
+                });
         }
 
-        // 자동 저장 (Electron 환경)
+        // 4. 자동 저장 (Electron 환경)
         if (window.isElectron && FileAPI.autoSavePath && document.getElementById('autoSaveToggle')?.checked) {
             const autoSaveContent = JSON.stringify(sampleLogs, null, 2);
             FileAPI.autoSave(autoSaveContent);
-            log('💾 퇴·액비 데이터 자동 저장');
         }
     }
 
@@ -1840,6 +1851,51 @@ document.addEventListener('DOMContentLoaded', async () => {
         log: log
     });
 
+    // ========================================
+    // 클라우드 마이그레이션 버튼
+    // ========================================
+    const migrateBtn = document.getElementById('migrateBtn');
+    if (migrateBtn) {
+        migrateBtn.addEventListener('click', async () => {
+            if (!window.firestoreDb?.isEnabled()) {
+                showToast('Firebase가 설정되지 않았습니다.', 'error');
+                return;
+            }
+
+            if (sampleLogs.length === 0) {
+                showToast('마이그레이션할 데이터가 없습니다.', 'warning');
+                return;
+            }
+
+            if (!confirm(`현재 ${selectedYear}년 데이터 ${sampleLogs.length}건을 클라우드에 업로드하시겠습니까?`)) {
+                return;
+            }
+
+            try {
+                migrateBtn.disabled = true;
+                migrateBtn.textContent = '⏳';
+
+                const dataWithIds = sampleLogs.map(item => ({
+                    ...item,
+                    id: item.id || (Date.now().toString(36) + Math.random().toString(36).substr(2, 9))
+                }));
+
+                await window.firestoreDb.batchSave('compost', parseInt(selectedYear), dataWithIds);
+
+                sampleLogs = dataWithIds;
+                localStorage.setItem(getStorageKey(selectedYear), JSON.stringify(sampleLogs));
+
+                showToast(`${dataWithIds.length}건 클라우드 업로드 완료`, 'success');
+            } catch (error) {
+                console.error('마이그레이션 실패:', error);
+                showToast('클라우드 업로드 실패: ' + error.message, 'error');
+            } finally {
+                migrateBtn.disabled = false;
+                migrateBtn.textContent = '☁️';
+            }
+        });
+    }
+
     // Electron 환경에서 자동 저장 파일 로드
     log('🔍 자동 저장 로드 체크:', { isElectron: window.isElectron, autoSavePath: FileAPI.autoSavePath });
     if (window.isElectron && FileAPI.autoSavePath) {
@@ -1998,27 +2054,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 초기화
     // ========================================
 
-    // 초기 데이터 로드 (Firebase 우선, 비동기)
+    // 초기 데이터 로드 (로컬 우선, Firebase 백업)
     (async function initializeData() {
         // Firebase/storageManager 초기화 대기
         if (window.storageManager?.init) {
             await window.storageManager.init();
         }
-        // Firebase에서 데이터 로드 시도
-        const cloudData = await loadFromFirebase(selectedYear);
-        if (cloudData && cloudData.length > 0) {
-            sampleLogs = cloudData;
-            renderLogs(sampleLogs);
-            updateRecordCount();
-            const receptionInput = document.getElementById('receptionNumber');
-            if (receptionInput) {
-                receptionInput.value = generateNextReceptionNumber();
+
+        // 로컬에 데이터가 없으면 Firebase에서 로드 시도
+        if (sampleLogs.length === 0) {
+            const cloudData = await loadFromFirebase(selectedYear);
+            if (cloudData && cloudData.length > 0) {
+                sampleLogs = cloudData;
+                localStorage.setItem(getStorageKey(selectedYear), JSON.stringify(sampleLogs));
+                renderLogs(sampleLogs);
+                updateRecordCount();
+                const receptionInput = document.getElementById('receptionNumber');
+                if (receptionInput) {
+                    receptionInput.value = generateNextReceptionNumber();
+                }
+                log('☁️ 초기 데이터: Firebase에서 복원 완료 -', sampleLogs.length, '건');
+            } else {
+                renderLogs(sampleLogs);
+                log('📭 초기 데이터: 데이터 없음');
             }
-            log('☁️ 초기 데이터: Firebase에서 로드 완료 -', sampleLogs.length, '건');
-        } else if (sampleLogs.length === 0) {
-            // localStorage에도 데이터가 없으면 빈 상태 표시
-            renderLogs(sampleLogs);
-            log('📭 초기 데이터: 데이터 없음');
+        } else {
+            log('💾 초기 데이터: localStorage에서 로드 완료 -', sampleLogs.length, '건');
         }
     })();
 

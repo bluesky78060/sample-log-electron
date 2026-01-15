@@ -762,18 +762,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         return null;
     }
 
-    // 년도별 데이터 로드 함수 (Firebase 우선)
+    // 년도별 데이터 로드 함수 (로컬 우선, Firebase 백업)
     async function loadYearData(year) {
         const yearStorageKey = getStorageKey(year);
 
-        // Firebase에서 먼저 로드 시도
-        const cloudData = await loadFromFirebase(year);
-        if (cloudData && cloudData.length > 0) {
-            sampleLogs = cloudData;
-            // localStorage에도 저장 (이미 loadFromFirebase에서 저장됨)
-        } else {
-            // Firebase에 데이터가 없으면 localStorage에서 로드
-            sampleLogs = SampleUtils.safeParseJSON(yearStorageKey, []);
+        // 1. localStorage에서 먼저 로드
+        sampleLogs = SampleUtils.safeParseJSON(yearStorageKey, []);
+
+        // 2. 로컬에 데이터가 없으면 Firebase에서 로드 시도
+        if (sampleLogs.length === 0) {
+            const cloudData = await loadFromFirebase(year);
+            if (cloudData && cloudData.length > 0) {
+                sampleLogs = cloudData;
+                localStorage.setItem(yearStorageKey, JSON.stringify(sampleLogs));
+                log('☁️ Firebase에서 데이터 복원:', sampleLogs.length, '건');
+            }
         }
 
         renderLogs(sampleLogs);
@@ -839,7 +842,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // ========================================
-    // 초기 데이터 로드 (Firebase 우선)
+    // 초기 데이터 로드 (로컬 우선, Firebase 백업)
     // ========================================
     (async () => {
         // Firebase/storageManager 초기화 대기
@@ -847,43 +850,39 @@ document.addEventListener('DOMContentLoaded', async () => {
             await window.storageManager.init();
         }
 
-        // Firebase에서 데이터 로드 시도
-        const cloudData = await loadFromFirebase(selectedYear);
-        if (cloudData && cloudData.length > 0) {
-            sampleLogs = cloudData;
+        // 1. localStorage에 데이터가 있으면 먼저 사용
+        if (sampleLogs.length > 0) {
+            log('💾 초기 데이터: localStorage에서 로드 완료 -', sampleLogs.length, '건');
             renderLogs(sampleLogs);
             receptionNumberInput.value = generateNextReceptionNumber();
-            log('☁️ 초기 데이터: Firebase에서 로드 완료 -', sampleLogs.length, '건');
-            return; // Firebase 데이터가 있으면 자동 저장 파일 체크 스킵
+            return;
         }
 
-        // Firebase에 데이터가 없으면 Electron 환경에서 자동 저장 파일 체크
+        // 2. localStorage에 데이터가 없으면 Electron 자동 저장 파일 체크
         if (window.isElectron && FileAPI.autoSavePath) {
             try {
                 const autoSaveData = await window.loadFromAutoSaveFile();
                 if (autoSaveData && autoSaveData.length > 0) {
-                    // localStorage에 데이터가 없거나 자동 저장 파일이 더 많은 데이터를 가진 경우
-                    if (sampleLogs.length === 0) {
-                        sampleLogs = autoSaveData;
-                        localStorage.setItem(getStorageKey(selectedYear), JSON.stringify(sampleLogs));
-                        log('📂 자동 저장 파일에서 데이터 복원 완료:', sampleLogs.length, '건');
-                    } else if (autoSaveData.length > sampleLogs.length) {
-                        // 자동 저장 파일에 더 많은 데이터가 있으면 병합 여부 확인
-                        const mergeConfirm = confirm(
-                            `자동 저장 파일에 ${autoSaveData.length}건의 데이터가 있습니다.\n` +
-                            `현재 ${sampleLogs.length}건의 데이터가 로드되어 있습니다.\n\n` +
-                            `자동 저장 파일에서 데이터를 불러오시겠습니까?`
-                        );
-                        if (mergeConfirm) {
-                            sampleLogs = autoSaveData;
-                            localStorage.setItem(getStorageKey(selectedYear), JSON.stringify(sampleLogs));
-                            log('📂 자동 저장 파일에서 데이터 교체 완료:', sampleLogs.length, '건');
-                        }
-                    }
+                    sampleLogs = autoSaveData;
+                    localStorage.setItem(getStorageKey(selectedYear), JSON.stringify(sampleLogs));
+                    log('📂 자동 저장 파일에서 데이터 복원 완료:', sampleLogs.length, '건');
+                    renderLogs(sampleLogs);
+                    receptionNumberInput.value = generateNextReceptionNumber();
+                    return;
                 }
             } catch (error) {
                 console.error('자동 저장 파일 로드 중 오류:', error);
             }
+        }
+
+        // 3. 로컬에 데이터가 없으면 Firebase에서 로드 시도
+        const cloudData = await loadFromFirebase(selectedYear);
+        if (cloudData && cloudData.length > 0) {
+            sampleLogs = cloudData;
+            localStorage.setItem(getStorageKey(selectedYear), JSON.stringify(sampleLogs));
+            log('☁️ 초기 데이터: Firebase에서 복원 완료 -', sampleLogs.length, '건');
+        } else {
+            log('📭 초기 데이터: 데이터 없음');
         }
 
         // 렌더링
@@ -3520,25 +3519,77 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // ========================================
+    // 클라우드 마이그레이션 버튼
+    // ========================================
+    const migrateBtn = document.getElementById('migrateBtn');
+    if (migrateBtn) {
+        migrateBtn.addEventListener('click', async () => {
+            if (!window.firestoreDb?.isEnabled()) {
+                showToast('Firebase가 설정되지 않았습니다.', 'error');
+                return;
+            }
+
+            if (sampleLogs.length === 0) {
+                showToast('마이그레이션할 데이터가 없습니다.', 'warning');
+                return;
+            }
+
+            if (!confirm(`현재 ${selectedYear}년 데이터 ${sampleLogs.length}건을 클라우드에 업로드하시겠습니까?`)) {
+                return;
+            }
+
+            try {
+                migrateBtn.disabled = true;
+                migrateBtn.textContent = '⏳';
+
+                const dataWithIds = sampleLogs.map(item => ({
+                    ...item,
+                    id: item.id || (Date.now().toString(36) + Math.random().toString(36).substr(2, 9))
+                }));
+
+                await window.firestoreDb.batchSave('pesticide', parseInt(selectedYear), dataWithIds);
+
+                sampleLogs = dataWithIds;
+                localStorage.setItem(getStorageKey(selectedYear), JSON.stringify(sampleLogs));
+
+                showToast(`${dataWithIds.length}건 클라우드 업로드 완료`, 'success');
+            } catch (error) {
+                console.error('마이그레이션 실패:', error);
+                showToast('클라우드 업로드 실패: ' + error.message, 'error');
+            } finally {
+                migrateBtn.disabled = false;
+                migrateBtn.textContent = '☁️';
+            }
+        });
+    }
+
+    // ========================================
     // 헬퍼 함수들
     // ========================================
     function saveLogs() {
-        // 년도별 스토리지에 저장
         const yearStorageKey = getStorageKey(selectedYear);
-        localStorage.setItem(yearStorageKey, JSON.stringify(sampleLogs));
 
-        // Firebase 클라우드 동기화
+        // 1. ID가 없는 항목에 ID 추가 (로컬 저장 전에 처리)
+        sampleLogs = sampleLogs.map(item => ({
+            ...item,
+            id: item.id || (Date.now().toString(36) + Math.random().toString(36).substr(2, 9))
+        }));
+
+        // 2. 로컬(localStorage)에 먼저 저장
+        localStorage.setItem(yearStorageKey, JSON.stringify(sampleLogs));
+        log('💾 로컬 저장 완료:', sampleLogs.length, '건');
+
+        // 3. Firebase 클라우드에 마이그레이션 (백그라운드)
         if (window.firestoreDb?.isEnabled()) {
-            const dataWithIds = sampleLogs.map(item => ({
-                ...item,
-                id: item.id || (Date.now().toString(36) + Math.random().toString(36).substr(2, 9))
-            }));
-            window.firestoreDb.batchSave('pesticide', parseInt(selectedYear), dataWithIds)
-                .then(() => log('☁️ Firebase 동기화 완료'))
-                .catch(err => console.error('Firebase 동기화 실패:', err));
+            window.firestoreDb.batchSave('pesticide', parseInt(selectedYear), sampleLogs)
+                .then(() => log('☁️ Firebase 마이그레이션 완료'))
+                .catch(err => {
+                    console.error('Firebase 마이그레이션 실패:', err);
+                    showToast('클라우드 동기화 실패', 'error');
+                });
         }
 
-        // 자동 저장 실행 (Electron: FileAPI.autoSavePath, Web: autoSaveFileHandle)
+        // 4. 자동 저장 실행 (Electron: FileAPI.autoSavePath, Web: autoSaveFileHandle)
         const autoSaveEnabled = localStorage.getItem('pesticideAutoSaveEnabled') === 'true';
         if (autoSaveEnabled && (window.isElectron ? FileAPI.autoSavePath : autoSaveFileHandle)) {
             autoSaveToFile();
