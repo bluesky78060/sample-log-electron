@@ -414,14 +414,16 @@ async function initAutoSave(options) {
                 }
             }, 500);
         } else {
-            // 이전에 폴더를 선택한 경우, 자동 저장 경로 설정 및 활성화
+            // 이전에 폴더를 선택한 경우, 자동 저장 경로 설정
             FileAPI.autoSavePath = await window.electronAPI.getAutoSavePath(moduleKey, currentYear);
-            localStorage.setItem(enabledKey, 'true');
+
+            // 사용자가 설정한 자동저장 상태 복원 (기본값: true - 최초 폴더 선택 시 true로 설정됨)
+            const autoSaveEnabled = localStorage.getItem(enabledKey) !== 'false';
             if (autoSaveToggle) {
-                autoSaveToggle.checked = true;
+                autoSaveToggle.checked = autoSaveEnabled;
             }
-            updateAutoSaveStatus('active');
-            log(`📁 ${moduleName} 자동 저장 경로:`, FileAPI.autoSavePath);
+            updateAutoSaveStatus(autoSaveEnabled ? 'active' : 'inactive');
+            log(`📁 ${moduleName} 자동 저장 경로:`, FileAPI.autoSavePath, '활성화:', autoSaveEnabled);
         }
     } else {
         // Web 환경 - 자동저장 상태 복원

@@ -740,6 +740,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (window.storageManager?.isCloudEnabled()) {
                 const cloudData = await window.storageManager.load('pesticide', parseInt(year), getStorageKey(year));
                 if (cloudData && cloudData.length > 0) {
+                    // localStorage에도 저장 (캐시)
+                    localStorage.setItem(getStorageKey(year), JSON.stringify(cloudData));
                     log('☁️ Firebase에서 데이터 로드:', cloudData.length, '건');
                     return cloudData;
                 }
@@ -768,6 +770,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const cloudData = await loadFromFirebase(year);
         if (cloudData && cloudData.length > 0) {
             sampleLogs = cloudData;
+            // localStorage에도 저장 (이미 loadFromFirebase에서 저장됨)
         } else {
             // Firebase에 데이터가 없으면 localStorage에서 로드
             sampleLogs = SampleUtils.safeParseJSON(yearStorageKey, []);
@@ -3677,7 +3680,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const addressFull = row.address || '';
             const zipMatch = addressFull.match(/^\((\d{5})\)\s*/);
-            const zipcode = zipMatch ? zipMatch[1] : '';
+            const zipcode = row.addressPostcode || (zipMatch ? zipMatch[1] : '');
             const addressOnly = zipMatch ? addressFull.replace(zipMatch[0], '') : addressFull;
 
             // 법인여부 및 생년월일/법인번호

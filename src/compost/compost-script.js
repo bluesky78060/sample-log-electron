@@ -188,6 +188,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (window.storageManager?.isCloudEnabled()) {
                 const cloudData = await window.storageManager.load('compost', parseInt(year), getStorageKey(year));
                 if (cloudData && cloudData.length > 0) {
+                    // localStorage에도 저장 (캐시)
+                    localStorage.setItem(getStorageKey(year), JSON.stringify(cloudData));
                     log('☁️ Firebase에서 데이터 로드:', cloudData.length, '건');
                     return cloudData;
                 }

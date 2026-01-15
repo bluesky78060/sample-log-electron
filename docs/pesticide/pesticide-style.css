@@ -1082,3 +1082,18 @@
 [data-theme="dark"] .pesticide-page #addressModal .modal-overlay {
     background: rgba(0, 0, 0, 0.8) !important;
 }
+
+
+/* ========================================
+   접수 목록 테이블 - 숨김 컬럼
+   ======================================== */
+
+/* 기본적으로 숨김 컬럼 숨기기 */
+.pesticide-navbar ~ .main-content .col-hidden {
+    display: none;
+}
+
+/* 전체 보기 모드에서 숨김 컬럼 표시 */
+.pesticide-navbar ~ .main-content .data-table.full-view .col-hidden {
+    display: table-cell;
+}
