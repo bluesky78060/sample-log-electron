@@ -3383,6 +3383,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const migrateBtn = document.getElementById('migrateBtn');
     if (migrateBtn) {
         migrateBtn.addEventListener('click', async () => {
+            // Firebase 초기화 시도
+            if (window.firebaseConfig?.initialize) {
+                await window.firebaseConfig.initialize();
+            }
+            if (window.firestoreDb?.init) {
+                await window.firestoreDb.init();
+            }
+
             if (!window.firestoreDb?.isEnabled()) {
                 showToast('Firebase가 설정되지 않았습니다.', 'error');
                 return;
