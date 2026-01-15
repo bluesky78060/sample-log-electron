@@ -706,6 +706,235 @@
         .sync-icon {
             font-size: 0.875rem;
         }
+
+        /* 동기화 버튼 */
+        .sync-btn {
+            position: fixed;
+            top: 20px;
+            right: 280px;
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 1000;
+            animation: fadeIn 1s ease-out 0.85s both;
+            cursor: pointer;
+            border: none;
+        }
+
+        .sync-btn:hover {
+            transform: scale(1.15);
+            box-shadow: 0 8px 25px rgba(34, 197, 94, 0.5);
+        }
+
+        .sync-btn:hover span {
+            animation: spin 1s linear infinite;
+        }
+
+        .sync-btn.syncing span {
+            animation: spin 1s linear infinite;
+        }
+
+        .sync-btn.syncing {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .sync-btn span {
+            font-size: 1.5rem;
+            transition: transform 0.3s ease;
+        }
+
+        .sync-btn .tooltip {
+            position: absolute;
+            right: 60px;
+            background: #1e293b;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform: translateX(10px);
+        }
+
+        .sync-btn .tooltip::after {
+            content: '';
+            position: absolute;
+            right: -6px;
+            top: 50%;
+            transform: translateY(-50%);
+            border: 6px solid transparent;
+            border-left-color: #1e293b;
+        }
+
+        .sync-btn:hover .tooltip {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(0);
+        }
+
+        [data-theme="dark"] .sync-btn {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4);
+        }
+
+        [data-theme="dark"] .sync-btn:hover {
+            box-shadow: 0 8px 25px rgba(34, 197, 94, 0.5);
+        }
+
+        [data-theme="dark"] .sync-btn.syncing {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+        }
+
+        /* 동기화 결과 모달 */
+        .sync-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .sync-modal.show {
+            display: flex;
+        }
+
+        .sync-modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        [data-theme="dark"] .sync-modal-content {
+            background: #1e293b;
+            color: #f1f5f9;
+        }
+
+        .sync-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .sync-modal-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .sync-modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #64748b;
+            transition: color 0.2s ease;
+        }
+
+        .sync-modal-close:hover {
+            color: #1e293b;
+        }
+
+        [data-theme="dark"] .sync-modal-close:hover {
+            color: #f1f5f9;
+        }
+
+        .sync-result-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            background: #f8fafc;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+        }
+
+        [data-theme="dark"] .sync-result-item {
+            background: #334155;
+        }
+
+        .sync-result-type {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 500;
+        }
+
+        .sync-result-count {
+            font-size: 0.875rem;
+            color: #64748b;
+        }
+
+        .sync-result-count.success {
+            color: #22c55e;
+        }
+
+        .sync-result-count.error {
+            color: #ef4444;
+        }
+
+        .sync-modal-footer {
+            margin-top: 1.5rem;
+            text-align: center;
+        }
+
+        .sync-modal-btn {
+            padding: 0.75rem 2rem;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .sync-modal-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+        }
     </style>
 </head>
 
@@ -731,6 +960,12 @@
         <span class="theme-icon">🌙</span>
     </div>
 
+    <!-- 동기화 버튼 -->
+    <button class="sync-btn" id="syncBtn" title="클라우드 동기화">
+        <span>🔄</span>
+        <div class="tooltip">클라우드 동기화</div>
+    </button>
+
     <!-- 설정 버튼 -->
     <a href="settings/index.html" class="settings-btn">
         <span>⚙️</span>
@@ -742,6 +977,25 @@
         <span>📖</span>
         <div class="tooltip">사용 설명서</div>
     </a>
+
+    <!-- 동기화 결과 모달 -->
+    <div class="sync-modal" id="syncModal">
+        <div class="sync-modal-content">
+            <div class="sync-modal-header">
+                <div class="sync-modal-title">
+                    <span>☁️</span>
+                    <span>동기화 결과</span>
+                </div>
+                <button class="sync-modal-close" id="syncModalClose">&times;</button>
+            </div>
+            <div class="sync-modal-body" id="syncModalBody">
+                <!-- 동기화 결과가 여기에 표시됩니다 -->
+            </div>
+            <div class="sync-modal-footer">
+                <button class="sync-modal-btn" id="syncModalOk">확인</button>
+            </div>
+        </div>
+    </div>
 
     <div class="container">
         <div class="header">
@@ -794,7 +1048,7 @@
 
         <div class="footer">
             <p>봉화군농업기술센터 안전성분석센터</p>
-            <p class="version-info" id="appVersion">v1.7.0</p>
+            <p class="version-info" id="appVersion">v1.7.6</p>
             <!-- 클라우드 동기화 상태 -->
             <p class="sync-status" id="syncStatus" style="display: none;">
                 <span class="sync-icon">☁️</span>
@@ -859,6 +1113,134 @@
         // 온라인/오프라인 상태 변경 감지
         window.addEventListener('online', updateSyncStatus);
         window.addEventListener('offline', updateSyncStatus);
+
+        // ========================================
+        // 전체 동기화 기능
+        // ========================================
+        const SAMPLE_TYPES = [
+            { type: 'soil', name: '토양', icon: '🌱', storagePrefix: 'soilSampleLogs' },
+            { type: 'water', name: '수질분석', icon: '💧', storagePrefix: 'waterSampleLogs' },
+            { type: 'compost', name: '퇴·액비', icon: '🐄', storagePrefix: 'compostSampleLogs' },
+            { type: 'heavyMetal', name: '토양 중금속', icon: '⚗️', storagePrefix: 'heavyMetalSampleLogs' },
+            { type: 'pesticide', name: '잔류농약', icon: '🧪', storagePrefix: 'pesticideSampleLogs' }
+        ];
+
+        const MIN_YEAR = 2020;
+        const syncBtn = document.getElementById('syncBtn');
+        const syncModal = document.getElementById('syncModal');
+        const syncModalBody = document.getElementById('syncModalBody');
+        const syncModalClose = document.getElementById('syncModalClose');
+        const syncModalOk = document.getElementById('syncModalOk');
+
+        // 모달 닫기
+        function closeSyncModal() {
+            syncModal.classList.remove('show');
+        }
+
+        syncModalClose?.addEventListener('click', closeSyncModal);
+        syncModalOk?.addEventListener('click', closeSyncModal);
+        syncModal?.addEventListener('click', (e) => {
+            if (e.target === syncModal) closeSyncModal();
+        });
+
+        // 전체 동기화 실행
+        async function syncAllData() {
+            if (!window.firestoreDb?.isEnabled()) {
+                alert('Firebase가 설정되지 않았습니다.\n설정 페이지에서 Firebase를 설정해주세요.');
+                return;
+            }
+
+            syncBtn.classList.add('syncing');
+            const currentYear = new Date().getFullYear();
+            const results = [];
+
+            try {
+                for (const sampleType of SAMPLE_TYPES) {
+                    let totalLoaded = 0;
+                    let yearsWithData = [];
+
+                    // 모든 연도 동기화 (2020년부터 현재 연도까지)
+                    for (let year = MIN_YEAR; year <= currentYear; year++) {
+                        try {
+                            const cloudData = await window.firestoreDb.getAll(sampleType.type, year);
+                            const storageKey = `${sampleType.storagePrefix}_${year}`;
+
+                            if (cloudData && cloudData.length > 0) {
+                                // Firebase 데이터를 localStorage에 저장
+                                localStorage.setItem(storageKey, JSON.stringify(cloudData));
+                                totalLoaded += cloudData.length;
+                                yearsWithData.push({ year, count: cloudData.length });
+                            }
+                        } catch (err) {
+                            console.error(`${sampleType.name} ${year}년 동기화 오류:`, err);
+                        }
+                    }
+
+                    results.push({
+                        type: sampleType.type,
+                        name: sampleType.name,
+                        icon: sampleType.icon,
+                        totalCount: totalLoaded,
+                        yearsWithData: yearsWithData,
+                        success: true
+                    });
+                }
+
+                // 결과 표시
+                showSyncResults(results);
+
+            } catch (error) {
+                console.error('동기화 오류:', error);
+                alert('동기화 중 오류가 발생했습니다: ' + error.message);
+            } finally {
+                syncBtn.classList.remove('syncing');
+            }
+        }
+
+        // 동기화 결과 표시
+        function showSyncResults(results) {
+            let totalItems = 0;
+            let html = '';
+
+            results.forEach(result => {
+                totalItems += result.totalCount;
+                const statusClass = result.totalCount > 0 ? 'success' : '';
+                const yearInfo = result.yearsWithData.length > 0
+                    ? result.yearsWithData.map(y => `${y.year}년: ${y.count}건`).join(', ')
+                    : '데이터 없음';
+
+                html += `
+                    <div class="sync-result-item">
+                        <div class="sync-result-type">
+                            <span>${result.icon}</span>
+                            <span>${result.name}</span>
+                        </div>
+                        <div class="sync-result-count ${statusClass}">
+                            ${result.totalCount > 0 ? `${result.totalCount}건 동기화` : '데이터 없음'}
+                        </div>
+                    </div>
+                `;
+            });
+
+            // 총합 표시
+            html += `
+                <div class="sync-result-item" style="margin-top: 1rem; background: linear-gradient(135deg, #22c55e20, #3b82f620);">
+                    <div class="sync-result-type">
+                        <span>📊</span>
+                        <span><strong>총 동기화</strong></span>
+                    </div>
+                    <div class="sync-result-count success">
+                        <strong>${totalItems}건</strong>
+                    </div>
+                </div>
+            `;
+
+            syncModalBody.innerHTML = html;
+            syncModal.classList.add('show');
+        }
+
+        // 동기화 버튼 클릭 이벤트
+        syncBtn?.addEventListener('click', syncAllData);
     </script>
 </body>
 
