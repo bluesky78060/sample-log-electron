@@ -184,6 +184,7 @@ async function deleteDocument(sampleType, year, docId) {
 
 /**
  * 여러 문서 일괄 저장 (배치)
+ * Firestore writeBatch는 최대 500개 작업으로 제한되므로 청크로 나누어 처리
  * @param {string} sampleType - 시료 타입
  * @param {number} year - 연도
  * @param {Array} documents - 저장할 문서 배열 [{id, ...data}]
@@ -199,18 +200,33 @@ async function batchSave(sampleType, year, documents) {
         const collectionName = getCollectionName(sampleType, year);
 
         const { doc, writeBatch, serverTimestamp } = firestore;
-        const batch = writeBatch(db);
 
-        documents.forEach((docData) => {
-            const docRef = doc(db, collectionName, docData.id);
-            batch.set(docRef, {
-                ...docData,
-                updatedAt: serverTimestamp(),
-                syncedAt: serverTimestamp()
-            }, { merge: true });
-        });
+        // Firestore batch는 최대 500개로 제한됨
+        const BATCH_SIZE = 450;
+        const chunks = [];
+        for (let i = 0; i < documents.length; i += BATCH_SIZE) {
+            chunks.push(documents.slice(i, i + BATCH_SIZE));
+        }
 
-        await batch.commit();
+        logFirestore(`배치 저장 시작: ${collectionName} (${documents.length}건, ${chunks.length}개 청크)`);
+
+        for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
+            const chunk = chunks[chunkIndex];
+            const batch = writeBatch(db);
+
+            chunk.forEach((docData) => {
+                const docRef = doc(db, collectionName, docData.id);
+                batch.set(docRef, {
+                    ...docData,
+                    updatedAt: serverTimestamp(),
+                    syncedAt: serverTimestamp()
+                }, { merge: true });
+            });
+
+            await batch.commit();
+            logFirestore(`청크 ${chunkIndex + 1}/${chunks.length} 완료 (${chunk.length}건)`);
+        }
+
         logFirestore(`배치 저장 완료: ${collectionName} (${documents.length}건)`);
         return true;
     } catch (error) {
