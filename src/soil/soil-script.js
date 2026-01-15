@@ -3295,7 +3295,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         XLSX.utils.book_append_sheet(wb, ws, '시료접수대장');
 
         const today = new Date().toISOString().slice(0, 10);
-        const filename = `시료접수대장_${today}.xlsx`;
+        const filename = `토양_접수대장_${today}.xlsx`;
 
         XLSX.writeFile(wb, filename);
     });

@@ -3307,7 +3307,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                         '나머지주소': (addressParts.rest + (log.addressDetail ? ' ' + log.addressDetail : '')).trim() || '-',
                         '필지 주소': parcel.lotAddress || '-',
                         '작물': cropsDisplay,
-                        '면적(m²)': totalArea > 0 ? totalArea : '-',
                         '수령 방법': log.receptionMethod || '-',
                         '비고': log.note || '-',
                         '완료여부': log.isCompleted ? '완료' : '미완료',
@@ -3343,7 +3342,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 '나머지주소': (addressParts.rest + (log.addressDetail ? ' ' + log.addressDetail : '')).trim() || '-',
                                 '필지 주소': subLotAddress,
                                 '작물': subLotCropsDisplay,
-                                '면적(m²)': subLotTotalArea > 0 ? subLotTotalArea : '-',
                                 '수령 방법': log.receptionMethod || '-',
                                 '비고': log.note || '-',
                                 '완료여부': log.isCompleted ? '완료' : '미완료',
@@ -3353,7 +3351,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                 });
             } else {
-                // 기존 데이터 호환
+                // 기존 데이터 호환 (parcels가 없는 단일 레코드)
                 excelData.push({
                     '접수번호': log.receptionNumber,
                     '접수일자': log.date,
@@ -3368,12 +3366,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     '시군구': addressParts.sigungu || '-',
                     '읍면동': addressParts.eupmyeondong || '-',
                     '나머지주소': (addressParts.rest + (log.addressDetail ? ' ' + log.addressDetail : '')).trim() || '-',
-                    '필지 주소': log.lotAddress || '-',
-                    '작물': log.cropsDisplay || '-',
-                    '면적(m²)': log.area || '-',
+                    '필지 주소': log.producerAddress || log.lotAddress || '-',
+                    '작물': log.requestContent || log.cropsDisplay || '-',
                     '수령 방법': log.receptionMethod || '-',
                     '비고': log.note || '-',
-                    '완료여부': log.isCompleted ? '완료' : '미완료',
+                    '완료여부': log.isCompleted || log.completed ? '완료' : '미완료',
                     '등록일시': log.createdAt ? new Date(log.createdAt).toLocaleString('ko-KR') : '-'
                 });
             }
@@ -3398,7 +3395,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             { wch: 25 },  // 나머지주소
             { wch: 30 },  // 필지 주소
             { wch: 15 },  // 작물
-            { wch: 10 },  // 면적
             { wch: 10 },  // 수령 방법
             { wch: 20 },  // 비고
             { wch: 8 },   // 완료여부
@@ -3408,7 +3404,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         XLSX.utils.book_append_sheet(wb, ws, '시료접수대장');
 
         const today = new Date().toISOString().slice(0, 10);
-        const filename = `시료접수대장_${today}.xlsx`;
+        const filename = `잔류농약_접수대장_${today}.xlsx`;
 
         XLSX.writeFile(wb, filename);
     });

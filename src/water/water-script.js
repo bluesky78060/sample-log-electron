@@ -1908,7 +1908,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             ];
 
             XLSX.utils.book_append_sheet(wb, ws, '수질분석 접수');
-            XLSX.writeFile(wb, `수질분석접수_${new Date().toISOString().split('T')[0]}.xlsx`);
+            XLSX.writeFile(wb, `수질분석_접수대장_${new Date().toISOString().split('T')[0]}.xlsx`);
             showToast('엑셀 파일이 저장되었습니다.', 'success');
         });
     }
