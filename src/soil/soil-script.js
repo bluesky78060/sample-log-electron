@@ -2075,6 +2075,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 parcels: [{
                     id: crypto.randomUUID(),
                     lotAddress: parcel.lotAddress,
+                    isMountain: parcel.isMountain || false, // 산 여부
                     subLots: [...parcel.subLots],
                     crops: parcel.crops.map(c => ({ ...c })),
                     category: parcel.category || '', // 필지별 구분 저장
