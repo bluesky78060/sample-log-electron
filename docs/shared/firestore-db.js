@@ -214,10 +214,22 @@ async function batchSave(sampleType, year, documents) {
             const chunk = chunks[chunkIndex];
             const batch = writeBatch(db);
 
-            chunk.forEach((docData) => {
-                const docRef = doc(db, collectionName, docData.id);
+            chunk.forEach((docData, index) => {
+                // ID 유효성 검사 및 변환
+                let docId = docData.id;
+
+                // 숫자형 ID를 문자열로 변환하고 인덱스 추가 (고유성 보장)
+                if (typeof docId === 'number') {
+                    docId = `${docId}_${chunkIndex}_${index}`;
+                } else if (!docId || typeof docId !== 'string' || docId.trim() === '') {
+                    // ID가 없거나 유효하지 않으면 새로 생성
+                    docId = Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+                }
+
+                const docRef = doc(db, collectionName, docId);
                 batch.set(docRef, {
                     ...docData,
+                    id: docId, // 변환된 ID 저장
                     updatedAt: serverTimestamp(),
                     syncedAt: serverTimestamp()
                 }, { merge: true });
