@@ -963,6 +963,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         localStorage.setItem(yearStorageKey, JSON.stringify(sampleLogs));
         updateRecordCount();
 
+        // Firebase 클라우드 동기화
+        if (window.firestoreDb?.isEnabled()) {
+            const dataWithIds = sampleLogs.map(item => ({
+                ...item,
+                id: item.id || (Date.now().toString(36) + Math.random().toString(36).substr(2, 9))
+            }));
+            window.firestoreDb.batchSave('water', parseInt(selectedYear), dataWithIds)
+                .then(() => log('☁️ Firebase 동기화 완료'))
+                .catch(err => console.error('Firebase 동기화 실패:', err));
+        }
+
         // 자동 저장 (Electron 환경)
         if (window.isElectron && FileAPI.autoSavePath && document.getElementById('autoSaveToggle')?.checked) {
             const autoSaveContent = JSON.stringify(sampleLogs, null, 2);

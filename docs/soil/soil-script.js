@@ -3388,6 +3388,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         const yearStorageKey = getStorageKey(selectedYear);
         localStorage.setItem(yearStorageKey, JSON.stringify(sampleLogs));
 
+        // Firebase 클라우드 동기화
+        if (window.firestoreDb?.isEnabled()) {
+            // ID가 없는 항목에 ID 추가
+            const dataWithIds = sampleLogs.map(item => ({
+                ...item,
+                id: item.id || (Date.now().toString(36) + Math.random().toString(36).substr(2, 9))
+            }));
+            window.firestoreDb.batchSave('soil', parseInt(selectedYear), dataWithIds)
+                .then(() => log('☁️ Firebase 동기화 완료'))
+                .catch(err => console.error('Firebase 동기화 실패:', err));
+        }
+
         // 자동 저장 실행 (Electron: FileAPI.autoSavePath, Web: autoSaveFileHandle)
         const autoSaveEnabled = localStorage.getItem('soilAutoSaveEnabled') === 'true';
         if (autoSaveEnabled && (window.isElectron ? FileAPI.autoSavePath : autoSaveFileHandle)) {
