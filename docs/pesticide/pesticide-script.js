@@ -2712,6 +2712,24 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
+        // 판정 버튼 (적합/부적합 토글)
+        if (e.target.classList.contains('btn-result')) {
+            const id = e.target.dataset.id;
+            const log = sampleLogs.find(l => String(l.id) === id);
+            if (log) {
+                // 판정 결과 토글 (미판정 → 적합 → 부적합 → 미판정)
+                if (!log.testResult || log.testResult === '') {
+                    log.testResult = 'pass';  // 미판정 → 적합
+                } else if (log.testResult === 'pass') {
+                    log.testResult = 'fail';  // 적합 → 부적합
+                } else {
+                    log.testResult = '';      // 부적합 → 미판정
+                }
+                saveLogs();
+                renderLogs(sampleLogs);
+            }
+        }
+
         // 삭제 버튼
         if (e.target.classList.contains('btn-delete')) {
             const id = e.target.dataset.id;
@@ -3701,6 +3719,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <td class="col-complete">
                     <button class="btn-complete ${isCompleted ? 'completed' : ''}" data-id="${escapeHTML(row.id)}" title="${isCompleted ? '완료 취소' : '완료'}">
                         ${isCompleted ? '✔' : ''}
+                    </button>
+                </td>
+                <td class="col-result">
+                    <button class="btn-result ${row.testResult === 'pass' ? 'pass' : row.testResult === 'fail' ? 'fail' : ''}"
+                            data-id="${escapeHTML(row.id)}"
+                            title="${row.testResult === 'pass' ? '불검출' : row.testResult === 'fail' ? '검출' : '미판정 (클릭하여 변경)'}">
+                        ${row.testResult === 'pass' ? '불검출' : row.testResult === 'fail' ? '검출' : '-'}
                     </button>
                 </td>
                 <td>${escapeHTML(row._displayNumber)}</td>

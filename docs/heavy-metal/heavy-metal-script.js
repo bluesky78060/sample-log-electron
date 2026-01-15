@@ -928,6 +928,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                         ${logItem.isCompleted ? '✓' : '○'}
                     </button>
                 </td>
+                <td class="col-result">
+                    <button class="btn-result ${logItem.testResult === 'pass' ? 'pass' : logItem.testResult === 'fail' ? 'fail' : ''}"
+                            title="${logItem.testResult === 'pass' ? '적합' : logItem.testResult === 'fail' ? '부적합' : '미판정 (클릭하여 변경)'}">
+                        ${logItem.testResult === 'pass' ? '적합' : logItem.testResult === 'fail' ? '부적합' : '-'}
+                    </button>
+                </td>
                 <td>${escapeHTML(logItem.receptionNumber || '-')}</td>
                 <td>${escapeHTML(logItem.date || '-')}</td>
                 <td>${safeName}</td>
@@ -954,6 +960,21 @@ document.addEventListener('DOMContentLoaded', async () => {
             tr.querySelector('.btn-complete')?.addEventListener('click', () => {
                 const realIdx = parseInt(tr.dataset.index, 10);
                 sampleLogs[realIdx].isCompleted = !sampleLogs[realIdx].isCompleted;
+                saveData();
+                renderLogs();
+            });
+
+            // 판정 토글 (미판정 → 적합 → 부적합 → 미판정)
+            tr.querySelector('.btn-result')?.addEventListener('click', () => {
+                const realIdx = parseInt(tr.dataset.index, 10);
+                const log = sampleLogs[realIdx];
+                if (!log.testResult || log.testResult === '') {
+                    log.testResult = 'pass';  // 미판정 → 적합
+                } else if (log.testResult === 'pass') {
+                    log.testResult = 'fail';  // 적합 → 부적합
+                } else {
+                    log.testResult = '';      // 부적합 → 미판정
+                }
                 saveData();
                 renderLogs();
             });
