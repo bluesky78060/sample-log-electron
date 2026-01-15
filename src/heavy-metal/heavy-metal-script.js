@@ -212,10 +212,46 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // 년도별 데이터 로드 함수
-    function loadYearData(year) {
+    // Firebase에서 데이터 로드 (클라우드 동기화)
+    async function loadFromFirebase(year) {
+        try {
+            // storageManager가 클라우드 모드인지 확인
+            if (window.storageManager?.isCloudEnabled()) {
+                const cloudData = await window.storageManager.load('heavyMetal', parseInt(year), getStorageKey(year));
+                if (cloudData && cloudData.length > 0) {
+                    log('☁️ Firebase에서 데이터 로드:', cloudData.length, '건');
+                    return cloudData;
+                }
+            }
+            // firestoreDb 직접 사용 (storageManager가 초기화되지 않은 경우)
+            if (window.firestoreDb?.isEnabled()) {
+                const cloudData = await window.firestoreDb.getAll('heavyMetal', parseInt(year));
+                if (cloudData && cloudData.length > 0) {
+                    // localStorage에도 저장 (캐시)
+                    localStorage.setItem(getStorageKey(year), JSON.stringify(cloudData));
+                    log('☁️ Firebase에서 데이터 로드 (직접):', cloudData.length, '건');
+                    return cloudData;
+                }
+            }
+        } catch (error) {
+            console.error('Firebase 데이터 로드 실패:', error);
+        }
+        return null;
+    }
+
+    // 년도별 데이터 로드 함수 (Firebase 우선)
+    async function loadYearData(year) {
         const yearStorageKey = getStorageKey(year);
-        sampleLogs = SampleUtils.safeParseJSON(yearStorageKey, []);
+
+        // Firebase에서 먼저 로드 시도
+        const cloudData = await loadFromFirebase(year);
+        if (cloudData && cloudData.length > 0) {
+            sampleLogs = cloudData;
+        } else {
+            // Firebase에 데이터가 없으면 localStorage에서 로드
+            sampleLogs = SampleUtils.safeParseJSON(yearStorageKey, []);
+        }
+
         renderLogs(sampleLogs);
         // receptionNumberInput이 정의된 후에 호출되므로 DOM에서 직접 참조
         const receptionInput = document.getElementById('receptionNumber');
@@ -1632,6 +1668,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ========================================
     // 초기 렌더링
     // ========================================
+
+    // 초기 데이터 로드 (Firebase 우선, 비동기)
+    (async function initializeData() {
+        // Firebase/storageManager 초기화 대기
+        if (window.storageManager?.init) {
+            await window.storageManager.init();
+        }
+        // Firebase에서 데이터 로드 시도
+        const cloudData = await loadFromFirebase(selectedYear);
+        if (cloudData && cloudData.length > 0) {
+            sampleLogs = cloudData;
+            renderLogs();
+            updateSelectedItemsCount();
+            const receptionInput = document.getElementById('receptionNumber');
+            if (receptionInput) {
+                receptionInput.value = generateNextReceptionNumber();
+            }
+            log('☁️ 초기 데이터: Firebase에서 로드 완료 -', sampleLogs.length, '건');
+        } else if (sampleLogs.length === 0) {
+            // localStorage에도 데이터가 없으면 빈 상태 표시
+            renderLogs();
+            log('📭 초기 데이터: 데이터 없음');
+        }
+    })();
+
+    // 초기 목록 렌더링 (localStorage 데이터가 있으면 먼저 표시)
     renderLogs();
     updateSelectedItemsCount();
 

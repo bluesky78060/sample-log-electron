@@ -733,10 +733,46 @@ document.addEventListener('DOMContentLoaded', async () => {
         log('📂 기존 데이터를 년도별 저장소로 마이그레이션:', sampleLogs.length, '건');
     }
 
-    // 년도별 데이터 로드 함수
-    function loadYearData(year) {
+    // Firebase에서 데이터 로드 (클라우드 동기화)
+    async function loadFromFirebase(year) {
+        try {
+            // storageManager가 클라우드 모드인지 확인
+            if (window.storageManager?.isCloudEnabled()) {
+                const cloudData = await window.storageManager.load('pesticide', parseInt(year), getStorageKey(year));
+                if (cloudData && cloudData.length > 0) {
+                    log('☁️ Firebase에서 데이터 로드:', cloudData.length, '건');
+                    return cloudData;
+                }
+            }
+            // firestoreDb 직접 사용 (storageManager가 초기화되지 않은 경우)
+            if (window.firestoreDb?.isEnabled()) {
+                const cloudData = await window.firestoreDb.getAll('pesticide', parseInt(year));
+                if (cloudData && cloudData.length > 0) {
+                    // localStorage에도 저장 (캐시)
+                    localStorage.setItem(getStorageKey(year), JSON.stringify(cloudData));
+                    log('☁️ Firebase에서 데이터 로드 (직접):', cloudData.length, '건');
+                    return cloudData;
+                }
+            }
+        } catch (error) {
+            console.error('Firebase 데이터 로드 실패:', error);
+        }
+        return null;
+    }
+
+    // 년도별 데이터 로드 함수 (Firebase 우선)
+    async function loadYearData(year) {
         const yearStorageKey = getStorageKey(year);
-        sampleLogs = SampleUtils.safeParseJSON(yearStorageKey, []);
+
+        // Firebase에서 먼저 로드 시도
+        const cloudData = await loadFromFirebase(year);
+        if (cloudData && cloudData.length > 0) {
+            sampleLogs = cloudData;
+        } else {
+            // Firebase에 데이터가 없으면 localStorage에서 로드
+            sampleLogs = SampleUtils.safeParseJSON(yearStorageKey, []);
+        }
+
         renderLogs(sampleLogs);
         // receptionNumberInput이 정의된 후에 호출되므로 DOM에서 직접 참조
         const receptionInput = document.getElementById('receptionNumber');
@@ -800,10 +836,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // ========================================
-    // Electron 환경: 자동 저장 파일에서 데이터 로드
+    // 초기 데이터 로드 (Firebase 우선)
     // ========================================
-    if (window.isElectron && FileAPI.autoSavePath) {
-        (async () => {
+    (async () => {
+        // Firebase/storageManager 초기화 대기
+        if (window.storageManager?.init) {
+            await window.storageManager.init();
+        }
+
+        // Firebase에서 데이터 로드 시도
+        const cloudData = await loadFromFirebase(selectedYear);
+        if (cloudData && cloudData.length > 0) {
+            sampleLogs = cloudData;
+            renderLogs(sampleLogs);
+            receptionNumberInput.value = generateNextReceptionNumber();
+            log('☁️ 초기 데이터: Firebase에서 로드 완료 -', sampleLogs.length, '건');
+            return; // Firebase 데이터가 있으면 자동 저장 파일 체크 스킵
+        }
+
+        // Firebase에 데이터가 없으면 Electron 환경에서 자동 저장 파일 체크
+        if (window.isElectron && FileAPI.autoSavePath) {
             try {
                 const autoSaveData = await window.loadFromAutoSaveFile();
                 if (autoSaveData && autoSaveData.length > 0) {
@@ -829,16 +881,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             } catch (error) {
                 console.error('자동 저장 파일 로드 중 오류:', error);
             }
+        }
 
-            // 자동 저장 데이터 로드 후 렌더링
-            renderLogs(sampleLogs);
-            receptionNumberInput.value = generateNextReceptionNumber();
-        })();
-    } else {
-        // 웹 환경이거나 자동 저장 경로가 없는 경우 바로 렌더링
+        // 렌더링
         renderLogs(sampleLogs);
         receptionNumberInput.value = generateNextReceptionNumber();
-    }
+    })();
+
+    // 초기 목록 렌더링 (localStorage 데이터가 있으면 먼저 표시)
+    renderLogs(sampleLogs);
+    receptionNumberInput.value = generateNextReceptionNumber();
 
     // ========================================
     // 필지 관리 시스템 (잔류농약 페이지에서는 사용 안 함)

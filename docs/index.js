@@ -8,12 +8,10 @@ const path = require('node:path');
 const fs = require('node:fs');
 const { autoUpdater } = require('electron-updater');
 
-// GitHub 저장소에서 업데이트 확인하도록 설정
-autoUpdater.setFeedURL({
-  provider: 'github',
-  owner: 'bluesky78060',
-  repo: 'sample-log-electron'
-});
+// 자동 업데이트 로깅 활성화
+autoUpdater.logger = require('electron').app.isPackaged ? null : console;
+autoUpdater.autoDownload = true;
+autoUpdater.autoInstallOnAppQuit = true;
 
 // Windows 설치/제거 시 바로가기 생성/삭제 처리
 if (require('electron-squirrel-startup')) {
