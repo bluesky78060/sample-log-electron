@@ -252,23 +252,53 @@ document.addEventListener('DOMContentLoaded', async () => {
         return null;
     }
 
-    // 년도별 데이터 로드 함수 (로컬 우선, Firebase 백그라운드 동기화)
+    // 년도별 데이터 로드 함수 (Firebase 우선, 로컬 폴백)
     async function loadYearData(year) {
         const yearStorageKey = getStorageKey(year);
 
-        // 1. localStorage에서 먼저 로드 (즉시 표시)
+        // 1. Firebase에서 먼저 로드 시도
+        if (window.firestoreDb?.isEnabled()) {
+            try {
+                log('☁️ Firebase에서 데이터 로드 중...');
+                const cloudData = await window.firestoreDb.getAll('heavyMetal', parseInt(year), { skipOrder: true });
+
+                if (cloudData && cloudData.length > 0) {
+                    const localData = SampleUtils.safeParseJSON(yearStorageKey, []);
+
+                    // 스마트 병합: 최신 데이터 선택
+                    const mergedData = smartMerge(localData, cloudData);
+                    sampleLogs = mergedData.data;
+                    localStorage.setItem(yearStorageKey, JSON.stringify(mergedData.data));
+
+                    renderLogs(sampleLogs);
+                    const receptionInput = document.getElementById('receptionNumber');
+                    if (receptionInput) {
+                        receptionInput.value = generateNextReceptionNumber();
+                    }
+                    updateListViewTitle();
+
+                    if (mergedData.hasChanges) {
+                        log('☁️ Firebase에서 동기화 완료:', mergedData.data.length, '건');
+                        showToast(`클라우드에서 동기화됨 (${mergedData.updated}건 업데이트, ${mergedData.added}건 추가)`, 'success');
+                    } else {
+                        log('☁️ Firebase 로드 완료:', cloudData.length, '건');
+                    }
+                    return;
+                }
+            } catch (error) {
+                console.error('Firebase 로드 실패, 로컬 데이터 사용:', error);
+            }
+        }
+
+        // 2. Firebase 사용 불가 또는 데이터 없음 → 로컬에서 로드
         sampleLogs = SampleUtils.safeParseJSON(yearStorageKey, []);
         renderLogs(sampleLogs);
 
-        // receptionNumberInput이 정의된 후에 호출되므로 DOM에서 직접 참조
         const receptionInput = document.getElementById('receptionNumber');
         if (receptionInput) {
             receptionInput.value = generateNextReceptionNumber();
         }
         updateListViewTitle();
-
-        // 2. 백그라운드에서 Firebase 동기화 (속도 최적화 옵션 사용)
-        syncWithCloud(year);
     }
 
     // 클라우드 동기화 함수 (백그라운드 실행)
@@ -287,23 +317,109 @@ document.addEventListener('DOMContentLoaded', async () => {
             const yearStorageKey = getStorageKey(year);
             const localData = SampleUtils.safeParseJSON(yearStorageKey, []);
 
-            // 클라우드 데이터가 더 많거나 로컬이 비어있으면 클라우드 데이터 사용
-            if (cloudData.length > localData.length || localData.length === 0) {
-                sampleLogs = cloudData;
-                localStorage.setItem(yearStorageKey, JSON.stringify(cloudData));
+            // 스마트 병합: ID 기반으로 최신 데이터 선택
+            const mergedData = smartMerge(localData, cloudData);
+
+            // 변경사항이 있으면 업데이트
+            if (mergedData.hasChanges) {
+                sampleLogs = mergedData.data;
+                localStorage.setItem(yearStorageKey, JSON.stringify(mergedData.data));
                 renderLogs(sampleLogs);
                 const receptionInput = document.getElementById('receptionNumber');
                 if (receptionInput) {
                     receptionInput.value = generateNextReceptionNumber();
                 }
-                log('☁️ 클라우드에서 동기화 완료:', cloudData.length, '건');
-                showToast(`클라우드에서 ${cloudData.length}건 동기화됨`, 'success');
-            } else if (cloudData.length === localData.length) {
+                log('☁️ 클라우드에서 동기화 완료:', mergedData.data.length, '건');
+                showToast(`클라우드에서 동기화됨 (${mergedData.updated}건 업데이트, ${mergedData.added}건 추가)`, 'success');
+            } else {
                 log('☁️ 로컬과 클라우드 데이터 동일 (', localData.length, '건)');
             }
         } catch (error) {
             console.error('클라우드 동기화 실패:', error);
         }
+    }
+
+    // 스마트 병합: updatedAt 타임스탬프 기반으로 최신 데이터 선택
+    function smartMerge(localData, cloudData) {
+        const localMap = new Map();
+        const cloudMap = new Map();
+
+        // 로컬 데이터를 ID로 매핑
+        localData.forEach(item => {
+            const id = item.id || item.receptionNumber;
+            if (id) localMap.set(id, item);
+        });
+
+        // 클라우드 데이터를 ID로 매핑
+        cloudData.forEach(item => {
+            const id = item.id || item.receptionNumber;
+            if (id) cloudMap.set(id, item);
+        });
+
+        const merged = [];
+        const processedIds = new Set();
+        let updated = 0;
+        let added = 0;
+        let hasChanges = false;
+
+        // 클라우드 데이터 기준으로 병합
+        cloudData.forEach(cloudItem => {
+            const id = cloudItem.id || cloudItem.receptionNumber;
+            if (!id) return;
+
+            processedIds.add(id);
+            const localItem = localMap.get(id);
+
+            if (!localItem) {
+                // 클라우드에만 있는 데이터 (새로 추가됨)
+                merged.push(cloudItem);
+                added++;
+                hasChanges = true;
+            } else {
+                // 양쪽에 있는 데이터 - updatedAt 비교
+                const cloudTime = getTimestamp(cloudItem.updatedAt);
+                const localTime = getTimestamp(localItem.updatedAt);
+
+                if (cloudTime > localTime) {
+                    // 클라우드가 더 최신
+                    merged.push(cloudItem);
+                    updated++;
+                    hasChanges = true;
+                } else {
+                    // 로컬이 더 최신이거나 동일
+                    merged.push(localItem);
+                }
+            }
+        });
+
+        // 로컬에만 있는 데이터 추가 (클라우드에 아직 업로드 안된 것)
+        localData.forEach(localItem => {
+            const id = localItem.id || localItem.receptionNumber;
+            if (id && !processedIds.has(id)) {
+                merged.push(localItem);
+            }
+        });
+
+        // 접수번호 기준 정렬
+        merged.sort((a, b) => {
+            const aNum = parseInt(a.receptionNumber) || 0;
+            const bNum = parseInt(b.receptionNumber) || 0;
+            return aNum - bNum;
+        });
+
+        return { data: merged, hasChanges, updated, added };
+    }
+
+    // 타임스탬프 추출 헬퍼
+    function getTimestamp(updatedAt) {
+        if (!updatedAt) return 0;
+        // Firestore Timestamp 객체
+        if (updatedAt.seconds) return updatedAt.seconds * 1000;
+        // ISO 문자열
+        if (typeof updatedAt === 'string') return new Date(updatedAt).getTime();
+        // 숫자
+        if (typeof updatedAt === 'number') return updatedAt;
+        return 0;
     }
 
     // 연도 전환 시 자동 저장 파일 복원
