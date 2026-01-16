@@ -486,6 +486,9 @@
                     <button type="button" id="btnBulkDelete" class="btn-bulk-delete" title="선택한 항목 일괄 삭제">
                         🗑️ 선택 삭제
                     </button>
+                    <button type="button" id="btnBulkMailDate" class="btn-bulk-mail" title="선택한 항목 우편발송일자 일괄 입력">
+                        📮 발송일자
+                    </button>
                     <button type="button" id="openSearchModalBtn" class="btn-search-open" title="검색">
                         🔍 검색
                     </button>
@@ -513,6 +516,7 @@
                             <th>목적</th>
                             <th>수령방법</th>
                             <th class="col-note">비고</th>
+                            <th class="col-mail-date">발송일자</th>
                             <th class="col-action">관리</th>
                         </tr>
                     </thead>
@@ -738,6 +742,28 @@
             </div>
             <div class="modal-footer">
                 <button type="button" id="closeStatisticsBtn" class="btn-cancel">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 우편발송일자 입력 모달 -->
+    <div id="mailDateModal" class="modal hidden">
+        <div class="modal-overlay"></div>
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h3>📮 우편발송일자 입력</h3>
+                <button type="button" class="modal-close" id="closeMailDateModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="mailDateInfo" class="mail-date-info">선택한 0건의 우편발송일자를 입력하세요.</p>
+                <div class="form-field">
+                    <label for="mailDateInput">발송일자</label>
+                    <input type="date" id="mailDateInput" class="mail-date-input">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="cancelMailDateBtn" class="btn-cancel">취소</button>
+                <button type="button" id="confirmMailDateBtn" class="btn-confirm">확인</button>
             </div>
         </div>
     </div>

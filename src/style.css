@@ -2563,6 +2563,64 @@ input[type="number"] {
     box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
 }
 
+/* 일괄 발송일자 버튼 */
+.btn-bulk-mail {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 0.875rem;
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+    border: none;
+    border-radius: 8px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-bulk-mail:hover {
+    background: linear-gradient(135deg, #7c3aed, #6d28d9);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+}
+
+/* 발송일자 모달 */
+.modal-small .modal-content {
+    max-width: 400px;
+}
+
+.mail-date-info {
+    margin-bottom: 1rem;
+    color: var(--gray-600);
+    font-size: 0.9375rem;
+}
+
+.mail-date-input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--gray-300);
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: all 0.2s ease;
+}
+
+.mail-date-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+}
+
+[data-theme="dark"] .mail-date-info {
+    color: var(--gray-300);
+}
+
+[data-theme="dark"] .mail-date-input {
+    background-color: var(--gray-800);
+    border-color: var(--gray-600);
+    color: var(--gray-100);
+}
+
 /* 통계 버튼 */
 .btn-statistics {
     display: inline-flex;
@@ -3148,6 +3206,15 @@ input[type="number"] {
     max-width: 200px;
     text-align: left;
     padding: 0.5rem;
+}
+
+/* 발송일자 열 */
+.data-table th.col-mail-date,
+.data-table td.col-mail-date {
+    width: 100px;
+    min-width: 90px;
+    text-align: center;
+    white-space: nowrap;
 }
 
 .note-cell {

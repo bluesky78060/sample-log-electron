@@ -2968,6 +2968,84 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // ========================================
+    // 우편발송일자 일괄 입력 (모달 사용)
+    // ========================================
+    const btnBulkMailDate = document.getElementById('btnBulkMailDate');
+    const mailDateModal = document.getElementById('mailDateModal');
+    const closeMailDateModal = document.getElementById('closeMailDateModal');
+    const cancelMailDateBtn = document.getElementById('cancelMailDateBtn');
+    const confirmMailDateBtn = document.getElementById('confirmMailDateBtn');
+    const mailDateInput = document.getElementById('mailDateInput');
+    const mailDateInfo = document.getElementById('mailDateInfo');
+
+    let pendingMailDateIds = [];
+
+    function openMailDateModal(selectedIds) {
+        pendingMailDateIds = selectedIds;
+        const today = new Date().toISOString().split('T')[0];
+        if (mailDateInput) mailDateInput.value = today;
+        if (mailDateInfo) mailDateInfo.textContent = `선택한 ${selectedIds.length}건의 우편발송일자를 입력하세요.`;
+        if (mailDateModal) mailDateModal.classList.remove('hidden');
+    }
+
+    function closeMailDateModalFn() {
+        if (mailDateModal) mailDateModal.classList.add('hidden');
+        pendingMailDateIds = [];
+    }
+
+    if (closeMailDateModal) closeMailDateModal.addEventListener('click', closeMailDateModalFn);
+    if (cancelMailDateBtn) cancelMailDateBtn.addEventListener('click', closeMailDateModalFn);
+    if (mailDateModal) {
+        mailDateModal.querySelector('.modal-overlay')?.addEventListener('click', closeMailDateModalFn);
+    }
+
+    if (confirmMailDateBtn) {
+        confirmMailDateBtn.addEventListener('click', () => {
+            const inputDate = mailDateInput?.value;
+
+            if (!inputDate) {
+                showToast('날짜를 선택해주세요.', 'warning');
+                return;
+            }
+
+            // 선택된 항목들의 발송일자 업데이트
+            let updatedCount = 0;
+            sampleLogs = sampleLogs.map(log => {
+                if (pendingMailDateIds.includes(String(log.id))) {
+                    updatedCount++;
+                    return { ...log, mailDate: inputDate };
+                }
+                return log;
+            });
+
+            saveLogs();
+            renderLogs(sampleLogs);
+
+            // 전체 선택 체크박스 해제
+            if (selectAllCheckbox) {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = false;
+            }
+
+            closeMailDateModalFn();
+            showToast(`${updatedCount}건의 발송일자가 입력되었습니다.`, 'success');
+        });
+    }
+
+    if (btnBulkMailDate) {
+        btnBulkMailDate.addEventListener('click', () => {
+            const selectedIds = getSelectedIds();
+
+            if (selectedIds.length === 0) {
+                showToast('발송일자를 입력할 항목을 선택해주세요.', 'warning');
+                return;
+            }
+
+            openMailDateModal(selectedIds);
+        });
+    }
+
+    // ========================================
     // 통계 기능
     // ========================================
     const btnStatistics = document.getElementById('btnStatistics');
@@ -3824,6 +3902,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <td>${safePhone}</td>
                 <td>${escapeHTML(methodText)}</td>
                 <td class="col-note" title="${safeNote}"><div class="note-cell">${safeNote}</div></td>
+                <td class="col-mail-date">${escapeHTML(row.mailDate || '-')}</td>
                 <td>
                     <div class="table-actions">
                         <button class="btn-edit" data-id="${escapeHTML(row.id)}">수정</button>
