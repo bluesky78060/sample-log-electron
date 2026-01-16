@@ -44,15 +44,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     const currentYear = new Date().getFullYear().toString();
     await FileAPI.init(currentYear);
 
-    // Firebase 초기화 (백그라운드에서 실행)
-    if (window.firebaseConfig?.initialize) {
-        window.firebaseConfig.initialize().then(() => {
-            if (window.firestoreDb?.init) {
-                window.firestoreDb.init().then(() => {
-                    log('☁️ Firebase 초기화 완료');
-                }).catch(err => console.warn('Firestore init failed:', err));
+    // Firebase 초기화 (데이터 로드 전에 완료 필요)
+    let firebaseReady = false;
+    try {
+        if (window.firebaseConfig?.initialize) {
+            const firebaseInitialized = await window.firebaseConfig.initialize();
+            if (firebaseInitialized && window.firestoreDb?.init) {
+                await window.firestoreDb.init();
+                firebaseReady = true;
+                log('☁️ Firebase 초기화 완료');
             }
-        }).catch(err => console.warn('Firebase init failed:', err));
+        }
+    } catch (err) {
+        console.warn('Firebase 초기화 실패, 로컬 모드로 동작:', err);
     }
 
     // 자동 저장 초기화 (공통 모듈 사용)
@@ -2252,35 +2256,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 초기 렌더링
     // ========================================
 
-    // 초기 데이터 로드 (로컬 우선, Firebase 백업)
-    (async function initializeData() {
-        // Firebase/storageManager 초기화 대기
-        if (window.storageManager?.init) {
-            await window.storageManager.init();
-        }
-
-        // 로컬에 데이터가 없으면 Firebase에서 복원 시도
-        if (sampleLogs.length === 0) {
-            const cloudData = await loadFromFirebase(selectedYear);
-            if (cloudData && cloudData.length > 0) {
-                sampleLogs = cloudData;
-                // localStorage에 캐시
-                localStorage.setItem(getStorageKey(selectedYear), JSON.stringify(sampleLogs));
-                renderLogs(sampleLogs);
-                const receptionInput = document.getElementById('receptionNumber');
-                if (receptionInput) {
-                    receptionInput.value = generateNextReceptionNumber();
-                }
-                log('☁️ 초기 데이터: Firebase에서 복원 완료 -', sampleLogs.length, '건');
-            } else {
-                renderLogs(sampleLogs);
-                log('📭 초기 데이터: 데이터 없음');
-            }
-        }
-    })();
-
-    // 초기 목록 렌더링 (localStorage 데이터가 있으면 먼저 표시)
-    renderLogs(sampleLogs);
+    // 초기 데이터 로드 (Firebase 우선)
+    await loadYearData(selectedYear);
 
     log('✅ 수질분석 페이지 초기화 완료');
 });

@@ -54,15 +54,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     const currentYear = new Date().getFullYear().toString();
     await FileAPI.init(currentYear);
 
-    // Firebase 초기화 (백그라운드에서 실행)
-    if (window.firebaseConfig?.initialize) {
-        window.firebaseConfig.initialize().then(() => {
-            if (window.firestoreDb?.init) {
-                window.firestoreDb.init().then(() => {
-                    log('☁️ Firebase 초기화 완료');
-                }).catch(err => console.warn('Firestore init failed:', err));
+    // Firebase 초기화 (데이터 로드 전에 완료 필요)
+    let firebaseReady = false;
+    try {
+        if (window.firebaseConfig?.initialize) {
+            const firebaseInitialized = await window.firebaseConfig.initialize();
+            if (firebaseInitialized && window.firestoreDb?.init) {
+                await window.firestoreDb.init();
+                firebaseReady = true;
+                log('☁️ Firebase 초기화 완료');
             }
-        }).catch(err => console.warn('Firebase init failed:', err));
+        }
+    } catch (err) {
+        console.warn('Firebase 초기화 실패, 로컬 모드로 동작:', err);
     }
 
     // 공통 유틸리티를 사용한 자동 저장 초기화
@@ -917,56 +921,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // ========================================
-    // 초기 데이터 로드 (로컬 우선, Firebase 백업)
+    // 초기 데이터 로드 (Firebase 우선)
     // ========================================
-    (async () => {
-        // Firebase/storageManager 초기화 대기
-        if (window.storageManager?.init) {
-            await window.storageManager.init();
-        }
-
-        // 1. localStorage에 데이터가 있으면 먼저 사용
-        if (sampleLogs.length > 0) {
-            log('💾 초기 데이터: localStorage에서 로드 완료 -', sampleLogs.length, '건');
-            renderLogs(sampleLogs);
-            receptionNumberInput.value = generateNextReceptionNumber();
-            return;
-        }
-
-        // 2. localStorage에 데이터가 없으면 Electron 자동 저장 파일 체크
-        if (window.isElectron && FileAPI.autoSavePath) {
-            try {
-                const autoSaveData = await window.loadFromAutoSaveFile();
-                if (autoSaveData && autoSaveData.length > 0) {
-                    sampleLogs = autoSaveData;
-                    localStorage.setItem(getStorageKey(selectedYear), JSON.stringify(sampleLogs));
-                    log('📂 자동 저장 파일에서 데이터 복원 완료:', sampleLogs.length, '건');
-                    renderLogs(sampleLogs);
-                    receptionNumberInput.value = generateNextReceptionNumber();
-                    return;
-                }
-            } catch (error) {
-                console.error('자동 저장 파일 로드 중 오류:', error);
-            }
-        }
-
-        // 3. 로컬에 데이터가 없으면 Firebase에서 로드 시도
-        const cloudData = await loadFromFirebase(selectedYear);
-        if (cloudData && cloudData.length > 0) {
-            sampleLogs = cloudData;
-            localStorage.setItem(getStorageKey(selectedYear), JSON.stringify(sampleLogs));
-            log('☁️ 초기 데이터: Firebase에서 복원 완료 -', sampleLogs.length, '건');
-        } else {
-            log('📭 초기 데이터: 데이터 없음');
-        }
-
-        // 렌더링
-        renderLogs(sampleLogs);
-        receptionNumberInput.value = generateNextReceptionNumber();
-    })();
-
-    // 초기 목록 렌더링 (localStorage 데이터가 있으면 먼저 표시)
-    renderLogs(sampleLogs);
+    await loadYearData(selectedYear);
     receptionNumberInput.value = generateNextReceptionNumber();
 
     // ========================================
