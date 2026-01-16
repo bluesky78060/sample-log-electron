@@ -15,7 +15,7 @@
 // ========================================
 
 /** @type {boolean} 디버그 모드 (프로덕션에서는 false) */
-const DEBUG_FIREBASE = false;
+const DEBUG_FIREBASE = true;
 
 /** 조건부 로깅 */
 const logFirebase = (...args) => DEBUG_FIREBASE && console.log('[Firebase]', ...args);

@@ -14,7 +14,7 @@
 let firestore = null;
 
 /** @type {boolean} 디버그 모드 (프로덕션에서는 false) */
-const DEBUG_FIRESTORE = false;
+const DEBUG_FIRESTORE = true;
 
 /** 조건부 로깅 */
 const logFirestore = (...args) => DEBUG_FIRESTORE && console.log('[Firestore]', ...args);

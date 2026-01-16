@@ -1383,20 +1383,33 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Firebase 초기화 시도
             let firebaseInitialized = false;
             let firestoreInitialized = false;
+            let initError = null;
 
-            if (window.firebaseConfig?.initialize) {
-                firebaseInitialized = await window.firebaseConfig.initialize();
-                log('Firebase 초기화 결과:', firebaseInitialized);
+            try {
+                if (window.firebaseConfig?.initialize) {
+                    firebaseInitialized = await window.firebaseConfig.initialize();
+                    console.log('Firebase 초기화 결과:', firebaseInitialized);
+                }
+            } catch (err) {
+                console.error('Firebase 초기화 에러:', err);
+                initError = err;
             }
 
-            if (firebaseInitialized && window.firestoreDb?.init) {
-                firestoreInitialized = await window.firestoreDb.init();
-                log('Firestore 초기화 결과:', firestoreInitialized);
+            try {
+                if (firebaseInitialized && window.firestoreDb?.init) {
+                    firestoreInitialized = await window.firestoreDb.init();
+                    console.log('Firestore 초기화 결과:', firestoreInitialized);
+                }
+            } catch (err) {
+                console.error('Firestore 초기화 에러:', err);
+                initError = err;
             }
 
             if (!window.firestoreDb?.isEnabled()) {
-                if (!firebaseInitialized) {
-                    showToast('Firebase 연결 실패. 인터넷 연결을 확인하세요.', 'error');
+                if (initError) {
+                    showToast('Firebase 초기화 실패: ' + initError.message, 'error');
+                } else if (!firebaseInitialized) {
+                    showToast('Firebase 연결 실패. 콘솔에서 에러를 확인하세요.', 'error');
                 } else if (!firestoreInitialized) {
                     showToast('Firestore 모듈 로드 실패. 페이지를 새로고침하세요.', 'error');
                 } else {
