@@ -1306,6 +1306,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const log = sampleLogs.find(l => String(l.id) === id);
         if (log) {
             log.isComplete = !log.isComplete;
+            log.updatedAt = new Date().toISOString();
             saveLogs();
             renderLogs(sampleLogs);
         }
@@ -1322,6 +1323,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else {
                 log.testResult = '';      // 부적합 → 미판정
             }
+            log.updatedAt = new Date().toISOString();
             saveLogs();
             renderLogs(sampleLogs);
         }
@@ -1623,7 +1625,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             sampleLogs = sampleLogs.map(log => {
                 if (pendingMailDateIds.includes(String(log.id))) {
                     updatedCount++;
-                    return { ...log, mailDate: inputDate };
+                    return { ...log, mailDate: inputDate, updatedAt: new Date().toISOString() };
                 }
                 return log;
             });

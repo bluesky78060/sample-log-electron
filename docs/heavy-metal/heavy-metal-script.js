@@ -1061,6 +1061,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             tr.querySelector('.btn-complete')?.addEventListener('click', () => {
                 const realIdx = parseInt(tr.dataset.index, 10);
                 sampleLogs[realIdx].isCompleted = !sampleLogs[realIdx].isCompleted;
+                sampleLogs[realIdx].updatedAt = new Date().toISOString();
                 saveData();
                 renderLogs();
             });
@@ -1076,6 +1077,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 } else {
                     log.testResult = '';      // 부적합 → 미판정
                 }
+                log.updatedAt = new Date().toISOString();
                 saveData();
                 renderLogs();
             });
@@ -1575,6 +1577,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             pendingMailDateIndices.forEach(idx => {
                 if (sampleLogs[idx]) {
                     sampleLogs[idx].mailDate = inputDate;
+                    sampleLogs[idx].updatedAt = new Date().toISOString();
                 }
             });
 

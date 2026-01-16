@@ -2752,6 +2752,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // 모든 관련 시료의 완료 상태 업데이트
                 relatedLogs.forEach(relatedLog => {
                     relatedLog.completed = newCompletedStatus;
+                    relatedLog.updatedAt = new Date().toISOString();
 
                     // 각 행의 UI 업데이트 (동일한 ID를 가진 모든 행을 찾아야 함)
                     const relatedRows = tableBody.querySelectorAll(`tr[data-id="${relatedLog.id}"]`);
@@ -2800,6 +2801,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 } else {
                     log.testResult = '';      // 부적합 → 미판정
                 }
+                log.updatedAt = new Date().toISOString();
                 saveLogs();
                 renderLogs(sampleLogs);
             }
@@ -3078,7 +3080,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             sampleLogs = sampleLogs.map(log => {
                 if (pendingMailDateIds.includes(String(log.id))) {
                     updatedCount++;
-                    return { ...log, mailDate: inputDate };
+                    return { ...log, mailDate: inputDate, updatedAt: new Date().toISOString() };
                 }
                 return log;
             });
