@@ -8,7 +8,7 @@ module.exports = {
     name: 'sample-log',
     executableName: 'sample-log',
     appBundleId: 'com.samplelog.app',
-    extraResource: ['./src/app-update.yml'],
+    extraResource: ['./app-update.yml'],
     icon: path.resolve(__dirname, 'assets', 'icon'),
   },
   rebuildConfig: {},
