@@ -127,9 +127,11 @@ async function getDocument(sampleType, year, docId) {
  * 컬렉션 전체 조회
  * @param {string} sampleType - 시료 타입
  * @param {number} year - 연도
+ * @param {Object} options - 조회 옵션
+ * @param {boolean} options.skipOrder - 정렬 생략 (속도 향상)
  * @returns {Promise<Array>} 문서 배열
  */
-async function getAllDocuments(sampleType, year) {
+async function getAllDocuments(sampleType, year, options = {}) {
     if (!window.firebaseConfig?.isEnabled()) {
         return [];
     }
@@ -139,13 +141,36 @@ async function getAllDocuments(sampleType, year) {
         const collectionName = getCollectionName(sampleType, year);
 
         const { collection, getDocs, query, orderBy } = firestore;
-        const q = query(collection(db, collectionName), orderBy('updatedAt', 'desc'));
+
+        // 정렬 옵션 - 인덱스 없이 빠르게 조회하려면 skipOrder: true
+        let q;
+        if (options.skipOrder) {
+            q = query(collection(db, collectionName));
+        } else {
+            try {
+                q = query(collection(db, collectionName), orderBy('updatedAt', 'desc'));
+            } catch (indexError) {
+                // 인덱스 오류 시 정렬 없이 재시도
+                console.warn('[Firestore] 인덱스 없음, 정렬 없이 조회:', indexError.message);
+                q = query(collection(db, collectionName));
+            }
+        }
+
         const querySnapshot = await getDocs(q);
 
         const documents = [];
         querySnapshot.forEach((doc) => {
             documents.push({ id: doc.id, ...doc.data() });
         });
+
+        // skipOrder인 경우 로컬에서 정렬
+        if (options.skipOrder && documents.length > 0) {
+            documents.sort((a, b) => {
+                const aTime = a.updatedAt?.seconds || 0;
+                const bTime = b.updatedAt?.seconds || 0;
+                return bTime - aTime;
+            });
+        }
 
         logFirestore(`조회 완료: ${collectionName} (${documents.length}건)`);
         return documents;
@@ -337,7 +362,7 @@ function subscribeToChanges(sampleType, year, callback) {
  * @returns {boolean} 활성화 여부
  */
 function isFirestoreEnabled() {
-    return window.firebaseConfig?.isEnabled() === true;
+    return window.firebaseConfig?.isEnabled() === true && firestore !== null;
 }
 
 /**

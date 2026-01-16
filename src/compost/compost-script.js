@@ -221,30 +221,58 @@ document.addEventListener('DOMContentLoaded', async () => {
         return null;
     }
 
-    // 년도별 데이터 로드 함수 (로컬 우선, Firebase 백업)
+    // 년도별 데이터 로드 함수 (로컬 우선, Firebase 백그라운드 동기화)
     async function loadYearData(year) {
         const yearStorageKey = getStorageKey(year);
 
-        // 1. localStorage에서 먼저 로드
+        // 1. localStorage에서 먼저 로드 (즉시 표시)
         sampleLogs = SampleUtils.safeParseJSON(yearStorageKey, []);
-
-        // 2. 로컬에 데이터가 없으면 Firebase에서 로드 시도
-        if (sampleLogs.length === 0) {
-            const cloudData = await loadFromFirebase(year);
-            if (cloudData && cloudData.length > 0) {
-                sampleLogs = cloudData;
-                localStorage.setItem(yearStorageKey, JSON.stringify(sampleLogs));
-                log('☁️ Firebase에서 데이터 복원:', sampleLogs.length, '건');
-            }
-        }
-
         renderLogs(sampleLogs);
+
         // receptionNumberInput이 정의된 후에 호출되므로 DOM에서 직접 참조
         const receptionInput = document.getElementById('receptionNumber');
         if (receptionInput) {
             receptionInput.value = generateNextReceptionNumber();
         }
         updateListViewTitle();
+
+        // 2. 백그라운드에서 Firebase 동기화 (속도 최적화 옵션 사용)
+        syncWithCloud(year);
+    }
+
+    // 클라우드 동기화 함수 (백그라운드 실행)
+    async function syncWithCloud(year) {
+        try {
+            if (!window.firestoreDb?.isEnabled()) return;
+
+            log('☁️ 클라우드 동기화 시작...');
+            const cloudData = await window.firestoreDb.getAll('compost', parseInt(year), { skipOrder: true });
+
+            if (!cloudData || cloudData.length === 0) {
+                log('☁️ 클라우드에 데이터 없음');
+                return;
+            }
+
+            const yearStorageKey = getStorageKey(year);
+            const localData = SampleUtils.safeParseJSON(yearStorageKey, []);
+
+            // 클라우드 데이터가 더 많거나 로컬이 비어있으면 클라우드 데이터 사용
+            if (cloudData.length > localData.length || localData.length === 0) {
+                sampleLogs = cloudData;
+                localStorage.setItem(yearStorageKey, JSON.stringify(cloudData));
+                renderLogs(sampleLogs);
+                const receptionInput = document.getElementById('receptionNumber');
+                if (receptionInput) {
+                    receptionInput.value = generateNextReceptionNumber();
+                }
+                log('☁️ 클라우드에서 동기화 완료:', cloudData.length, '건');
+                showToast(`클라우드에서 ${cloudData.length}건 동기화됨`, 'success');
+            } else if (cloudData.length === localData.length) {
+                log('☁️ 로컬과 클라우드 데이터 동일 (', localData.length, '건)');
+            }
+        } catch (error) {
+            console.error('클라우드 동기화 실패:', error);
+        }
     }
 
     // 연도 전환 시 자동 저장 파일 복원
@@ -1943,15 +1971,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (migrateBtn) {
         migrateBtn.addEventListener('click', async () => {
             // Firebase 초기화 시도
+            let firebaseInitialized = false;
+            let firestoreInitialized = false;
+
             if (window.firebaseConfig?.initialize) {
-                await window.firebaseConfig.initialize();
+                firebaseInitialized = await window.firebaseConfig.initialize();
+                log('Firebase 초기화 결과:', firebaseInitialized);
             }
-            if (window.firestoreDb?.init) {
-                await window.firestoreDb.init();
+
+            if (firebaseInitialized && window.firestoreDb?.init) {
+                firestoreInitialized = await window.firestoreDb.init();
+                log('Firestore 초기화 결과:', firestoreInitialized);
             }
 
             if (!window.firestoreDb?.isEnabled()) {
-                showToast('Firebase가 설정되지 않았습니다.', 'error');
+                if (!firebaseInitialized) {
+                    showToast('Firebase 연결 실패. 인터넷 연결을 확인하세요.', 'error');
+                } else if (!firestoreInitialized) {
+                    showToast('Firestore 모듈 로드 실패. 페이지를 새로고침하세요.', 'error');
+                } else {
+                    showToast('Firebase가 설정되지 않았습니다.', 'error');
+                }
                 return;
             }
 
