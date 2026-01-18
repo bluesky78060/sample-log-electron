@@ -2207,8 +2207,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         name: '',
         receptionFrom: '',
         receptionTo: '',
-        lot: ''
+        lot: '',
+        purpose: ''
     };
+
+    // 목적(용도) 필터 드롭다운
+    const purposeFilter = document.getElementById('purposeFilter');
+    if (purposeFilter) {
+        purposeFilter.addEventListener('change', (e) => {
+            currentSearchFilter.purpose = e.target.value;
+            filterAndRenderLogs();
+        });
+    }
 
     // 접수번호에서 숫자 부분 추출 (예: "토양-2025-001" → 1)
     function extractReceptionNumber(receptionNumber) {
@@ -2325,7 +2335,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
 
-            return matchesName && matchesReception && matchesDate && matchesLot;
+            // 목적(용도) 필터
+            const matchesPurpose = !currentSearchFilter.purpose ||
+                (log.purpose || '') === currentSearchFilter.purpose;
+
+            return matchesName && matchesReception && matchesDate && matchesLot && matchesPurpose;
         });
 
         renderLogs(filteredLogs);
@@ -2335,13 +2349,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     function updateSearchButtonState() {
         const hasFilter = currentSearchFilter.dateFrom || currentSearchFilter.dateTo ||
             currentSearchFilter.name || currentSearchFilter.receptionFrom ||
-            currentSearchFilter.receptionTo || currentSearchFilter.lot;
+            currentSearchFilter.receptionTo || currentSearchFilter.lot || currentSearchFilter.purpose;
         if (hasFilter) {
             openSearchModalBtn.classList.add('has-filter');
             openSearchModalBtn.innerHTML = '🔍 검색 중';
         } else {
             openSearchModalBtn.classList.remove('has-filter');
             openSearchModalBtn.innerHTML = '🔍 검색';
+        }
+        // 목적 필터 드롭다운에 활성 상태 표시
+        if (purposeFilter) {
+            if (currentSearchFilter.purpose) {
+                purposeFilter.classList.add('has-filter');
+            } else {
+                purposeFilter.classList.remove('has-filter');
+            }
         }
     }
 
@@ -2394,7 +2416,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         searchReceptionFromInput.value = '';
         searchReceptionToInput.value = '';
         searchLotInput.value = '';
-        currentSearchFilter = { dateFrom: '', dateTo: '', name: '', receptionFrom: '', receptionTo: '', lot: '' };
+        if (purposeFilter) purposeFilter.value = '';
+        currentSearchFilter = { dateFrom: '', dateTo: '', name: '', receptionFrom: '', receptionTo: '', lot: '', purpose: '' };
         filterAndRenderLogs();
         closeSearchModal();
     });

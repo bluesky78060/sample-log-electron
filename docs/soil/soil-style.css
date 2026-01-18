@@ -261,6 +261,50 @@
     margin-left: 0.75rem;
 }
 
+/* 목적(용도) 필터 드롭다운 */
+.purpose-filter {
+    background: white;
+    color: var(--soil-primary-dark);
+    border: 2px solid var(--soil-primary);
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2322C55E' d='M6 8L2 4h8z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.5rem center;
+    padding-right: 1.8rem;
+    transition: all 0.2s ease;
+    margin-left: 0.5rem;
+}
+
+.purpose-filter:hover {
+    background: var(--soil-primary-light);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
+}
+
+.purpose-filter:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2);
+}
+
+.purpose-filter option {
+    background: white;
+    color: var(--soil-primary-dark);
+    font-weight: 500;
+}
+
+.purpose-filter.has-filter {
+    background-color: var(--soil-primary);
+    color: white;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='white' d='M6 8L2 4h8z'/%3E%3C/svg%3E");
+}
+
 .year-select:hover,
 .list-year-select:hover {
     background: var(--soil-primary-light);
@@ -345,6 +389,39 @@
 [data-theme="dark"] .list-year-select option {
     background-color: #14532d !important;
     color: #86efac !important;
+}
+
+/* 다크 모드 목적 필터 */
+[data-theme="dark"] .purpose-filter {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-color: rgba(34, 197, 94, 0.15) !important;
+    color: #86efac !important;
+    border-color: rgba(34, 197, 94, 0.4) !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2386efac' d='M6 8L2 4h8z'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 8px center !important;
+}
+
+[data-theme="dark"] .purpose-filter:hover {
+    background-color: rgba(34, 197, 94, 0.25) !important;
+}
+
+[data-theme="dark"] .purpose-filter:focus {
+    border-color: #22c55e !important;
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2);
+}
+
+[data-theme="dark"] .purpose-filter option {
+    background-color: #14532d !important;
+    color: #86efac !important;
+}
+
+[data-theme="dark"] .purpose-filter.has-filter {
+    background-color: rgba(34, 197, 94, 0.6) !important;
+    color: white !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='white' d='M6 8L2 4h8z'/%3E%3C/svg%3E") !important;
 }
 
 /* 다크 모드 select 공통 (subCategory, purpose 등) */
