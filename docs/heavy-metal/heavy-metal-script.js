@@ -1103,10 +1103,21 @@ document.addEventListener('DOMContentLoaded', async () => {
             // 삭제 버튼
             tr.querySelector('.btn-delete')?.addEventListener('click', () => {
                 if (confirm('정말 삭제하시겠습니까?')) {
-                    sampleLogs.splice(parseInt(tr.dataset.index, 10), 1);
+                    const idx = parseInt(tr.dataset.index, 10);
+                    const deletedItem = sampleLogs[idx];
+                    const deletedId = deletedItem?.id;
+
+                    sampleLogs.splice(idx, 1);
                     saveData();
                     renderLogs();
                     showToast('삭제되었습니다.', 'success');
+
+                    // Firebase에서도 삭제
+                    if (deletedId && window.firestoreDb?.isEnabled()) {
+                        window.firestoreDb.delete('heavy-metal', parseInt(selectedYear), deletedId)
+                            .then(() => log('☁️ Firebase 삭제 완료:', deletedId))
+                            .catch(err => console.error('Firebase 삭제 실패:', err));
+                    }
                 }
             });
 
@@ -1537,10 +1548,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (confirm(`${checked.length}건의 데이터를 삭제하시겠습니까?`)) {
                 const indices = Array.from(checked).map(cb => parseInt(cb.dataset.index, 10)).sort((a, b) => b - a);
+                // 삭제 전 ID들 수집 (인덱스가 변경되기 전에)
+                const deletedIds = indices.map(idx => sampleLogs[idx]?.id).filter(id => id);
+
                 indices.forEach(idx => sampleLogs.splice(idx, 1));
                 saveData();
                 renderLogs();
                 showToast(`${checked.length}건이 삭제되었습니다.`, 'success');
+
+                // Firebase에서도 삭제
+                if (deletedIds.length > 0 && window.firestoreDb?.isEnabled()) {
+                    Promise.all(deletedIds.map(id =>
+                        window.firestoreDb.delete('heavy-metal', parseInt(selectedYear), id)
+                    ))
+                        .then(() => log('☁️ Firebase 일괄 삭제 완료:', deletedIds.length, '건'))
+                        .catch(err => console.error('Firebase 일괄 삭제 실패:', err));
+                }
             }
         });
     }

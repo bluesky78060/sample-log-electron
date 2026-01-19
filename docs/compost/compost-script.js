@@ -1130,6 +1130,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         sampleLogs = sampleLogs.filter(l => String(l.id) !== id);
         saveLogs();
         renderLogs(sampleLogs);
+
+        // Firebase에서도 삭제
+        if (window.firestoreDb?.isEnabled()) {
+            window.firestoreDb.delete('compost', parseInt(selectedYear), id)
+                .then(() => log('☁️ Firebase 삭제 완료:', id))
+                .catch(err => console.error('Firebase 삭제 실패:', err));
+        }
+
         showToast('삭제되었습니다.', 'success');
     }
 
@@ -1383,6 +1391,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 saveLogs();
                 renderLogs(sampleLogs);
                 selectAllCheckbox.checked = false;
+
+                // Firebase에서도 삭제
+                if (window.firestoreDb?.isEnabled()) {
+                    Promise.all(selectedIds.map(id =>
+                        window.firestoreDb.delete('compost', parseInt(selectedYear), id)
+                    ))
+                        .then(() => log('☁️ Firebase 일괄 삭제 완료:', selectedIds.length, '건'))
+                        .catch(err => console.error('Firebase 일괄 삭제 실패:', err));
+                }
+
                 showToast(`${selectedIds.length}건이 삭제되었습니다.`, 'success');
             }
         });

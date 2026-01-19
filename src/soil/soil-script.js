@@ -2698,6 +2698,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 saveLogs();
                 renderLogs(sampleLogs);
 
+                // Firebase에서도 삭제
+                if (window.firestoreDb?.isEnabled()) {
+                    window.firestoreDb.delete('soil', parseInt(selectedYear), id)
+                        .then(() => log('☁️ Firebase 삭제 완료:', id))
+                        .catch(err => console.error('Firebase 삭제 실패:', err));
+                }
+
                 // 삭제한 항목이 수정 중이던 항목이면 수정 모드 취소
                 if (editingLogId === id) {
                     cancelEditMode();
@@ -2901,6 +2908,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             sampleLogs = sampleLogs.filter(log => !selectedIds.includes(String(log.id)));
             saveLogs();
             renderLogs(sampleLogs);
+
+            // Firebase에서도 삭제
+            if (window.firestoreDb?.isEnabled()) {
+                Promise.all(selectedIds.map(id =>
+                    window.firestoreDb.delete('soil', parseInt(selectedYear), id)
+                ))
+                    .then(() => log('☁️ Firebase 일괄 삭제 완료:', selectedIds.length, '건'))
+                    .catch(err => console.error('Firebase 일괄 삭제 실패:', err));
+            }
 
             // 전체 선택 체크박스 해제
             if (selectAllCheckbox) {
