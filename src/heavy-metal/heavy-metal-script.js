@@ -297,6 +297,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                         if (mergedData.added > 0) msgs.push(`${mergedData.added}건 추가`);
                         if (mergedData.deleted > 0) msgs.push(`${mergedData.deleted}건 삭제`);
                         showToast(`클라우드에서 동기화됨 (${msgs.join(', ')})`, 'success');
+
+                        // 자동저장 실행 (JSON 파일)
+                        const autoSaveEnabled = localStorage.getItem('heavyMetalAutoSaveEnabled') === 'true';
+                        if (autoSaveEnabled && window.isElectron && FileAPI.autoSavePath) {
+                            SampleUtils.performAutoSave({
+                                FileAPI: FileAPI,
+                                moduleKey: 'heavyMetal',
+                                data: sampleLogs,
+                                log: log
+                            });
+                        }
                     } else {
                         log('☁️ Firebase 로드 완료:', cloudData.length, '건');
                     }
@@ -348,10 +359,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 log('☁️ 클라우드에서 동기화 완료:', mergedData.data.length, '건');
                 const msgs = [];
-                        if (mergedData.updated > 0) msgs.push(`${mergedData.updated}건 업데이트`);
-                        if (mergedData.added > 0) msgs.push(`${mergedData.added}건 추가`);
-                        if (mergedData.deleted > 0) msgs.push(`${mergedData.deleted}건 삭제`);
-                        showToast(`클라우드에서 동기화됨 (${msgs.join(', ')})`, 'success');
+                if (mergedData.updated > 0) msgs.push(`${mergedData.updated}건 업데이트`);
+                if (mergedData.added > 0) msgs.push(`${mergedData.added}건 추가`);
+                if (mergedData.deleted > 0) msgs.push(`${mergedData.deleted}건 삭제`);
+                showToast(`클라우드에서 동기화됨 (${msgs.join(', ')})`, 'success');
+
+                // 자동저장 실행 (JSON 파일)
+                const autoSaveEnabled = localStorage.getItem('heavyMetalAutoSaveEnabled') === 'true';
+                if (autoSaveEnabled && window.isElectron && FileAPI.autoSavePath) {
+                    SampleUtils.performAutoSave({
+                        FileAPI: FileAPI,
+                        moduleKey: 'heavyMetal',
+                        data: sampleLogs,
+                        log: log
+                    });
+                }
             } else {
                 log('☁️ 로컬과 클라우드 데이터 동일 (', localData.length, '건)');
             }
