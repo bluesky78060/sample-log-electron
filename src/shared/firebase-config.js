@@ -85,6 +85,18 @@ async function initializeFirebase() {
         return true;
     }
 
+    // 네트워크 접근 체크
+    if (window.NetworkAccess) {
+        const accessResult = await window.NetworkAccess.checkAccess();
+        logFirebase('네트워크 접근 체크:', accessResult);
+
+        if (!accessResult.allowed) {
+            logFirebase('네트워크 접근 거부:', accessResult.reason);
+            console.warn('[Firebase] 허용되지 않은 네트워크입니다. 로컬 모드로 동작합니다.');
+            return false;
+        }
+    }
+
     // firebase compat SDK가 로드되었는지 확인
     if (typeof firebase === 'undefined') {
         console.error('[Firebase] SDK가 로드되지 않았습니다. firebase-app-compat.js를 먼저 로드하세요.');
