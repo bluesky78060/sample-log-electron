@@ -1070,57 +1070,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </td>
             `;
 
-            // 완료 토글
-            tr.querySelector('.btn-complete')?.addEventListener('click', () => {
-                const realIdx = parseInt(tr.dataset.index, 10);
-                sampleLogs[realIdx].isCompleted = !sampleLogs[realIdx].isCompleted;
-                sampleLogs[realIdx].updatedAt = new Date().toISOString();
-                saveData();
-                renderLogs();
-            });
-
-            // 판정 토글 (미판정 → 적합 → 부적합 → 미판정)
-            tr.querySelector('.btn-result')?.addEventListener('click', () => {
-                const realIdx = parseInt(tr.dataset.index, 10);
-                const log = sampleLogs[realIdx];
-                if (!log.testResult || log.testResult === '') {
-                    log.testResult = 'pass';  // 미판정 → 적합
-                } else if (log.testResult === 'pass') {
-                    log.testResult = 'fail';  // 적합 → 부적합
-                } else {
-                    log.testResult = '';      // 부적합 → 미판정
-                }
-                log.updatedAt = new Date().toISOString();
-                saveData();
-                renderLogs();
-            });
-
-            // 수정 버튼
-            tr.querySelector('.btn-edit')?.addEventListener('click', () => {
-                editLog(parseInt(tr.dataset.index, 10));
-            });
-
-            // 삭제 버튼
-            tr.querySelector('.btn-delete')?.addEventListener('click', () => {
-                if (confirm('정말 삭제하시겠습니까?')) {
-                    const idx = parseInt(tr.dataset.index, 10);
-                    const deletedItem = sampleLogs[idx];
-                    const deletedId = deletedItem?.id;
-
-                    sampleLogs.splice(idx, 1);
-                    saveData();
-                    renderLogs();
-                    showToast('삭제되었습니다.', 'success');
-
-                    // Firebase에서도 삭제
-                    if (deletedId && window.firestoreDb?.isEnabled()) {
-                        window.firestoreDb.delete('heavy-metal', parseInt(selectedYear), deletedId)
-                            .then(() => log('☁️ Firebase 삭제 완료:', deletedId))
-                            .catch(err => console.error('Firebase 삭제 실패:', err));
-                    }
-                }
-            });
-
             tableBody.appendChild(tr);
         });
 
@@ -1524,6 +1473,66 @@ document.addEventListener('DOMContentLoaded', async () => {
             renderLogs();
         }
     }
+
+    // ========================================
+    // 테이블 이벤트 위임 (한 번만 등록 - Electron 호환)
+    // ========================================
+    tableBody?.addEventListener('click', (e) => {
+        const tr = e.target.closest('tr[data-index]');
+        if (!tr) return;
+        const realIdx = parseInt(tr.dataset.index, 10);
+
+        // 완료 토글
+        if (e.target.closest('.btn-complete')) {
+            sampleLogs[realIdx].isCompleted = !sampleLogs[realIdx].isCompleted;
+            sampleLogs[realIdx].updatedAt = new Date().toISOString();
+            saveData();
+            renderLogs();
+            return;
+        }
+
+        // 판정 토글 (미판정 → 적합 → 부적합 → 미판정)
+        if (e.target.closest('.btn-result')) {
+            const logItem = sampleLogs[realIdx];
+            if (!logItem.testResult || logItem.testResult === '') {
+                logItem.testResult = 'pass';
+            } else if (logItem.testResult === 'pass') {
+                logItem.testResult = 'fail';
+            } else {
+                logItem.testResult = '';
+            }
+            logItem.updatedAt = new Date().toISOString();
+            saveData();
+            renderLogs();
+            return;
+        }
+
+        // 수정 버튼
+        if (e.target.closest('.btn-edit')) {
+            editLog(realIdx);
+            return;
+        }
+
+        // 삭제 버튼
+        if (e.target.closest('.btn-delete')) {
+            if (confirm('정말 삭제하시겠습니까?')) {
+                const deletedItem = sampleLogs[realIdx];
+                const deletedId = deletedItem?.id;
+
+                sampleLogs.splice(realIdx, 1);
+                saveData();
+                renderLogs();
+                showToast('삭제되었습니다.', 'success');
+
+                // Firebase에서도 삭제
+                if (deletedId && window.firestoreDb?.isEnabled()) {
+                    window.firestoreDb.delete('heavy-metal', parseInt(selectedYear), deletedId)
+                        .catch(err => console.error('Firebase 삭제 실패:', err));
+                }
+            }
+            return;
+        }
+    });
 
     // ========================================
     // 선택 삭제

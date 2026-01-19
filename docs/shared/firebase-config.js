@@ -1,5 +1,5 @@
 /**
- * @fileoverview Firebase 설정 및 초기화
+ * @fileoverview Firebase 설정 및 초기화 (compat 버전)
  * @description Firebase Firestore 연결 설정
  *
  * 사용 전 Firebase Console에서 프로젝트 생성 필요:
@@ -20,11 +20,10 @@ const DEBUG_FIREBASE = true;
 /** 조건부 로깅 */
 const logFirebase = (...args) => DEBUG_FIREBASE && console.log('[Firebase]', ...args);
 
-let app = null;
 let db = null;
 let isFirebaseEnabled = false;
 let isOfflineEnabled = false;
-let firebaseConfig = null;
+let firebaseConfigData = null;
 
 // localStorage 키
 const FIREBASE_CONFIG_KEY = 'firebase_config';
@@ -74,7 +73,7 @@ function isFirebaseConfigValid() {
 }
 
 /**
- * Firebase 초기화
+ * Firebase 초기화 (compat 버전)
  * @returns {Promise<boolean>} 초기화 성공 여부
  */
 async function initializeFirebase() {
@@ -86,18 +85,24 @@ async function initializeFirebase() {
         return true;
     }
 
-    firebaseConfig = loadFirebaseConfig();
-    logFirebase('로드된 설정:', firebaseConfig ? '있음' : '없음');
+    // firebase compat SDK가 로드되었는지 확인
+    if (typeof firebase === 'undefined') {
+        console.error('[Firebase] SDK가 로드되지 않았습니다. firebase-app-compat.js를 먼저 로드하세요.');
+        return false;
+    }
 
-    if (!firebaseConfig) {
+    firebaseConfigData = loadFirebaseConfig();
+    logFirebase('로드된 설정:', firebaseConfigData ? '있음' : '없음');
+
+    if (!firebaseConfigData) {
         logFirebase('설정이 없습니다. localStorage 모드로 동작합니다.');
         return false;
     }
 
     logFirebase('설정값 확인:', {
-        apiKey: firebaseConfig.apiKey ? firebaseConfig.apiKey.substring(0, 10) + '...' : '없음',
-        projectId: firebaseConfig.projectId || '없음',
-        authDomain: firebaseConfig.authDomain || '없음'
+        apiKey: firebaseConfigData.apiKey ? firebaseConfigData.apiKey.substring(0, 10) + '...' : '없음',
+        projectId: firebaseConfigData.projectId || '없음',
+        authDomain: firebaseConfigData.authDomain || '없음'
     });
 
     if (!isFirebaseConfigValid()) {
@@ -106,24 +111,19 @@ async function initializeFirebase() {
     }
 
     try {
-        logFirebase('SDK 로드 중...');
-        // Firebase 앱 초기화 - 병렬 로드로 성능 최적화 (async-parallel)
-        const [appModule, firestoreModule] = await Promise.all([
-            import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js'),
-            import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js')
-        ]);
-        const { initializeApp } = appModule;
-        const { getFirestore, enableIndexedDbPersistence } = firestoreModule;
+        logFirebase('앱 초기화 중...');
 
-        logFirebase('SDK 로드 완료, 앱 초기화 중...');
-        app = initializeApp(firebaseConfig);
-        db = getFirestore(app);
+        // 이미 초기화된 앱이 있는지 확인
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfigData);
+        }
 
+        db = firebase.firestore();
         logFirebase('Firestore 연결됨');
 
         // 오프라인 지원 활성화
         try {
-            await enableIndexedDbPersistence(db);
+            await db.enablePersistence();
             isOfflineEnabled = true;
             logFirebase('오프라인 지원 활성화됨');
         } catch (err) {
@@ -136,7 +136,7 @@ async function initializeFirebase() {
         }
 
         isFirebaseEnabled = true;
-        logFirebase('초기화 완료:', firebaseConfig.projectId);
+        logFirebase('초기화 완료:', firebaseConfigData.projectId);
         return true;
     } catch (error) {
         console.error('[Firebase] 초기화 실패:', error);

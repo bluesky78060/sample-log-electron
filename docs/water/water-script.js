@@ -1279,40 +1279,45 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    function bindTableEvents() {
+    // 테이블 이벤트 위임 (한 번만 등록)
+    tableBody?.addEventListener('click', (e) => {
         // 완료 버튼
-        document.querySelectorAll('.btn-complete').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const id = btn.dataset.id;
-                toggleComplete(id);
-            });
-        });
+        const completeBtn = e.target.closest('.btn-complete');
+        if (completeBtn) {
+            const id = completeBtn.dataset.id;
+            toggleComplete(id);
+            return;
+        }
 
         // 판정 버튼 (적합/부적합 토글)
-        document.querySelectorAll('.btn-result').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const id = btn.dataset.id;
-                toggleTestResult(id);
-            });
-        });
+        const resultBtn = e.target.closest('.btn-result');
+        if (resultBtn) {
+            const id = resultBtn.dataset.id;
+            toggleTestResult(id);
+            return;
+        }
 
         // 삭제 버튼
-        document.querySelectorAll('.btn-delete').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const id = btn.dataset.id;
-                if (confirm('이 항목을 삭제하시겠습니까?')) {
-                    deleteSample(id);
-                }
-            });
-        });
+        const deleteBtn = e.target.closest('.btn-delete');
+        if (deleteBtn) {
+            const id = deleteBtn.dataset.id;
+            if (confirm('이 항목을 삭제하시겠습니까?')) {
+                deleteSample(id);
+            }
+            return;
+        }
 
         // 수정 버튼
-        document.querySelectorAll('.btn-edit').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const id = btn.dataset.id;
-                editSample(id);
-            });
-        });
+        const editBtn = e.target.closest('.btn-edit');
+        if (editBtn) {
+            const id = editBtn.dataset.id;
+            editSample(id);
+            return;
+        }
+    });
+
+    function bindTableEvents() {
+        // 이벤트 위임으로 대체됨 - 이 함수는 호환성을 위해 유지
     }
 
     function toggleComplete(id) {

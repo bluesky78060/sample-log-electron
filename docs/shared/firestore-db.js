@@ -1,5 +1,5 @@
 /**
- * @fileoverview Firestore 데이터베이스 CRUD 모듈
+ * @fileoverview Firestore 데이터베이스 CRUD 모듈 (compat 버전)
  * @description 시료 데이터의 Firestore 저장/조회/수정/삭제 기능
  *
  * 컬렉션 구조:
@@ -9,9 +9,6 @@
  * - heavyMetalSamples: 토양 중금속 시료
  * - pesticideSamples: 잔류농약 시료
  */
-
-// Firestore 모듈 참조
-let firestore = null;
 
 /** @type {boolean} 디버그 모드 (프로덕션에서는 false) */
 const DEBUG_FIRESTORE = true;
@@ -30,26 +27,6 @@ const COLLECTION_MAP = {
 };
 
 /**
- * Firestore 모듈 초기화
- * @returns {Promise<boolean>} 초기화 성공 여부
- */
-async function initFirestore() {
-    if (!window.firebaseConfig?.isEnabled()) {
-        logFirestore('Firebase가 비활성화 상태입니다.');
-        return false;
-    }
-
-    try {
-        firestore = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-        logFirestore('모듈 로드 완료');
-        return true;
-    } catch (error) {
-        console.error('[Firestore] 모듈 로드 실패:', error);
-        return false;
-    }
-}
-
-/**
  * 컬렉션 이름 가져오기
  * @param {string} sampleType - 시료 타입 (soil, water, compost, heavyMetal, pesticide)
  * @param {number} year - 연도
@@ -61,7 +38,7 @@ function getCollectionName(sampleType, year) {
 }
 
 /**
- * 단일 문서 저장/업데이트
+ * 단일 문서 저장/업데이트 (compat 버전)
  * @param {string} sampleType - 시료 타입
  * @param {number} year - 연도
  * @param {string} docId - 문서 ID
@@ -75,15 +52,14 @@ async function saveDocument(sampleType, year, docId, data) {
 
     try {
         const db = window.firebaseConfig.getDb();
+        if (!db) return false;
+
         const collectionName = getCollectionName(sampleType, year);
 
-        const { doc, setDoc, serverTimestamp } = firestore;
-        const docRef = doc(db, collectionName, docId);
-
-        await setDoc(docRef, {
+        await db.collection(collectionName).doc(docId).set({
             ...data,
-            updatedAt: serverTimestamp(),
-            syncedAt: serverTimestamp()
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            syncedAt: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
 
         logFirestore(`저장 완료: ${collectionName}/${docId}`);
@@ -95,7 +71,7 @@ async function saveDocument(sampleType, year, docId, data) {
 }
 
 /**
- * 단일 문서 조회
+ * 단일 문서 조회 (compat 버전)
  * @param {string} sampleType - 시료 타입
  * @param {number} year - 연도
  * @param {string} docId - 문서 ID
@@ -108,13 +84,12 @@ async function getDocument(sampleType, year, docId) {
 
     try {
         const db = window.firebaseConfig.getDb();
+        if (!db) return null;
+
         const collectionName = getCollectionName(sampleType, year);
+        const docSnap = await db.collection(collectionName).doc(docId).get();
 
-        const { doc, getDoc } = firestore;
-        const docRef = doc(db, collectionName, docId);
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
+        if (docSnap.exists) {
             return { id: docSnap.id, ...docSnap.data() };
         }
         return null;
@@ -125,7 +100,7 @@ async function getDocument(sampleType, year, docId) {
 }
 
 /**
- * 컬렉션 전체 조회
+ * 컬렉션 전체 조회 (compat 버전)
  * @param {string} sampleType - 시료 타입
  * @param {number} year - 연도
  * @param {Object} options - 조회 옵션
@@ -139,25 +114,21 @@ async function getAllDocuments(sampleType, year, options = {}) {
 
     try {
         const db = window.firebaseConfig.getDb();
+        if (!db) return [];
+
         const collectionName = getCollectionName(sampleType, year);
+        let queryRef = db.collection(collectionName);
 
-        const { collection, getDocs, query, orderBy } = firestore;
-
-        // 정렬 옵션 - 인덱스 없이 빠르게 조회하려면 skipOrder: true
-        let q;
-        if (options.skipOrder) {
-            q = query(collection(db, collectionName));
-        } else {
+        // 정렬 옵션
+        if (!options.skipOrder) {
             try {
-                q = query(collection(db, collectionName), orderBy('updatedAt', 'desc'));
+                queryRef = queryRef.orderBy('updatedAt', 'desc');
             } catch (indexError) {
-                // 인덱스 오류 시 정렬 없이 재시도
                 console.warn('[Firestore] 인덱스 없음, 정렬 없이 조회:', indexError.message);
-                q = query(collection(db, collectionName));
             }
         }
 
-        const querySnapshot = await getDocs(q);
+        const querySnapshot = await queryRef.get();
 
         const documents = [];
         querySnapshot.forEach((doc) => {
@@ -182,7 +153,7 @@ async function getAllDocuments(sampleType, year, options = {}) {
 }
 
 /**
- * 문서 삭제 (id 필드 기반 쿼리로 삭제)
+ * 문서 삭제 (compat 버전) - id 필드 기반 쿼리로 삭제
  * @param {string} sampleType - 시료 타입
  * @param {number} year - 연도
  * @param {string} docId - 데이터의 id 필드 값
@@ -195,49 +166,51 @@ async function deleteDocument(sampleType, year, docId) {
 
     try {
         const db = window.firebaseConfig.getDb();
+        if (!db) return false;
+
         const collectionName = getCollectionName(sampleType, year);
 
         // ID를 문자열로 변환
         const stringDocId = typeof docId === 'number' ? String(docId) : String(docId || '');
-        if (!stringDocId) {
-            console.error('Firestore 삭제 실패: 유효하지 않은 문서 ID');
-            return false;
-        }
+        const numericDocId = parseInt(stringDocId, 10);
 
-        const { doc, deleteDoc, collection, query, where, getDocs, getDoc } = firestore;
+        if (!stringDocId) return false;
 
-        logFirestore(`삭제 시도: ${collectionName} id=${stringDocId}`);
+        // 1차: 문서 ID로 직접 삭제 시도
+        const directDocRef = db.collection(collectionName).doc(stringDocId);
+        const directDocSnap = await directDocRef.get();
 
-        // 1차: 문서 ID로 직접 삭제 시도 (문서 존재 여부 먼저 확인)
-        const directDocRef = doc(db, collectionName, stringDocId);
-        const directDocSnap = await getDoc(directDocRef);
-
-        if (directDocSnap.exists()) {
-            await deleteDoc(directDocRef);
-            logFirestore(`삭제 완료 (문서ID): ${collectionName}/${stringDocId}`);
+        if (directDocSnap.exists) {
+            await directDocRef.delete();
+            logFirestore(`삭제 완료: ${collectionName}/${stringDocId}`);
             return true;
         }
 
-        logFirestore(`문서ID로 찾지 못함, id 필드로 쿼리: ${stringDocId}`);
+        // 2차: id 필드로 쿼리 (문자열)
+        let querySnapshot = await db.collection(collectionName)
+            .where('id', '==', stringDocId)
+            .get();
 
-        // 2차: id 필드로 쿼리하여 삭제
-        const q = query(collection(db, collectionName), where('id', '==', stringDocId));
-        const querySnapshot = await getDocs(q);
+        // 3차: 문자열로 찾지 못하면 숫자로도 쿼리 시도
+        if (querySnapshot.empty && !isNaN(numericDocId)) {
+            querySnapshot = await db.collection(collectionName)
+                .where('id', '==', numericDocId)
+                .get();
+        }
 
         if (querySnapshot.empty) {
-            logFirestore(`삭제 대상 없음: ${collectionName} id=${stringDocId}`);
+            logFirestore(`삭제 대상 없음: ${collectionName}/${stringDocId}`);
             return false;
         }
 
         // 찾은 문서 삭제
         const deletePromises = [];
         querySnapshot.forEach((docSnap) => {
-            logFirestore(`쿼리로 찾은 문서: ${docSnap.id}`);
-            deletePromises.push(deleteDoc(doc(db, collectionName, docSnap.id)));
+            deletePromises.push(docSnap.ref.delete());
         });
         await Promise.all(deletePromises);
 
-        logFirestore(`삭제 완료 (쿼리): ${collectionName} id=${stringDocId} (${querySnapshot.size}건)`);
+        logFirestore(`삭제 완료 (쿼리): ${collectionName}/${stringDocId} (${querySnapshot.size}건)`);
         return true;
     } catch (error) {
         console.error('Firestore 삭제 실패:', error);
@@ -246,7 +219,7 @@ async function deleteDocument(sampleType, year, docId) {
 }
 
 /**
- * 여러 문서 일괄 저장 (배치)
+ * 여러 문서 일괄 저장 (compat 버전 - 배치)
  * Firestore writeBatch는 최대 500개 작업으로 제한되므로 청크로 나누어 처리
  * @param {string} sampleType - 시료 타입
  * @param {number} year - 연도
@@ -260,9 +233,9 @@ async function batchSave(sampleType, year, documents) {
 
     try {
         const db = window.firebaseConfig.getDb();
-        const collectionName = getCollectionName(sampleType, year);
+        if (!db) return false;
 
-        const { doc, writeBatch, serverTimestamp } = firestore;
+        const collectionName = getCollectionName(sampleType, year);
 
         // Firestore batch는 최대 500개로 제한됨
         const BATCH_SIZE = 450;
@@ -275,7 +248,7 @@ async function batchSave(sampleType, year, documents) {
 
         for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
             const chunk = chunks[chunkIndex];
-            const batch = writeBatch(db);
+            const batch = db.batch();
 
             chunk.forEach((docData) => {
                 // ID 유효성 검사 - 문자열로 변환 (원본 ID 유지)
@@ -289,12 +262,12 @@ async function batchSave(sampleType, year, documents) {
                     docId = Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
                 }
 
-                const docRef = doc(db, collectionName, docId);
+                const docRef = db.collection(collectionName).doc(docId);
                 batch.set(docRef, {
                     ...docData,
                     id: docId, // 문자열 ID 저장
-                    updatedAt: serverTimestamp(),
-                    syncedAt: serverTimestamp()
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    syncedAt: firebase.firestore.FieldValue.serverTimestamp()
                 }, { merge: true });
             });
 
@@ -311,7 +284,7 @@ async function batchSave(sampleType, year, documents) {
 }
 
 /**
- * localStorage 데이터를 Firestore로 마이그레이션
+ * localStorage 데이터를 Firestore로 마이그레이션 (compat 버전)
  * @param {string} sampleType - 시료 타입
  * @param {number} year - 연도
  * @param {string} localStorageKey - localStorage 키
@@ -359,7 +332,7 @@ function generateMigrationId() {
 }
 
 /**
- * 실시간 동기화 리스너 설정
+ * 실시간 동기화 리스너 설정 (compat 버전)
  * @param {string} sampleType - 시료 타입
  * @param {number} year - 연도
  * @param {Function} callback - 변경 시 호출될 콜백 함수
@@ -372,20 +345,21 @@ function subscribeToChanges(sampleType, year, callback) {
 
     try {
         const db = window.firebaseConfig.getDb();
+        if (!db) return null;
+
         const collectionName = getCollectionName(sampleType, year);
 
-        const { collection, onSnapshot, query, orderBy } = firestore;
-        const q = query(collection(db, collectionName), orderBy('updatedAt', 'desc'));
-
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const documents = [];
-            snapshot.forEach((doc) => {
-                documents.push({ id: doc.id, ...doc.data() });
+        const unsubscribe = db.collection(collectionName)
+            .orderBy('updatedAt', 'desc')
+            .onSnapshot((snapshot) => {
+                const documents = [];
+                snapshot.forEach((doc) => {
+                    documents.push({ id: doc.id, ...doc.data() });
+                });
+                callback(documents, snapshot.metadata.fromCache);
+            }, (error) => {
+                console.error('실시간 동기화 에러:', error);
             });
-            callback(documents, snapshot.metadata.fromCache);
-        }, (error) => {
-            console.error('실시간 동기화 에러:', error);
-        });
 
         logFirestore(`실시간 동기화 시작: ${collectionName}`);
         return unsubscribe;
@@ -400,7 +374,7 @@ function subscribeToChanges(sampleType, year, callback) {
  * @returns {boolean} 활성화 여부
  */
 function isFirestoreEnabled() {
-    return window.firebaseConfig?.isEnabled() === true && firestore !== null;
+    return window.firebaseConfig?.isEnabled() === true;
 }
 
 /**
@@ -413,7 +387,11 @@ function isFirestoreOfflineEnabled() {
 
 // 전역으로 내보내기
 window.firestoreDb = {
-    init: initFirestore,
+    // init은 호환성을 위해 빈 함수 (실제 초기화는 firebase-config에서 수행)
+    init: async function() {
+        logFirestore('firestoreDb.init() 호출됨 (no-op)');
+        return true;
+    },
     save: saveDocument,
     get: getDocument,
     getAll: getAllDocuments,

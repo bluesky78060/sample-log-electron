@@ -2631,11 +2631,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         }, 100);
     }
 
-    // 삭제 및 수정 핸들러 (이벤트 위임)
+    // 삭제 및 수정 핸들러 (이벤트 위임 - closest로 버튼 찾기)
     tableBody.addEventListener('click', (e) => {
         // 완료 버튼
-        if (e.target.classList.contains('btn-complete')) {
-            const id = e.target.dataset.id;
+        const completeBtn = e.target.closest('.btn-complete');
+        if (completeBtn) {
+            const id = completeBtn.dataset.id;
             const log = sampleLogs.find(l => String(l.id) === id);
             if (log) {
                 // 완료 상태 토글
@@ -2690,9 +2691,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
-        // 삭제 버튼
-        if (e.target.classList.contains('btn-delete')) {
-            const id = e.target.dataset.id;
+        // 삭제 버튼 (closest로 버튼 찾기 - Electron 호환성)
+        const deleteBtn = e.target.closest('.btn-delete');
+        if (deleteBtn) {
+            const id = deleteBtn.dataset.id;
             if (confirm('정말 삭제하시겠습니까?')) {
                 sampleLogs = sampleLogs.filter(log => log.id !== id);
                 saveLogs();
@@ -2712,12 +2714,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
-        // 수정 버튼
-        if (e.target.classList.contains('btn-edit')) {
-            const id = e.target.dataset.id;
-            const log = sampleLogs.find(l => String(l.id) === id);
-            if (log) {
-                populateFormForEdit(log);
+        // 수정 버튼 (closest로 버튼 찾기 - Electron 호환성)
+        const editBtn = e.target.closest('.btn-edit');
+        if (editBtn) {
+            const id = editBtn.dataset.id;
+            const logItem = sampleLogs.find(l => String(l.id) === id);
+            if (logItem) {
+                populateFormForEdit(logItem);
             }
         }
     });

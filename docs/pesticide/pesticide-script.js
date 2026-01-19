@@ -2695,18 +2695,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         }, 100);
     }
 
-    // 삭제 및 수정 핸들러 (이벤트 위임)
-    tableBody.addEventListener('click', (e) => {
+    // 삭제 및 수정 핸들러 (이벤트 위임 - closest로 버튼 찾기)
+    tableBody?.addEventListener('click', (e) => {
         // 완료 버튼
-        if (e.target.classList.contains('btn-complete')) {
-            const id = e.target.dataset.id;
-            const log = sampleLogs.find(l => String(l.id) === id);
-            if (log) {
+        const completeBtn = e.target.closest('.btn-complete');
+        if (completeBtn) {
+            const id = completeBtn.dataset.id;
+            const logItem = sampleLogs.find(l => String(l.id) === id);
+            if (logItem) {
                 // 완료 상태 토글
-                const newCompletedStatus = !log.completed;
+                const newCompletedStatus = !logItem.completed;
 
                 // 접수번호에서 기본 번호 추출 (예: "2025-001-1" -> "2025-001")
-                const receptionNumber = log.receptionNumber || '';
+                const receptionNumber = logItem.receptionNumber || '';
                 const baseNumber = receptionNumber.split('-').slice(0, 2).join('-');
 
                 // 같은 기본 번호를 가진 모든 시료 찾기 (하위 필지 포함)
@@ -2755,8 +2756,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         // 판정 버튼 (적합/부적합 토글)
-        if (e.target.classList.contains('btn-result')) {
-            const id = e.target.dataset.id;
+        const resultBtn = e.target.closest('.btn-result');
+        if (resultBtn) {
+            const id = resultBtn.dataset.id;
             const log = sampleLogs.find(l => String(l.id) === id);
             if (log) {
                 // 판정 결과 토글 (미판정 → 적합 → 부적합 → 미판정)
@@ -2773,18 +2775,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
-        // 삭제 버튼
-        if (e.target.classList.contains('btn-delete')) {
-            const id = e.target.dataset.id;
+        // 삭제 버튼 (closest로 버튼 찾기 - Electron 호환성)
+        const deleteBtn = e.target.closest('.btn-delete');
+        if (deleteBtn) {
+            const id = deleteBtn.dataset.id;
             if (confirm('정말 삭제하시겠습니까?')) {
-                sampleLogs = sampleLogs.filter(log => log.id !== id);
+                sampleLogs = sampleLogs.filter(item => item.id !== id);
                 saveLogs();
                 renderLogs(sampleLogs);
 
                 // Firebase에서도 삭제
                 if (window.firestoreDb?.isEnabled()) {
                     window.firestoreDb.delete('pesticide', parseInt(selectedYear), id)
-                        .then(() => log('☁️ Firebase 삭제 완료:', id))
                         .catch(err => console.error('Firebase 삭제 실패:', err));
                 }
 
@@ -2795,12 +2797,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
-        // 수정 버튼
-        if (e.target.classList.contains('btn-edit')) {
-            const id = e.target.dataset.id;
-            const log = sampleLogs.find(l => String(l.id) === id);
-            if (log) {
-                populateFormForEdit(log);
+        // 수정 버튼 (closest로 버튼 찾기 - Electron 호환성)
+        const editBtn = e.target.closest('.btn-edit');
+        if (editBtn) {
+            const id = editBtn.dataset.id;
+            const logItem = sampleLogs.find(l => String(l.id) === id);
+            if (logItem) {
+                populateFormForEdit(logItem);
             }
         }
     });
