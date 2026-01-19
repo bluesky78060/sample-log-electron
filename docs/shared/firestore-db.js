@@ -204,16 +204,21 @@ async function deleteDocument(sampleType, year, docId) {
             return false;
         }
 
-        const { doc, deleteDoc, collection, query, where, getDocs } = firestore;
+        const { doc, deleteDoc, collection, query, where, getDocs, getDoc } = firestore;
 
-        // 1차: 문서 ID로 직접 삭제 시도
-        try {
-            await deleteDoc(doc(db, collectionName, stringDocId));
+        logFirestore(`삭제 시도: ${collectionName} id=${stringDocId}`);
+
+        // 1차: 문서 ID로 직접 삭제 시도 (문서 존재 여부 먼저 확인)
+        const directDocRef = doc(db, collectionName, stringDocId);
+        const directDocSnap = await getDoc(directDocRef);
+
+        if (directDocSnap.exists()) {
+            await deleteDoc(directDocRef);
             logFirestore(`삭제 완료 (문서ID): ${collectionName}/${stringDocId}`);
             return true;
-        } catch (directError) {
-            logFirestore(`문서ID로 삭제 실패, 쿼리로 재시도: ${stringDocId}`);
         }
+
+        logFirestore(`문서ID로 찾지 못함, id 필드로 쿼리: ${stringDocId}`);
 
         // 2차: id 필드로 쿼리하여 삭제
         const q = query(collection(db, collectionName), where('id', '==', stringDocId));
@@ -227,6 +232,7 @@ async function deleteDocument(sampleType, year, docId) {
         // 찾은 문서 삭제
         const deletePromises = [];
         querySnapshot.forEach((docSnap) => {
+            logFirestore(`쿼리로 찾은 문서: ${docSnap.id}`);
             deletePromises.push(deleteDoc(doc(db, collectionName, docSnap.id)));
         });
         await Promise.all(deletePromises);
