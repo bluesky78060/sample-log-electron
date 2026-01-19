@@ -25,6 +25,7 @@ const COLLECTION_MAP = {
     'water': 'waterSamples',
     'compost': 'compostSamples',
     'heavyMetal': 'heavyMetalSamples',
+    'heavy-metal': 'heavyMetalSamples',
     'pesticide': 'pesticideSamples'
 };
 
@@ -196,10 +197,17 @@ async function deleteDocument(sampleType, year, docId) {
         const db = window.firebaseConfig.getDb();
         const collectionName = getCollectionName(sampleType, year);
 
-        const { doc, deleteDoc } = firestore;
-        await deleteDoc(doc(db, collectionName, docId));
+        // ID를 문자열로 변환 (저장 시와 동일하게)
+        const stringDocId = typeof docId === 'number' ? String(docId) : String(docId || '');
+        if (!stringDocId) {
+            console.error('Firestore 삭제 실패: 유효하지 않은 문서 ID');
+            return false;
+        }
 
-        logFirestore(`삭제 완료: ${collectionName}/${docId}`);
+        const { doc, deleteDoc } = firestore;
+        await deleteDoc(doc(db, collectionName, stringDocId));
+
+        logFirestore(`삭제 완료: ${collectionName}/${stringDocId}`);
         return true;
     } catch (error) {
         console.error('Firestore 삭제 실패:', error);
@@ -239,13 +247,13 @@ async function batchSave(sampleType, year, documents) {
             const chunk = chunks[chunkIndex];
             const batch = writeBatch(db);
 
-            chunk.forEach((docData, index) => {
-                // ID 유효성 검사 및 변환
+            chunk.forEach((docData) => {
+                // ID 유효성 검사 - 문자열로 변환 (원본 ID 유지)
                 let docId = docData.id;
 
-                // 숫자형 ID를 문자열로 변환하고 인덱스 추가 (고유성 보장)
+                // 숫자형 ID는 문자열로만 변환 (원본 값 유지)
                 if (typeof docId === 'number') {
-                    docId = `${docId}_${chunkIndex}_${index}`;
+                    docId = String(docId);
                 } else if (!docId || typeof docId !== 'string' || docId.trim() === '') {
                     // ID가 없거나 유효하지 않으면 새로 생성
                     docId = Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
@@ -254,7 +262,7 @@ async function batchSave(sampleType, year, documents) {
                 const docRef = doc(db, collectionName, docId);
                 batch.set(docRef, {
                     ...docData,
-                    id: docId, // 변환된 ID 저장
+                    id: docId, // 문자열 ID 저장
                     updatedAt: serverTimestamp(),
                     syncedAt: serverTimestamp()
                 }, { merge: true });
