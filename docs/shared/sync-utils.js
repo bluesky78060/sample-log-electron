@@ -29,12 +29,14 @@ function getTimestamp(updatedAt) {
 
 /**
  * 로컬과 클라우드 데이터를 updatedAt 기준으로 스마트 병합
+ * Firebase가 진실의 원천(source of truth) - 클라우드에서 삭제된 항목은 로컬에서도 삭제
  * @param {Array} localData - 로컬 데이터 배열
  * @param {Array} cloudData - 클라우드 데이터 배열
- * @returns {Object} { data: 병합된 배열, hasChanges: 변경 여부, updated: 업데이트 건수, added: 추가 건수 }
+ * @returns {Object} { data: 병합된 배열, hasChanges: 변경 여부, updated: 업데이트 건수, added: 추가 건수, deleted: 삭제 건수 }
  */
 function smartMerge(localData, cloudData) {
     const localMap = new Map();
+    const cloudIds = new Set();
 
     // 로컬 데이터를 ID로 매핑
     localData.forEach(item => {
@@ -42,10 +44,17 @@ function smartMerge(localData, cloudData) {
         if (id) localMap.set(id, item);
     });
 
+    // 클라우드 ID 집합 생성
+    cloudData.forEach(item => {
+        const id = item.id || item.receptionNumber;
+        if (id) cloudIds.add(id);
+    });
+
     const merged = [];
     const processedIds = new Set();
     let updated = 0;
     let added = 0;
+    let deleted = 0;
     let hasChanges = false;
 
     // 클라우드 데이터 기준으로 병합
@@ -78,11 +87,21 @@ function smartMerge(localData, cloudData) {
         }
     });
 
-    // 로컬에만 있는 데이터 추가 (클라우드에 아직 업로드 안된 것)
+    // 로컬에만 있는 데이터 처리
+    // - syncedAt이 있으면: 이전에 클라우드와 동기화된 적 있음 → 클라우드에서 삭제됨 → 로컬에서도 삭제
+    // - syncedAt이 없으면: 아직 업로드 안된 로컬 데이터 → 유지
     localData.forEach(localItem => {
         const id = localItem.id || localItem.receptionNumber;
         if (id && !processedIds.has(id)) {
-            merged.push(localItem);
+            if (localItem.syncedAt) {
+                // 이전에 동기화된 적 있는데 클라우드에 없음 = 클라우드에서 삭제됨
+                deleted++;
+                hasChanges = true;
+                // merged에 추가하지 않음 (삭제)
+            } else {
+                // 아직 업로드 안된 로컬 데이터 → 유지
+                merged.push(localItem);
+            }
         }
     });
 
@@ -93,7 +112,7 @@ function smartMerge(localData, cloudData) {
         return aNum - bNum;
     });
 
-    return { data: merged, hasChanges, updated, added };
+    return { data: merged, hasChanges, updated, added, deleted };
 }
 
 // ========================================

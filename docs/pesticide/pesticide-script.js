@@ -813,7 +813,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     if (mergedData.hasChanges) {
                         log('☁️ Firebase에서 동기화 완료:', mergedData.data.length, '건');
-                        showToast(`클라우드에서 동기화됨 (${mergedData.updated}건 업데이트, ${mergedData.added}건 추가)`, 'success');
+                        const msgs = [];
+                        if (mergedData.updated > 0) msgs.push(`${mergedData.updated}건 업데이트`);
+                        if (mergedData.added > 0) msgs.push(`${mergedData.added}건 추가`);
+                        if (mergedData.deleted > 0) msgs.push(`${mergedData.deleted}건 삭제`);
+                        showToast(`클라우드에서 동기화됨 (${msgs.join(', ')})`, 'success');
                     } else {
                         log('☁️ Firebase 로드 완료:', cloudData.length, '건');
                     }
@@ -864,7 +868,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     receptionInput.value = generateNextReceptionNumber();
                 }
                 log('☁️ 클라우드에서 동기화 완료:', mergedData.data.length, '건');
-                showToast(`클라우드에서 동기화됨 (${mergedData.updated}건 업데이트, ${mergedData.added}건 추가)`, 'success');
+                const msgs2 = [];
+                if (mergedData.updated > 0) msgs2.push(`${mergedData.updated}건 업데이트`);
+                if (mergedData.added > 0) msgs2.push(`${mergedData.added}건 추가`);
+                if (mergedData.deleted > 0) msgs2.push(`${mergedData.deleted}건 삭제`);
+                showToast(`클라우드에서 동기화됨 (${msgs2.join(', ')})`, 'success');
             } else {
                 log('☁️ 로컬과 클라우드 데이터 동일 (', localData.length, '건)');
             }
