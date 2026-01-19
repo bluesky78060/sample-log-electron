@@ -83,30 +83,39 @@ document.addEventListener('DOMContentLoaded', async () => {
     const currentYear = new Date().getFullYear().toString();
     await FileAPI.init(currentYear);
 
-    // Firebase 초기화 (데이터 로드 전에 완료 필요)
+    // Firebase 초기화와 AutoSave 초기화를 병렬로 실행
     let firebaseReady = false;
-    try {
-        if (window.firebaseConfig?.initialize) {
-            const firebaseInitialized = await window.firebaseConfig.initialize();
-            if (firebaseInitialized && window.firestoreDb?.init) {
-                await window.firestoreDb.init();
-                firebaseReady = true;
-                log('☁️ Firebase 초기화 완료');
-            }
-        }
-    } catch (err) {
-        console.warn('Firebase 초기화 실패, 로컬 모드로 동작:', err);
-    }
 
-    // 자동 저장 초기화 (공통 모듈 사용)
-    await SampleUtils.initAutoSave({
-        moduleKey: 'compost',
-        moduleName: '가축분뇨퇴비',
+    // Firebase 초기화 Promise
+    const firebaseInitPromise = (async () => {
+        try {
+            if (window.firebaseConfig?.initialize) {
+                const firebaseInitialized = await window.firebaseConfig.initialize();
+                if (firebaseInitialized && window.firestoreDb?.init) {
+                    await window.firestoreDb.init();
+                    log('☁️ Firebase 초기화 완료');
+                    return true;
+                }
+            }
+        } catch (err) {
+            console.warn('Firebase 초기화 실패, 로컬 모드로 동작:', err);
+        }
+        return false;
+    })();
+
+    // AutoSave 초기화 Promise
+    const autoSaveInitPromise = SampleUtils.initAutoSave({
+        moduleKey: SAMPLE_TYPE,
+        moduleName: '퇴·액비',
         FileAPI: FileAPI,
         currentYear: currentYear,
         log: log,
         showToast: window.showToast
     });
+
+    // 병렬 실행 후 결과 대기
+    const [firebaseResult] = await Promise.all([firebaseInitPromise, autoSaveInitPromise]);
+    firebaseReady = firebaseResult;
 
     // 자동 저장 파일에서 데이터 로드하는 함수 (공통 모듈 사용)
     window.loadFromAutoSaveFile = async function() {

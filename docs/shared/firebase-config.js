@@ -107,9 +107,13 @@ async function initializeFirebase() {
 
     try {
         logFirebase('SDK 로드 중...');
-        // Firebase 앱 초기화
-        const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
-        const { getFirestore, enableIndexedDbPersistence } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+        // Firebase 앱 초기화 - 병렬 로드로 성능 최적화 (async-parallel)
+        const [appModule, firestoreModule] = await Promise.all([
+            import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js'),
+            import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js')
+        ]);
+        const { initializeApp } = appModule;
+        const { getFirestore, enableIndexedDbPersistence } = firestoreModule;
 
         logFirebase('SDK 로드 완료, 앱 초기화 중...');
         app = initializeApp(firebaseConfig);

@@ -5,10 +5,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>시료 접수 대장</title>
+    <!-- 폰트 preconnect 및 preload로 성능 최적화 (bundle-defer-third-party) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap"
-        rel="stylesheet">
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap"></noscript>
     <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
     <script>
         tailwind.config = {
@@ -393,7 +395,7 @@
             margin-top: 0.25rem;
         }
 
-        /* 설정 버튼 */
+        /* 설정 버튼 - 우측 상단 */
         .settings-btn {
             position: fixed;
             top: 20px;
@@ -413,7 +415,7 @@
         }
 
         .settings-btn:hover {
-            transform: scale(1.15) rotate(90deg);
+            transform: scale(1.15);
             box-shadow: 0 8px 25px rgba(100, 116, 139, 0.5);
         }
 
@@ -424,36 +426,38 @@
 
         .settings-btn .tooltip {
             position: absolute;
-            right: 60px;
+            top: 56px;
+            left: 50%;
+            transform: translateX(-50%) translateY(5px);
             background: #1e293b;
             color: white;
-            padding: 8px 12px;
-            border-radius: 8px;
-            font-size: 0.85rem;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
             white-space: nowrap;
             opacity: 0;
             visibility: hidden;
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            transform: translateX(10px);
+            transition: all 0.2s ease;
+            pointer-events: none;
         }
 
-        .settings-btn .tooltip::after {
+        .settings-btn .tooltip::before {
             content: '';
             position: absolute;
-            right: -6px;
-            top: 50%;
-            transform: translateY(-50%);
+            top: -6px;
+            left: 50%;
+            transform: translateX(-50%);
             border: 6px solid transparent;
-            border-left-color: #1e293b;
+            border-bottom-color: #1e293b;
         }
 
         .settings-btn:hover .tooltip {
             opacity: 1;
             visibility: visible;
-            transform: translateX(0);
+            transform: translateX(-50%) translateY(0);
         }
 
-        /* 사용 설명서 버튼 - 오른쪽 상단 (토글 버튼 왼쪽) */
+        /* 사용 설명서 버튼 - 오른쪽 상단 */
         .help-btn {
             position: fixed;
             top: 20px;
@@ -488,33 +492,35 @@
 
         .help-btn .tooltip {
             position: absolute;
-            right: 60px;
+            top: 56px;
+            left: 50%;
+            transform: translateX(-50%) translateY(5px);
             background: #1e293b;
             color: white;
-            padding: 8px 12px;
-            border-radius: 8px;
-            font-size: 0.85rem;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
             white-space: nowrap;
             opacity: 0;
             visibility: hidden;
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            transform: translateX(10px);
+            transition: all 0.2s ease;
+            pointer-events: none;
         }
 
-        .help-btn .tooltip::after {
+        .help-btn .tooltip::before {
             content: '';
             position: absolute;
-            right: -6px;
-            top: 50%;
-            transform: translateY(-50%);
+            top: -6px;
+            left: 50%;
+            transform: translateX(-50%);
             border: 6px solid transparent;
-            border-left-color: #1e293b;
+            border-bottom-color: #1e293b;
         }
 
         .help-btn:hover .tooltip {
             opacity: 1;
             visibility: visible;
-            transform: translateX(0);
+            transform: translateX(-50%) translateY(0);
         }
 
         /* 반응형 조정 */
@@ -733,10 +739,6 @@
             box-shadow: 0 8px 25px rgba(34, 197, 94, 0.5);
         }
 
-        .sync-btn:hover span {
-            animation: spin 1s linear infinite;
-        }
-
         .sync-btn.syncing span {
             animation: spin 1s linear infinite;
         }
@@ -758,33 +760,35 @@
 
         .sync-btn .tooltip {
             position: absolute;
-            right: 60px;
+            top: 56px;
+            left: 50%;
+            transform: translateX(-50%) translateY(5px);
             background: #1e293b;
             color: white;
-            padding: 8px 12px;
-            border-radius: 8px;
-            font-size: 0.85rem;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
             white-space: nowrap;
             opacity: 0;
             visibility: hidden;
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            transform: translateX(10px);
+            transition: all 0.2s ease;
+            pointer-events: none;
         }
 
-        .sync-btn .tooltip::after {
+        .sync-btn .tooltip::before {
             content: '';
             position: absolute;
-            right: -6px;
-            top: 50%;
-            transform: translateY(-50%);
+            top: -6px;
+            left: 50%;
+            transform: translateX(-50%);
             border: 6px solid transparent;
-            border-left-color: #1e293b;
+            border-bottom-color: #1e293b;
         }
 
         .sync-btn:hover .tooltip {
             opacity: 1;
             visibility: visible;
-            transform: translateX(0);
+            transform: translateX(-50%) translateY(0);
         }
 
         [data-theme="dark"] .sync-btn {
@@ -961,21 +965,21 @@
     </div>
 
     <!-- 동기화 버튼 -->
-    <button class="sync-btn" id="syncBtn" title="클라우드 동기화">
+    <button class="sync-btn" id="syncBtn">
         <span>🔄</span>
-        <div class="tooltip">클라우드 동기화</div>
+        <span class="tooltip">동기화</span>
     </button>
 
     <!-- 설정 버튼 -->
     <a href="settings/index.html" class="settings-btn">
         <span>⚙️</span>
-        <div class="tooltip">설정</div>
+        <span class="tooltip">설정</span>
     </a>
 
     <!-- 사용 설명서 버튼 -->
     <a href="manual/index.html" class="help-btn">
         <span>📖</span>
-        <div class="tooltip">사용 설명서</div>
+        <span class="tooltip">설명서</span>
     </a>
 
     <!-- 동기화 결과 모달 -->

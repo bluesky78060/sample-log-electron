@@ -4,6 +4,21 @@
 // ========================================
 
 // ========================================
+// 정규식 상수 - 모듈 레벨 호이스팅 (js-hoist-regexp)
+// ========================================
+const REGEX_NON_DIGIT = /[^\d]/g;
+const REGEX_HTML_ESCAPE = /[&<>"']/g;
+
+// HTML 이스케이프 매핑
+const HTML_ESCAPE_MAP = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+};
+
+// ========================================
 // 전역 에러 핸들러
 // ========================================
 
@@ -49,7 +64,7 @@ setupGlobalErrorHandler();
  * @returns {string} 포맷된 전화번호
  */
 function formatPhoneNumber(value) {
-    const numbers = value.replace(/[^\d]/g, '');
+    const numbers = value.replace(REGEX_NON_DIGIT, '');
 
     if (numbers.length <= 3) {
         return numbers;
@@ -709,17 +724,13 @@ function createLogger(debug) {
 
 /**
  * HTML 이스케이프 (XSS 방지)
+ * 성능 최적화: 단일 정규식과 매핑 객체 사용 (js-hoist-regexp)
  * @param {string} str - 이스케이프할 문자열
  * @returns {string} 이스케이프된 문자열
  */
 function escapeHTML(str) {
     if (str === null || str === undefined) return '';
-    return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
+    return String(str).replace(REGEX_HTML_ESCAPE, char => HTML_ESCAPE_MAP[char]);
 }
 
 /**

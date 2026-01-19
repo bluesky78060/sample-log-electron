@@ -105,23 +105,28 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     await FileAPI.init(selectedYear);
 
-    // Firebase 초기화 (데이터 로드 전에 완료 필요)
+    // Firebase 초기화와 AutoSave 초기화를 병렬로 실행
     let firebaseReady = false;
-    try {
-        if (window.firebaseConfig?.initialize) {
-            const firebaseInitialized = await window.firebaseConfig.initialize();
-            if (firebaseInitialized && window.firestoreDb?.init) {
-                await window.firestoreDb.init();
-                firebaseReady = true;
-                log('☁️ Firebase 초기화 완료');
-            }
-        }
-    } catch (err) {
-        console.warn('Firebase 초기화 실패, 로컬 모드로 동작:', err);
-    }
 
-    // 자동 저장 초기화 (공통 모듈 사용)
-    await SampleUtils.initAutoSave({
+    // Firebase 초기화 Promise
+    const firebaseInitPromise = (async () => {
+        try {
+            if (window.firebaseConfig?.initialize) {
+                const firebaseInitialized = await window.firebaseConfig.initialize();
+                if (firebaseInitialized && window.firestoreDb?.init) {
+                    await window.firestoreDb.init();
+                    log('☁️ Firebase 초기화 완료');
+                    return true;
+                }
+            }
+        } catch (err) {
+            console.warn('Firebase 초기화 실패, 로컬 모드로 동작:', err);
+        }
+        return false;
+    })();
+
+    // AutoSave 초기화 Promise
+    const autoSaveInitPromise = SampleUtils.initAutoSave({
         moduleKey: 'heavyMetal',
         moduleName: '중금속',
         FileAPI: FileAPI,
@@ -129,6 +134,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         log: log,
         showToast: window.showToast
     });
+
+    // 병렬 실행 후 결과 대기
+    const [firebaseResult] = await Promise.all([firebaseInitPromise, autoSaveInitPromise]);
+    firebaseReady = firebaseResult;
 
     // 자동 저장 파일에서 데이터 로드하는 함수 (공통 모듈 사용)
     window.loadFromAutoSaveFile = async function() {
