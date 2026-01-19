@@ -182,10 +182,10 @@ async function getAllDocuments(sampleType, year, options = {}) {
 }
 
 /**
- * 문서 삭제
+ * 문서 삭제 (id 필드 기반 쿼리로 삭제)
  * @param {string} sampleType - 시료 타입
  * @param {number} year - 연도
- * @param {string} docId - 문서 ID
+ * @param {string} docId - 데이터의 id 필드 값
  * @returns {Promise<boolean>} 성공 여부
  */
 async function deleteDocument(sampleType, year, docId) {
@@ -197,17 +197,41 @@ async function deleteDocument(sampleType, year, docId) {
         const db = window.firebaseConfig.getDb();
         const collectionName = getCollectionName(sampleType, year);
 
-        // ID를 문자열로 변환 (저장 시와 동일하게)
+        // ID를 문자열로 변환
         const stringDocId = typeof docId === 'number' ? String(docId) : String(docId || '');
         if (!stringDocId) {
             console.error('Firestore 삭제 실패: 유효하지 않은 문서 ID');
             return false;
         }
 
-        const { doc, deleteDoc } = firestore;
-        await deleteDoc(doc(db, collectionName, stringDocId));
+        const { doc, deleteDoc, collection, query, where, getDocs } = firestore;
 
-        logFirestore(`삭제 완료: ${collectionName}/${stringDocId}`);
+        // 1차: 문서 ID로 직접 삭제 시도
+        try {
+            await deleteDoc(doc(db, collectionName, stringDocId));
+            logFirestore(`삭제 완료 (문서ID): ${collectionName}/${stringDocId}`);
+            return true;
+        } catch (directError) {
+            logFirestore(`문서ID로 삭제 실패, 쿼리로 재시도: ${stringDocId}`);
+        }
+
+        // 2차: id 필드로 쿼리하여 삭제
+        const q = query(collection(db, collectionName), where('id', '==', stringDocId));
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+            logFirestore(`삭제 대상 없음: ${collectionName} id=${stringDocId}`);
+            return false;
+        }
+
+        // 찾은 문서 삭제
+        const deletePromises = [];
+        querySnapshot.forEach((docSnap) => {
+            deletePromises.push(deleteDoc(doc(db, collectionName, docSnap.id)));
+        });
+        await Promise.all(deletePromises);
+
+        logFirestore(`삭제 완료 (쿼리): ${collectionName} id=${stringDocId} (${querySnapshot.size}건)`);
         return true;
     } catch (error) {
         console.error('Firestore 삭제 실패:', error);
