@@ -330,7 +330,7 @@
 
             <div class="alert alert-info">
                 <strong>인증 파일이란?</strong><br>
-                Firebase 접근을 위한 인증 파일(firebase-auth.key)을 등록해야 클라우드 동기화가 활성화됩니다.
+                Firebase 접근을 위한 인증 파일(firebase-auth.json)을 등록해야 클라우드 동기화가 활성화됩니다.
                 인증 파일은 관리자에게 받으세요.
             </div>
 
@@ -420,6 +420,50 @@
                         <button type="submit" class="btn btn-primary">설정 저장</button>
                     </div>
                 </form>
+            </div>
+        </div>
+
+        <!-- 네트워크 접근 제어 (웹 환경용) -->
+        <div class="settings-card" id="networkAccessSection">
+            <h2>
+                <span>🌐</span>
+                네트워크 접근 제어
+                <span id="networkAccessStatus" class="status-badge disconnected">● 비활성</span>
+            </h2>
+
+            <div class="alert alert-info">
+                <strong>게이트웨이 체크란?</strong><br>
+                허용된 게이트웨이 주소를 설정하면, 같은 네트워크에 있는 사용자만 Firebase 데이터에 접근할 수 있습니다.
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                    <input type="checkbox" id="networkCheckEnabled">
+                    <span>네트워크 체크 활성화</span>
+                </label>
+            </div>
+
+            <div id="networkAccessSettings" style="display: none;">
+                <div class="form-group">
+                    <label>허용된 게이트웨이 주소</label>
+                    <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
+                        <input type="text" id="gatewayInput" placeholder="예: 192.168.1.1" style="flex: 1;">
+                        <button type="button" id="addGatewayBtn" class="btn btn-primary" style="white-space: nowrap;">추가</button>
+                    </div>
+                    <ul id="gatewayList" style="list-style: none; padding: 0; margin: 0;"></ul>
+                </div>
+
+                <div style="margin-top: 1rem; padding: 0.75rem; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+                    <div style="font-size: 0.8rem; color: #64748b;">
+                        <div>공인 IP: <strong id="currentPublicIP">확인 중...</strong></div>
+                        <div>로컬 IP: <strong id="currentLocalIP">확인 중...</strong></div>
+                        <div>접근 상태: <strong id="currentAccessStatus">확인 중...</strong></div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 1rem;">
+                    <button type="button" id="checkNetworkBtn" class="btn btn-secondary">네트워크 상태 확인</button>
+                </div>
             </div>
         </div>
 
@@ -1005,6 +1049,127 @@
             keysToRemove.forEach(key => localStorage.removeItem(key));
             alert('캐시가 정리되었습니다.');
         });
+
+        // ========================================
+        // 네트워크 접근 제어 UI
+        // ========================================
+
+        function initNetworkAccessUI() {
+            if (!window.NetworkAccess) return;
+
+            const config = NetworkAccess.loadConfig();
+            const enabledCheckbox = document.getElementById('networkCheckEnabled');
+            const settingsDiv = document.getElementById('networkAccessSettings');
+            const statusEl = document.getElementById('networkAccessStatus');
+
+            // 초기 상태 설정
+            enabledCheckbox.checked = config.enabled;
+            settingsDiv.style.display = config.enabled ? 'block' : 'none';
+            if (config.enabled) {
+                statusEl.className = 'status-badge connected';
+                statusEl.textContent = '● 활성';
+            }
+
+            // 활성화 체크박스
+            enabledCheckbox.addEventListener('change', () => {
+                const enabled = enabledCheckbox.checked;
+                NetworkAccess.setEnabled(enabled);
+                settingsDiv.style.display = enabled ? 'block' : 'none';
+                statusEl.className = enabled ? 'status-badge connected' : 'status-badge disconnected';
+                statusEl.textContent = enabled ? '● 활성' : '● 비활성';
+                if (enabled) refreshNetworkStatus();
+            });
+
+            // IP 주소 유효성 검증 (각 옥텟 0-255)
+            function isValidIP(ip) {
+                if (!/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(ip)) return false;
+                return ip.split('.').every(octet => {
+                    const num = parseInt(octet, 10);
+                    return num >= 0 && num <= 255;
+                });
+            }
+
+            // 게이트웨이 목록 렌더링 (DOM API 사용 - XSS 방지)
+            function renderGatewayList() {
+                const listEl = document.getElementById('gatewayList');
+                const cfg = NetworkAccess.loadConfig();
+                const gateways = cfg.allowedGateways || [];
+                listEl.innerHTML = '';
+
+                if (gateways.length === 0) {
+                    const emptyLi = document.createElement('li');
+                    emptyLi.style.cssText = 'color: #94a3b8; font-size: 0.8rem; padding: 0.5rem 0;';
+                    emptyLi.textContent = '등록된 게이트웨이 없음';
+                    listEl.appendChild(emptyLi);
+                    return;
+                }
+
+                gateways.forEach(gw => {
+                    const li = document.createElement('li');
+                    li.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 0.4rem 0.75rem; background: #f0fdf4; border-radius: 6px; margin-bottom: 0.25rem; border: 1px solid #bbf7d0;';
+
+                    const span = document.createElement('span');
+                    span.style.fontFamily = 'monospace';
+                    span.textContent = gw;
+
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.style.cssText = 'background: none; border: none; color: #ef4444; cursor: pointer; font-size: 1.1rem;';
+                    btn.textContent = '×';
+                    btn.addEventListener('click', () => {
+                        NetworkAccess.removeAllowedGateway(gw);
+                        renderGatewayList();
+                    });
+
+                    li.appendChild(span);
+                    li.appendChild(btn);
+                    listEl.appendChild(li);
+                });
+            }
+
+            // 게이트웨이 추가
+            document.getElementById('addGatewayBtn').addEventListener('click', () => {
+                const input = document.getElementById('gatewayInput');
+                const gateway = input.value.trim();
+                if (!gateway) return;
+                if (!isValidIP(gateway)) {
+                    alert('올바른 IP 주소를 입력하세요. (예: 192.168.1.1)\n각 숫자는 0~255 범위여야 합니다.');
+                    return;
+                }
+                NetworkAccess.addAllowedGateway(gateway);
+                input.value = '';
+                renderGatewayList();
+            });
+
+            // 네트워크 상태 확인
+            async function refreshNetworkStatus() {
+                const publicIPEl = document.getElementById('currentPublicIP');
+                const localIPEl = document.getElementById('currentLocalIP');
+                const accessEl = document.getElementById('currentAccessStatus');
+
+                publicIPEl.textContent = '확인 중...';
+                localIPEl.textContent = '확인 중...';
+                accessEl.textContent = '확인 중...';
+
+                const publicIP = await NetworkAccess.getCurrentIP();
+                publicIPEl.textContent = publicIP || '확인 불가';
+
+                const localIP = await NetworkAccess.getLocalIP();
+                localIPEl.textContent = localIP || '감지 불가 (브라우저 제한)';
+
+                const access = await NetworkAccess.checkAccess();
+                accessEl.textContent = access.allowed ? `허용 (${access.reason})` : `거부 (${access.reason})`;
+                accessEl.style.color = access.allowed ? '#16a34a' : '#dc2626';
+            }
+
+            document.getElementById('checkNetworkBtn').addEventListener('click', refreshNetworkStatus);
+
+            // 초기 렌더링
+            renderGatewayList();
+            if (config.enabled) refreshNetworkStatus();
+        }
+
+        initNetworkAccessUI();
 
         // 초기화
         loadSavedConfig();

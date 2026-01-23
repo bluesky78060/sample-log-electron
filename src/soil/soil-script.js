@@ -3949,9 +3949,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <td>${escapeHTML(row.purpose || '-')}</td>
                     <td>${safeName}</td>
                     <td class="col-zipcode">${escapeHTML(zipcode || '-')}</td>
-                    <td title="${safeAddress}">${safeAddress}</td>
-                    <td title="${safeLotAddress}">${safeLotAddress}</td>
-                    <td title="${safeCrops}">${safeCrops}</td>
+                    <td class="text-truncate" data-tooltip="${safeAddress}">${safeAddress}</td>
+                    <td>${safeLotAddress}</td>
+                    <td class="text-truncate" data-tooltip="${safeCrops}">${safeCrops}</td>
                     <td>${escapeHTML(row._areaDisplay)}</td>
                     <td>${safePhone}</td>
                     <td>${safeMethod}</td>

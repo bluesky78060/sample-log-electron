@@ -15,6 +15,8 @@ const NetworkAccess = {
         allowedIPRanges: [],
         // 허용된 정확한 IP
         allowedExactIPs: [],
+        // 허용된 게이트웨이 주소 (예: '192.168.1.1') - 같은 서브넷이면 허용
+        allowedGateways: [],
         // 네트워크 체크 활성화 여부
         enabled: false,
         // IP 조회 타임아웃 (ms)
@@ -23,6 +25,7 @@ const NetworkAccess = {
 
     // 현재 IP 캐시
     _currentIP: null,
+    _localIP: null,
     _lastCheck: null,
     _cacheTimeout: 60000, // 1분간 캐시
 
@@ -57,9 +60,10 @@ const NetworkAccess = {
 
     /**
      * 현재 공인 IP 조회
+     * @param {number} [timeoutMs] - 타임아웃 (ms), 미지정 시 설정값 사용
      * @returns {Promise<string|null>}
      */
-    async getCurrentIP() {
+    async getCurrentIP(timeoutMs) {
         // 캐시된 IP가 있고 유효하면 반환
         if (this._currentIP && this._lastCheck) {
             const elapsed = Date.now() - this._lastCheck;
@@ -68,11 +72,11 @@ const NetworkAccess = {
             }
         }
 
-        const config = this.loadConfig();
+        const configTimeout = timeoutMs || this.loadConfig().timeout;
 
         try {
             const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), config.timeout);
+            const timeout = setTimeout(() => controller.abort(), configTimeout);
 
             const response = await fetch('https://api.ipify.org?format=json', {
                 signal: controller.signal
@@ -93,6 +97,88 @@ const NetworkAccess = {
     },
 
     /**
+     * WebRTC를 이용한 로컬 IP 감지
+     * @returns {Promise<string|null>}
+     */
+    async getLocalIP() {
+        // 캐시된 로컬 IP가 있으면 반환
+        if (this._localIP && this._lastCheck) {
+            const elapsed = Date.now() - this._lastCheck;
+            if (elapsed < this._cacheTimeout) {
+                return this._localIP;
+            }
+        }
+
+        try {
+            return await new Promise((resolve) => {
+                let resolved = false;
+                const pc = new RTCPeerConnection({ iceServers: [] });
+                const timeout = setTimeout(() => {
+                    if (!resolved) { resolved = true; pc.close(); resolve(null); }
+                }, 3000);
+
+                pc.createDataChannel('');
+                pc.createOffer().then(offer => pc.setLocalDescription(offer));
+
+                pc.onicecandidate = (event) => {
+                    if (resolved) return;
+                    if (!event || !event.candidate) return;
+                    const candidate = event.candidate.candidate;
+                    const match = candidate.match(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/);
+                    if (match) {
+                        const ip = match[1];
+                        // 내부 IP만 사용 (10.x, 172.16-31.x, 192.168.x)
+                        if (ip.startsWith('10.') ||
+                            ip.startsWith('192.168.') ||
+                            /^172\.(1[6-9]|2\d|3[01])\./.test(ip)) {
+                            resolved = true;
+                            clearTimeout(timeout);
+                            pc.close();
+                            this._localIP = ip;
+                            resolve(ip);
+                        }
+                    }
+                };
+            });
+        } catch (error) {
+            console.warn('[NetworkAccess] 로컬 IP 감지 실패:', error.message);
+            return null;
+        }
+    },
+
+    /**
+     * IP에서 서브넷 프리픽스 추출 (예: '192.168.1.100' → '192.168.1.')
+     * @param {string} ip
+     * @returns {string}
+     */
+    getSubnetPrefix(ip) {
+        if (!ip) return '';
+        const parts = ip.split('.');
+        if (parts.length !== 4) return '';
+        return parts.slice(0, 3).join('.') + '.';
+    },
+
+    /**
+     * 게이트웨이 주소와 같은 서브넷인지 확인
+     * @param {string} localIP - 감지된 로컬 IP
+     * @param {string[]} gateways - 허용된 게이트웨이 목록
+     * @returns {{match: boolean, gateway: string|null}}
+     */
+    checkGatewayMatch(localIP, gateways) {
+        if (!localIP || !gateways || gateways.length === 0) {
+            return { match: false, gateway: null };
+        }
+        const localPrefix = this.getSubnetPrefix(localIP);
+        for (const gw of gateways) {
+            const gwPrefix = this.getSubnetPrefix(gw);
+            if (localPrefix && gwPrefix && localPrefix === gwPrefix) {
+                return { match: true, gateway: gw };
+            }
+        }
+        return { match: false, gateway: null };
+    },
+
+    /**
      * 현재 IP가 허용된 네트워크인지 확인
      * @returns {Promise<{allowed: boolean, reason: string, ip: string|null}>}
      */
@@ -109,7 +195,7 @@ const NetworkAccess = {
             return { allowed: true, reason: 'Electron 로컬 실행', ip: null };
         }
 
-        const currentIP = await this.getCurrentIP();
+        const currentIP = await this.getCurrentIP(config.timeout);
 
         if (!currentIP) {
             return { allowed: false, reason: 'IP 확인 불가', ip: null };
@@ -130,6 +216,29 @@ const NetworkAccess = {
             if (currentIP.startsWith(range)) {
                 return { allowed: true, reason: `허용된 대역 (${range})`, ip: currentIP };
             }
+        }
+
+        // 게이트웨이 주소 매칭 (로컬 IP의 서브넷과 게이트웨이 서브넷 비교)
+        if (config.allowedGateways && config.allowedGateways.length > 0) {
+            const localIP = await this.getLocalIP();
+            if (localIP) {
+                const gwResult = this.checkGatewayMatch(localIP, config.allowedGateways);
+                if (gwResult.match) {
+                    return { allowed: true, reason: `허용된 게이트웨이 (${gwResult.gateway})`, ip: currentIP };
+                }
+                // 로컬 IP 감지 성공했지만 서브넷 불일치
+                return { allowed: false, reason: '게이트웨이 네트워크 불일치', ip: currentIP };
+            }
+            // WebRTC 실패 시 폴백: 공인 IP 대역으로 게이트웨이 서브넷 비교 시도
+            // (동일 공유기 뒤에서 공인 IP가 같은 경우를 위한 보조 수단)
+            console.warn('[NetworkAccess] WebRTC 미지원 - 공인 IP 대역 폴백 체크');
+            for (const gw of config.allowedGateways) {
+                const gwPrefix = this.getSubnetPrefix(gw);
+                if (gwPrefix && currentIP.startsWith(gwPrefix)) {
+                    return { allowed: true, reason: `허용된 게이트웨이 폴백 (${gw})`, ip: currentIP };
+                }
+            }
+            return { allowed: false, reason: '게이트웨이 네트워크 불일치 (WebRTC 미지원)', ip: currentIP };
         }
 
         return { allowed: false, reason: '허용되지 않은 네트워크', ip: currentIP };
@@ -225,6 +334,30 @@ const NetworkAccess = {
     },
 
     /**
+     * 허용된 게이트웨이 추가
+     * @param {string} gateway (예: '192.168.1.1')
+     */
+    addAllowedGateway(gateway) {
+        const config = this.loadConfig();
+        if (!config.allowedGateways) config.allowedGateways = [];
+        if (!config.allowedGateways.includes(gateway)) {
+            config.allowedGateways.push(gateway);
+            this.saveConfig(config);
+        }
+    },
+
+    /**
+     * 허용된 게이트웨이 제거
+     * @param {string} gateway
+     */
+    removeAllowedGateway(gateway) {
+        const config = this.loadConfig();
+        if (!config.allowedGateways) return;
+        config.allowedGateways = config.allowedGateways.filter(g => g !== gateway);
+        this.saveConfig(config);
+    },
+
+    /**
      * 현재 IP를 관리자로 등록
      * @returns {Promise<string|null>} 등록된 IP
      */
@@ -256,6 +389,7 @@ const NetworkAccess = {
     resetConfig() {
         localStorage.removeItem(this.STORAGE_KEY);
         this._currentIP = null;
+        this._localIP = null;
         this._lastCheck = null;
         console.log('[NetworkAccess] 설정 초기화됨');
     },
@@ -266,20 +400,23 @@ const NetworkAccess = {
     async printStatus() {
         const config = this.loadConfig();
         const currentIP = await this.getCurrentIP();
+        const localIP = await this.getLocalIP();
         const access = await this.checkAccess();
 
         console.log('========================================');
         console.log('[NetworkAccess] 현재 상태');
         console.log('========================================');
         console.log('네트워크 체크 활성화:', config.enabled);
-        console.log('현재 IP:', currentIP);
+        console.log('공인 IP:', currentIP);
+        console.log('로컬 IP:', localIP || '감지 불가');
         console.log('접근 허용:', access.allowed, `(${access.reason})`);
         console.log('관리자 IP 목록:', config.adminIPs);
         console.log('허용된 IP 목록:', config.allowedExactIPs);
         console.log('허용된 IP 대역:', config.allowedIPRanges);
+        console.log('허용된 게이트웨이:', config.allowedGateways || []);
         console.log('========================================');
 
-        return { config, currentIP, access };
+        return { config, currentIP, localIP, access };
     }
 };
 
@@ -291,3 +428,4 @@ console.log('[NetworkAccess] 모듈 로드됨. 콘솔에서 다음 명령어 사
 console.log('  NetworkAccess.printStatus() - 현재 상태 확인');
 console.log('  NetworkAccess.registerCurrentAsAdmin() - 현재 IP를 관리자로 등록');
 console.log('  NetworkAccess.setEnabled(true) - 네트워크 체크 활성화');
+console.log('  NetworkAccess.addAllowedGateway("192.168.1.1") - 게이트웨이 추가');

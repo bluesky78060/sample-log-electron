@@ -2,7 +2,7 @@
  * @fileoverview Firebase 설정 및 초기화 (compat 버전)
  * @description Firebase Firestore 연결 설정
  *
- * 인증 파일(firebase-auth.key)이 있어야 Firebase에 접근 가능
+ * 인증 파일(firebase-auth.json)이 있어야 Firebase에 접근 가능
  * 인증 파일이 없으면 로컬 모드로만 동작
  */
 

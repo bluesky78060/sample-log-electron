@@ -1189,16 +1189,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <td class="col-birth-corp hidden">${escapeHTML(birthOrCorp)}</td>
                 <td>${safeName}</td>
                 <td class="col-zipcode hidden">${escapeHTML(zipcode || '-')}</td>
-                <td class="text-truncate" title="${safeAddress}">${safeAddress}</td>
+                <td class="text-truncate" data-tooltip="${safeAddress}">${safeAddress}</td>
                 <td>${safeSampleName}</td>
                 <td>${escapeHTML(String(log.sampleCount || 1))}점</td>
-                <td class="text-truncate" title="${safeSamplingLocation}">${safeSamplingLocation}</td>
-                <td class="text-truncate" title="${safeMainCrop}">${safeMainCrop}</td>
+                <td class="text-truncate" data-tooltip="${safeSamplingLocation}">${safeSamplingLocation}</td>
+                <td class="text-truncate" data-tooltip="${safeMainCrop}">${safeMainCrop}</td>
                 <td>${escapeHTML(log.purpose || '-')}</td>
                 <td>${escapeHTML(log.testItems || '-')}</td>
                 <td>${safePhone}</td>
                 <td>${escapeHTML(log.receptionMethod || '-')}</td>
-                <td class="col-note text-truncate" title="${safeNote}">${safeNote}</td>
+                <td class="col-note text-truncate" data-tooltip="${safeNote}">${safeNote}</td>
                 <td class="col-mail-date">${escapeHTML(log.mailDate || '-')}</td>
                 <td class="col-action">
                     <button class="btn-edit" data-id="${escapeHTML(log.id)}" title="수정">✏️</button>

@@ -1,6 +1,6 @@
 /**
  * @fileoverview Firebase 인증 파일 관리 모듈
- * @description 인증 파일(.key)을 통한 Firebase 접근 제어
+ * @description 인증 파일(.json)을 통한 Firebase 접근 제어
  */
 
 const AuthFile = {

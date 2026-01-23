@@ -951,8 +951,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <td>${safeFarmName}</td>
                 <td>${safeName}</td>
                 <td class="col-postcode col-hidden">${escapeHTML(logItem.addressPostcode || '-')}</td>
-                <td class="col-address text-truncate" title="${safeFullAddress}">${safeFullAddress}</td>
-                <td class="col-farm-address text-truncate" title="${safeFarmAddress}">${safeFarmAddress}</td>
+                <td class="col-address text-truncate" data-tooltip="${safeFullAddress}">${safeFullAddress}</td>
+                <td class="col-farm-address">${safeFarmAddress}</td>
                 <td>${logItem.farmArea ? parseInt(logItem.farmArea, 10).toLocaleString('ko-KR') + ' ' + getUnitLabel(logItem.farmAreaUnit) : '-'}</td>
                 <td>${sampleTypeBadge}</td>
                 <td>${animalTypeBadge}</td>
@@ -960,7 +960,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <td>${escapeHTML(logItem.purpose || '-')}</td>
                 <td>${safePhone}</td>
                 <td>${escapeHTML(logItem.receptionMethod || '-')}</td>
-                <td class="col-note text-truncate" title="${safeNote}">${safeNote}</td>
+                <td class="col-note text-truncate" data-tooltip="${safeNote}">${safeNote}</td>
                 <td class="col-mail-date">${escapeHTML(logItem.mailDate || '-')}</td>
                 <td class="col-action">
                     <button class="btn-edit" data-id="${escapeHTML(logItem.id)}" title="수정">✏️</button>

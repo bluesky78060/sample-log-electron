@@ -1082,15 +1082,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <td>${safeName}</td>
                 <td class="col-applicant-type col-hidden">${escapeHTML(applicantType)}</td>
                 <td class="col-birth-corp col-hidden">${escapeHTML(birthOrCorp)}</td>
-                <td title="${safeAddress}">${safeAddressRoad.substring(0, 20)}${safeAddressRoad.length > 20 ? '...' : ''}</td>
+                <td class="text-truncate" data-tooltip="${safeAddress}">${safeAddressRoad}</td>
                 <td>${safePhone}</td>
-                <td title="${safeSamplingLocation}">${safeSamplingLocation.substring(0, 15)}${safeSamplingLocation.length > 15 ? '...' : ''}</td>
+                <td>${safeSamplingLocation}</td>
                 <td>${safeCropName}${logItem.treeAge ? ' (' + escapeHTML(String(logItem.treeAge)) + '년생)' : ''}</td>
                 <td>${escapeHTML(logItem.samplingDate || '-')}</td>
-                <td title="${escapeHTML(analysisItemsStr)}">${escapeHTML(analysisItemsDisplay)}</td>
+                <td class="text-truncate" data-tooltip="${escapeHTML(analysisItemsStr)}">${escapeHTML(analysisItemsDisplay)}</td>
                 <td>${escapeHTML(logItem.purpose || '-')}</td>
                 <td>${escapeHTML(methodText)}</td>
-                <td title="${safeNote}">${safeNote.substring(0, 10)}${safeNote.length > 10 ? '...' : ''}</td>
+                <td class="text-truncate" data-tooltip="${safeNote}">${safeNote}</td>
                 <td class="col-mail-date">${escapeHTML(logItem.mailDate || '-')}</td>
                 <td>
                     <div class="action-btns">

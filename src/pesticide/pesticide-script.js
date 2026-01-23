@@ -4024,13 +4024,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <td>${escapeHTML(row.purpose || '-')}</td>
                 <td>${safeName}</td>
                 <td class="col-zipcode col-hidden">${escapeHTML(zipcode || '-')}</td>
-                <td title="${safeAddress}">${safeAddress}</td>
+                <td class="text-truncate" data-tooltip="${safeAddress}">${safeAddress}</td>
                 <td>${safeProducerName}</td>
-                <td title="${safeProducerAddress}">${safeProducerAddress}</td>
-                <td title="${safeRequestContent}"><div class="note-cell">${safeRequestContent}</div></td>
+                <td>${safeProducerAddress}</td>
+                <td class="text-truncate" data-tooltip="${safeRequestContent}">${safeRequestContent}</td>
                 <td>${safePhone}</td>
                 <td>${escapeHTML(methodText)}</td>
-                <td class="col-note" title="${safeNote}"><div class="note-cell">${safeNote}</div></td>
+                <td class="col-note text-truncate" data-tooltip="${safeNote}">${safeNote}</td>
                 <td class="col-mail-date">${escapeHTML(row.mailDate || '-')}</td>
                 <td>
                     <div class="table-actions">
