@@ -918,6 +918,54 @@
             color: #ef4444;
         }
 
+        .sync-progress {
+            margin-bottom: 1rem;
+            padding: 1rem;
+            background: linear-gradient(135deg, #3b82f620, #8b5cf620);
+            border-radius: 8px;
+        }
+
+        .sync-progress-text {
+            font-size: 0.875rem;
+            color: #64748b;
+            margin-bottom: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        [data-theme="dark"] .sync-progress-text {
+            color: #94a3b8;
+        }
+
+        .sync-progress-bar {
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        [data-theme="dark"] .sync-progress-bar {
+            background: #475569;
+        }
+
+        .sync-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        .sync-result-item.syncing {
+            background: linear-gradient(135deg, #fef3c720, #fef9c320);
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
         .sync-modal-footer {
             margin-top: 1.5rem;
             text-align: center;
@@ -1064,6 +1112,7 @@
     <!-- Firebase SDK (compat 버전 - Electron 호환) -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <!-- 네트워크 접근 제어 (Firebase 초기화 전에 로드) -->
     <script src="shared/network-access.js"></script>
     <!-- Firebase 스크립트 -->
@@ -1154,19 +1203,43 @@
 
         // 전체 동기화 실행
         async function syncAllData() {
+            // Firebase가 아직 초기화되지 않았으면 초기화 시도
             if (!window.firestoreDb?.isEnabled()) {
-                alert('Firebase가 설정되지 않았습니다.\n설정 페이지에서 Firebase를 설정해주세요.');
+                if (window.firebaseConfig?.initialize) {
+                    try {
+                        const initialized = await window.firebaseConfig.initialize();
+                        if (initialized) {
+                            await window.firestoreDb?.init();
+                        }
+                    } catch (err) {
+                        console.warn('Firebase 초기화 실패:', err);
+                    }
+                }
+            }
+
+            // 초기화 후에도 여전히 비활성화 상태면 에러
+            if (!window.firestoreDb?.isEnabled()) {
+                alert('Firebase가 설정되지 않았습니다.\n설정 페이지에서 인증 파일을 등록해주세요.');
                 return;
             }
 
             syncBtn.classList.add('syncing');
             const currentYear = new Date().getFullYear();
             const results = [];
+            const totalSteps = SAMPLE_TYPES.length * (currentYear - MIN_YEAR + 1);
+            let completedSteps = 0;
+
+            // 진행 상태 모달 표시
+            showSyncProgress(SAMPLE_TYPES);
 
             try {
-                for (const sampleType of SAMPLE_TYPES) {
+                for (let i = 0; i < SAMPLE_TYPES.length; i++) {
+                    const sampleType = SAMPLE_TYPES[i];
                     let totalLoaded = 0;
                     let yearsWithData = [];
+
+                    // 현재 시료 타입 진행 중 표시
+                    updateSyncItemStatus(i, 'syncing', '동기화 중...');
 
                     // 모든 연도 동기화 (2020년부터 현재 연도까지)
                     for (let year = MIN_YEAR; year <= currentYear; year++) {
@@ -1183,7 +1256,15 @@
                         } catch (err) {
                             console.error(`${sampleType.name} ${year}년 동기화 오류:`, err);
                         }
+
+                        // 진행률 업데이트
+                        completedSteps++;
+                        updateSyncProgress(completedSteps, totalSteps, `${sampleType.name} ${year}년...`);
                     }
+
+                    // 완료 상태 업데이트
+                    const statusText = totalLoaded > 0 ? `${totalLoaded}건 완료` : '데이터 없음';
+                    updateSyncItemStatus(i, totalLoaded > 0 ? 'success' : '', statusText);
 
                     results.push({
                         type: sampleType.type,
@@ -1203,6 +1284,62 @@
                 alert('동기화 중 오류가 발생했습니다: ' + error.message);
             } finally {
                 syncBtn.classList.remove('syncing');
+            }
+        }
+
+        // 동기화 진행 상태 모달 표시
+        function showSyncProgress(sampleTypes) {
+            let html = `
+                <div class="sync-progress">
+                    <div class="sync-progress-text">
+                        <span id="syncProgressLabel">준비 중...</span>
+                        <span id="syncProgressPercent">0%</span>
+                    </div>
+                    <div class="sync-progress-bar">
+                        <div class="sync-progress-fill" id="syncProgressFill"></div>
+                    </div>
+                </div>
+            `;
+
+            sampleTypes.forEach((type, index) => {
+                html += `
+                    <div class="sync-result-item" id="syncItem${index}">
+                        <div class="sync-result-type">
+                            <span>${type.icon}</span>
+                            <span>${type.name}</span>
+                        </div>
+                        <div class="sync-result-count" id="syncStatus${index}">대기 중</div>
+                    </div>
+                `;
+            });
+
+            syncModalBody.innerHTML = html;
+            syncModal.classList.add('show');
+        }
+
+        // 진행률 업데이트
+        function updateSyncProgress(completed, total, label) {
+            const percent = Math.round((completed / total) * 100);
+            const progressFill = document.getElementById('syncProgressFill');
+            const progressLabel = document.getElementById('syncProgressLabel');
+            const progressPercent = document.getElementById('syncProgressPercent');
+
+            if (progressFill) progressFill.style.width = `${percent}%`;
+            if (progressLabel) progressLabel.textContent = label;
+            if (progressPercent) progressPercent.textContent = `${percent}%`;
+        }
+
+        // 개별 항목 상태 업데이트
+        function updateSyncItemStatus(index, statusClass, statusText) {
+            const item = document.getElementById(`syncItem${index}`);
+            const status = document.getElementById(`syncStatus${index}`);
+
+            if (item) {
+                item.className = `sync-result-item ${statusClass}`;
+            }
+            if (status) {
+                status.className = `sync-result-count ${statusClass}`;
+                status.textContent = statusText;
             }
         }
 

@@ -2434,14 +2434,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     const resetSearchBtn = document.getElementById('resetSearchBtn');
     const applySearchBtn = document.getElementById('applySearchBtn');
 
+    // 완료 필터
+    const completedFilter = document.getElementById('completedFilter');
+
     // 현재 검색 필터 상태
     let currentSearchFilter = {
         dateFrom: '',
         dateTo: '',
         name: '',
         receptionFrom: '',
-        receptionTo: ''
+        receptionTo: '',
+        completed: ''
     };
+
+    // 완료 필터 이벤트
+    if (completedFilter) {
+        completedFilter.addEventListener('change', () => {
+            currentSearchFilter.completed = completedFilter.value;
+            filterAndRenderLogs();
+        });
+    }
 
     // 접수번호에서 숫자 부분 추출
     function extractReceptionNumber(receptionNumber) {
@@ -2473,7 +2485,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (currentSearchFilter.dateTo && logDate > currentSearchFilter.dateTo) matchesDate = false;
             }
 
-            return matchesName && matchesReception && matchesDate;
+            // 완료 상태 필터
+            let matchesCompleted = true;
+            if (currentSearchFilter.completed === 'completed') {
+                matchesCompleted = log.completed === true;
+            } else if (currentSearchFilter.completed === 'incomplete') {
+                matchesCompleted = !log.completed;
+            }
+
+            return matchesName && matchesReception && matchesDate && matchesCompleted;
         });
 
         renderLogs(filteredLogs);
@@ -2482,7 +2502,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function updateSearchButtonState() {
         const hasFilter = currentSearchFilter.dateFrom || currentSearchFilter.dateTo ||
-            currentSearchFilter.name || currentSearchFilter.receptionFrom || currentSearchFilter.receptionTo;
+            currentSearchFilter.name || currentSearchFilter.receptionFrom || currentSearchFilter.receptionTo ||
+            currentSearchFilter.completed;
         if (hasFilter) {
             openSearchModalBtn.classList.add('has-filter');
             openSearchModalBtn.innerHTML = '🔍 검색 중';
@@ -2532,7 +2553,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         searchNameInput.value = '';
         searchReceptionFromInput.value = '';
         searchReceptionToInput.value = '';
-        currentSearchFilter = { dateFrom: '', dateTo: '', name: '', receptionFrom: '', receptionTo: '' };
+        if (completedFilter) completedFilter.value = '';
+        currentSearchFilter = { dateFrom: '', dateTo: '', name: '', receptionFrom: '', receptionTo: '', completed: '' };
         filterAndRenderLogs();
         closeSearchModal();
     });

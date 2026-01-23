@@ -30,21 +30,13 @@ let mainWindow = null;
 
 /**
  * 허용된 경로인지 검증 (Path Traversal 방지)
+ * realpath를 사용하여 심볼릭 링크 해석 후 실제 경로 확인
  * @param {string} filePath - 검증할 파일 경로
- * @returns {{valid: boolean, error?: string}} 검증 결과
+ * @returns {{valid: boolean, resolvedPath?: string, error?: string}} 검증 결과
  */
 function validateFilePath(filePath) {
     if (!filePath || typeof filePath !== 'string') {
         return { valid: false, error: '유효하지 않은 파일 경로입니다.' };
-    }
-
-    // 경로 정규화
-    const normalizedPath = path.normalize(filePath);
-    const resolvedPath = path.resolve(filePath);
-
-    // Path Traversal 패턴 감지 (../, ..\)
-    if (filePath.includes('..')) {
-        return { valid: false, error: '상위 디렉토리 접근이 허용되지 않습니다.' };
     }
 
     // 허용된 디렉토리 목록
@@ -56,17 +48,46 @@ function validateFilePath(filePath) {
         app.getPath('home')           // 홈 디렉토리
     ];
 
-    // 허용된 디렉토리 내부 경로인지 확인
-    const isAllowedPath = allowedDirs.some(allowedDir => {
-        const normalizedAllowed = path.normalize(allowedDir);
-        return resolvedPath.startsWith(normalizedAllowed);
-    });
+    try {
+        // 경로를 절대 경로로 변환
+        const absolutePath = path.resolve(filePath);
 
-    if (!isAllowedPath) {
-        return { valid: false, error: '허용되지 않은 경로입니다.' };
+        // 파일/디렉토리가 존재하면 realpath로 심볼릭 링크 해석
+        let realPath;
+        if (fs.existsSync(absolutePath)) {
+            realPath = fs.realpathSync(absolutePath);
+        } else {
+            // 파일이 없으면 부모 디렉토리 확인
+            const parentDir = path.dirname(absolutePath);
+            if (fs.existsSync(parentDir)) {
+                const realParent = fs.realpathSync(parentDir);
+                realPath = path.join(realParent, path.basename(absolutePath));
+            } else {
+                realPath = absolutePath;
+            }
+        }
+
+        // 정규화된 실제 경로가 허용된 디렉토리 내부인지 확인
+        const isAllowedPath = allowedDirs.some(allowedDir => {
+            try {
+                // 허용된 디렉토리도 realpath로 해석
+                const realAllowedDir = fs.existsSync(allowedDir)
+                    ? fs.realpathSync(allowedDir)
+                    : allowedDir;
+                return realPath.startsWith(realAllowedDir + path.sep) || realPath === realAllowedDir;
+            } catch {
+                return false;
+            }
+        });
+
+        if (!isAllowedPath) {
+            return { valid: false, error: '허용되지 않은 경로입니다.' };
+        }
+
+        return { valid: true, resolvedPath: realPath };
+    } catch (error) {
+        return { valid: false, error: '경로 검증 중 오류가 발생했습니다: ' + error.message };
     }
-
-    return { valid: true };
 }
 
 /**
@@ -434,4 +455,119 @@ ipcMain.handle('get-app-path', async () => {
 // 앱 버전 가져오기
 ipcMain.handle('get-app-version', async () => {
     return app.getVersion();
+});
+
+// ========================================
+// Firebase 인증 파일 IPC 핸들러
+// ========================================
+
+/**
+ * Firebase 인증 파일 경로
+ * @returns {string}
+ */
+function getAuthFilePath() {
+    return path.join(app.getPath('userData'), 'firebase-auth.key');
+}
+
+// 인증 파일 읽기
+ipcMain.handle('read-auth-file', async () => {
+    try {
+        const authFilePath = getAuthFilePath();
+
+        if (!fs.existsSync(authFilePath)) {
+            return { exists: false };
+        }
+
+        const content = fs.readFileSync(authFilePath, 'utf8');
+        return { exists: true, content };
+    } catch (error) {
+        console.error('[AuthFile] 읽기 오류:', error);
+        return { exists: false, error: error.message };
+    }
+});
+
+// 인증 파일 저장
+ipcMain.handle('save-auth-file', async (event, content) => {
+    try {
+        const authFilePath = getAuthFilePath();
+        fs.writeFileSync(authFilePath, content, 'utf8');
+        console.log('[AuthFile] 저장 완료:', authFilePath);
+        return { success: true };
+    } catch (error) {
+        console.error('[AuthFile] 저장 오류:', error);
+        return { success: false, error: error.message };
+    }
+});
+
+// 인증 파일 삭제
+ipcMain.handle('delete-auth-file', async () => {
+    try {
+        const authFilePath = getAuthFilePath();
+
+        if (fs.existsSync(authFilePath)) {
+            fs.unlinkSync(authFilePath);
+            console.log('[AuthFile] 삭제 완료:', authFilePath);
+        }
+
+        return { success: true };
+    } catch (error) {
+        console.error('[AuthFile] 삭제 오류:', error);
+        return { success: false, error: error.message };
+    }
+});
+
+// 인증 파일 존재 여부 확인
+ipcMain.handle('check-auth-file', async () => {
+    try {
+        const authFilePath = getAuthFilePath();
+        const exists = fs.existsSync(authFilePath);
+        return { exists };
+    } catch (error) {
+        console.error('[AuthFile] 확인 오류:', error);
+        return { exists: false, error: error.message };
+    }
+});
+
+// 인증 파일 선택 다이얼로그 (Electron 네이티브)
+ipcMain.handle('select-auth-file', async () => {
+    try {
+        // 기본 경로: 앱 실행 디렉토리 (프로젝트 루트)
+        const defaultPath = process.cwd();
+        console.log('[AuthFile] 파일 선택 다이얼로그 열림, 기본 경로:', defaultPath);
+
+        const result = await dialog.showOpenDialog(mainWindow, {
+            title: 'Firebase 인증 파일 선택 (firebase-auth.json)',
+            defaultPath: defaultPath,
+            buttonLabel: '선택',
+            properties: ['openFile']
+        });
+
+        if (result.canceled || result.filePaths.length === 0) {
+            return { success: false, canceled: true };
+        }
+
+        // 선택한 파일 읽기
+        const selectedPath = result.filePaths[0];
+        const content = fs.readFileSync(selectedPath, 'utf8');
+
+        // JSON 유효성 검사
+        try {
+            const config = JSON.parse(content);
+            if (!config.apiKey || !config.projectId) {
+                return { success: false, error: '유효하지 않은 인증 파일입니다. apiKey와 projectId가 필요합니다.' };
+            }
+
+            // 인증 파일로 저장
+            const authFilePath = getAuthFilePath();
+            fs.writeFileSync(authFilePath, content, 'utf8');
+            console.log('[AuthFile] 선택 및 저장 완료:', authFilePath);
+
+            return { success: true, projectId: config.projectId };
+        } catch (parseError) {
+            return { success: false, error: '파일이 올바른 JSON 형식이 아닙니다.' };
+        }
+    } catch (error) {
+        console.error('[AuthFile] 선택 오류:', error);
+        return { success: false, error: error.message };
+    }
 });

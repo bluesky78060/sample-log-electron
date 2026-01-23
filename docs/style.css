@@ -951,6 +951,38 @@ body.heavy-metal-page {
     font-weight: 600;
 }
 
+/* 완료 상태 필터 드롭다운 */
+select#completedFilter {
+    background: white;
+    color: #374151;
+    border: 2px solid #d1d5db;
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236366f1' d='M6 8L2 4h8z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 12px 12px;
+    padding-right: 1.8rem;
+    transition: all 0.2s ease;
+}
+
+select#completedFilter:hover {
+    border-color: var(--primary);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
+}
+
+select#completedFilter:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
 /* Search Open Button */
 .btn-search-open {
     display: inline-flex;
@@ -2474,6 +2506,7 @@ input[type="number"] {
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-sm);
     overflow: auto;
+    max-height: calc(100vh - 200px);
     transition: var(--transition);
 }
 
@@ -3091,6 +3124,16 @@ input[type="number"] {
     background: linear-gradient(to bottom, #f6f8fa 0%, #e9ecef 100%);
     color: #24292f;
     border-bottom: 2px solid #d0d7de;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.data-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: #eef1f4;
 }
 
 .data-table th {
@@ -5409,6 +5452,18 @@ select {
     color: #a5b4fc;
 }
 
+/* 다크 모드 완료 필터 */
+[data-theme="dark"] select#completedFilter {
+    background: #2a2a30;
+    color: #e5e7eb;
+    border-color: #4b5563;
+}
+
+[data-theme="dark"] select#completedFilter:hover {
+    border-color: #a5b4fc;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
+}
+
 /* 다크 모드 테이블 래퍼 */
 [data-theme="dark"] .table-wrapper {
     background: rgba(50, 50, 55, 0.95);
@@ -5423,6 +5478,10 @@ select {
 [data-theme="dark"] .data-table thead {
     background: linear-gradient(to bottom, #3a3a40 0%, #2f2f35 100%);
     color: var(--gray-800);
+}
+
+[data-theme="dark"] .data-table thead th {
+    background: #3a3a40;
 }
 
 [data-theme="dark"] .data-table th {

@@ -2247,7 +2247,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         receptionFrom: '',
         receptionTo: '',
         lot: '',
-        purpose: ''
+        purpose: '',
+        completed: ''
     };
 
     // 목적(용도) 필터 드롭다운
@@ -2255,6 +2256,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (purposeFilter) {
         purposeFilter.addEventListener('change', (e) => {
             currentSearchFilter.purpose = e.target.value;
+            filterAndRenderLogs();
+        });
+    }
+
+    // 완료 상태 필터 드롭다운
+    const completedFilter = document.getElementById('completedFilter');
+    if (completedFilter) {
+        completedFilter.addEventListener('change', (e) => {
+            currentSearchFilter.completed = e.target.value;
             filterAndRenderLogs();
         });
     }
@@ -2378,7 +2388,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             const matchesPurpose = !currentSearchFilter.purpose ||
                 (log.purpose || '') === currentSearchFilter.purpose;
 
-            return matchesName && matchesReception && matchesDate && matchesLot && matchesPurpose;
+            // 완료 상태 필터
+            let matchesCompleted = true;
+            if (currentSearchFilter.completed === 'completed') {
+                matchesCompleted = log.completed === true;
+            } else if (currentSearchFilter.completed === 'incomplete') {
+                matchesCompleted = !log.completed;
+            }
+
+            return matchesName && matchesReception && matchesDate && matchesLot && matchesPurpose && matchesCompleted;
         });
 
         renderLogs(filteredLogs);
@@ -2388,7 +2406,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     function updateSearchButtonState() {
         const hasFilter = currentSearchFilter.dateFrom || currentSearchFilter.dateTo ||
             currentSearchFilter.name || currentSearchFilter.receptionFrom ||
-            currentSearchFilter.receptionTo || currentSearchFilter.lot || currentSearchFilter.purpose;
+            currentSearchFilter.receptionTo || currentSearchFilter.lot || currentSearchFilter.purpose ||
+            currentSearchFilter.completed;
         if (hasFilter) {
             openSearchModalBtn.classList.add('has-filter');
             openSearchModalBtn.innerHTML = '🔍 검색 중';
@@ -2456,7 +2475,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         searchReceptionToInput.value = '';
         searchLotInput.value = '';
         if (purposeFilter) purposeFilter.value = '';
-        currentSearchFilter = { dateFrom: '', dateTo: '', name: '', receptionFrom: '', receptionTo: '', lot: '', purpose: '' };
+        if (completedFilter) completedFilter.value = '';
+        currentSearchFilter = { dateFrom: '', dateTo: '', name: '', receptionFrom: '', receptionTo: '', lot: '', purpose: '', completed: '' };
         filterAndRenderLogs();
         closeSearchModal();
     });

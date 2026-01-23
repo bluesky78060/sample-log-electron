@@ -1704,8 +1704,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         dateTo: '',
         name: '',
         receptionFrom: '',
-        receptionTo: ''
+        receptionTo: '',
+        completed: ''
     };
+
+    // 완료 상태 필터 드롭다운
+    const completedFilter = document.getElementById('completedFilter');
+    if (completedFilter) {
+        completedFilter.addEventListener('change', (e) => {
+            currentSearchFilter.completed = e.target.value;
+            filterAndRenderLogs();
+        });
+    }
 
     // 접수번호에서 숫자 부분 추출
     function extractReceptionNumber(receptionNumber) {
@@ -1737,7 +1747,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (currentSearchFilter.dateTo && logDate > currentSearchFilter.dateTo) matchesDate = false;
             }
 
-            return matchesName && matchesReception && matchesDate;
+            // 완료 상태 필터
+            let matchesCompleted = true;
+            if (currentSearchFilter.completed === 'completed') {
+                matchesCompleted = log.completed === true;
+            } else if (currentSearchFilter.completed === 'incomplete') {
+                matchesCompleted = !log.completed;
+            }
+
+            return matchesName && matchesReception && matchesDate && matchesCompleted;
         });
 
         renderLogs(filtered);
@@ -1747,7 +1765,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function updateSearchButtonState() {
         const hasFilter = currentSearchFilter.dateFrom || currentSearchFilter.dateTo ||
-            currentSearchFilter.name || currentSearchFilter.receptionFrom || currentSearchFilter.receptionTo;
+            currentSearchFilter.name || currentSearchFilter.receptionFrom || currentSearchFilter.receptionTo ||
+            currentSearchFilter.completed;
         if (openSearchModalBtn) {
             if (hasFilter) {
                 openSearchModalBtn.classList.add('has-filter');
@@ -1813,8 +1832,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (searchNameInput) searchNameInput.value = '';
             if (searchReceptionFromInput) searchReceptionFromInput.value = '';
             if (searchReceptionToInput) searchReceptionToInput.value = '';
-            currentSearchFilter = { dateFrom: '', dateTo: '', name: '', receptionFrom: '', receptionTo: '' };
-            renderLogs();
+            if (completedFilter) completedFilter.value = '';
+            currentSearchFilter = { dateFrom: '', dateTo: '', name: '', receptionFrom: '', receptionTo: '', completed: '' };
+            filterAndRenderLogs();
             updateSearchButtonState();
             listSearchModal.classList.add('hidden');
         });

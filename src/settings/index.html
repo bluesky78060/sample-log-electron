@@ -320,61 +320,107 @@
             ⚙️ 설정
         </h1>
 
-        <!-- Firebase 설정 -->
-        <div class="settings-card">
+        <!-- Firebase 인증 파일 설정 (Electron 앱용) -->
+        <div class="settings-card" id="authFileSection">
             <h2>
-                <span>☁️</span>
-                Firebase 클라우드 동기화
-                <span id="connectionStatus" class="status-badge disconnected">● 미연결</span>
+                <span>🔐</span>
+                Firebase 인증 파일
+                <span id="authFileStatus" class="status-badge disconnected">● 미등록</span>
             </h2>
 
             <div class="alert alert-info">
-                <strong>클라우드 동기화란?</strong><br>
-                Firebase를 설정하면 여러 컴퓨터에서 같은 데이터를 사용할 수 있고,
-                인터넷이 끊겨도 오프라인으로 작업 후 자동 동기화됩니다.
+                <strong>인증 파일이란?</strong><br>
+                Firebase 접근을 위한 인증 파일(firebase-auth.key)을 등록해야 클라우드 동기화가 활성화됩니다.
+                인증 파일은 관리자에게 받으세요.
             </div>
 
-            <form id="firebaseForm">
-                <div class="form-group">
-                    <label for="apiKey">API Key</label>
-                    <input type="text" id="apiKey" placeholder="AIzaSy...">
+            <div id="authFileUploadArea" style="margin-bottom: 1rem;">
+                <div style="border: 2px dashed #cbd5e1; border-radius: 8px; padding: 2rem; text-align: center; background: #f8fafc;">
+                    <input type="file" id="authFileInput" style="display: none;">
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">📁</div>
+                    <p style="color: #64748b; margin-bottom: 1rem;">인증 파일을 선택하거나 드래그해서 놓으세요</p>
+                    <button type="button" id="selectAuthFileBtn" class="btn btn-primary">파일 선택</button>
+                </div>
+            </div>
+
+            <div id="authFileInfo" style="display: none; padding: 1rem; background: #f0fdf4; border-radius: 8px; border: 1px solid #bbf7d0;">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <span style="font-size: 1.5rem;">✅</span>
+                        <div>
+                            <div style="font-weight: 500; color: #166534;">인증 파일이 등록되어 있습니다</div>
+                            <div id="authFileProjectId" style="font-size: 0.75rem; color: #15803d;"></div>
+                        </div>
+                    </div>
+                    <button type="button" id="deleteAuthFileBtn" class="btn" style="background: #fee2e2; color: #dc2626;">삭제</button>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                <button type="button" id="testConnectionBtn" class="btn btn-secondary">연결 테스트</button>
+            </div>
+
+            <p class="help-text" style="margin-top: 1rem;">
+                인증 파일이 없다면 관리자에게 문의하거나, 아래 수동 설정 섹션을 펼쳐서 직접 입력하세요.
+            </p>
+        </div>
+
+        <!-- Firebase 수동 설정 (웹 환경 또는 고급 사용자용) -->
+        <div class="settings-card">
+            <h2 style="cursor: pointer;" onclick="toggleManualSettings()">
+                <span>☁️</span>
+                Firebase 수동 설정
+                <span id="connectionStatus" class="status-badge disconnected">● 미연결</span>
+                <span id="manualSettingsToggle" style="margin-left: auto; font-size: 0.875rem; color: #64748b;">▼ 펼치기</span>
+            </h2>
+
+            <div id="manualSettingsContent" style="display: none;">
+                <div class="alert alert-warning">
+                    <strong>참고:</strong> Electron 앱에서는 인증 파일 사용을 권장합니다.
+                    웹 환경이거나 직접 설정이 필요한 경우에만 이 섹션을 사용하세요.
                 </div>
 
-                <div class="form-group">
-                    <label for="projectId">Project ID</label>
-                    <input type="text" id="projectId" placeholder="your-project-id">
-                </div>
+                <form id="firebaseForm">
+                    <div class="form-group">
+                        <label for="apiKey">API Key</label>
+                        <input type="text" id="apiKey" placeholder="AIzaSy...">
+                    </div>
 
-                <div class="form-group">
-                    <label for="authDomain">Auth Domain</label>
-                    <input type="text" id="authDomain" placeholder="your-project-id.firebaseapp.com">
-                </div>
+                    <div class="form-group">
+                        <label for="projectId">Project ID</label>
+                        <input type="text" id="projectId" placeholder="your-project-id">
+                    </div>
 
-                <div class="form-group">
-                    <label for="storageBucket">Storage Bucket</label>
-                    <input type="text" id="storageBucket" placeholder="your-project-id.appspot.com">
-                </div>
+                    <div class="form-group">
+                        <label for="authDomain">Auth Domain</label>
+                        <input type="text" id="authDomain" placeholder="your-project-id.firebaseapp.com">
+                    </div>
 
-                <div class="form-group">
-                    <label for="messagingSenderId">Messaging Sender ID</label>
-                    <input type="text" id="messagingSenderId" placeholder="123456789">
-                </div>
+                    <div class="form-group">
+                        <label for="storageBucket">Storage Bucket</label>
+                        <input type="text" id="storageBucket" placeholder="your-project-id.appspot.com">
+                    </div>
 
-                <div class="form-group">
-                    <label for="appId">App ID</label>
-                    <input type="text" id="appId" placeholder="1:123456789:web:abcdef">
-                </div>
+                    <div class="form-group">
+                        <label for="messagingSenderId">Messaging Sender ID</label>
+                        <input type="text" id="messagingSenderId" placeholder="123456789">
+                    </div>
 
-                <p class="help-text">
-                    Firebase Console에서 프로젝트를 생성하고 웹 앱 설정값을 복사해서 입력하세요.
-                    <a href="https://console.firebase.google.com/" target="_blank" style="color: #3b82f6;">Firebase Console 열기</a>
-                </p>
+                    <div class="form-group">
+                        <label for="appId">App ID</label>
+                        <input type="text" id="appId" placeholder="1:123456789:web:abcdef">
+                    </div>
 
-                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
-                    <button type="submit" class="btn btn-primary">설정 저장</button>
-                    <button type="button" id="testConnectionBtn" class="btn btn-secondary">연결 테스트</button>
-                </div>
-            </form>
+                    <p class="help-text">
+                        Firebase Console에서 프로젝트를 생성하고 웹 앱 설정값을 복사해서 입력하세요.
+                        <a href="https://console.firebase.google.com/" target="_blank" style="color: #3b82f6;">Firebase Console 열기</a>
+                    </p>
+
+                    <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                        <button type="submit" class="btn btn-primary">설정 저장</button>
+                    </div>
+                </form>
+            </div>
         </div>
 
         <!-- 데이터 마이그레이션 -->
@@ -421,6 +467,7 @@
     <!-- Firebase SDK (compat 버전 - Electron 호환) -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <!-- 네트워크 접근 제어 (Firebase 초기화 전에 로드) -->
     <script src="../shared/network-access.js"></script>
     <!-- Firebase 스크립트 -->
@@ -438,6 +485,266 @@
             { key: 'compost', name: '가축분뇨퇴비', icon: '🐄', storagePrefix: 'compostSampleLogs' },
             { key: 'heavyMetal', name: '토양 중금속', icon: '⚗️', storagePrefix: 'heavyMetalSampleLogs' }
         ];
+
+        // Electron 환경 확인
+        const isElectron = window.electronAPI?.isElectron === true;
+
+        // ========================================
+        // 인증 파일 관련 함수 (Electron 전용)
+        // ========================================
+
+        // 인증 파일 상태 확인 및 UI 업데이트
+        async function checkAuthFileStatus() {
+            const statusEl = document.getElementById('authFileStatus');
+            const uploadArea = document.getElementById('authFileUploadArea');
+            const infoArea = document.getElementById('authFileInfo');
+
+            if (!isElectron) {
+                // 웹 환경: localStorage에서 설정 확인
+                if (window.firebaseConfig?.isEnabled?.()) {
+                    statusEl.className = 'status-badge connected';
+                    statusEl.textContent = '● 연결됨';
+                    uploadArea.style.display = 'none';
+                    infoArea.style.display = 'block';
+                    document.getElementById('authFileProjectId').textContent = '웹 환경 - 설정 저장됨';
+                } else {
+                    statusEl.className = 'status-badge disconnected';
+                    statusEl.textContent = '● 미등록';
+                    uploadArea.style.display = 'block';
+                    infoArea.style.display = 'none';
+                }
+                // 웹 환경에서도 인증 파일 업로드 가능하도록 섹션 표시
+                document.querySelector('#authFileSection .alert-info').innerHTML =
+                    '<strong>인증 파일이란?</strong><br>' +
+                    'Firebase 접근을 위한 인증 파일을 업로드하면 자동으로 설정됩니다.<br>' +
+                    '<small style="color: #64748b;">(웹 환경: 설정이 브라우저에 저장됩니다)</small>';
+                return;
+            }
+
+            try {
+                const result = await window.electronAPI.readAuthFile();
+
+                if (result.exists && result.content) {
+                    try {
+                        const config = JSON.parse(result.content);
+                        if (config.projectId) {
+                            // 인증 파일 등록됨
+                            statusEl.className = 'status-badge connected';
+                            statusEl.textContent = '● 등록됨';
+                            uploadArea.style.display = 'none';
+                            infoArea.style.display = 'block';
+                            document.getElementById('authFileProjectId').textContent = `프로젝트: ${config.projectId}`;
+                            return;
+                        }
+                    } catch (e) {
+                        console.error('인증 파일 파싱 오류:', e);
+                    }
+                }
+
+                // 인증 파일 미등록
+                statusEl.className = 'status-badge disconnected';
+                statusEl.textContent = '● 미등록';
+                uploadArea.style.display = 'block';
+                infoArea.style.display = 'none';
+            } catch (error) {
+                console.error('인증 파일 확인 오류:', error);
+            }
+        }
+
+        // 인증 파일 저장
+        async function saveAuthFile(content) {
+            try {
+                // JSON 파싱 검증
+                const config = JSON.parse(content);
+                if (!config.apiKey || !config.projectId) {
+                    alert('유효하지 않은 인증 파일입니다.\nAPI Key와 Project ID가 필요합니다.');
+                    return false;
+                }
+
+                if (!isElectron) {
+                    // 웹 환경: localStorage에 저장
+                    if (window.firebaseConfig?.saveConfig) {
+                        window.firebaseConfig.saveConfig(config);
+                    }
+
+                    // Firebase 재초기화
+                    if (window.firebaseConfig?.reinitialize) {
+                        const initResult = await window.firebaseConfig.reinitialize();
+                        if (initResult) {
+                            alert('인증 파일이 적용되고 Firebase가 연결되었습니다.\n프로젝트: ' + config.projectId);
+                        } else {
+                            alert('인증 파일이 저장되었지만 Firebase 연결에 실패했습니다.\n페이지를 새로고침해주세요.');
+                        }
+                    } else {
+                        alert('인증 파일이 저장되었습니다.\n페이지를 새로고침하면 적용됩니다.');
+                    }
+                    await checkAuthFileStatus();
+                    updateConnectionStatus();
+                    return true;
+                }
+
+                // Electron 환경: 파일 시스템에 저장
+                const result = await window.electronAPI.saveAuthFile(content);
+                if (result.success) {
+                    // Firebase 재초기화 (새 인증 파일 적용)
+                    if (window.firebaseConfig?.reinitialize) {
+                        const initResult = await window.firebaseConfig.reinitialize();
+                        if (initResult) {
+                            alert('인증 파일이 등록되고 Firebase가 연결되었습니다.\n프로젝트: ' + config.projectId);
+                        } else {
+                            alert('인증 파일은 등록되었지만 Firebase 연결에 실패했습니다.\n앱을 재시작해주세요.');
+                        }
+                    } else {
+                        alert('인증 파일이 등록되었습니다.\n앱을 재시작하면 적용됩니다.');
+                    }
+                    await checkAuthFileStatus();
+                    updateConnectionStatus();
+                    return true;
+                } else {
+                    alert('인증 파일 저장 실패: ' + (result.error || '알 수 없는 오류'));
+                    return false;
+                }
+            } catch (error) {
+                alert('인증 파일 형식이 올바르지 않습니다.\nJSON 형식의 파일이 필요합니다.');
+                return false;
+            }
+        }
+
+        // 인증 파일 삭제
+        async function deleteAuthFile() {
+            if (!confirm('인증 파일을 삭제하시겠습니까?\nFirebase 연결이 해제됩니다.')) {
+                return;
+            }
+
+            if (!isElectron) {
+                // 웹 환경: localStorage에서 삭제
+                if (window.firebaseConfig?.resetConfig) {
+                    window.firebaseConfig.resetConfig();
+                }
+                alert('Firebase 설정이 삭제되었습니다.');
+                await checkAuthFileStatus();
+                updateConnectionStatus();
+                return;
+            }
+
+            try {
+                const result = await window.electronAPI.deleteAuthFile();
+                if (result.success) {
+                    // Firebase 설정도 초기화
+                    if (window.firebaseConfig?.resetConfig) {
+                        window.firebaseConfig.resetConfig();
+                    }
+                    alert('인증 파일이 삭제되었습니다.');
+                    await checkAuthFileStatus();
+                    updateConnectionStatus();
+                } else {
+                    alert('인증 파일 삭제 실패: ' + (result.error || '알 수 없는 오류'));
+                }
+            } catch (error) {
+                alert('인증 파일 삭제 중 오류 발생: ' + error.message);
+            }
+        }
+
+        // 파일 선택 버튼 클릭 (Electron 네이티브 다이얼로그 사용)
+        document.getElementById('selectAuthFileBtn')?.addEventListener('click', async () => {
+            if (isElectron && window.electronAPI?.selectAuthFile) {
+                // Electron 네이티브 파일 선택 다이얼로그
+                try {
+                    const result = await window.electronAPI.selectAuthFile();
+                    if (result.canceled) {
+                        return;
+                    }
+                    if (result.success) {
+                        // Firebase 재초기화 (새 인증 파일 적용)
+                        if (window.firebaseConfig?.reinitialize) {
+                            const initResult = await window.firebaseConfig.reinitialize();
+                            if (initResult) {
+                                alert('인증 파일이 등록되고 Firebase가 연결되었습니다.\n프로젝트: ' + result.projectId);
+                            } else {
+                                alert('인증 파일은 등록되었지만 Firebase 연결에 실패했습니다.\n앱을 재시작해주세요.');
+                            }
+                        } else {
+                            alert('인증 파일이 등록되었습니다.\n앱을 재시작하면 적용됩니다.\n프로젝트: ' + result.projectId);
+                        }
+                        await checkAuthFileStatus();
+                        updateConnectionStatus();
+                    } else {
+                        alert('인증 파일 등록 실패: ' + (result.error || '알 수 없는 오류'));
+                    }
+                } catch (error) {
+                    alert('파일 선택 중 오류 발생: ' + error.message);
+                }
+            } else {
+                // 웹 환경 폴백
+                document.getElementById('authFileInput').click();
+            }
+        });
+
+        // 파일 선택 처리 (웹 환경용)
+        document.getElementById('authFileInput')?.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                await saveAuthFile(event.target.result);
+            };
+            reader.readAsText(file);
+
+            // 입력 초기화
+            e.target.value = '';
+        });
+
+        // 인증 파일 삭제 버튼
+        document.getElementById('deleteAuthFileBtn')?.addEventListener('click', deleteAuthFile);
+
+        // 드래그 앤 드롭 지원
+        const uploadArea = document.getElementById('authFileUploadArea');
+        if (uploadArea) {
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.querySelector('div').style.borderColor = '#3b82f6';
+                uploadArea.querySelector('div').style.background = '#eff6ff';
+            });
+
+            uploadArea.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                uploadArea.querySelector('div').style.borderColor = '#cbd5e1';
+                uploadArea.querySelector('div').style.background = '#f8fafc';
+            });
+
+            uploadArea.addEventListener('drop', async (e) => {
+                e.preventDefault();
+                uploadArea.querySelector('div').style.borderColor = '#cbd5e1';
+                uploadArea.querySelector('div').style.background = '#f8fafc';
+
+                const file = e.dataTransfer.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                    await saveAuthFile(event.target.result);
+                };
+                reader.readAsText(file);
+            });
+        }
+
+        // 수동 설정 토글
+        function toggleManualSettings() {
+            const content = document.getElementById('manualSettingsContent');
+            const toggle = document.getElementById('manualSettingsToggle');
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                toggle.textContent = '▲ 접기';
+            } else {
+                content.style.display = 'none';
+                toggle.textContent = '▼ 펼치기';
+            }
+        }
+
+        // ========================================
+        // 기존 Firebase 설정 관련 함수
+        // ========================================
 
         // 저장된 설정 로드
         function loadSavedConfig() {
@@ -477,27 +784,24 @@
             alert('설정이 저장되었습니다. "연결 테스트" 버튼을 눌러 연결을 확인하세요.');
         });
 
+        // 연결 상태 업데이트
+        function updateConnectionStatus() {
+            const statusEl = document.getElementById('connectionStatus');
+            if (window.firebaseConfig?.isEnabled?.()) {
+                statusEl.className = 'status-badge connected';
+                statusEl.textContent = '● 연결됨';
+                document.getElementById('migrateAllBtn').disabled = false;
+            } else {
+                statusEl.className = 'status-badge disconnected';
+                statusEl.textContent = '● 미연결';
+            }
+        }
+
         // 연결 테스트
         document.getElementById('testConnectionBtn').addEventListener('click', async () => {
-            // 먼저 현재 폼 값을 저장
-            const config = {
-                apiKey: document.getElementById('apiKey').value.trim(),
-                projectId: document.getElementById('projectId').value.trim(),
-                authDomain: document.getElementById('authDomain').value.trim(),
-                storageBucket: document.getElementById('storageBucket').value.trim(),
-                messagingSenderId: document.getElementById('messagingSenderId').value.trim(),
-                appId: document.getElementById('appId').value.trim()
-            };
-
-            // 값이 비어있으면 경고
-            if (!config.apiKey || !config.projectId) {
-                alert('API Key와 Project ID는 필수입니다.');
-                return;
-            }
-
-            localStorage.setItem(SETTINGS_FIREBASE_KEY, JSON.stringify(config));
-
             const statusEl = document.getElementById('connectionStatus');
+            const authStatusEl = document.getElementById('authFileStatus');
+
             statusEl.className = 'status-badge';
             statusEl.style.background = '#fef3c7';
             statusEl.style.color = '#92400e';
@@ -512,6 +816,12 @@
                     statusEl.style.background = '#dcfce7';
                     statusEl.style.color = '#16a34a';
                     statusEl.textContent = '● 연결됨';
+
+                    if (authStatusEl) {
+                        authStatusEl.className = 'status-badge connected';
+                        authStatusEl.textContent = '● 연결됨';
+                    }
+
                     document.getElementById('migrateAllBtn').disabled = false;
                     renderMigrationList();
                     alert('Firebase 연결 성공!');
@@ -520,7 +830,12 @@
                     statusEl.style.background = '#fef3c7';
                     statusEl.style.color = '#d97706';
                     statusEl.textContent = '● 미연결';
-                    alert('Firebase 연결 실패. 설정값을 확인해주세요.');
+
+                    if (isElectron) {
+                        alert('Firebase 연결 실패.\n인증 파일이 등록되어 있는지 확인하세요.');
+                    } else {
+                        alert('Firebase 연결 실패.\n수동 설정값을 확인해주세요.');
+                    }
                 }
             } catch (error) {
                 statusEl.className = 'status-badge error';
@@ -695,6 +1010,9 @@
         loadSavedConfig();
         renderMigrationList();
 
+        // 인증 파일 상태 확인 (Electron)
+        checkAuthFileStatus();
+
         // 연결 상태 확인
         (async function() {
             if (window.storageManager) {
@@ -704,6 +1022,13 @@
                     statusEl.className = 'status-badge connected';
                     statusEl.textContent = '● 연결됨';
                     document.getElementById('migrateAllBtn').disabled = false;
+
+                    // 인증 파일 섹션도 연결됨으로 표시
+                    const authStatusEl = document.getElementById('authFileStatus');
+                    if (authStatusEl) {
+                        authStatusEl.className = 'status-badge connected';
+                        authStatusEl.textContent = '● 연결됨';
+                    }
                 }
             }
         })();

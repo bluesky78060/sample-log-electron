@@ -2,74 +2,175 @@
  * @fileoverview Firebase 설정 및 초기화 (compat 버전)
  * @description Firebase Firestore 연결 설정
  *
- * 사용 전 Firebase Console에서 프로젝트 생성 필요:
- * 1. https://console.firebase.google.com/ 접속
- * 2. 프로젝트 생성 (예: sample-log-bonghwa)
- * 3. Firestore Database 생성 (테스트 모드로 시작)
- * 4. 프로젝트 설정 > 웹 앱 추가 > 설정값 복사
- * 5. 설정 페이지에서 값 입력
+ * 인증 파일(firebase-auth.key)이 있어야 Firebase에 접근 가능
+ * 인증 파일이 없으면 로컬 모드로만 동작
  */
 
 // ========================================
 // Firebase 초기화 상태
 // ========================================
 
-/** @type {boolean} 디버그 모드 (프로덕션에서는 false) */
-const DEBUG_FIREBASE = true;
+/**
+ * 디버그 모드 - 개발 환경에서만 활성화
+ * Electron: process.env.NODE_ENV 또는 --dev 플래그 확인
+ * Web: localStorage의 debug 플래그 확인
+ */
+const DEBUG_FIREBASE = (() => {
+    // Electron 환경
+    if (typeof process !== 'undefined' && process.env) {
+        return process.env.NODE_ENV === 'development' || process.argv?.includes('--dev');
+    }
+    // 웹 환경
+    try {
+        return localStorage.getItem('DEBUG_MODE') === 'true';
+    } catch {
+        return false;
+    }
+})();
 
 /** 조건부 로깅 */
 const logFirebase = (...args) => DEBUG_FIREBASE && console.log('[Firebase]', ...args);
 
 let db = null;
+let auth = null;
 let isFirebaseEnabled = false;
 let isOfflineEnabled = false;
+let isAuthenticated = false;
 let firebaseConfigData = null;
 
-// localStorage 키
+// localStorage 키 (사용자가 직접 설정한 경우)
 const FIREBASE_CONFIG_KEY = 'firebase_config';
 
-// 기본 Firebase 설정 (내장)
-const DEFAULT_FIREBASE_CONFIG = {
-    apiKey: "AIzaSyAe8PmU_xPmUCPC7Ift9BYtp7Reib4cWLQ",
-    authDomain: "sample-log-electron.firebaseapp.com",
-    projectId: "sample-log-electron",
-    storageBucket: "sample-log-electron.firebasestorage.app",
-    messagingSenderId: "714729425268",
-    appId: "1:714729425268:web:dcd6eaa5b64ab227378421",
-    measurementId: "G-5ET4E14885"
+/**
+ * 간단한 Base64 인코딩/디코딩 (민감 정보 난독화용)
+ * 참고: 이것은 암호화가 아니며, 단순 난독화 목적
+ */
+const obfuscate = {
+    encode: (str) => {
+        try {
+            return btoa(encodeURIComponent(str));
+        } catch {
+            return str;
+        }
+    },
+    decode: (str) => {
+        try {
+            return decodeURIComponent(atob(str));
+        } catch {
+            return str;
+        }
+    }
 };
 
 /**
- * localStorage에서 Firebase 설정 로드 (없으면 기본값 사용)
+ * 인증 파일에서 Firebase 설정 로드 (Electron 전용)
+ * @returns {Promise<Object|null>}
+ */
+async function loadFirebaseConfigFromAuthFile() {
+    // Electron 환경이 아니면 null 반환
+    if (!window.electronAPI?.isElectron) {
+        logFirebase('웹 환경 - 인증 파일 사용 불가');
+        return null;
+    }
+
+    try {
+        if (!window.electronAPI?.readAuthFile) {
+            logFirebase('readAuthFile API 없음');
+            return null;
+        }
+
+        const result = await window.electronAPI.readAuthFile();
+
+        if (!result.exists) {
+            logFirebase('인증 파일 없음 - 로컬 모드로 동작');
+            return null;
+        }
+
+        // JSON 파싱
+        const config = JSON.parse(result.content);
+
+        // 필수 필드 확인
+        if (config.apiKey && config.projectId) {
+            logFirebase('인증 파일에서 Firebase 설정 로드됨');
+            return config;
+        } else {
+            logFirebase('인증 파일에 필수 설정 없음');
+            return null;
+        }
+
+    } catch (error) {
+        console.error('[Firebase] 인증 파일 로드 실패:', error);
+        return null;
+    }
+}
+
+/**
+ * localStorage에서 Firebase 설정 로드 (백업용)
+ * 난독화된 데이터와 레거시 평문 데이터 모두 지원
  * @returns {Object|null}
  */
-function loadFirebaseConfig() {
+function loadFirebaseConfigFromStorage() {
     try {
         const saved = localStorage.getItem(FIREBASE_CONFIG_KEY);
         if (saved) {
-            return JSON.parse(saved);
+            let config;
+            // 난독화된 데이터인지 확인 (Base64로 시작)
+            if (saved.startsWith('eyJ') || /^[A-Za-z0-9+/=]+$/.test(saved)) {
+                try {
+                    config = JSON.parse(obfuscate.decode(saved));
+                } catch {
+                    // 디코딩 실패 시 레거시 평문으로 시도
+                    config = JSON.parse(saved);
+                }
+            } else {
+                // 레거시 평문 데이터
+                config = JSON.parse(saved);
+            }
+            if (config.apiKey && config.projectId) {
+                return config;
+            }
         }
     } catch (e) {
         console.error('Firebase 설정 로드 실패:', e);
     }
-    // localStorage에 설정이 없으면 기본 설정 사용
-    return DEFAULT_FIREBASE_CONFIG;
+    return null;
+}
+
+/**
+ * Firebase 설정 로드 (인증 파일 우선)
+ * @returns {Promise<Object|null>}
+ */
+async function loadFirebaseConfig() {
+    // 1. 인증 파일에서 로드 (Electron)
+    const authFileConfig = await loadFirebaseConfigFromAuthFile();
+    if (authFileConfig) {
+        return authFileConfig;
+    }
+
+    // 2. localStorage에서 로드 (웹 또는 백업)
+    const storageConfig = loadFirebaseConfigFromStorage();
+    if (storageConfig) {
+        logFirebase('localStorage에서 설정 로드됨');
+        return storageConfig;
+    }
+
+    // 3. 설정 없음
+    logFirebase('Firebase 설정 없음 - 로컬 모드로 동작');
+    return null;
 }
 
 /**
  * Firebase 설정이 유효한지 확인
+ * @param {Object} config
  * @returns {boolean}
  */
-function isFirebaseConfigValid() {
-    const config = loadFirebaseConfig();
+function isFirebaseConfigValid(config) {
     if (!config) return false;
 
     return config.apiKey &&
            config.apiKey.trim() !== '' &&
-           config.apiKey !== 'YOUR_API_KEY' &&
            config.projectId &&
-           config.projectId.trim() !== '' &&
-           config.projectId !== 'YOUR_PROJECT_ID';
+           config.projectId.trim() !== '';
 }
 
 /**
@@ -85,7 +186,7 @@ async function initializeFirebase() {
         return true;
     }
 
-    // 네트워크 접근 체크
+    // 네트워크 접근 체크 (웹 환경용)
     if (window.NetworkAccess) {
         const accessResult = await window.NetworkAccess.checkAccess();
         logFirebase('네트워크 접근 체크:', accessResult);
@@ -103,11 +204,12 @@ async function initializeFirebase() {
         return false;
     }
 
-    firebaseConfigData = loadFirebaseConfig();
+    // Firebase 설정 로드 (인증 파일에서)
+    firebaseConfigData = await loadFirebaseConfig();
     logFirebase('로드된 설정:', firebaseConfigData ? '있음' : '없음');
 
     if (!firebaseConfigData) {
-        logFirebase('설정이 없습니다. localStorage 모드로 동작합니다.');
+        logFirebase('설정이 없습니다. 로컬 모드로 동작합니다.');
         return false;
     }
 
@@ -117,7 +219,7 @@ async function initializeFirebase() {
         authDomain: firebaseConfigData.authDomain || '없음'
     });
 
-    if (!isFirebaseConfigValid()) {
+    if (!isFirebaseConfigValid(firebaseConfigData)) {
         logFirebase('설정이 유효하지 않습니다.');
         return false;
     }
@@ -132,6 +234,31 @@ async function initializeFirebase() {
 
         db = firebase.firestore();
         logFirebase('Firestore 연결됨');
+
+        // 익명 인증 수행
+        try {
+            auth = firebase.auth();
+            const userCredential = await auth.signInAnonymously();
+            isAuthenticated = true;
+            logFirebase('익명 인증 성공:', userCredential.user.uid);
+        } catch (authError) {
+            console.error('[Firebase] 익명 인증 실패:', authError);
+            isAuthenticated = false;
+
+            // 인증 실패 시 보안 규칙에 따라 Firestore 접근이 제한될 수 있음
+            // 보안 규칙이 request.auth != null을 요구하면 초기화 실패로 처리
+            const errorCode = authError.code || '';
+            if (errorCode === 'auth/operation-not-allowed') {
+                console.error('[Firebase] 익명 인증이 비활성화되어 있습니다. Firebase Console에서 활성화하세요.');
+                // 익명 인증이 비활성화된 경우 초기화 실패
+                return false;
+            } else if (errorCode === 'auth/network-request-failed') {
+                console.warn('[Firebase] 네트워크 오류로 인증 실패. 오프라인 모드로 계속 진행합니다.');
+                // 네트워크 오류는 오프라인 모드로 계속 진행
+            } else {
+                console.warn('[Firebase] 인증 없이 계속 진행 (보안 규칙에 따라 제한될 수 있음)');
+            }
+        }
 
         // 오프라인 지원 활성화
         try {
@@ -181,11 +308,89 @@ function isOfflineSupported() {
     return isOfflineEnabled;
 }
 
+/**
+ * 인증 여부 확인
+ * @returns {boolean}
+ */
+function isUserAuthenticated() {
+    return isAuthenticated;
+}
+
+/**
+ * 현재 사용자 UID 반환
+ * @returns {string|null}
+ */
+function getCurrentUserId() {
+    return auth?.currentUser?.uid || null;
+}
+
+/**
+ * Firebase 설정 저장 (설정 페이지에서 사용)
+ * 난독화하여 저장 (평문 노출 방지)
+ * @param {Object} config
+ */
+function saveFirebaseConfig(config) {
+    try {
+        const encoded = obfuscate.encode(JSON.stringify(config));
+        localStorage.setItem(FIREBASE_CONFIG_KEY, encoded);
+        logFirebase('설정 저장됨 (난독화)');
+    } catch (e) {
+        console.error('Firebase 설정 저장 실패:', e);
+    }
+}
+
+/**
+ * Firebase 설정 초기화
+ */
+function resetFirebaseConfig() {
+    localStorage.removeItem(FIREBASE_CONFIG_KEY);
+    isFirebaseEnabled = false;
+    isAuthenticated = false;
+    db = null;
+    auth = null;
+    firebaseConfigData = null;
+    logFirebase('설정 초기화됨');
+}
+
+/**
+ * Firebase 재초기화 (인증 파일 변경 후 사용)
+ * @returns {Promise<boolean>} 초기화 성공 여부
+ */
+async function reinitializeFirebase() {
+    logFirebase('재초기화 시작...');
+
+    // 기존 상태 초기화
+    isFirebaseEnabled = false;
+    isAuthenticated = false;
+    isOfflineEnabled = false;
+    db = null;
+    auth = null;
+    firebaseConfigData = null;
+
+    // Firebase 앱이 이미 있으면 삭제
+    if (typeof firebase !== 'undefined' && firebase.apps.length > 0) {
+        try {
+            await firebase.app().delete();
+            logFirebase('기존 Firebase 앱 삭제됨');
+        } catch (e) {
+            console.warn('[Firebase] 앱 삭제 실패:', e);
+        }
+    }
+
+    // 새로운 설정으로 초기화
+    return await initializeFirebase();
+}
+
 // 전역으로 내보내기
 window.firebaseConfig = {
     initialize: initializeFirebase,
+    reinitialize: reinitializeFirebase,
     getDb: getDb,
     isEnabled: isEnabled,
     isOfflineSupported: isOfflineSupported,
-    isConfigValid: isFirebaseConfigValid
+    isAuthenticated: isUserAuthenticated,
+    getCurrentUserId: getCurrentUserId,
+    isConfigValid: isFirebaseConfigValid,
+    saveConfig: saveFirebaseConfig,
+    resetConfig: resetFirebaseConfig
 };

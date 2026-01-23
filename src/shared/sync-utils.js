@@ -24,6 +24,36 @@ function getTimestamp(updatedAt) {
 }
 
 // ========================================
+// ID 정규화 헬퍼
+// ========================================
+
+/**
+ * ID를 문자열로 정규화하여 일관된 비교 가능하게 함
+ * 숫자, 문자열 혼용 문제 해결
+ * @param {string|number|null|undefined} id - 원본 ID
+ * @returns {string|null} 정규화된 문자열 ID
+ */
+function normalizeId(id) {
+    if (id === null || id === undefined) return null;
+    if (typeof id === 'number' && !isNaN(id)) return String(id);
+    if (typeof id === 'string') {
+        const trimmed = id.trim();
+        return trimmed !== '' ? trimmed : null;
+    }
+    return null;
+}
+
+/**
+ * 아이템에서 ID 추출 (정규화 포함)
+ * @param {Object} item - 데이터 아이템
+ * @returns {string|null} 정규화된 ID
+ */
+function getItemId(item) {
+    if (!item) return null;
+    return normalizeId(item.id) || normalizeId(item.receptionNumber);
+}
+
+// ========================================
 // 스마트 병합
 // ========================================
 
@@ -38,15 +68,15 @@ function smartMerge(localData, cloudData) {
     const localMap = new Map();
     const cloudIds = new Set();
 
-    // 로컬 데이터를 ID로 매핑
+    // 로컬 데이터를 정규화된 ID로 매핑
     localData.forEach(item => {
-        const id = item.id || item.receptionNumber;
+        const id = getItemId(item);
         if (id) localMap.set(id, item);
     });
 
-    // 클라우드 ID 집합 생성
+    // 클라우드 ID 집합 생성 (정규화된 ID 사용)
     cloudData.forEach(item => {
-        const id = item.id || item.receptionNumber;
+        const id = getItemId(item);
         if (id) cloudIds.add(id);
     });
 
@@ -59,7 +89,7 @@ function smartMerge(localData, cloudData) {
 
     // 클라우드 데이터 기준으로 병합
     cloudData.forEach(cloudItem => {
-        const id = cloudItem.id || cloudItem.receptionNumber;
+        const id = getItemId(cloudItem);
         if (!id) return;
 
         processedIds.add(id);
@@ -91,7 +121,7 @@ function smartMerge(localData, cloudData) {
     // - syncedAt이 있으면: 이전에 클라우드와 동기화된 적 있음 → 클라우드에서 삭제됨 → 로컬에서도 삭제
     // - syncedAt이 없으면: 아직 업로드 안된 로컬 데이터 → 유지
     localData.forEach(localItem => {
-        const id = localItem.id || localItem.receptionNumber;
+        const id = getItemId(localItem);
         if (id && !processedIds.has(id)) {
             if (localItem.syncedAt) {
                 // 이전에 동기화된 적 있는데 클라우드에 없음 = 클라우드에서 삭제됨
@@ -121,5 +151,7 @@ function smartMerge(localData, cloudData) {
 
 window.SyncUtils = {
     smartMerge,
-    getTimestamp
+    getTimestamp,
+    normalizeId,
+    getItemId
 };

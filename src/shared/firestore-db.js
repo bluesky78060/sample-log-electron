@@ -10,8 +10,23 @@
  * - pesticideSamples: 잔류농약 시료
  */
 
-/** @type {boolean} 디버그 모드 (프로덕션에서는 false) */
-const DEBUG_FIRESTORE = true;
+/**
+ * 디버그 모드 - 개발 환경에서만 활성화
+ * Electron: process.env.NODE_ENV 또는 --dev 플래그 확인
+ * Web: localStorage의 debug 플래그 확인
+ */
+const DEBUG_FIRESTORE = (() => {
+    // Electron 환경
+    if (typeof process !== 'undefined' && process.env) {
+        return process.env.NODE_ENV === 'development' || process.argv?.includes('--dev');
+    }
+    // 웹 환경
+    try {
+        return localStorage.getItem('DEBUG_MODE') === 'true';
+    } catch {
+        return false;
+    }
+})();
 
 /** 조건부 로깅 */
 const logFirestore = (...args) => DEBUG_FIRESTORE && console.log('[Firestore]', ...args);
@@ -254,12 +269,23 @@ async function batchSave(sampleType, year, documents) {
                 // ID 유효성 검사 - 문자열로 변환 (원본 ID 유지)
                 let docId = docData.id;
 
-                // 숫자형 ID는 문자열로만 변환 (원본 값 유지)
-                if (typeof docId === 'number') {
-                    docId = String(docId);
-                } else if (!docId || typeof docId !== 'string' || docId.trim() === '') {
+                // ID 유효성 검사를 먼저 수행
+                const isValidId = (() => {
+                    if (docId === null || docId === undefined) return false;
+                    if (typeof docId === 'number' && !isNaN(docId)) return true;
+                    if (typeof docId === 'string' && docId.trim() !== '') return true;
+                    return false;
+                })();
+
+                if (!isValidId) {
                     // ID가 없거나 유효하지 않으면 새로 생성
-                    docId = Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+                    docId = generateUniqueId();
+                } else if (typeof docId === 'number') {
+                    // 숫자형 ID는 문자열로 변환
+                    docId = String(docId);
+                } else {
+                    // 문자열 ID는 trim 처리
+                    docId = String(docId).trim();
                 }
 
                 const docRef = db.collection(collectionName).doc(docId);
@@ -324,11 +350,24 @@ async function migrateFromLocalStorage(sampleType, year, localStorageKey) {
 }
 
 /**
- * 마이그레이션용 ID 생성
+ * 고유 ID 생성 (crypto.randomUUID 우선 사용)
+ * @returns {string} 고유 ID
+ */
+function generateUniqueId() {
+    // crypto.randomUUID가 지원되면 사용 (더 안전한 난수)
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+        return crypto.randomUUID();
+    }
+    // 폴백: 타임스탬프 + 랜덤 문자열
+    return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+}
+
+/**
+ * 마이그레이션용 ID 생성 (하위 호환성 유지)
  * @returns {string} 고유 ID
  */
 function generateMigrationId() {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+    return generateUniqueId();
 }
 
 /**

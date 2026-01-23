@@ -51,13 +51,17 @@ window.addEventListener('offline', () => {
  * @returns {Promise<string>} 현재 스토리지 모드
  */
 async function initStorageManager() {
-    // Firebase 초기화 시도
-    if (window.firebaseConfig?.isConfigValid()) {
-        const initialized = await window.firebaseConfig.initialize();
-        if (initialized) {
-            await window.firestoreDb?.init();
-            currentMode = STORAGE_MODE.CLOUD_SYNC;
-            logStorage('클라우드 동기화 모드');
+    // Firebase 초기화 시도 (인증 파일에서 설정을 로드함)
+    if (window.firebaseConfig?.initialize) {
+        try {
+            const initialized = await window.firebaseConfig.initialize();
+            if (initialized) {
+                await window.firestoreDb?.init();
+                currentMode = STORAGE_MODE.CLOUD_SYNC;
+                logStorage('클라우드 동기화 모드');
+            }
+        } catch (err) {
+            console.warn('[Storage] Firebase 초기화 실패:', err);
         }
     }
 

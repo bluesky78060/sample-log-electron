@@ -68,6 +68,25 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // 앱 버전 가져오기
     getVersion: () => ipcRenderer.invoke('get-app-version'),
 
+    // ========================================
+    // Firebase 인증 파일 관련
+    // ========================================
+
+    // 인증 파일 읽기
+    readAuthFile: () => ipcRenderer.invoke('read-auth-file'),
+
+    // 인증 파일 저장
+    saveAuthFile: (content) => ipcRenderer.invoke('save-auth-file', content),
+
+    // 인증 파일 삭제
+    deleteAuthFile: () => ipcRenderer.invoke('delete-auth-file'),
+
+    // 인증 파일 존재 여부 확인
+    checkAuthFile: () => ipcRenderer.invoke('check-auth-file'),
+
+    // 인증 파일 선택 다이얼로그 (Electron 네이티브)
+    selectAuthFile: () => ipcRenderer.invoke('select-auth-file'),
+
     // Electron 환경 여부
     isElectron: true
 });
