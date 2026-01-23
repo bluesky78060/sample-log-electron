@@ -114,8 +114,8 @@ function loadFirebaseConfigFromStorage() {
         const saved = localStorage.getItem(FIREBASE_CONFIG_KEY);
         if (saved) {
             let config;
-            // 난독화된 데이터인지 확인 (Base64로 시작)
-            if (saved.startsWith('eyJ') || /^[A-Za-z0-9+/=]+$/.test(saved)) {
+            // 난독화된 데이터인지 확인 (Base64 인코딩된 JSON은 'eyJ'로 시작)
+            if (saved.startsWith('eyJ')) {
                 try {
                     config = JSON.parse(obfuscate.decode(saved));
                 } catch {

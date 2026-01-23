@@ -466,7 +466,7 @@ ipcMain.handle('get-app-version', async () => {
  * @returns {string}
  */
 function getAuthFilePath() {
-    return path.join(app.getPath('userData'), 'firebase-auth.key');
+    return path.join(app.getPath('userData'), 'firebase-auth.json');
 }
 
 // 인증 파일 읽기
@@ -546,8 +546,12 @@ ipcMain.handle('select-auth-file', async () => {
             return { success: false, canceled: true };
         }
 
-        // 선택한 파일 읽기
+        // 선택한 파일 읽기 (크기 제한: 10KB - 인증 파일은 1KB 미만이어야 정상)
         const selectedPath = result.filePaths[0];
+        const stat = fs.statSync(selectedPath);
+        if (stat.size > 10240) {
+            return { success: false, error: '파일이 너무 큽니다 (최대 10KB). 올바른 인증 파일인지 확인하세요.' };
+        }
         const content = fs.readFileSync(selectedPath, 'utf8');
 
         // JSON 유효성 검사

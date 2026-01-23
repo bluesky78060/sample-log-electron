@@ -4,11 +4,8 @@
  */
 
 const AuthFile = {
-    // 인증 키 (이 값과 파일 내용이 일치해야 함)
-    VALID_AUTH_KEY: 'BONGHWA-SAMPLE-LOG-2024-FIREBASE-AUTH',
-
     // 인증 파일명
-    AUTH_FILE_NAME: 'firebase-auth.key',
+    AUTH_FILE_NAME: 'firebase-auth.json',
 
     // 캐시
     _isAuthenticated: null,
@@ -57,18 +54,22 @@ const AuthFile = {
                 return { valid: false, reason: '인증 파일 없음' };
             }
 
-            // 파일 내용 검증
-            const content = result.content?.trim();
-            if (content === this.VALID_AUTH_KEY) {
-                console.log('[AuthFile] 인증 성공');
-                this._isAuthenticated = true;
-                this._authChecked = true;
-                return { valid: true, reason: '인증 파일 유효' };
-            } else {
-                console.warn('[AuthFile] 인증 파일 내용 불일치');
+            // 파일 내용 검증 (JSON 형식의 Firebase 설정인지 확인)
+            try {
+                const config = JSON.parse(result.content);
+                if (config.apiKey && config.projectId) {
+                    this._isAuthenticated = true;
+                    this._authChecked = true;
+                    return { valid: true, reason: '인증 파일 유효' };
+                } else {
+                    this._isAuthenticated = false;
+                    this._authChecked = true;
+                    return { valid: false, reason: '인증 파일에 필수 설정(apiKey, projectId) 없음' };
+                }
+            } catch {
                 this._isAuthenticated = false;
                 this._authChecked = true;
-                return { valid: false, reason: '인증 파일 내용 불일치' };
+                return { valid: false, reason: '인증 파일 형식 오류 (JSON 아님)' };
             }
 
         } catch (error) {
@@ -94,13 +95,17 @@ const AuthFile = {
                 return { success: false, message: 'API 미지원' };
             }
 
-            // 파일 내용 검증
-            const trimmedContent = content?.trim();
-            if (trimmedContent !== this.VALID_AUTH_KEY) {
-                return { success: false, message: '유효하지 않은 인증 파일입니다' };
+            // JSON 형식 검증
+            try {
+                const config = JSON.parse(content);
+                if (!config.apiKey || !config.projectId) {
+                    return { success: false, message: '유효하지 않은 인증 파일입니다 (apiKey, projectId 필요)' };
+                }
+            } catch {
+                return { success: false, message: '유효하지 않은 인증 파일입니다 (JSON 형식 아님)' };
             }
 
-            const result = await window.electronAPI.saveAuthFile(trimmedContent);
+            const result = await window.electronAPI.saveAuthFile(content);
 
             if (result.success) {
                 // 캐시 업데이트
@@ -166,22 +171,14 @@ const AuthFile = {
     },
 
     /**
-     * 인증 파일 생성 (관리자용)
-     * 이 함수를 콘솔에서 실행하면 인증 파일 내용을 얻을 수 있음
+     * 인증 파일 형식 안내 (관리자용)
      */
-    generateAuthFileContent() {
-        console.log('='.repeat(50));
-        console.log('Firebase 인증 파일 내용');
-        console.log('='.repeat(50));
-        console.log(this.VALID_AUTH_KEY);
-        console.log('='.repeat(50));
-        console.log('위 내용을 firebase-auth.key 파일로 저장하세요.');
-        return this.VALID_AUTH_KEY;
+    showAuthFileFormat() {
+        console.log('Firebase 인증 파일은 다음 JSON 형식이어야 합니다:');
+        console.log('{ "apiKey": "...", "projectId": "...", "authDomain": "..." }');
+        console.log('설정 페이지에서 파일을 업로드하세요.');
     }
 };
 
 // 전역으로 내보내기
 window.AuthFile = AuthFile;
-
-console.log('[AuthFile] 모듈 로드됨');
-console.log('  AuthFile.generateAuthFileContent() - 인증 파일 내용 생성');
