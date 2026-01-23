@@ -3,7 +3,7 @@
  * @description 앱 초기화, 창 관리, IPC 핸들러 정의
  */
 
-const { app, BrowserWindow, Menu, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, dialog, session } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 const { autoUpdater } = require('electron-updater');
@@ -200,6 +200,23 @@ const createWindow = () => {
 
 // Electron 초기화 완료 후 브라우저 창 생성 준비
 app.whenReady().then(() => {
+  // CSP (Content-Security-Policy) 헤더 설정
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [
+          "default-src 'self' file:; " +
+          "script-src 'self' 'unsafe-inline' 'unsafe-eval' file: https://cdn.tailwindcss.com https://www.gstatic.com https://cdn.sheetjs.com https://t1.daumcdn.net https://cdnjs.cloudflare.com; " +
+          "style-src 'self' 'unsafe-inline' file: https://fonts.googleapis.com; " +
+          "font-src 'self' file: https://fonts.gstatic.com; " +
+          "connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.ipify.org; " +
+          "img-src 'self' file: data:;"
+        ]
+      }
+    });
+  });
+
   // 한글 메뉴 적용
   const menu = Menu.buildFromTemplate(createMenuTemplate());
   Menu.setApplicationMenu(menu);
@@ -486,11 +503,27 @@ ipcMain.handle('read-auth-file', async () => {
     }
 });
 
-// 인증 파일 저장
+// 인증 파일 저장 (메인 프로세스에서도 검증 - defense-in-depth)
 ipcMain.handle('save-auth-file', async (event, content) => {
     try {
+        // 크기 제한 (10KB)
+        if (!content || typeof content !== 'string' || content.length > 10240) {
+            return { success: false, error: '유효하지 않은 내용입니다 (최대 10KB).' };
+        }
+
+        // JSON 및 필수 필드 검증
+        let config;
+        try {
+            config = JSON.parse(content);
+        } catch {
+            return { success: false, error: '유효한 JSON 형식이 아닙니다.' };
+        }
+        if (!config.apiKey || !config.projectId) {
+            return { success: false, error: 'apiKey와 projectId가 필요합니다.' };
+        }
+
         const authFilePath = getAuthFilePath();
-        fs.writeFileSync(authFilePath, content, 'utf8');
+        fs.writeFileSync(authFilePath, content, { encoding: 'utf8', mode: 0o600 });
         console.log('[AuthFile] 저장 완료:', authFilePath);
         return { success: true };
     } catch (error) {
@@ -539,6 +572,10 @@ ipcMain.handle('select-auth-file', async () => {
             title: 'Firebase 인증 파일 선택 (firebase-auth.json)',
             defaultPath: defaultPath,
             buttonLabel: '선택',
+            filters: [
+                { name: 'JSON 파일', extensions: ['json'] },
+                { name: '모든 파일', extensions: ['*'] }
+            ],
             properties: ['openFile']
         });
 
@@ -563,7 +600,7 @@ ipcMain.handle('select-auth-file', async () => {
 
             // 인증 파일로 저장
             const authFilePath = getAuthFilePath();
-            fs.writeFileSync(authFilePath, content, 'utf8');
+            fs.writeFileSync(authFilePath, content, { encoding: 'utf8', mode: 0o600 });
             console.log('[AuthFile] 선택 및 저장 완료:', authFilePath);
 
             return { success: true, projectId: config.projectId };
