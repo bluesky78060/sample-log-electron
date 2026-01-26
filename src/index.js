@@ -234,7 +234,7 @@ app.whenReady().then(() => {
           "script-src 'self' 'unsafe-inline' file: https://cdn.tailwindcss.com https://www.gstatic.com https://cdn.sheetjs.com https://t1.daumcdn.net https://cdnjs.cloudflare.com; " +
           "style-src 'self' 'unsafe-inline' file: https://fonts.googleapis.com; " +
           "font-src 'self' file: https://fonts.gstatic.com; " +
-          "connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.ipify.org https://www.gstatic.com; " +
+          "connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.ipify.org https://www.gstatic.com https://cdnjs.cloudflare.com; " +
           "img-src 'self' file: data:; " +
           "object-src 'none'; " +  // Flash, Java 등 플러그인 차단
           "base-uri 'self'; " +     // <base> 태그 제한

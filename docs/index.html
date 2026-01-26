@@ -12,26 +12,8 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" media="print" onload="this.media='all'">
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap"></noscript>
     <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
-    <script>
-        tailwind.config = {
-            darkMode: ['selector', '[data-theme="dark"]'],
-            theme: {
-                extend: {
-                    colors: {
-                        primary: "#3B82F6",
-                        "background-light": "#F8FAFC",
-                        "background-dark": "#18181B",
-                    },
-                    fontFamily: {
-                        display: ["Noto Sans KR", "sans-serif"],
-                    },
-                    borderRadius: {
-                        DEFAULT: "12px",
-                    },
-                },
-            },
-        };
-    </script>
+    <!-- Tailwind 설정을 외부 파일로 분리 (CSP 보안 강화) -->
+    <script src="tailwind-config-main.js"></script>
     <style>
         * {
             margin: 0;
@@ -1114,11 +1096,13 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <!-- 네트워크 접근 제어 (Firebase 초기화 전에 로드) -->
+    <script src="shared/logger.js"></script>
     <script src="shared/network-access.js"></script>
     <!-- Firebase 스크립트 -->
     <script src="shared/firebase-config.js"></script>
     <script src="shared/firestore-db.js"></script>
     <script src="shared/storage-manager.js"></script>
+    <script src="shared/sanitize.js"></script>
 
     <!-- 다크 모드 스크립트 (theme.js가 자동으로 이벤트 리스너 등록) -->
     <script src="shared/theme.js"></script>
@@ -1313,7 +1297,7 @@
                 `;
             });
 
-            syncModalBody.innerHTML = html;
+            syncModalBody.innerHTML = sanitizeHTML(html);
             syncModal.classList.add('show');
         }
 
@@ -1381,7 +1365,7 @@
                 </div>
             `;
 
-            syncModalBody.innerHTML = html;
+            syncModalBody.innerHTML = sanitizeHTML(html);
             syncModal.classList.add('show');
         }
 

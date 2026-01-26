@@ -3,7 +3,7 @@
  * @description 관리자 IP 및 허용된 네트워크에서만 Firebase 접근 허용
  */
 
-import { logger } from './logger.js';
+// logger는 logger.js에서 window.logger로 전역 설정됨
 
 const NetworkAccess = {
     // localStorage 키

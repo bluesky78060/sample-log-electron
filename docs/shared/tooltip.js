@@ -46,13 +46,19 @@
     }
 
     document.addEventListener('mouseenter', function (e) {
-        const target = e.target.closest('.text-truncate[data-tooltip]');
-        if (target) showTooltip(target);
+        // e.target이 Element인지 확인
+        if (e.target && e.target.nodeType === 1) {
+            const target = e.target.closest('.text-truncate[data-tooltip]');
+            if (target) showTooltip(target);
+        }
     }, true);
 
     document.addEventListener('mouseleave', function (e) {
-        const target = e.target.closest('.text-truncate[data-tooltip]');
-        if (target) hideTooltip();
+        // e.target이 Element인지 확인
+        if (e.target && e.target.nodeType === 1) {
+            const target = e.target.closest('.text-truncate[data-tooltip]');
+            if (target) hideTooltip();
+        }
     }, true);
 
     // 스크롤 시 툴팁 숨김

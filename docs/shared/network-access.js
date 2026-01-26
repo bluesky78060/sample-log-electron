@@ -3,6 +3,8 @@
  * @description 관리자 IP 및 허용된 네트워크에서만 Firebase 접근 허용
  */
 
+// logger는 logger.js에서 window.logger로 전역 설정됨
+
 const NetworkAccess = {
     // localStorage 키
     STORAGE_KEY: 'networkAccessConfig',
@@ -40,7 +42,7 @@ const NetworkAccess = {
                 return { ...this.defaultConfig, ...JSON.parse(saved) };
             }
         } catch (e) {
-            console.error('[NetworkAccess] 설정 로드 실패:', e);
+            logger.error('[NetworkAccess] 설정 로드 실패:', e);
         }
         return { ...this.defaultConfig };
     },
@@ -52,9 +54,9 @@ const NetworkAccess = {
     saveConfig(config) {
         try {
             localStorage.setItem(this.STORAGE_KEY, JSON.stringify(config));
-            console.log('[NetworkAccess] 설정 저장됨:', config);
+            logger.info('[NetworkAccess] 설정 저장됨:', config);
         } catch (e) {
-            console.error('[NetworkAccess] 설정 저장 실패:', e);
+            logger.error('[NetworkAccess] 설정 저장 실패:', e);
         }
     },
 
@@ -87,11 +89,11 @@ const NetworkAccess = {
             this._currentIP = data.ip;
             this._lastCheck = Date.now();
 
-            console.log('[NetworkAccess] 현재 IP:', this._currentIP);
+            logger.info('[NetworkAccess] 현재 IP:', this._currentIP);
             return this._currentIP;
 
         } catch (error) {
-            console.warn('[NetworkAccess] IP 조회 실패:', error.message);
+            logger.warn('[NetworkAccess] IP 조회 실패:', error.message);
             return null;
         }
     },
@@ -141,7 +143,7 @@ const NetworkAccess = {
                 };
             });
         } catch (error) {
-            console.warn('[NetworkAccess] 로컬 IP 감지 실패:', error.message);
+            logger.warn('[NetworkAccess] 로컬 IP 감지 실패:', error.message);
             return null;
         }
     },
@@ -231,7 +233,7 @@ const NetworkAccess = {
             }
             // WebRTC 실패 시 폴백: 공인 IP 대역으로 게이트웨이 서브넷 비교 시도
             // (동일 공유기 뒤에서 공인 IP가 같은 경우를 위한 보조 수단)
-            console.warn('[NetworkAccess] WebRTC 미지원 - 공인 IP 대역 폴백 체크');
+            logger.warn('[NetworkAccess] WebRTC 미지원 - 공인 IP 대역 폴백 체크');
             for (const gw of config.allowedGateways) {
                 const gwPrefix = this.getSubnetPrefix(gw);
                 if (gwPrefix && currentIP.startsWith(gwPrefix)) {
@@ -391,7 +393,7 @@ const NetworkAccess = {
         this._currentIP = null;
         this._localIP = null;
         this._lastCheck = null;
-        console.log('[NetworkAccess] 설정 초기화됨');
+        logger.info('[NetworkAccess] 설정 초기화됨');
     },
 
     /**
@@ -404,7 +406,7 @@ const NetworkAccess = {
         const access = await this.checkAccess();
 
         console.log('========================================');
-        console.log('[NetworkAccess] 현재 상태');
+        logger.info('[NetworkAccess] 현재 상태');
         console.log('========================================');
         console.log('네트워크 체크 활성화:', config.enabled);
         console.log('공인 IP:', currentIP);
@@ -424,7 +426,7 @@ const NetworkAccess = {
 window.NetworkAccess = NetworkAccess;
 
 // 콘솔에서 쉽게 사용할 수 있도록 단축 명령어 제공
-console.log('[NetworkAccess] 모듈 로드됨. 콘솔에서 다음 명령어 사용 가능:');
+logger.info('[NetworkAccess] 모듈 로드됨. 콘솔에서 다음 명령어 사용 가능:');
 console.log('  NetworkAccess.printStatus() - 현재 상태 확인');
 console.log('  NetworkAccess.registerCurrentAsAdmin() - 현재 IP를 관리자로 등록');
 console.log('  NetworkAccess.setEnabled(true) - 네트워크 체크 활성화');

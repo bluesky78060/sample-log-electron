@@ -513,11 +513,13 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <!-- 네트워크 접근 제어 (Firebase 초기화 전에 로드) -->
+    <script src="../shared/logger.js"></script>
     <script src="../shared/network-access.js"></script>
     <!-- Firebase 스크립트 -->
     <script src="../shared/firebase-config.js"></script>
     <script src="../shared/firestore-db.js"></script>
     <script src="../shared/storage-manager.js"></script>
+    <script src="../shared/sanitize.js"></script>
     <script src="../shared/theme.js"></script>
     <script>
         // SETTINGS_FIREBASE_KEY는 firebase-config.js에서 이미 정의됨
@@ -558,10 +560,11 @@
                     infoArea.style.display = 'none';
                 }
                 // 웹 환경에서도 인증 파일 업로드 가능하도록 섹션 표시
-                document.querySelector('#authFileSection .alert-info').innerHTML =
+                document.querySelector('#authFileSection .alert-info').innerHTML = sanitizeHTML(
                     '<strong>인증 파일이란?</strong><br>' +
                     'Firebase 접근을 위한 인증 파일을 업로드하면 자동으로 설정됩니다.<br>' +
-                    '<small style="color: #64748b;">(웹 환경: 설정이 브라우저에 저장됩니다)</small>';
+                    '<small style="color: #64748b;">(웹 환경: 설정이 브라우저에 저장됩니다)</small>'
+                );
                 return;
             }
 
@@ -931,7 +934,7 @@
                 `;
             });
 
-            container.innerHTML = html;
+            container.innerHTML = sanitizeHTML(html);
         }
 
         // 개별 타입의 모든 연도 마이그레이션

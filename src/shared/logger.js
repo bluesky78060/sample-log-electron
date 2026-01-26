@@ -10,7 +10,8 @@ class Logger {
         this.isPackaged = this.isElectron && window.electronAPI?.isPackaged === true;
 
         // 개발 환경 여부
-        this.isDev = !this.isPackaged && process.env.NODE_ENV !== 'production';
+        this.isDev = !this.isPackaged &&
+            (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production');
 
         // 로그 레벨 설정 (debug < info < warn < error)
         this.logLevel = this.isDev ? 'debug' : 'error';
@@ -253,7 +254,7 @@ if (typeof window !== 'undefined') {
     window.setLogLevel = (level) => logger.setLogLevel(level);
 
     // console 메서드 대체 옵션 (선택적)
-    if (process.env.REPLACE_CONSOLE === 'true') {
+    if (typeof process !== 'undefined' && process.env?.REPLACE_CONSOLE === 'true') {
         window.console.log = (...args) => logger.debug(...args);
         window.console.info = (...args) => logger.info(...args);
         window.console.warn = (...args) => logger.warn(...args);
@@ -261,10 +262,8 @@ if (typeof window !== 'undefined') {
     }
 }
 
-// ES6 모듈 내보내기
-export { logger, Logger };
-
-// CommonJS 호환성
+// 브라우저 환경에서는 window.logger로 접근 가능
+// CommonJS 호환성 (Node.js 환경용)
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { logger, Logger };
 }

@@ -179,14 +179,14 @@ const ThemeManager = {
 
         const themeToggle = document.createElement('div');
         themeToggle.className = 'theme-toggle';
-        themeToggle.innerHTML = `
+        themeToggle.innerHTML = sanitizeHTML(`
             <span class="theme-icon sun">☀️</span>
             <button class="theme-toggle-btn ${isDark ? 'dark' : ''}"
                     aria-label="${isDark ? '라이트 모드로 전환' : '다크 모드로 전환'}"
                     title="${isDark ? '라이트 모드로 전환' : '다크 모드로 전환'}">
             </button>
             <span class="theme-icon moon">🌙</span>
-        `;
+        `);
 
         const toggleBtn = themeToggle.querySelector('.theme-toggle-btn');
         toggleBtn.addEventListener('click', () => this.toggle());

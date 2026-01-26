@@ -598,11 +598,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (typeof suggestRegionVillages === 'function') {
                 const suggestions = suggestRegionVillages(value, null);
                 if (suggestions.length > 0) {
-                    samplingLocationAutocomplete.innerHTML = suggestions.slice(0, 10).map(suggestion => `
+                    samplingLocationAutocomplete.innerHTML = sanitizeHTML(suggestions.slice(0, 10).map(suggestion => `
                         <li data-village="${suggestion.village}" data-district="${suggestion.district}" data-region="${suggestion.region}">
                             ${suggestion.displayText}
                         </li>
-                    `).join('');
+                    `).join(''));
                     samplingLocationAutocomplete.classList.add('show');
                 }
             }
@@ -626,20 +626,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (result) {
                         // 여러 지역에서 중복되는 경우 (isDuplicate: true) - 드롭다운 표시
                         if (result.isDuplicate && result.locations) {
-                            samplingLocationAutocomplete.innerHTML = result.locations.map(loc => `
+                            samplingLocationAutocomplete.innerHTML = sanitizeHTML(result.locations.map(loc => `
                                 <li data-village="${result.villageName}" data-district="${loc.district}" data-region="${loc.region}" data-lot="${result.lotNumber || ''}">
                                     ${loc.fullAddress} ${result.lotNumber || ''}
                                 </li>
-                            `).join('');
+                            `).join(''));
                             samplingLocationAutocomplete.classList.add('show');
                         }
                         // 단일 지역 내 중복인 경우
                         else if (result.alternatives && result.alternatives.length > 1) {
-                            samplingLocationAutocomplete.innerHTML = result.alternatives.map(district => `
+                            samplingLocationAutocomplete.innerHTML = sanitizeHTML(result.alternatives.map(district => `
                                 <li data-village="${result.village}" data-district="${district}" data-lot="${result.lotNumber || ''}" data-region="${result.region}">
                                     ${result.region} ${district} ${result.village} ${result.lotNumber || ''}
                                 </li>
-                            `).join('');
+                            `).join(''));
                             samplingLocationAutocomplete.classList.add('show');
                         } else if (result.fullAddress) {
                             // 단일 매칭 - 바로 변환
@@ -1064,7 +1064,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const birthOrCorp = applicantType === '법인' ? (logItem.corpNumber || '-') : (logItem.birthDate || '-');
 
             // 테이블 행 HTML: 개별 데이터는 이미 escapeHTML로 이스케이프됨
-            tr.innerHTML = `
+            tr.innerHTML = sanitizeHTML(`
                 <td><input type="checkbox" class="row-checkbox" data-index="${escapeHTML(String(tr.dataset.index))}"></td>
                 <td>
                     <button class="btn-complete ${logItem.isCompleted ? 'completed' : ''}" title="${logItem.isCompleted ? '완료됨' : '미완료'}">
@@ -1098,7 +1098,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <button class="btn-delete" title="삭제">🗑️</button>
                     </div>
                 </td>
-            `;
+            `);
 
             tableBody.appendChild(tr);
         });
@@ -1770,10 +1770,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (openSearchModalBtn) {
             if (hasFilter) {
                 openSearchModalBtn.classList.add('has-filter');
-                openSearchModalBtn.innerHTML = '🔍 검색 중';
+                openSearchModalBtn.innerHTML = sanitizeHTML('🔍 검색 중');
             } else {
                 openSearchModalBtn.classList.remove('has-filter');
-                openSearchModalBtn.innerHTML = '🔍 검색';
+                openSearchModalBtn.innerHTML = sanitizeHTML('🔍 검색');
             }
         }
     }
@@ -1971,11 +1971,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         const totalCount = entries.reduce((sum, [, v]) => sum + v.count, 0);
 
         if (totalCount === 0) {
-            container.innerHTML = '<div class="stats-empty">데이터가 없습니다</div>';
+            container.innerHTML = sanitizeHTML('<div class="stats-empty">데이터가 없습니다</div>');
             return;
         }
 
-        container.innerHTML = `
+        container.innerHTML = sanitizeHTML(`
             <div class="monthly-chart">
                 <div class="monthly-bars">
                     ${entries.map(([key, value]) => {
@@ -2000,7 +2000,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <span class="legend-item"><span class="legend-color pending"></span> 미완료</span>
                 </div>
             </div>
-        `;
+        `);
     }
 
     function renderQuarterlySummary(containerId, byQuarter) {
@@ -2011,11 +2011,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         const totalCount = entries.reduce((sum, [, v]) => sum + v.count, 0);
 
         if (totalCount === 0) {
-            container.innerHTML = '<div class="stats-empty">데이터가 없습니다</div>';
+            container.innerHTML = sanitizeHTML('<div class="stats-empty">데이터가 없습니다</div>');
             return;
         }
 
-        container.innerHTML = `
+        container.innerHTML = sanitizeHTML(`
             <div class="quarterly-summary">
                 ${entries.map(([key, data]) => `
                     <div class="quarterly-card">
@@ -2028,7 +2028,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                 `).join('')}
             </div>
-        `;
+        `);
     }
 
     function renderBarChart(containerId, data) {
@@ -2066,7 +2066,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             '직접방문': 'method-visit'
         };
 
-        container.innerHTML = entries.map(([label, value]) => {
+        container.innerHTML = sanitizeHTML(entries.map(([label, value]) => {
             const barClass = analysisClassMap[label] || purposeClassMap[label] || methodClassMap[label] || '';
             return `
                 <div class="stat-bar-row">
@@ -2077,7 +2077,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <span class="stat-bar-value">${value}</span>
                 </div>
             `;
-        }).join('');
+        }).join(''));
     }
 
     // ========================================

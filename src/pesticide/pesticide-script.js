@@ -309,11 +309,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const suggestions = suggestRegionVillages(value, ['bonghwa', 'yeongju', 'uljin']);
 
                 if (suggestions.length > 0) {
-                    producerAddressAutocomplete.innerHTML = suggestions.map(item => `
+                    producerAddressAutocomplete.innerHTML = sanitizeHTML(suggestions.map(item => `
                         <li data-village="${item.village}" data-district="${item.district}" data-region="${item.region}">
                             ${item.displayText}
                         </li>
-                    `).join('');
+                    `).join(''));
                     producerAddressAutocomplete.classList.add('show');
                 } else {
                     producerAddressAutocomplete.classList.remove('show');
@@ -403,11 +403,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         duplicateVillageName.textContent = result.villageName;
 
-        regionOptions.innerHTML = result.locations.map(loc => `
+        regionOptions.innerHTML = sanitizeHTML(result.locations.map(loc => `
             <button type="button" class="region-option-btn" data-address="${loc.fullAddress}">
                 ${loc.region} ${loc.district}
             </button>
-        `).join('');
+        `).join(''));
 
         // 지역 선택 이벤트
         regionOptions.querySelectorAll('.region-option-btn').forEach(btn => {
@@ -444,7 +444,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         itemDiv.className = 'request-item';
         itemDiv.dataset.index = index;
 
-        itemDiv.innerHTML = `
+        itemDiv.innerHTML = sanitizeHTML(`
             <div class="request-item-header">
                 <span class="item-number">의뢰 ${requestItemCounter}</span>
                 <button type="button" class="btn-remove-item" title="항목 삭제">✕</button>
@@ -464,7 +464,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <input type="text" class="request-crop-name" name="requestContent[]" placeholder="예: 사과, 배, 포도 등">
                 </div>
             </div>
-        `;
+        `);
 
         requestItemsList.appendChild(itemDiv);
 
@@ -530,11 +530,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const suggestions = suggestRegionVillages(value, ['bonghwa', 'yeongju', 'uljin']);
 
                 if (suggestions.length > 0) {
-                    autocompleteList.innerHTML = suggestions.map(item => `
+                    autocompleteList.innerHTML = sanitizeHTML(suggestions.map(item => `
                         <li data-village="${item.village}" data-district="${item.district}" data-region="${item.region}">
                             ${item.displayText}
                         </li>
-                    `).join('');
+                    `).join(''));
                     autocompleteList.classList.add('show');
                 } else {
                     autocompleteList.classList.remove('show');
@@ -1230,11 +1230,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const suggestions = suggestRegionVillages(value, ['bonghwa', 'yeongju', 'uljin']);
 
                 if (suggestions.length > 0) {
-                    autocompleteList.innerHTML = suggestions.map(item => `
+                    autocompleteList.innerHTML = sanitizeHTML(suggestions.map(item => `
                         <li data-village="${item.village}" data-district="${item.district}" data-region="${item.region}">
                             ${item.displayText}
                         </li>
-                    `).join('');
+                    `).join(''));
                     autocompleteList.classList.add('show');
                 } else {
                     autocompleteList.classList.remove('show');
@@ -1272,11 +1272,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                         // 단일 지역 내 중복인 경우
                         else if (result.alternatives && result.alternatives.length > 1) {
                             // 같은 지역 내 중복 리 선택 UI 표시
-                            autocompleteList.innerHTML = result.alternatives.map(district => `
+                            autocompleteList.innerHTML = sanitizeHTML(result.alternatives.map(district => `
                                 <li data-village="${result.village}" data-district="${district}" data-lot="${result.lotNumber}" data-region="${result.region}">
                                     ${result.region} ${district} ${result.village} ${result.lotNumber || ''}
                                 </li>
-                            `).join('');
+                            `).join(''));
                             autocompleteList.classList.add('show');
                         } else {
                             // 단일 매칭 - 바로 변환
@@ -1341,11 +1341,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const suggestions = suggestRegionVillages(value, ['bonghwa', 'yeongju', 'uljin']);
 
                 if (suggestions.length > 0) {
-                    autocompleteList.innerHTML = suggestions.map(item => `
+                    autocompleteList.innerHTML = sanitizeHTML(suggestions.map(item => `
                         <li data-village="${item.village}" data-district="${item.district}" data-region="${item.region}">
                             ${item.displayText}
                         </li>
-                    `).join('');
+                    `).join(''));
                     autocompleteList.classList.add('show');
                 } else {
                     autocompleteList.classList.remove('show');
@@ -1366,11 +1366,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                             // 중복 리인 경우 선택 옵션 제공
                             if (result.alternatives && result.alternatives.length > 1) {
                                 // 중복 리 선택 UI 표시
-                                autocompleteList.innerHTML = result.alternatives.map(district => `
+                                autocompleteList.innerHTML = sanitizeHTML(result.alternatives.map(district => `
                                     <li data-village="${result.village}" data-district="${district}" data-region="${result.region}" data-lot="${result.lotNumber}">
                                         ${result.region} ${district} ${result.village} ${result.lotNumber || ''}
                                     </li>
-                                `).join('');
+                                `).join(''));
                                 autocompleteList.classList.add('show');
                             } else {
                                 // 단일 매칭 - 바로 변환
@@ -1453,9 +1453,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 log('🔍 Direct crop matches:', matches.length);
 
                 if (matches.length > 0) {
-                    autocompleteList.innerHTML = matches.map(crop => `
+                    autocompleteList.innerHTML = sanitizeHTML(matches.map(crop => `
                         <li data-code="${crop.code}" data-name="${crop.name}">${crop.name} (${crop.category})</li>
-                    `).join('');
+                    `).join(''));
 
                     // 위치 설정
                     const rect = cropInput.getBoundingClientRect();
@@ -1827,7 +1827,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     function updateParcelSummary(parcelId) {
         const parcel = parcels.find(p => p.id === parcelId);
         const summaryEl = document.getElementById(`summary-${parcelId}`);
-        summaryEl.innerHTML = renderParcelSummary(parcel);
+        summaryEl.innerHTML = sanitizeHTML(renderParcelSummary(parcel));
     }
 
     // 필지 번호 업데이트 (잔류농약 페이지에서는 미사용)
@@ -1932,7 +1932,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const subLotOptions = getSubLotOptions(currentParcelIdForCrop);
         const hasSubLots = subLotOptions.length > 1; // 'all' 외에 하위 지번이 있는지
 
-        cropAreaList.innerHTML = tempCropAreas.map((crop, idx) => `
+        cropAreaList.innerHTML = sanitizeHTML(tempCropAreas.map((crop, idx) => `
             <div class="crop-area-input-row" data-index="${idx}">
                 <div class="crop-select-wrapper crop-autocomplete-wrapper">
                     <input type="text" class="crop-search-input"
@@ -1974,7 +1974,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 ` : ''}
                 <button type="button" class="btn-remove-row" data-index="${idx}">&times;</button>
             </div>
-        `).join('');
+        `).join(''));
 
         // 자동완성 이벤트 바인딩
         bindAutocompleteEvents();
@@ -2014,9 +2014,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     log('🔍 Found', matches.length, 'matches');
 
                     if (matches.length > 0) {
-                        autocompleteList.innerHTML = matches.map(crop => `
+                        autocompleteList.innerHTML = sanitizeHTML(matches.map(crop => `
                             <li data-code="${crop.code}" data-name="${crop.name}">${crop.name} (${crop.category})</li>
-                        `).join('');
+                        `).join(''));
 
                         const rect = e.target.getBoundingClientRect();
                         autocompleteList.style.top = `${rect.bottom + 2}px`;
@@ -2395,7 +2395,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             </tr>
         `).join('');
 
-        tableBody.innerHTML = `
+        tableBody.innerHTML = sanitizeHTML(`
             <div style="margin-bottom: 16px; text-align: center;">
                 <span style="font-size: 2rem;">✅</span>
                 <p style="font-size: 1.1rem; font-weight: 600; color: #22C55E; margin: 8px 0;">${logs.length}건 접수 완료</p>
@@ -2415,7 +2415,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <div style="margin-top: 12px; padding: 8px; background: #F0FDF4; border-radius: 6px; font-size: 0.85rem; color: #15803D;">
                 <strong>접수일:</strong> ${logs[0].date} | <strong>의뢰인:</strong> ${logs[0].name} | <strong>생산자:</strong> ${logs[0].producerName || '-'}
             </div>
-        `;
+        `);
 
         modal.classList.remove('hidden');
     }
@@ -2506,10 +2506,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             currentSearchFilter.completed;
         if (hasFilter) {
             openSearchModalBtn.classList.add('has-filter');
-            openSearchModalBtn.innerHTML = '🔍 검색 중';
+            openSearchModalBtn.innerHTML = sanitizeHTML('🔍 검색 중');
         } else {
             openSearchModalBtn.classList.remove('has-filter');
-            openSearchModalBtn.innerHTML = '🔍 검색';
+            openSearchModalBtn.innerHTML = sanitizeHTML('🔍 검색');
         }
     }
 
@@ -2600,7 +2600,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const subCatSelect = document.getElementById('subCategory');
         if (subCatSelect) {
             subCatSelect.disabled = true;
-            subCatSelect.innerHTML = '<option value="">상위 카테고리를 먼저 선택하세요</option>';
+            subCatSelect.innerHTML = sanitizeHTML('<option value="">상위 카테고리를 먼저 선택하세요</option>');
         }
         dateInput.valueAsDate = new Date();
 
@@ -3317,13 +3317,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         const entries = Object.entries(data).sort((a, b) => b[1].count - a[1].count);
 
         if (entries.length === 0) {
-            container.innerHTML = '<div class="stats-empty">데이터가 없습니다</div>';
+            container.innerHTML = sanitizeHTML('<div class="stats-empty">데이터가 없습니다</div>');
             return;
         }
 
         const maxCount = Math.max(...entries.map(([, v]) => v.count));
 
-        container.innerHTML = entries.map(([key, value]) => {
+        container.innerHTML = sanitizeHTML(entries.map(([key, value]) => {
             const percent = maxCount > 0 ? (value.count / maxCount) * 100 : 0;
             const showInside = percent > 20;
 
@@ -3337,7 +3337,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     ${!showInside ? `<span style="font-size: 0.75rem; color: #6b7280; min-width: 40px;">${value.count}건</span>` : ''}
                 </div>
             `;
-        }).join('');
+        }).join(''));
     }
 
     /**
@@ -3352,11 +3352,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         const totalCount = entries.reduce((sum, [, v]) => sum + v.count, 0);
 
         if (totalCount === 0) {
-            container.innerHTML = '<div class="stats-empty">데이터가 없습니다</div>';
+            container.innerHTML = sanitizeHTML('<div class="stats-empty">데이터가 없습니다</div>');
             return;
         }
 
-        container.innerHTML = `
+        container.innerHTML = sanitizeHTML(`
             <div class="monthly-chart">
                 <div class="monthly-bars">
                     ${entries.map(([key, value]) => {
@@ -3381,7 +3381,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <span class="legend-item"><span class="legend-color pending"></span> 미완료</span>
                 </div>
             </div>
-        `;
+        `);
     }
 
     /**
@@ -3393,7 +3393,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const totalCount = Object.values(data).reduce((sum, q) => sum + q.count, 0);
 
-        container.innerHTML = `
+        container.innerHTML = sanitizeHTML(`
             <div class="quarterly-summary">
                 ${Object.entries(data).map(([key, value]) => {
                     const percent = totalCount > 0 ? ((value.count / totalCount) * 100).toFixed(1) : 0;
@@ -3415,7 +3415,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     `;
                 }).join('')}
             </div>
-        `;
+        `);
     }
 
     // ========================================
@@ -4000,7 +4000,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             tr.dataset.id = row.id;
             // 테이블 행 HTML: 개별 데이터는 이미 escapeHTML로 이스케이프됨
-            tr.innerHTML = `
+            tr.innerHTML = sanitizeHTML(`
                 <td class="col-checkbox">
                     <input type="checkbox" class="row-checkbox" data-id="${escapeHTML(row.id)}">
                 </td>
@@ -4038,7 +4038,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <button class="btn-delete" data-id="${escapeHTML(row.id)}">삭제</button>
                     </div>
                 </td>
-            `;
+            `);
             tableBody.appendChild(tr);
         });
 
@@ -4215,12 +4215,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         ];
 
         // 테이블 생성
-        resultTableBody.innerHTML = rows.map(row => `
+        resultTableBody.innerHTML = sanitizeHTML(rows.map(row => `
             <tr>
                 <td>${row.label}</td>
                 <td>${row.value}</td>
             </tr>
-        `).join('');
+        `).join(''));
 
         // 모달 표시
         registrationResultModal.classList.remove('hidden');
@@ -4338,7 +4338,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // 지역 옵션 생성
         if (regionOptions) {
-            regionOptions.innerHTML = parseResult.locations.map((location, index) => `
+            regionOptions.innerHTML = sanitizeHTML(parseResult.locations.map((location, index) => `
                 <div class="region-option" data-index="${index}">
                     <div class="region-option-content">
                         <div class="region-option-title">${location.fullAddress}</div>
@@ -4346,7 +4346,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                     <div class="region-option-icon">→</div>
                 </div>
-            `).join('');
+            `).join(''));
 
             // 옵션 클릭 이벤트
             regionOptions.querySelectorAll('.region-option').forEach(option => {

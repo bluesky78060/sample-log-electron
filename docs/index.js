@@ -3,7 +3,7 @@
  * @description 앱 초기화, 창 관리, IPC 핸들러 정의
  */
 
-const { app, BrowserWindow, Menu, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, dialog, session } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 const { autoUpdater } = require('electron-updater');
@@ -39,13 +39,35 @@ function validateFilePath(filePath) {
         return { valid: false, error: '유효하지 않은 파일 경로입니다.' };
     }
 
+    // 추가 보안 검사
+    // 1. Null 바이트 검사
+    if (filePath.includes('\0')) {
+        return { valid: false, error: '잘못된 파일 경로입니다. (null byte detected)' };
+    }
+
+    // 2. 상대 경로 요소 검사 (정규화 전)
+    if (filePath.includes('../') || filePath.includes('..\\')) {
+        return { valid: false, error: '상대 경로는 허용되지 않습니다.' };
+    }
+
+    // 3. 파일명 유효성 검사
+    const basename = path.basename(filePath);
+    const validFilenameRegex = /^[a-zA-Z0-9가-힣\-_.() ]+$/;
+    if (basename && !validFilenameRegex.test(basename)) {
+        return { valid: false, error: '파일명에 허용되지 않은 문자가 포함되어 있습니다.' };
+    }
+
     // 허용된 디렉토리 목록
     const allowedDirs = [
         app.getPath('userData'),      // 앱 데이터 폴더
         app.getPath('documents'),     // 문서 폴더
         app.getPath('downloads'),     // 다운로드 폴더
         app.getPath('desktop'),       // 바탕화면
-        app.getPath('home')           // 홈 디렉토리
+        // app.getPath('home') 제거 - 너무 광범위한 접근 권한
+
+        // 대신 특정 하위 폴더만 허용
+        path.join(app.getPath('documents'), 'SampleLog'), // 문서 폴더 내 앱 전용 폴더
+        path.join(app.getPath('downloads'), 'SampleLog')  // 다운로드 폴더 내 앱 전용 폴더
     ];
 
     try {
@@ -200,6 +222,41 @@ const createWindow = () => {
 
 // Electron 초기화 완료 후 브라우저 창 생성 준비
 app.whenReady().then(() => {
+  // CSP (Content-Security-Policy) 및 보안 헤더 설정
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [
+          "default-src 'self' file:; " +
+          // unsafe-eval 제거 완료: eval(), Function(), setTimeout(string) 사용 차단
+          // unsafe-inline은 단계적 마이그레이션을 위해 일시적으로 유지 (추후 해시 방식으로 전환 예정)
+          "script-src 'self' 'unsafe-inline' file: https://cdn.tailwindcss.com https://www.gstatic.com https://cdn.sheetjs.com https://t1.daumcdn.net https://cdnjs.cloudflare.com; " +
+          "style-src 'self' 'unsafe-inline' file: https://fonts.googleapis.com; " +
+          "font-src 'self' file: https://fonts.gstatic.com; " +
+          "connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.ipify.org https://www.gstatic.com https://cdnjs.cloudflare.com; " +
+          "img-src 'self' file: data:; " +
+          "object-src 'none'; " +  // Flash, Java 등 플러그인 차단
+          "base-uri 'self'; " +     // <base> 태그 제한
+          "form-action 'self'; " +   // 폼 제출 대상 제한
+          "frame-ancestors 'none'; " + // iframe 내 로드 방지
+          "upgrade-insecure-requests;"  // HTTP를 HTTPS로 업그레이드
+        ],
+        // 추가 보안 헤더
+        'X-Content-Type-Options': ['nosniff'],  // MIME 타입 스니핑 방지
+        'X-Frame-Options': ['DENY'],  // 클릭재킹 방지
+        'X-XSS-Protection': ['1; mode=block'],  // XSS 필터 활성화 (레거시 브라우저용)
+        'Referrer-Policy': ['strict-origin-when-cross-origin'],  // Referrer 정보 제한
+        'Permissions-Policy': [  // 브라우저 기능 제한
+          "camera=(), " +
+          "microphone=(), " +
+          "geolocation=(), " +
+          "payment=()"
+        ]
+      }
+    });
+  });
+
   // 한글 메뉴 적용
   const menu = Menu.buildFromTemplate(createMenuTemplate());
   Menu.setApplicationMenu(menu);
@@ -486,11 +543,27 @@ ipcMain.handle('read-auth-file', async () => {
     }
 });
 
-// 인증 파일 저장
+// 인증 파일 저장 (메인 프로세스에서도 검증 - defense-in-depth)
 ipcMain.handle('save-auth-file', async (event, content) => {
     try {
+        // 크기 제한 (10KB)
+        if (!content || typeof content !== 'string' || content.length > 10240) {
+            return { success: false, error: '유효하지 않은 내용입니다 (최대 10KB).' };
+        }
+
+        // JSON 및 필수 필드 검증
+        let config;
+        try {
+            config = JSON.parse(content);
+        } catch {
+            return { success: false, error: '유효한 JSON 형식이 아닙니다.' };
+        }
+        if (!config.apiKey || !config.projectId) {
+            return { success: false, error: 'apiKey와 projectId가 필요합니다.' };
+        }
+
         const authFilePath = getAuthFilePath();
-        fs.writeFileSync(authFilePath, content, 'utf8');
+        fs.writeFileSync(authFilePath, content, { encoding: 'utf8', mode: 0o600 });
         console.log('[AuthFile] 저장 완료:', authFilePath);
         return { success: true };
     } catch (error) {
@@ -539,6 +612,10 @@ ipcMain.handle('select-auth-file', async () => {
             title: 'Firebase 인증 파일 선택 (firebase-auth.json)',
             defaultPath: defaultPath,
             buttonLabel: '선택',
+            filters: [
+                { name: 'JSON 파일', extensions: ['json'] },
+                { name: '모든 파일', extensions: ['*'] }
+            ],
             properties: ['openFile']
         });
 
@@ -563,7 +640,7 @@ ipcMain.handle('select-auth-file', async () => {
 
             // 인증 파일로 저장
             const authFilePath = getAuthFilePath();
-            fs.writeFileSync(authFilePath, content, 'utf8');
+            fs.writeFileSync(authFilePath, content, { encoding: 'utf8', mode: 0o600 });
             console.log('[AuthFile] 선택 및 저장 완료:', authFilePath);
 
             return { success: true, projectId: config.projectId };

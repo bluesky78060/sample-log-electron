@@ -78,12 +78,12 @@
   function renderProgressSteps(containerId, steps) {
     const container = document.getElementById(containerId);
     if (!container) return;
-    container.innerHTML = steps.map(step => `
+    container.innerHTML = sanitizeHTML(steps.map(step => `
       <li data-key="${step.key}" class="${step.status || 'pending'}">
         <span class="step-box"></span>
         <span class="step-label">${step.label}</span>
       </li>
-    `).join('');
+    `).join(''));
   }
 
   function updateProgressSteps(containerId, steps) {
@@ -352,7 +352,7 @@
       `;
     });
 
-    container.innerHTML = html;
+    container.innerHTML = sanitizeHTML(html);
 
     // 이벤트 리스너 추가
     container.querySelectorAll('select').forEach(select => {
@@ -403,7 +403,7 @@
 
     const previewColumns = dedupePreviewColumns(columns, displayData);
     const tableHtml = createDataTable(displayData, previewColumns);
-    document.getElementById('labelDataTable').innerHTML = tableHtml;
+    document.getElementById('labelDataTable').innerHTML = sanitizeHTML(tableHtml);
 
     const mappingColumns = Array.isArray(previewColumns) && previewColumns.length
       ? previewColumns
@@ -413,7 +413,7 @@
     const noteEl = document.getElementById('labelPreviewNote');
     if (noteEl) {
       if (lastLabelStatus?.truncatedCount) {
-        noteEl.innerHTML = `⚠️ 최대 ${lastLabelStatus.maxRows || 0}건까지만 처리되어 ${lastLabelStatus.truncatedCount}건은 제외되었습니다.`;
+        noteEl.innerHTML = sanitizeHTML(`⚠️ 최대 ${lastLabelStatus.maxRows || 0}건까지만 처리되어 ${lastLabelStatus.truncatedCount}건은 제외되었습니다.`);
         noteEl.classList.remove('hidden');
       } else {
         noteEl.textContent = '';
@@ -535,7 +535,7 @@
 
       const sheet = document.createElement('div');
       sheet.className = `${sheetClass} label-preview`;
-      sheet.innerHTML = sheetHtml;
+      sheet.innerHTML = sanitizeHTML(sheetHtml);
       labelSheetContainer.appendChild(sheet);
     }
 
