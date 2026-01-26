@@ -3451,7 +3451,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         '면적(m²)': totalArea > 0 ? totalArea : '-',
                         '수령 방법': log.receptionMethod || '-',
                         '비고': log.note || '-',
-                        '완료여부': log.isCompleted ? '완료' : '미완료',
+                        '완료여부': (log.isCompleted || log.completed) ? '완료' : '미완료',
                         '등록일시': log.createdAt ? new Date(log.createdAt).toLocaleString('ko-KR') : '-'
                     });
 
@@ -3484,7 +3484,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 '면적(m²)': subLotTotalArea > 0 ? subLotTotalArea : '-',
                                 '수령 방법': log.receptionMethod || '-',
                                 '비고': log.note || '-',
-                                '완료여부': log.isCompleted ? '완료' : '미완료',
+                                '완료여부': (log.isCompleted || log.completed) ? '완료' : '미완료',
                                 '등록일시': log.createdAt ? new Date(log.createdAt).toLocaleString('ko-KR') : '-'
                             });
                         });
@@ -3508,7 +3508,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     '면적(m²)': log.area || '-',
                     '수령 방법': log.receptionMethod || '-',
                     '비고': log.note || '-',
-                    '완료여부': log.isCompleted ? '완료' : '미완료',
+                    '완료여부': (log.isCompleted || log.completed) ? '완료' : '미완료',
                     '등록일시': log.createdAt ? new Date(log.createdAt).toLocaleString('ko-KR') : '-'
                 });
             }

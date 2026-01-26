@@ -1326,7 +1326,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     '목적': log.purpose || '-',
                     '수령방법': log.receptionMethod || '-',
                     '비고': log.note || '-',
-                    '완료여부': log.isCompleted ? '완료' : '미완료',
+                    '완료여부': (log.isCompleted || log.completed) ? '완료' : '미완료',
                     '등록일시': log.createdAt ? new Date(log.createdAt).toLocaleString('ko-KR') : '-'
                 };
             });
