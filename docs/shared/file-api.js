@@ -3,6 +3,9 @@
 // Electron과 Web 환경 모두 지원
 // ========================================
 
+// PathSecurity 로드 (있으면 사용)
+const pathSecurity = window.PathSecurity || null;
+
 // Electron 환경 여부 감지
 const isElectron = window.electronAPI?.isElectron === true;
 
@@ -82,7 +85,9 @@ function createFileAPI(sampleType) {
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = suggestedName;
+                    // 파일명 보안 검증
+                    const safeName = suggestedName.replace(/[<>:"|?*\x00-\x1f]/g, '_');
+                    a.download = safeName;
                     a.click();
                     URL.revokeObjectURL(url);
                     return true;

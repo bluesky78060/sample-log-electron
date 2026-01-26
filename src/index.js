@@ -45,9 +45,25 @@ function validateFilePath(filePath) {
         return { valid: false, error: '잘못된 파일 경로입니다. (null byte detected)' };
     }
 
-    // 2. 상대 경로 요소 검사 (정규화 전)
-    if (filePath.includes('../') || filePath.includes('..\\')) {
-        return { valid: false, error: '상대 경로는 허용되지 않습니다.' };
+    // 2. 상대 경로 요소 검사 (정규화 전) - 더 엄격한 검사
+    const dangerousPatterns = [
+        '../', '..\\', // 기본 상대 경로
+        '..%2F', '..%5C', // URL 인코딩된 상대 경로
+        '%2e%2e%2f', '%2e%2e%5c', // URL 인코딩된 점
+        '..%252f', '..%255c', // 이중 인코딩
+        '/../', '/..\\', // 절대 경로 내 상대 경로
+        '\\..\\'  // Windows UNC 경로
+    ];
+
+    for (const pattern of dangerousPatterns) {
+        if (filePath.toLowerCase().includes(pattern.toLowerCase())) {
+            return { valid: false, error: '상대 경로 패턴이 감지되었습니다.' };
+        }
+    }
+
+    // 3. URL 인코딩 감지 및 차단
+    if (/%[0-9a-fA-F]{2}/.test(filePath)) {
+        return { valid: false, error: 'URL 인코딩된 경로는 허용되지 않습니다.' };
     }
 
     // 3. 파일명 유효성 검사
@@ -563,6 +579,13 @@ ipcMain.handle('save-auth-file', async (event, content) => {
         }
 
         const authFilePath = getAuthFilePath();
+
+        // 경로 검증 추가 (defense-in-depth)
+        const validation = validateFilePath(authFilePath);
+        if (!validation.valid) {
+            return { success: false, error: validation.error };
+        }
+
         fs.writeFileSync(authFilePath, content, { encoding: 'utf8', mode: 0o600 });
         console.log('[AuthFile] 저장 완료:', authFilePath);
         return { success: true };
@@ -629,6 +652,12 @@ ipcMain.handle('select-auth-file', async () => {
         if (stat.size > 10240) {
             return { success: false, error: '파일이 너무 큽니다 (최대 10KB). 올바른 인증 파일인지 확인하세요.' };
         }
+        // 선택된 파일 경로 검증
+        const pathValidation = validateFilePath(selectedPath);
+        if (!pathValidation.valid) {
+            return { success: false, error: pathValidation.error };
+        }
+
         const content = fs.readFileSync(selectedPath, 'utf8');
 
         // JSON 유효성 검사
