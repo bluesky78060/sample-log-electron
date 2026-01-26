@@ -200,18 +200,36 @@ const createWindow = () => {
 
 // Electron 초기화 완료 후 브라우저 창 생성 준비
 app.whenReady().then(() => {
-  // CSP (Content-Security-Policy) 헤더 설정
+  // CSP (Content-Security-Policy) 및 보안 헤더 설정
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     callback({
       responseHeaders: {
         ...details.responseHeaders,
         'Content-Security-Policy': [
           "default-src 'self' file:; " +
-          "script-src 'self' 'unsafe-inline' 'unsafe-eval' file: https://cdn.tailwindcss.com https://www.gstatic.com https://cdn.sheetjs.com https://t1.daumcdn.net https://cdnjs.cloudflare.com; " +
+          // unsafe-eval 제거 완료: eval(), Function(), setTimeout(string) 사용 차단
+          // unsafe-inline은 단계적 마이그레이션을 위해 일시적으로 유지 (추후 해시 방식으로 전환 예정)
+          "script-src 'self' 'unsafe-inline' file: https://cdn.tailwindcss.com https://www.gstatic.com https://cdn.sheetjs.com https://t1.daumcdn.net https://cdnjs.cloudflare.com; " +
           "style-src 'self' 'unsafe-inline' file: https://fonts.googleapis.com; " +
           "font-src 'self' file: https://fonts.gstatic.com; " +
-          "connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.ipify.org; " +
-          "img-src 'self' file: data:;"
+          "connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.ipify.org https://www.gstatic.com; " +
+          "img-src 'self' file: data:; " +
+          "object-src 'none'; " +  // Flash, Java 등 플러그인 차단
+          "base-uri 'self'; " +     // <base> 태그 제한
+          "form-action 'self'; " +   // 폼 제출 대상 제한
+          "frame-ancestors 'none'; " + // iframe 내 로드 방지
+          "upgrade-insecure-requests;"  // HTTP를 HTTPS로 업그레이드
+        ],
+        // 추가 보안 헤더
+        'X-Content-Type-Options': ['nosniff'],  // MIME 타입 스니핑 방지
+        'X-Frame-Options': ['DENY'],  // 클릭재킹 방지
+        'X-XSS-Protection': ['1; mode=block'],  // XSS 필터 활성화 (레거시 브라우저용)
+        'Referrer-Policy': ['strict-origin-when-cross-origin'],  // Referrer 정보 제한
+        'Permissions-Policy': [  // 브라우저 기능 제한
+          "camera=(), " +
+          "microphone=(), " +
+          "geolocation=(), " +
+          "payment=()"
         ]
       }
     });
