@@ -34,21 +34,21 @@ const AuthFile = {
 
         // 웹 환경에서는 인증 파일 체크 불가 - 네트워크 체크로 대체
         if (!this.isElectron()) {
-            console.log('[AuthFile] 웹 환경 - 인증 파일 체크 건너뜀');
+            (window.logger?.info || console.log)('[AuthFile] 웹 환경 - 인증 파일 체크 건너뜀');
             return { valid: true, reason: '웹 환경 (네트워크 체크 사용)' };
         }
 
         try {
             // Electron API를 통해 인증 파일 읽기
             if (!window.electronAPI?.readAuthFile) {
-                console.warn('[AuthFile] readAuthFile API 없음');
+                (window.logger?.warn || console.warn)('[AuthFile] readAuthFile API 없음');
                 return { valid: false, reason: 'API 미지원' };
             }
 
             const result = await window.electronAPI.readAuthFile();
 
             if (!result.exists) {
-                console.log('[AuthFile] 인증 파일 없음');
+                (window.logger?.info || console.log)('[AuthFile] 인증 파일 없음');
                 this._isAuthenticated = false;
                 this._authChecked = true;
                 return { valid: false, reason: '인증 파일 없음' };
@@ -73,7 +73,7 @@ const AuthFile = {
             }
 
         } catch (error) {
-            console.error('[AuthFile] 인증 파일 확인 실패:', error);
+            (window.logger?.error || console.error)('[AuthFile] 인증 파일 확인 실패:', error);
             this._isAuthenticated = false;
             this._authChecked = true;
             return { valid: false, reason: '파일 읽기 오류: ' + error.message };
@@ -117,7 +117,7 @@ const AuthFile = {
             }
 
         } catch (error) {
-            console.error('[AuthFile] 인증 파일 저장 실패:', error);
+            (window.logger?.error || console.error)('[AuthFile] 인증 파일 저장 실패:', error);
             return { success: false, message: '저장 오류: ' + error.message };
         }
     },
@@ -148,7 +148,7 @@ const AuthFile = {
             }
 
         } catch (error) {
-            console.error('[AuthFile] 인증 파일 삭제 실패:', error);
+            (window.logger?.error || console.error)('[AuthFile] 인증 파일 삭제 실패:', error);
             return { success: false, message: '삭제 오류: ' + error.message };
         }
     },
@@ -174,9 +174,9 @@ const AuthFile = {
      * 인증 파일 형식 안내 (관리자용)
      */
     showAuthFileFormat() {
-        console.log('Firebase 인증 파일은 다음 JSON 형식이어야 합니다:');
-        console.log('{ "apiKey": "...", "projectId": "...", "authDomain": "..." }');
-        console.log('설정 페이지에서 파일을 업로드하세요.');
+        (window.logger?.info || console.log)('Firebase 인증 파일은 다음 JSON 형식이어야 합니다:');
+        (window.logger?.info || console.log)('{ "apiKey": "...", "projectId": "...", "authDomain": "..." }');
+        (window.logger?.info || console.log)('설정 페이지에서 파일을 업로드하세요.');
     }
 };
 

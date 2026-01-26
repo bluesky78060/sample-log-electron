@@ -254,7 +254,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 log('   - emptyParcels 숨김');
             }
         } else {
-            console.error('❌ emptyParcels 요소를 찾을 수 없습니다!');
+            window.logger.error('❌ emptyParcels 요소를 찾을 수 없습니다!');
         }
     }
 
@@ -356,7 +356,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
         } catch (error) {
-            console.error('Firebase 데이터 로드 실패:', error);
+            window.logger.error('Firebase 데이터 로드 실패:', error);
         }
         return null;
     }
@@ -410,7 +410,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     return;
                 }
             } catch (error) {
-                console.error('Firebase 로드 실패, 로컬 데이터 사용:', error);
+                window.logger.error('Firebase 로드 실패, 로컬 데이터 사용:', error);
             }
         }
 
@@ -474,7 +474,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 log('☁️ 로컬과 클라우드 데이터 동일 (', localData.length, '건)');
             }
         } catch (error) {
-            console.error('클라우드 동기화 실패:', error);
+            window.logger.error('클라우드 동기화 실패:', error);
         }
     }
 
@@ -631,7 +631,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     log(`   - addParcelBtn: ${addParcelBtn ? '✅ 찾음' : '❌ 없음'}`);
 
     if (!parcelsContainer) {
-        console.error('❌ 치명적 오류: parcelsContainer를 찾을 수 없습니다!');
+        window.logger.error('❌ 치명적 오류: parcelsContainer를 찾을 수 없습니다!');
     }
 
     let parcels = []; // 필지 배열
@@ -877,7 +877,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         `);
 
         if (!parcelsContainer) {
-            console.error('❌ parcelsContainer를 찾을 수 없습니다!');
+            window.logger.error('❌ parcelsContainer를 찾을 수 없습니다!');
             return;
         }
 
@@ -2754,7 +2754,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (window.firestoreDb?.isEnabled()) {
                     window.firestoreDb.delete('soil', parseInt(selectedYear), id)
                         .then(() => log('☁️ Firebase 삭제 완료:', id))
-                        .catch(err => console.error('Firebase 삭제 실패:', err));
+                        .catch(err => window.logger.error('Firebase 삭제 실패:', err));
                 }
 
                 // 삭제한 항목이 수정 중이던 항목이면 수정 모드 취소
@@ -2968,7 +2968,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     window.firestoreDb.delete('soil', parseInt(selectedYear), id)
                 ))
                     .then(() => log('☁️ Firebase 일괄 삭제 완료:', selectedIds.length, '건'))
-                    .catch(err => console.error('Firebase 일괄 삭제 실패:', err));
+                    .catch(err => window.logger.error('Firebase 일괄 삭제 실패:', err));
             }
 
             // 전체 선택 체크박스 해제
@@ -3627,20 +3627,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             try {
                 if (window.firebaseConfig?.initialize) {
                     firebaseInitialized = await window.firebaseConfig.initialize();
-                    console.log('Firebase 초기화 결과:', firebaseInitialized);
+                    window.logger.info('Firebase 초기화 결과:', firebaseInitialized);
                 }
             } catch (err) {
-                console.error('Firebase 초기화 에러:', err);
+                window.logger.error('Firebase 초기화 에러:', err);
                 initError = err;
             }
 
             try {
                 if (firebaseInitialized && window.firestoreDb?.init) {
                     firestoreInitialized = await window.firestoreDb.init();
-                    console.log('Firestore 초기화 결과:', firestoreInitialized);
+                    window.logger.info('Firestore 초기화 결과:', firestoreInitialized);
                 }
             } catch (err) {
-                console.error('Firestore 초기화 에러:', err);
+                window.logger.error('Firestore 초기화 에러:', err);
                 initError = err;
             }
 
@@ -3684,7 +3684,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 showToast(`${dataWithIds.length}건 클라우드 업로드 완료`, 'success');
             } catch (error) {
-                console.error('마이그레이션 실패:', error);
+                window.logger.error('마이그레이션 실패:', error);
                 showToast('클라우드 업로드 실패: ' + error.message, 'error');
             } finally {
                 migrateBtn.disabled = false;
@@ -3727,7 +3727,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.firestoreDb.batchSave('soil', parseInt(selectedYear), sampleLogs)
                 .then(() => log('☁️ Firebase 마이그레이션 완료'))
                 .catch(err => {
-                    console.error('Firebase 마이그레이션 실패:', err);
+                    window.logger.error('Firebase 마이그레이션 실패:', err);
                     showToast('클라우드 동기화 실패', 'error');
                 });
         }

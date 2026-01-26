@@ -99,7 +99,7 @@ async function loadFirebaseConfigFromAuthFile() {
         }
 
     } catch (error) {
-        console.error('[Firebase] 인증 파일 로드 실패:', error);
+        (window.logger?.error || console.error)('[Firebase] 인증 파일 로드 실패:', error);
         return null;
     }
 }
@@ -131,7 +131,7 @@ function loadFirebaseConfigFromStorage() {
             }
         }
     } catch (e) {
-        console.error('Firebase 설정 로드 실패:', e);
+        (window.logger?.error || console.error)('Firebase 설정 로드 실패:', e);
     }
     return null;
 }
@@ -193,14 +193,14 @@ async function initializeFirebase() {
 
         if (!accessResult.allowed) {
             logFirebase('네트워크 접근 거부:', accessResult.reason);
-            console.warn('[Firebase] 허용되지 않은 네트워크입니다. 로컬 모드로 동작합니다.');
+            (window.logger?.warn || console.warn)('[Firebase] 허용되지 않은 네트워크입니다. 로컬 모드로 동작합니다.');
             return false;
         }
     }
 
     // firebase compat SDK가 로드되었는지 확인
     if (typeof firebase === 'undefined') {
-        console.error('[Firebase] SDK가 로드되지 않았습니다. firebase-app-compat.js를 먼저 로드하세요.');
+        (window.logger?.error || console.error)('[Firebase] SDK가 로드되지 않았습니다. firebase-app-compat.js를 먼저 로드하세요.');
         return false;
     }
 
@@ -242,21 +242,21 @@ async function initializeFirebase() {
             isAuthenticated = true;
             logFirebase('익명 인증 성공:', userCredential.user.uid);
         } catch (authError) {
-            console.error('[Firebase] 익명 인증 실패:', authError);
+            (window.logger?.error || console.error)('[Firebase] 익명 인증 실패:', authError);
             isAuthenticated = false;
 
             // 인증 실패 시 보안 규칙에 따라 Firestore 접근이 제한될 수 있음
             // 보안 규칙이 request.auth != null을 요구하면 초기화 실패로 처리
             const errorCode = authError.code || '';
             if (errorCode === 'auth/operation-not-allowed') {
-                console.error('[Firebase] 익명 인증이 비활성화되어 있습니다. Firebase Console에서 활성화하세요.');
+                (window.logger?.error || console.error)('[Firebase] 익명 인증이 비활성화되어 있습니다. Firebase Console에서 활성화하세요.');
                 // 익명 인증이 비활성화된 경우 초기화 실패
                 return false;
             } else if (errorCode === 'auth/network-request-failed') {
-                console.warn('[Firebase] 네트워크 오류로 인증 실패. 오프라인 모드로 계속 진행합니다.');
+                (window.logger?.warn || console.warn)('[Firebase] 네트워크 오류로 인증 실패. 오프라인 모드로 계속 진행합니다.');
                 // 네트워크 오류는 오프라인 모드로 계속 진행
             } else {
-                console.warn('[Firebase] 인증 없이 계속 진행 (보안 규칙에 따라 제한될 수 있음)');
+                (window.logger?.warn || console.warn)('[Firebase] 인증 없이 계속 진행 (보안 규칙에 따라 제한될 수 있음)');
             }
         }
 
@@ -266,11 +266,11 @@ async function initializeFirebase() {
             isOfflineEnabled = true;
             logFirebase('오프라인 지원 활성화됨');
         } catch (err) {
-            console.warn('[Firebase] 오프라인 지원 에러:', err.code, err.message);
+            (window.logger?.warn || console.warn)('[Firebase] 오프라인 지원 에러:', err.code, err.message);
             if (err.code === 'failed-precondition') {
-                console.warn('[Firebase] 여러 탭이 열려 있어 오프라인 지원이 제한됩니다.');
+                (window.logger?.warn || console.warn)('[Firebase] 여러 탭이 열려 있어 오프라인 지원이 제한됩니다.');
             } else if (err.code === 'unimplemented') {
-                console.warn('[Firebase] 이 브라우저는 오프라인 지원을 지원하지 않습니다.');
+                (window.logger?.warn || console.warn)('[Firebase] 이 브라우저는 오프라인 지원을 지원하지 않습니다.');
             }
         }
 
@@ -278,8 +278,8 @@ async function initializeFirebase() {
         logFirebase('초기화 완료:', firebaseConfigData.projectId);
         return true;
     } catch (error) {
-        console.error('[Firebase] 초기화 실패:', error);
-        console.error('[Firebase] 에러 상세:', error.message, error.stack);
+        (window.logger?.error || console.error)('[Firebase] 초기화 실패:', error);
+        (window.logger?.error || console.error)('[Firebase] 에러 상세:', error.message, error.stack);
         return false;
     }
 }
@@ -335,7 +335,7 @@ function saveFirebaseConfig(config) {
         localStorage.setItem(FIREBASE_CONFIG_KEY, encoded);
         logFirebase('설정 저장됨 (난독화)');
     } catch (e) {
-        console.error('Firebase 설정 저장 실패:', e);
+        (window.logger?.error || console.error)('Firebase 설정 저장 실패:', e);
     }
 }
 
@@ -373,7 +373,7 @@ async function reinitializeFirebase() {
             await firebase.app().delete();
             logFirebase('기존 Firebase 앱 삭제됨');
         } catch (e) {
-            console.warn('[Firebase] 앱 삭제 실패:', e);
+            (window.logger?.warn || console.warn)('[Firebase] 앱 삭제 실패:', e);
         }
     }
 

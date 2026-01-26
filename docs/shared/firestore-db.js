@@ -80,7 +80,7 @@ async function saveDocument(sampleType, year, docId, data) {
         logFirestore(`저장 완료: ${collectionName}/${docId}`);
         return true;
     } catch (error) {
-        console.error('Firestore 저장 실패:', error);
+        (window.logger?.error || console.error)('Firestore 저장 실패:', error);
         return false;
     }
 }
@@ -109,7 +109,7 @@ async function getDocument(sampleType, year, docId) {
         }
         return null;
     } catch (error) {
-        console.error('Firestore 조회 실패:', error);
+        (window.logger?.error || console.error)('Firestore 조회 실패:', error);
         return null;
     }
 }
@@ -139,7 +139,7 @@ async function getAllDocuments(sampleType, year, options = {}) {
             try {
                 queryRef = queryRef.orderBy('updatedAt', 'desc');
             } catch (indexError) {
-                console.warn('[Firestore] 인덱스 없음, 정렬 없이 조회:', indexError.message);
+                (window.logger?.warn || console.warn)('[Firestore] 인덱스 없음, 정렬 없이 조회:', indexError.message);
             }
         }
 
@@ -162,7 +162,7 @@ async function getAllDocuments(sampleType, year, options = {}) {
         logFirestore(`조회 완료: ${collectionName} (${documents.length}건)`);
         return documents;
     } catch (error) {
-        console.error('Firestore 전체 조회 실패:', error);
+        (window.logger?.error || console.error)('Firestore 전체 조회 실패:', error);
         return [];
     }
 }
@@ -304,7 +304,7 @@ async function batchSave(sampleType, year, documents) {
         logFirestore(`배치 저장 완료: ${collectionName} (${documents.length}건)`);
         return true;
     } catch (error) {
-        console.error('Firestore 배치 저장 실패:', error);
+        (window.logger?.error || console.error)('Firestore 배치 저장 실패:', error);
         return false;
     }
 }
@@ -344,7 +344,7 @@ async function migrateFromLocalStorage(sampleType, year, localStorageKey) {
         logFirestore(`마이그레이션 완료: ${localStorageKey} → Firestore (${documentsWithId.length}건)`);
         return { success: true, count: documentsWithId.length };
     } catch (error) {
-        console.error('마이그레이션 실패:', error);
+        (window.logger?.error || console.error)('마이그레이션 실패:', error);
         return { success: false, count: 0 };
     }
 }
@@ -397,13 +397,13 @@ function subscribeToChanges(sampleType, year, callback) {
                 });
                 callback(documents, snapshot.metadata.fromCache);
             }, (error) => {
-                console.error('실시간 동기화 에러:', error);
+                (window.logger?.error || console.error)('실시간 동기화 에러:', error);
             });
 
         logFirestore(`실시간 동기화 시작: ${collectionName}`);
         return unsubscribe;
     } catch (error) {
-        console.error('실시간 동기화 설정 실패:', error);
+        (window.logger?.error || console.error)('실시간 동기화 설정 실패:', error);
         return null;
     }
 }

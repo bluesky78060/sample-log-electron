@@ -61,7 +61,7 @@ async function initStorageManager() {
                 logStorage('클라우드 동기화 모드');
             }
         } catch (err) {
-            console.warn('[Storage] Firebase 초기화 실패:', err);
+            (window.logger?.warn || console.warn)('[Storage] Firebase 초기화 실패:', err);
         }
     }
 
@@ -99,7 +99,7 @@ async function saveData(sampleType, year, localStorageKey, data) {
 
         return true;
     } catch (error) {
-        console.error('데이터 저장 실패:', error);
+        (window.logger?.error || console.error)('데이터 저장 실패:', error);
         return false;
     }
 }
@@ -142,7 +142,7 @@ async function saveItem(sampleType, year, localStorageKey, item) {
 
         return true;
     } catch (error) {
-        console.error('항목 저장 실패:', error);
+        (window.logger?.error || console.error)('항목 저장 실패:', error);
         return false;
     }
 }
@@ -172,7 +172,7 @@ async function loadData(sampleType, year, localStorageKey) {
         const localData = localStorage.getItem(localStorageKey);
         return localData ? JSON.parse(localData) : [];
     } catch (error) {
-        console.error('데이터 로드 실패:', error);
+        (window.logger?.error || console.error)('데이터 로드 실패:', error);
         // 에러 시 localStorage 폴백
         const localData = localStorage.getItem(localStorageKey);
         return localData ? JSON.parse(localData) : [];
@@ -202,7 +202,7 @@ async function deleteItem(sampleType, year, localStorageKey, itemId) {
 
         return true;
     } catch (error) {
-        console.error('항목 삭제 실패:', error);
+        (window.logger?.error || console.error)('항목 삭제 실패:', error);
         return false;
     }
 }

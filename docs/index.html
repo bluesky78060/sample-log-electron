@@ -1115,7 +1115,7 @@
                     const version = await window.electronAPI.getVersion();
                     if (version) versionEl.textContent = 'v' + version;
                 } catch (e) {
-                    console.log('버전 정보 가져오기 실패:', e);
+                    window.logger.info('버전 정보 가져오기 실패:', e);
                 }
             }
         })();
@@ -1196,7 +1196,7 @@
                             await window.firestoreDb?.init();
                         }
                     } catch (err) {
-                        console.warn('Firebase 초기화 실패:', err);
+                        window.logger.warn('Firebase 초기화 실패:', err);
                     }
                 }
             }
@@ -1238,7 +1238,7 @@
                                 yearsWithData.push({ year, count: cloudData.length });
                             }
                         } catch (err) {
-                            console.error(`${sampleType.name} ${year}년 동기화 오류:`, err);
+                            window.logger.error(`${sampleType.name} ${year}년 동기화 오류:`, err);
                         }
 
                         // 진행률 업데이트
@@ -1264,7 +1264,7 @@
                 showSyncResults(results);
 
             } catch (error) {
-                console.error('동기화 오류:', error);
+                window.logger.error('동기화 오류:', error);
                 alert('동기화 중 오류가 발생했습니다: ' + error.message);
             } finally {
                 syncBtn.classList.remove('syncing');

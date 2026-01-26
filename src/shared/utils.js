@@ -29,7 +29,7 @@ const HTML_ESCAPE_MAP = {
 function setupGlobalErrorHandler() {
     // 처리되지 않은 Promise rejection 캐치
     window.addEventListener('unhandledrejection', (event) => {
-        console.error('처리되지 않은 Promise rejection:', event.reason);
+        (window.logger?.error || console.error)('처리되지 않은 Promise rejection:', event.reason);
 
         // 네트워크 에러인 경우 사용자에게 알림
         if (event.reason?.message?.includes('network') ||
@@ -46,11 +46,11 @@ function setupGlobalErrorHandler() {
 
     // 전역 에러 캐치
     window.addEventListener('error', (event) => {
-        console.error('전역 에러:', event.error || event.message);
+        (window.logger?.error || console.error)('전역 에러:', event.error || event.message);
 
         // 스크립트 로드 실패
         if (event.target?.tagName === 'SCRIPT') {
-            console.error('스크립트 로드 실패:', event.target.src);
+            (window.logger?.error || console.error)('스크립트 로드 실패:', event.target.src);
         }
     });
 }
@@ -245,7 +245,7 @@ function safeParseJSON(key, defaultValue = []) {
         if (!value) return defaultValue;
         return JSON.parse(value);
     } catch (error) {
-        console.error(`JSON 파싱 오류 (${key}):`, error);
+        (window.logger?.error || console.error)(`JSON 파싱 오류 (${key}):`, error);
         return defaultValue;
     }
 }
@@ -293,7 +293,7 @@ function safeSetJSON(key, data, options = {}) {
             error.code === 1014 || // Firefox
             error.message.includes('quota')) {
 
-            console.error('localStorage 용량 초과:', error);
+            (window.logger?.error || console.error)('localStorage 용량 초과:', error);
 
             const usage = getLocalStorageUsage();
             const message = `저장 공간이 부족합니다.\n현재 사용량: ${usage.usedMB}MB / ${usage.totalMB}MB (${usage.percent}%)\n\n오래된 데이터를 삭제하거나 JSON 파일로 백업 후 정리해주세요.`;
@@ -311,7 +311,7 @@ function safeSetJSON(key, data, options = {}) {
             return false;
         }
 
-        console.error('localStorage 저장 오류:', error);
+        (window.logger?.error || console.error)('localStorage 저장 오류:', error);
         return false;
     }
 }
@@ -424,7 +424,7 @@ async function initAutoSave(options) {
                             log(`📁 ${moduleName} 자동 저장 폴더 설정됨:`, result.folder);
                         }
                     } catch (error) {
-                        console.error('폴더 선택 오류:', error);
+                        (window.logger?.error || console.error)('폴더 선택 오류:', error);
                     }
                 }
             }, 500);
@@ -470,7 +470,7 @@ async function loadFromAutoSaveFile(FileAPI, log = console.log) {
             }
         }
     } catch (error) {
-        console.error('자동 저장 파일 로드 오류:', error);
+        (window.logger?.error || console.error)('자동 저장 파일 로드 오류:', error);
     }
     return null;
 }
@@ -530,14 +530,14 @@ async function performAutoSave(options) {
                 return true;
             } catch (error) {
                 if (webFileHandle) {
-                    console.error('Web 자동 저장 오류:', error);
+                    (window.logger?.error || console.error)('Web 자동 저장 오류:', error);
                 }
                 updateAutoSaveStatus('error');
                 return false;
             }
         }
     } catch (error) {
-        console.error('자동 저장 오류:', error);
+        (window.logger?.error || console.error)('자동 저장 오류:', error);
         updateAutoSaveStatus('error');
         return false;
     }
@@ -615,7 +615,7 @@ function setupAutoSaveToggle(options) {
                 autoSaveToggle.checked = false;
                 updateAutoSaveStatus('inactive');
             } else {
-                console.error('자동 저장 설정 오류:', error);
+                (window.logger?.error || console.error)('자동 저장 설정 오류:', error);
                 alert('자동 저장 설정에 실패했습니다.');
                 autoSaveToggle.checked = false;
                 localStorage.setItem(enabledKey, 'false');
@@ -669,7 +669,7 @@ function setupAutoSaveFolderButton(options) {
                     if (showToast) showToast('폴더 선택에 실패했습니다.', 'error');
                 }
             } catch (error) {
-                console.error('폴더 선택 오류:', error);
+                (window.logger?.error || console.error)('폴더 선택 오류:', error);
                 if (showToast) showToast('폴더 선택 중 오류가 발생했습니다.', 'error');
             }
         });
@@ -680,7 +680,7 @@ function setupAutoSaveFolderButton(options) {
                 const folder = await window.electronAPI.getAutoSaveFolder();
                 selectAutoSaveFolderBtn.title = `저장 폴더: ${folder}`;
             } catch (error) {
-                console.error('폴더 경로 조회 오류:', error);
+                (window.logger?.error || console.error)('폴더 경로 조회 오류:', error);
             }
         })();
     } else {
@@ -705,7 +705,7 @@ function setupAutoSaveFolderButton(options) {
                 }
             } catch (error) {
                 if (error.name !== 'AbortError') {
-                    console.error('파일 선택 오류:', error);
+                    (window.logger?.error || console.error)('파일 선택 오류:', error);
                     if (showToast) showToast('파일 선택 중 오류가 발생했습니다.', 'error');
                 }
             }
@@ -719,7 +719,7 @@ function setupAutoSaveFolderButton(options) {
  * @returns {Function} 로그 함수
  */
 function createLogger(debug) {
-    return (...args) => debug && console.log(...args);
+    return (...args) => debug && (window.logger?.info || console.log)(...args);
 }
 
 /**
@@ -863,7 +863,7 @@ function setupJSONLoadHandler(options) {
                 if (showToast) showToast('파일 형식이 올바르지 않습니다.', 'error');
             }
         } catch (error) {
-            console.error('JSON 파일 로드 오류:', error);
+            (window.logger?.error || console.error)('JSON 파일 로드 오류:', error);
             if (showToast) showToast('파일을 읽는 중 오류가 발생했습니다.', 'error');
         }
 
@@ -910,7 +910,7 @@ function setupElectronLoadHandler(options) {
                 if (showToast) showToast('파일 형식이 올바르지 않습니다.', 'error');
             }
         } catch (error) {
-            console.error('JSON 파일 로드 오류:', error);
+            (window.logger?.error || console.error)('JSON 파일 로드 오류:', error);
             if (showToast) showToast('파일을 읽는 중 오류가 발생했습니다.', 'error');
         }
     });
