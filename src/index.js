@@ -39,13 +39,35 @@ function validateFilePath(filePath) {
         return { valid: false, error: '유효하지 않은 파일 경로입니다.' };
     }
 
+    // 추가 보안 검사
+    // 1. Null 바이트 검사
+    if (filePath.includes('\0')) {
+        return { valid: false, error: '잘못된 파일 경로입니다. (null byte detected)' };
+    }
+
+    // 2. 상대 경로 요소 검사 (정규화 전)
+    if (filePath.includes('../') || filePath.includes('..\\')) {
+        return { valid: false, error: '상대 경로는 허용되지 않습니다.' };
+    }
+
+    // 3. 파일명 유효성 검사
+    const basename = path.basename(filePath);
+    const validFilenameRegex = /^[a-zA-Z0-9가-힣\-_.() ]+$/;
+    if (basename && !validFilenameRegex.test(basename)) {
+        return { valid: false, error: '파일명에 허용되지 않은 문자가 포함되어 있습니다.' };
+    }
+
     // 허용된 디렉토리 목록
     const allowedDirs = [
         app.getPath('userData'),      // 앱 데이터 폴더
         app.getPath('documents'),     // 문서 폴더
         app.getPath('downloads'),     // 다운로드 폴더
         app.getPath('desktop'),       // 바탕화면
-        app.getPath('home')           // 홈 디렉토리
+        // app.getPath('home') 제거 - 너무 광범위한 접근 권한
+
+        // 대신 특정 하위 폴더만 허용
+        path.join(app.getPath('documents'), 'SampleLog'), // 문서 폴더 내 앱 전용 폴더
+        path.join(app.getPath('downloads'), 'SampleLog')  // 다운로드 폴더 내 앱 전용 폴더
     ];
 
     try {
