@@ -175,32 +175,32 @@ class WaterSampleManager extends BaseSampleManager {
     renderLogs(logs) {
         if (!this.tableBody) return;
 
-        this.tableBody.innerHTML = '';
-
-        if (logs.length === 0) {
-            if (this.emptyState) {
-                this.emptyState.style.display = 'flex';
-            }
-            return;
-        }
-
-        if (this.emptyState) {
-            this.emptyState.style.display = 'none';
-        }
-
-        // 페이지네이션 적용
-        const pageRange = this.paginationManager?.getPageRange() || { start: 0, end: logs.length };
-        const paginatedLogs = logs.slice(pageRange.start, pageRange.end);
-
-        paginatedLogs.forEach(log => {
-            const row = this.createTableRow(log);
-            this.tableBody.appendChild(row);
-        });
-
-        // 페이지네이션 UI 업데이트
+        // 기존 pagination.js 사용
         if (this.paginationManager) {
-            this.paginationManager.updatePagination();
+            this.paginationManager.setData(logs);
+            this.paginationManager.render();
+        } else {
+            // 폴백: 직접 렌더링
+            this.tableBody.innerHTML = '';
+
+            if (logs.length === 0) {
+                if (this.emptyState) {
+                    this.emptyState.style.display = 'flex';
+                }
+                return;
+            }
+
+            if (this.emptyState) {
+                this.emptyState.style.display = 'none';
+            }
+
+            logs.forEach(log => {
+                const row = this.createTableRow(log);
+                this.tableBody.appendChild(row);
+            });
         }
+
+        this.updateRecordCount();
     }
 
     /**
@@ -465,11 +465,17 @@ class WaterSampleManager extends BaseSampleManager {
      * 페이지네이션 초기화 오버라이드
      */
     initPagination() {
+        // 기존 pagination.js의 PaginationManager 사용
         if (window.PaginationManager) {
-            this.paginationManager = new PaginationManager({
+            this.paginationManager = new window.PaginationManager({
+                storageKey: 'waterItemsPerPage',
+                defaultItemsPerPage: 100,
                 onPageChange: () => this.renderLogs(this.sampleLogs),
-                getFilteredData: () => this.sampleLogs
+                renderRow: (log) => this.createTableRow(log)
             });
+
+            // 테이블 요소 설정
+            this.paginationManager.setTableElements(this.tableBody, this.emptyState);
         }
     }
 }

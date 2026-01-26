@@ -358,13 +358,31 @@ class BaseSampleManager {
             return;
         }
 
-        try {
-            const savedData = await this.FileAPI.loadAutoSave();
-            if (savedData) {
-                this.lastSavedDataHash = this.hashData(savedData);
+        // SampleUtils가 있으면 사용
+        if (window.SampleUtils?.initAutoSave) {
+            await window.SampleUtils.initAutoSave({
+                moduleKey: this.moduleKey,
+                moduleName: this.moduleName,
+                FileAPI: this.FileAPI,
+                currentYear: this.selectedYear,
+                log: (...args) => this.log(...args),
+                showToast: window.showToast
+            });
+
+            // 자동 저장 파일에서 데이터 로드하는 함수
+            window.loadFromAutoSaveFile = async () => {
+                return await window.SampleUtils.loadFromAutoSaveFile(this.FileAPI, (...args) => this.log(...args));
+            };
+        } else {
+            // 폴백: 기본 자동 저장 처리
+            try {
+                const savedData = await this.FileAPI.loadAutoSave();
+                if (savedData) {
+                    this.lastSavedDataHash = this.hashData(savedData);
+                }
+            } catch (error) {
+                this.log('자동 저장 데이터 로드 실패:', error);
             }
-        } catch (error) {
-            this.log('자동 저장 데이터 로드 실패:', error);
         }
     }
 
