@@ -3999,46 +3999,155 @@ document.addEventListener('DOMContentLoaded', async () => {
             const safeNote = escapeHTML(row.note || '-');
 
             tr.dataset.id = row.id;
-            // 테이블 행 HTML: 개별 데이터는 이미 escapeHTML로 이스케이프됨
-            tr.innerHTML = sanitizeHTML(`
-                <td class="col-checkbox">
-                    <input type="checkbox" class="row-checkbox" data-id="${escapeHTML(row.id)}">
-                </td>
-                <td class="col-complete">
-                    <button class="btn-complete ${isCompleted ? 'completed' : ''}" data-id="${escapeHTML(row.id)}" title="${isCompleted ? '완료 취소' : '완료'}">
-                        ${isCompleted ? '✔' : ''}
-                    </button>
-                </td>
-                <td class="col-result">
-                    <button class="btn-result ${row.testResult === 'pass' ? 'pass' : row.testResult === 'fail' ? 'fail' : ''}"
-                            data-id="${escapeHTML(row.id)}"
-                            title="${row.testResult === 'pass' ? '불검출' : row.testResult === 'fail' ? '검출' : '미판정 (클릭하여 변경)'}">
-                        ${row.testResult === 'pass' ? '불검출' : row.testResult === 'fail' ? '검출' : '-'}
-                    </button>
-                </td>
-                <td>${escapeHTML(row._displayNumber)}</td>
-                <td>${escapeHTML(row.date)}</td>
-                <td class="col-applicant-type col-hidden">${escapeHTML(applicantType)}</td>
-                <td class="col-birth-corp col-hidden">${escapeHTML(birthOrCorp)}</td>
-                <td>${escapeHTML(row.subCategory || '-')}</td>
-                <td>${escapeHTML(row.purpose || '-')}</td>
-                <td>${safeName}</td>
-                <td class="col-zipcode col-hidden">${escapeHTML(zipcode || '-')}</td>
-                <td class="text-truncate" data-tooltip="${safeAddress}">${safeAddress}</td>
-                <td>${safeProducerName}</td>
-                <td>${safeProducerAddress}</td>
-                <td class="text-truncate" data-tooltip="${safeRequestContent}">${safeRequestContent}</td>
-                <td>${safePhone}</td>
-                <td>${escapeHTML(methodText)}</td>
-                <td class="col-note text-truncate" data-tooltip="${safeNote}">${safeNote}</td>
-                <td class="col-mail-date">${escapeHTML(row.mailDate || '-')}</td>
-                <td>
-                    <div class="table-actions">
-                        <button class="btn-edit" data-id="${escapeHTML(row.id)}">수정</button>
-                        <button class="btn-delete" data-id="${escapeHTML(row.id)}">삭제</button>
-                    </div>
-                </td>
-            `);
+
+            // Checkbox column
+            const tdCheckbox = document.createElement('td');
+            tdCheckbox.className = 'col-checkbox';
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'row-checkbox';
+            checkbox.dataset.id = row.id;
+            tdCheckbox.appendChild(checkbox);
+            tr.appendChild(tdCheckbox);
+
+            // Complete button column
+            const tdComplete = document.createElement('td');
+            tdComplete.className = 'col-complete';
+            const btnComplete = document.createElement('button');
+            btnComplete.className = 'btn-complete' + (isCompleted ? ' completed' : '');
+            btnComplete.dataset.id = row.id;
+            btnComplete.title = isCompleted ? '완료 취소' : '완료';
+            btnComplete.textContent = isCompleted ? '✔' : '';
+            tdComplete.appendChild(btnComplete);
+            tr.appendChild(tdComplete);
+
+            // Result button column
+            const tdResult = document.createElement('td');
+            tdResult.className = 'col-result';
+            const btnResult = document.createElement('button');
+            btnResult.className = 'btn-result';
+            if (row.testResult === 'pass') {
+                btnResult.classList.add('pass');
+                btnResult.textContent = '불검출';
+                btnResult.title = '불검출';
+            } else if (row.testResult === 'fail') {
+                btnResult.classList.add('fail');
+                btnResult.textContent = '검출';
+                btnResult.title = '검출';
+            } else {
+                btnResult.textContent = '-';
+                btnResult.title = '미판정 (클릭하여 변경)';
+            }
+            btnResult.dataset.id = row.id;
+            tdResult.appendChild(btnResult);
+            tr.appendChild(tdResult);
+
+            // Display number
+            const tdNumber = document.createElement('td');
+            tdNumber.textContent = row._displayNumber;
+            tr.appendChild(tdNumber);
+
+            // Date
+            const tdDate = document.createElement('td');
+            tdDate.textContent = row.date;
+            tr.appendChild(tdDate);
+
+            // Applicant type (hidden)
+            const tdApplicantType = document.createElement('td');
+            tdApplicantType.className = 'col-applicant-type col-hidden';
+            tdApplicantType.textContent = applicantType;
+            tr.appendChild(tdApplicantType);
+
+            // Birth/Corp number (hidden)
+            const tdBirthCorp = document.createElement('td');
+            tdBirthCorp.className = 'col-birth-corp col-hidden';
+            tdBirthCorp.textContent = birthOrCorp;
+            tr.appendChild(tdBirthCorp);
+
+            // Sub category
+            const tdSubCategory = document.createElement('td');
+            tdSubCategory.textContent = row.subCategory || '-';
+            tr.appendChild(tdSubCategory);
+
+            // Purpose
+            const tdPurpose = document.createElement('td');
+            tdPurpose.textContent = row.purpose || '-';
+            tr.appendChild(tdPurpose);
+
+            // Name
+            const tdName = document.createElement('td');
+            tdName.textContent = safeName;
+            tr.appendChild(tdName);
+
+            // Zipcode (hidden)
+            const tdZipcode = document.createElement('td');
+            tdZipcode.className = 'col-zipcode col-hidden';
+            tdZipcode.textContent = zipcode || '-';
+            tr.appendChild(tdZipcode);
+
+            // Address (truncated with tooltip)
+            const tdAddress = document.createElement('td');
+            tdAddress.className = 'text-truncate';
+            tdAddress.dataset.tooltip = safeAddress;
+            tdAddress.textContent = safeAddress;
+            tr.appendChild(tdAddress);
+
+            // Producer name
+            const tdProducerName = document.createElement('td');
+            tdProducerName.textContent = safeProducerName;
+            tr.appendChild(tdProducerName);
+
+            // Producer address
+            const tdProducerAddress = document.createElement('td');
+            tdProducerAddress.textContent = safeProducerAddress;
+            tr.appendChild(tdProducerAddress);
+
+            // Request content (truncated with tooltip)
+            const tdRequestContent = document.createElement('td');
+            tdRequestContent.className = 'text-truncate';
+            tdRequestContent.dataset.tooltip = safeRequestContent;
+            tdRequestContent.textContent = safeRequestContent;
+            tr.appendChild(tdRequestContent);
+
+            // Phone
+            const tdPhone = document.createElement('td');
+            tdPhone.textContent = safePhone;
+            tr.appendChild(tdPhone);
+
+            // Reception method
+            const tdMethod = document.createElement('td');
+            tdMethod.textContent = methodText;
+            tr.appendChild(tdMethod);
+
+            // Note (truncated with tooltip)
+            const tdNote = document.createElement('td');
+            tdNote.className = 'col-note text-truncate';
+            tdNote.dataset.tooltip = safeNote;
+            tdNote.textContent = safeNote;
+            tr.appendChild(tdNote);
+
+            // Mail date
+            const tdMailDate = document.createElement('td');
+            tdMailDate.className = 'col-mail-date';
+            tdMailDate.textContent = row.mailDate || '-';
+            tr.appendChild(tdMailDate);
+
+            // Action buttons
+            const tdActions = document.createElement('td');
+            const divActions = document.createElement('div');
+            divActions.className = 'table-actions';
+            const btnEdit = document.createElement('button');
+            btnEdit.className = 'btn-edit';
+            btnEdit.dataset.id = row.id;
+            btnEdit.textContent = '수정';
+            const btnDelete = document.createElement('button');
+            btnDelete.className = 'btn-delete';
+            btnDelete.dataset.id = row.id;
+            btnDelete.textContent = '삭제';
+            divActions.appendChild(btnEdit);
+            divActions.appendChild(btnDelete);
+            tdActions.appendChild(divActions);
+            tr.appendChild(tdActions);
             tableBody.appendChild(tr);
         });
 

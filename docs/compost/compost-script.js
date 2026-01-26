@@ -806,8 +806,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             <tr><th>원료 및 투입비율</th><td>${safeRawMaterials}</td></tr>
             <tr><th>목적(용도)</th><td>${safePurpose}</td></tr>
             <tr><th>통보방법</th><td>${safeReceptionMethod}</td></tr>
-            <tr><th>비고</th><td>${safeNote}</td></tr>`
-        `;
+            <tr><th>비고</th><td>${safeNote}</td></tr>
+        `);
 
         registrationResultModal.classList.remove('hidden');
     }
@@ -927,46 +927,154 @@ document.addEventListener('DOMContentLoaded', async () => {
             const applicantType = logItem.applicantType || '개인';
             const birthOrCorp = applicantType === '법인' ? (logItem.corpNumber || '-') : (logItem.birthDate || '-');
 
-            // 테이블 행 HTML: 개별 데이터는 이미 escapeHTML로 이스케이프됨
-            row.innerHTML = sanitizeHTML(`
-                <td class="col-checkbox">
-                    <input type="checkbox" class="row-checkbox" data-id="${escapeHTML(logItem.id)}">
-                </td>
-                <td class="col-complete">
-                    <button class="btn-complete ${logItem.isComplete ? 'completed' : ''}" data-id="${escapeHTML(logItem.id)}" title="${logItem.isComplete ? '완료됨' : '완료 표시'}">
-                        ${logItem.isComplete ? '✅' : '⬜'}
-                    </button>
-                </td>
-                <td class="col-result">
-                    <button class="btn-result ${logItem.testResult === 'pass' ? 'pass' : logItem.testResult === 'fail' ? 'fail' : ''}"
-                            data-id="${escapeHTML(logItem.id)}"
-                            title="${logItem.testResult === 'pass' ? '적합' : logItem.testResult === 'fail' ? '부적합' : '미판정 (클릭하여 변경)'}">
-                        ${logItem.testResult === 'pass' ? '적합' : logItem.testResult === 'fail' ? '부적합' : '-'}
-                    </button>
-                </td>
-                <td>${escapeHTML(logItem.receptionNumber || '-')}</td>
-                <td>${escapeHTML(logItem.date || '-')}</td>
-                <td class="col-applicant-type col-hidden">${escapeHTML(applicantType)}</td>
-                <td class="col-birth-corp col-hidden">${escapeHTML(birthOrCorp)}</td>
-                <td>${safeFarmName}</td>
-                <td>${safeName}</td>
-                <td class="col-postcode col-hidden">${escapeHTML(logItem.addressPostcode || '-')}</td>
-                <td class="col-address text-truncate" data-tooltip="${safeFullAddress}">${safeFullAddress}</td>
-                <td class="col-farm-address">${safeFarmAddress}</td>
-                <td>${logItem.farmArea ? parseInt(logItem.farmArea, 10).toLocaleString('ko-KR') + ' ' + getUnitLabel(logItem.farmAreaUnit) : '-'}</td>
-                <td>${sampleTypeBadge}</td>
-                <td>${animalTypeBadge}</td>
-                <td>${escapeHTML(logItem.productionDate || '-')}</td>
-                <td>${escapeHTML(logItem.purpose || '-')}</td>
-                <td>${safePhone}</td>
-                <td>${escapeHTML(logItem.receptionMethod || '-')}</td>
-                <td class="col-note text-truncate" data-tooltip="${safeNote}">${safeNote}</td>
-                <td class="col-mail-date">${escapeHTML(logItem.mailDate || '-')}</td>
-                <td class="col-action">
-                    <button class="btn-edit" data-id="${escapeHTML(logItem.id)}" title="수정">✏️</button>
-                    <button class="btn-delete" data-id="${escapeHTML(logItem.id)}" title="삭제">🗑️</button>
-                </td>
-            `);
+            // 테이블 행 생성: DOM 요소 사용 (XSS 방지)
+            // 1. Checkbox column
+            const tdCheckbox = document.createElement('td');
+            tdCheckbox.className = 'col-checkbox';
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'row-checkbox';
+            checkbox.dataset.id = logItem.id;
+            tdCheckbox.appendChild(checkbox);
+            row.appendChild(tdCheckbox);
+
+            // 2. Complete button column
+            const tdComplete = document.createElement('td');
+            tdComplete.className = 'col-complete';
+            const btnComplete = document.createElement('button');
+            btnComplete.className = `btn-complete ${logItem.isComplete ? 'completed' : ''}`;
+            btnComplete.dataset.id = logItem.id;
+            btnComplete.title = logItem.isComplete ? '완료됨' : '완료 표시';
+            btnComplete.textContent = logItem.isComplete ? '✅' : '⬜';
+            tdComplete.appendChild(btnComplete);
+            row.appendChild(tdComplete);
+
+            // 3. Result button column
+            const tdResult = document.createElement('td');
+            tdResult.className = 'col-result';
+            const btnResult = document.createElement('button');
+            btnResult.className = `btn-result ${logItem.testResult === 'pass' ? 'pass' : logItem.testResult === 'fail' ? 'fail' : ''}`;
+            btnResult.dataset.id = logItem.id;
+            btnResult.title = logItem.testResult === 'pass' ? '적합' : logItem.testResult === 'fail' ? '부적합' : '미판정 (클릭하여 변경)';
+            btnResult.textContent = logItem.testResult === 'pass' ? '적합' : logItem.testResult === 'fail' ? '부적합' : '-';
+            tdResult.appendChild(btnResult);
+            row.appendChild(tdResult);
+
+            // 4. Reception number
+            const tdReceptionNumber = document.createElement('td');
+            tdReceptionNumber.textContent = logItem.receptionNumber || '-';
+            row.appendChild(tdReceptionNumber);
+
+            // 5. Date
+            const tdDate = document.createElement('td');
+            tdDate.textContent = logItem.date || '-';
+            row.appendChild(tdDate);
+
+            // 6. Applicant type (hidden)
+            const tdApplicantType = document.createElement('td');
+            tdApplicantType.className = 'col-applicant-type col-hidden';
+            tdApplicantType.textContent = applicantType;
+            row.appendChild(tdApplicantType);
+
+            // 7. Birth/Corp number (hidden)
+            const tdBirthCorp = document.createElement('td');
+            tdBirthCorp.className = 'col-birth-corp col-hidden';
+            tdBirthCorp.textContent = birthOrCorp;
+            row.appendChild(tdBirthCorp);
+
+            // 8. Farm name
+            const tdFarmName = document.createElement('td');
+            tdFarmName.textContent = safeFarmName;
+            row.appendChild(tdFarmName);
+
+            // 9. Name
+            const tdName = document.createElement('td');
+            tdName.textContent = safeName;
+            row.appendChild(tdName);
+
+            // 10. Postcode (hidden)
+            const tdPostcode = document.createElement('td');
+            tdPostcode.className = 'col-postcode col-hidden';
+            tdPostcode.textContent = logItem.addressPostcode || '-';
+            row.appendChild(tdPostcode);
+
+            // 11. Address (with tooltip)
+            const tdAddress = document.createElement('td');
+            tdAddress.className = 'col-address text-truncate';
+            tdAddress.dataset.tooltip = safeFullAddress;
+            tdAddress.textContent = safeFullAddress;
+            row.appendChild(tdAddress);
+
+            // 12. Farm address
+            const tdFarmAddress = document.createElement('td');
+            tdFarmAddress.className = 'col-farm-address';
+            tdFarmAddress.textContent = safeFarmAddress;
+            row.appendChild(tdFarmAddress);
+
+            // 13. Farm area (with unit)
+            const tdFarmArea = document.createElement('td');
+            tdFarmArea.textContent = logItem.farmArea ? parseInt(logItem.farmArea, 10).toLocaleString('ko-KR') + ' ' + getUnitLabel(logItem.farmAreaUnit) : '-';
+            row.appendChild(tdFarmArea);
+
+            // 14. Sample type badge
+            const tdSampleType = document.createElement('td');
+            tdSampleType.innerHTML = sampleTypeBadge;
+            row.appendChild(tdSampleType);
+
+            // 15. Animal type badge
+            const tdAnimalType = document.createElement('td');
+            tdAnimalType.innerHTML = animalTypeBadge;
+            row.appendChild(tdAnimalType);
+
+            // 16. Production date
+            const tdProductionDate = document.createElement('td');
+            tdProductionDate.textContent = logItem.productionDate || '-';
+            row.appendChild(tdProductionDate);
+
+            // 17. Purpose
+            const tdPurpose = document.createElement('td');
+            tdPurpose.textContent = logItem.purpose || '-';
+            row.appendChild(tdPurpose);
+
+            // 18. Phone
+            const tdPhone = document.createElement('td');
+            tdPhone.textContent = safePhone;
+            row.appendChild(tdPhone);
+
+            // 19. Reception method
+            const tdReceptionMethod = document.createElement('td');
+            tdReceptionMethod.textContent = logItem.receptionMethod || '-';
+            row.appendChild(tdReceptionMethod);
+
+            // 20. Note (with tooltip)
+            const tdNote = document.createElement('td');
+            tdNote.className = 'col-note text-truncate';
+            tdNote.dataset.tooltip = safeNote;
+            tdNote.textContent = safeNote;
+            row.appendChild(tdNote);
+
+            // 21. Mail date
+            const tdMailDate = document.createElement('td');
+            tdMailDate.className = 'col-mail-date';
+            tdMailDate.textContent = logItem.mailDate || '-';
+            row.appendChild(tdMailDate);
+
+            // 22. Action buttons (edit/delete)
+            const tdAction = document.createElement('td');
+            tdAction.className = 'col-action';
+            const btnEdit = document.createElement('button');
+            btnEdit.className = 'btn-edit';
+            btnEdit.dataset.id = logItem.id;
+            btnEdit.title = '수정';
+            btnEdit.textContent = '✏️';
+            const btnDelete = document.createElement('button');
+            btnDelete.className = 'btn-delete';
+            btnDelete.dataset.id = logItem.id;
+            btnDelete.title = '삭제';
+            btnDelete.textContent = '🗑️';
+            tdAction.appendChild(btnEdit);
+            tdAction.appendChild(btnDelete);
+            row.appendChild(tdAction);
 
             if (logItem.isComplete) {
                 row.classList.add('completed-row');
@@ -1747,7 +1855,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <div class="stat-bar-value">${count}건 (${percentage}%)</div>
                 </div>
             `;
-        }).join('');
+        }).join(''));
     }
 
     // ========================================

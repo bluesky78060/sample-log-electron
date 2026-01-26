@@ -1166,45 +1166,152 @@ document.addEventListener('DOMContentLoaded', async () => {
             const applicantType = log.applicantType || '개인';
             const birthOrCorp = applicantType === '법인' ? (log.corpNumber || '-') : (log.birthDate || '-');
 
-            // 테이블 행 HTML: 개별 데이터는 이미 escapeHTML로 이스케이프됨
-            row.innerHTML = sanitizeHTML(`
-                <td class="col-checkbox">
-                    <input type="checkbox" class="row-checkbox" data-id="${escapeHTML(log.id)}">
-                </td>
-                <td class="col-complete">
-                    <button class="btn-complete ${log.isComplete ? 'completed' : ''}" data-id="${escapeHTML(log.id)}" title="${log.isComplete ? '완료됨' : '완료 표시'}">
-                        ${log.isComplete ? '✅' : '⬜'}
-                    </button>
-                </td>
-                <td class="col-result">
-                    <button class="btn-result ${log.testResult === 'pass' ? 'pass' : log.testResult === 'fail' ? 'fail' : ''}"
-                            data-id="${escapeHTML(log.id)}"
-                            title="${log.testResult === 'pass' ? '적합' : log.testResult === 'fail' ? '부적합' : '미판정 (클릭하여 변경)'}">
-                        ${log.testResult === 'pass' ? '적합' : log.testResult === 'fail' ? '부적합' : '-'}
-                    </button>
-                </td>
-                <td>${escapeHTML(log.receptionNumber || '-')}</td>
-                <td>${escapeHTML(log.date || '-')}</td>
-                <td class="col-applicant-type hidden">${escapeHTML(applicantType)}</td>
-                <td class="col-birth-corp hidden">${escapeHTML(birthOrCorp)}</td>
-                <td>${safeName}</td>
-                <td class="col-zipcode hidden">${escapeHTML(zipcode || '-')}</td>
-                <td class="text-truncate" data-tooltip="${safeAddress}">${safeAddress}</td>
-                <td>${safeSampleName}</td>
-                <td>${escapeHTML(String(log.sampleCount || 1))}점</td>
-                <td class="text-truncate" data-tooltip="${safeSamplingLocation}">${safeSamplingLocation}</td>
-                <td class="text-truncate" data-tooltip="${safeMainCrop}">${safeMainCrop}</td>
-                <td>${escapeHTML(log.purpose || '-')}</td>
-                <td>${escapeHTML(log.testItems || '-')}</td>
-                <td>${safePhone}</td>
-                <td>${escapeHTML(log.receptionMethod || '-')}</td>
-                <td class="col-note text-truncate" data-tooltip="${safeNote}">${safeNote}</td>
-                <td class="col-mail-date">${escapeHTML(log.mailDate || '-')}</td>
-                <td class="col-action">
-                    <button class="btn-edit" data-id="${escapeHTML(log.id)}" title="수정">✏️</button>
-                    <button class="btn-delete" data-id="${escapeHTML(log.id)}" title="삭제">🗑️</button>
-                </td>
-            `);
+            // 테이블 행 생성: DOM 요소 사용 (XSS 방지)
+            // 1. Checkbox column
+            const tdCheckbox = document.createElement('td');
+            tdCheckbox.className = 'col-checkbox';
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'row-checkbox';
+            checkbox.dataset.id = log.id;
+            tdCheckbox.appendChild(checkbox);
+            row.appendChild(tdCheckbox);
+
+            // 2. Complete button column
+            const tdComplete = document.createElement('td');
+            tdComplete.className = 'col-complete';
+            const btnComplete = document.createElement('button');
+            btnComplete.className = `btn-complete ${log.isComplete ? 'completed' : ''}`;
+            btnComplete.dataset.id = log.id;
+            btnComplete.title = log.isComplete ? '완료됨' : '완료 표시';
+            btnComplete.textContent = log.isComplete ? '✅' : '⬜';
+            tdComplete.appendChild(btnComplete);
+            row.appendChild(tdComplete);
+
+            // 3. Result button column
+            const tdResult = document.createElement('td');
+            tdResult.className = 'col-result';
+            const btnResult = document.createElement('button');
+            btnResult.className = `btn-result ${log.testResult === 'pass' ? 'pass' : log.testResult === 'fail' ? 'fail' : ''}`;
+            btnResult.dataset.id = log.id;
+            btnResult.title = log.testResult === 'pass' ? '적합' : log.testResult === 'fail' ? '부적합' : '미판정 (클릭하여 변경)';
+            btnResult.textContent = log.testResult === 'pass' ? '적합' : log.testResult === 'fail' ? '부적합' : '-';
+            tdResult.appendChild(btnResult);
+            row.appendChild(tdResult);
+
+            // 4. Reception number
+            const tdReceptionNumber = document.createElement('td');
+            tdReceptionNumber.textContent = log.receptionNumber || '-';
+            row.appendChild(tdReceptionNumber);
+
+            // 5. Date
+            const tdDate = document.createElement('td');
+            tdDate.textContent = log.date || '-';
+            row.appendChild(tdDate);
+
+            // 6. Applicant type (hidden)
+            const tdApplicantType = document.createElement('td');
+            tdApplicantType.className = 'col-applicant-type hidden';
+            tdApplicantType.textContent = applicantType;
+            row.appendChild(tdApplicantType);
+
+            // 7. Birth/Corp number (hidden)
+            const tdBirthCorp = document.createElement('td');
+            tdBirthCorp.className = 'col-birth-corp hidden';
+            tdBirthCorp.textContent = birthOrCorp;
+            row.appendChild(tdBirthCorp);
+
+            // 8. Name
+            const tdName = document.createElement('td');
+            tdName.textContent = safeName;
+            row.appendChild(tdName);
+
+            // 9. Zipcode (hidden)
+            const tdZipcode = document.createElement('td');
+            tdZipcode.className = 'col-zipcode hidden';
+            tdZipcode.textContent = zipcode || '-';
+            row.appendChild(tdZipcode);
+
+            // 10. Address (with tooltip)
+            const tdAddress = document.createElement('td');
+            tdAddress.className = 'text-truncate';
+            tdAddress.dataset.tooltip = safeAddress;
+            tdAddress.textContent = safeAddress;
+            row.appendChild(tdAddress);
+
+            // 11. Sample name
+            const tdSampleName = document.createElement('td');
+            tdSampleName.textContent = safeSampleName;
+            row.appendChild(tdSampleName);
+
+            // 12. Sample count
+            const tdSampleCount = document.createElement('td');
+            tdSampleCount.textContent = `${String(log.sampleCount || 1)}점`;
+            row.appendChild(tdSampleCount);
+
+            // 13. Sampling location (with tooltip)
+            const tdSamplingLocation = document.createElement('td');
+            tdSamplingLocation.className = 'text-truncate';
+            tdSamplingLocation.dataset.tooltip = safeSamplingLocation;
+            tdSamplingLocation.textContent = safeSamplingLocation;
+            row.appendChild(tdSamplingLocation);
+
+            // 14. Main crop (with tooltip)
+            const tdMainCrop = document.createElement('td');
+            tdMainCrop.className = 'text-truncate';
+            tdMainCrop.dataset.tooltip = safeMainCrop;
+            tdMainCrop.textContent = safeMainCrop;
+            row.appendChild(tdMainCrop);
+
+            // 15. Purpose
+            const tdPurpose = document.createElement('td');
+            tdPurpose.textContent = log.purpose || '-';
+            row.appendChild(tdPurpose);
+
+            // 16. Test items
+            const tdTestItems = document.createElement('td');
+            tdTestItems.textContent = log.testItems || '-';
+            row.appendChild(tdTestItems);
+
+            // 17. Phone
+            const tdPhone = document.createElement('td');
+            tdPhone.textContent = safePhone;
+            row.appendChild(tdPhone);
+
+            // 18. Reception method
+            const tdReceptionMethod = document.createElement('td');
+            tdReceptionMethod.textContent = log.receptionMethod || '-';
+            row.appendChild(tdReceptionMethod);
+
+            // 19. Note (with tooltip)
+            const tdNote = document.createElement('td');
+            tdNote.className = 'col-note text-truncate';
+            tdNote.dataset.tooltip = safeNote;
+            tdNote.textContent = safeNote;
+            row.appendChild(tdNote);
+
+            // 20. Mail date
+            const tdMailDate = document.createElement('td');
+            tdMailDate.className = 'col-mail-date';
+            tdMailDate.textContent = log.mailDate || '-';
+            row.appendChild(tdMailDate);
+
+            // 21. Action buttons (edit/delete)
+            const tdAction = document.createElement('td');
+            tdAction.className = 'col-action';
+            const btnEdit = document.createElement('button');
+            btnEdit.className = 'btn-edit';
+            btnEdit.dataset.id = log.id;
+            btnEdit.title = '수정';
+            btnEdit.textContent = '✏️';
+            const btnDelete = document.createElement('button');
+            btnDelete.className = 'btn-delete';
+            btnDelete.dataset.id = log.id;
+            btnDelete.title = '삭제';
+            btnDelete.textContent = '🗑️';
+            tdAction.appendChild(btnEdit);
+            tdAction.appendChild(btnDelete);
+            row.appendChild(tdAction);
 
             if (log.isComplete) {
                 row.classList.add('completed-row');

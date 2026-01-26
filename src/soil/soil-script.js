@@ -3932,38 +3932,128 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const safeMethod = escapeHTML(methodText);
 
                 tr.dataset.id = row.id;
-                // 테이블 행 HTML: 개별 데이터는 이미 escapeHTML로 이스케이프됨
-                // sanitizeHTML을 사용하면 DOMPurify 미로드 시 td 태그가 이스케이프됨
-                tr.innerHTML = sanitizeHTML(`
-                    <td class="col-checkbox">
-                        <input type="checkbox" class="row-checkbox" data-id="${escapeHTML(row.id)}">
-                    </td>
-                    <td class="col-complete">
-                        <button class="btn-complete ${isCompleted ? 'completed' : ''}" data-id="${escapeHTML(row.id)}" title="${isCompleted ? '완료 취소' : '완료'}">
-                            ${isCompleted ? '✔' : ''}
-                        </button>
-                    </td>
-                    <td>${escapeHTML(row._displayNumber)}</td>
-                    <td>${escapeHTML(row.date)}</td>
-                    <td>${escapeHTML(row.subCategory || '-')}</td>
-                    <td>${escapeHTML(row.purpose || '-')}</td>
-                    <td>${safeName}</td>
-                    <td class="col-zipcode">${escapeHTML(zipcode || '-')}</td>
-                    <td class="text-truncate" data-tooltip="${safeAddress}">${safeAddress}</td>
-                    <td>${safeLotAddress}</td>
-                    <td class="text-truncate" data-tooltip="${safeCrops}">${safeCrops}</td>
-                    <td>${escapeHTML(row._areaDisplay)}</td>
-                    <td>${safePhone}</td>
-                    <td>${safeMethod}</td>
-                    <td class="col-note" title="${safeNote}"><div class="note-cell">${safeNote}</div></td>
-                    <td class="col-mail-date">${escapeHTML(row.mailDate || '-')}</td>
-                    <td>
-                        <div class="table-actions">
-                            <button class="btn-edit" data-id="${escapeHTML(row.id)}">수정</button>
-                            <button class="btn-delete" data-id="${escapeHTML(row.id)}">삭제</button>
-                        </div>
-                    </td>
-                `);
+
+                // 체크박스 열
+                const tdCheckbox = document.createElement('td');
+                tdCheckbox.className = 'col-checkbox';
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'row-checkbox';
+                checkbox.dataset.id = row.id;
+                tdCheckbox.appendChild(checkbox);
+                tr.appendChild(tdCheckbox);
+
+                // 완료 버튼 열
+                const tdComplete = document.createElement('td');
+                tdComplete.className = 'col-complete';
+                const btnComplete = document.createElement('button');
+                btnComplete.className = `btn-complete ${isCompleted ? 'completed' : ''}`;
+                btnComplete.dataset.id = row.id;
+                btnComplete.title = isCompleted ? '완료 취소' : '완료';
+                btnComplete.textContent = isCompleted ? '✔' : '';
+                tdComplete.appendChild(btnComplete);
+                tr.appendChild(tdComplete);
+
+                // 접수번호
+                const tdNumber = document.createElement('td');
+                tdNumber.textContent = row._displayNumber;
+                tr.appendChild(tdNumber);
+
+                // 날짜
+                const tdDate = document.createElement('td');
+                tdDate.textContent = row.date;
+                tr.appendChild(tdDate);
+
+                // 하위 카테고리
+                const tdSubCategory = document.createElement('td');
+                tdSubCategory.textContent = row.subCategory || '-';
+                tr.appendChild(tdSubCategory);
+
+                // 목적
+                const tdPurpose = document.createElement('td');
+                tdPurpose.textContent = row.purpose || '-';
+                tr.appendChild(tdPurpose);
+
+                // 성명
+                const tdName = document.createElement('td');
+                tdName.textContent = row.name;
+                tr.appendChild(tdName);
+
+                // 우편번호
+                const tdZipcode = document.createElement('td');
+                tdZipcode.className = 'col-zipcode';
+                tdZipcode.textContent = zipcode || '-';
+                tr.appendChild(tdZipcode);
+
+                // 주소
+                const tdAddress = document.createElement('td');
+                tdAddress.className = 'text-truncate';
+                tdAddress.setAttribute('data-tooltip', addressOnly || '-');
+                tdAddress.textContent = addressOnly || '-';
+                tr.appendChild(tdAddress);
+
+                // 필지 주소
+                const tdLotAddress = document.createElement('td');
+                tdLotAddress.textContent = row._lotAddress;
+                tr.appendChild(tdLotAddress);
+
+                // 작물
+                const tdCrops = document.createElement('td');
+                tdCrops.className = 'text-truncate';
+                tdCrops.setAttribute('data-tooltip', row._cropsDisplay);
+                tdCrops.textContent = row._cropsDisplay;
+                tr.appendChild(tdCrops);
+
+                // 면적
+                const tdArea = document.createElement('td');
+                tdArea.textContent = row._areaDisplay;
+                tr.appendChild(tdArea);
+
+                // 전화번호
+                const tdPhone = document.createElement('td');
+                tdPhone.textContent = row.phoneNumber || '-';
+                tr.appendChild(tdPhone);
+
+                // 수령방법
+                const tdMethod = document.createElement('td');
+                tdMethod.textContent = methodText;
+                tr.appendChild(tdMethod);
+
+                // 비고
+                const tdNote = document.createElement('td');
+                tdNote.className = 'col-note';
+                tdNote.title = combinedNote;
+                const noteDiv = document.createElement('div');
+                noteDiv.className = 'note-cell';
+                noteDiv.textContent = combinedNote;
+                tdNote.appendChild(noteDiv);
+                tr.appendChild(tdNote);
+
+                // 우편일자
+                const tdMailDate = document.createElement('td');
+                tdMailDate.className = 'col-mail-date';
+                tdMailDate.textContent = row.mailDate || '-';
+                tr.appendChild(tdMailDate);
+
+                // 액션 버튼
+                const tdAction = document.createElement('td');
+                const actionsDiv = document.createElement('div');
+                actionsDiv.className = 'table-actions';
+
+                const btnEdit = document.createElement('button');
+                btnEdit.className = 'btn-edit';
+                btnEdit.dataset.id = row.id;
+                btnEdit.textContent = '수정';
+
+                const btnDelete = document.createElement('button');
+                btnDelete.className = 'btn-delete';
+                btnDelete.dataset.id = row.id;
+                btnDelete.textContent = '삭제';
+
+                actionsDiv.appendChild(btnEdit);
+                actionsDiv.appendChild(btnDelete);
+                tdAction.appendChild(actionsDiv);
+                tr.appendChild(tdAction);
                 tableBody.appendChild(tr);
             });
 

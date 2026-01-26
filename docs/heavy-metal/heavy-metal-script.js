@@ -1063,42 +1063,143 @@ document.addEventListener('DOMContentLoaded', async () => {
             const applicantType = logItem.applicantType || '개인';
             const birthOrCorp = applicantType === '법인' ? (logItem.corpNumber || '-') : (logItem.birthDate || '-');
 
-            // 테이블 행 HTML: 개별 데이터는 이미 escapeHTML로 이스케이프됨
-            tr.innerHTML = sanitizeHTML(`
-                <td><input type="checkbox" class="row-checkbox" data-index="${escapeHTML(String(tr.dataset.index))}"></td>
-                <td>
-                    <button class="btn-complete ${logItem.isCompleted ? 'completed' : ''}" title="${logItem.isCompleted ? '완료됨' : '미완료'}">
-                        ${logItem.isCompleted ? '✓' : '○'}
-                    </button>
-                </td>
-                <td class="col-result">
-                    <button class="btn-result ${logItem.testResult === 'pass' ? 'pass' : logItem.testResult === 'fail' ? 'fail' : ''}"
-                            title="${logItem.testResult === 'pass' ? '적합' : logItem.testResult === 'fail' ? '부적합' : '미판정 (클릭하여 변경)'}">
-                        ${logItem.testResult === 'pass' ? '적합' : logItem.testResult === 'fail' ? '부적합' : '-'}
-                    </button>
-                </td>
-                <td>${escapeHTML(logItem.receptionNumber || '-')}</td>
-                <td>${escapeHTML(logItem.date || '-')}</td>
-                <td>${safeName}</td>
-                <td class="col-applicant-type col-hidden">${escapeHTML(applicantType)}</td>
-                <td class="col-birth-corp col-hidden">${escapeHTML(birthOrCorp)}</td>
-                <td class="text-truncate" data-tooltip="${safeAddress}">${safeAddressRoad}</td>
-                <td>${safePhone}</td>
-                <td>${safeSamplingLocation}</td>
-                <td>${safeCropName}${logItem.treeAge ? ' (' + escapeHTML(String(logItem.treeAge)) + '년생)' : ''}</td>
-                <td>${escapeHTML(logItem.samplingDate || '-')}</td>
-                <td class="text-truncate" data-tooltip="${escapeHTML(analysisItemsStr)}">${escapeHTML(analysisItemsDisplay)}</td>
-                <td>${escapeHTML(logItem.purpose || '-')}</td>
-                <td>${escapeHTML(methodText)}</td>
-                <td class="text-truncate" data-tooltip="${safeNote}">${safeNote}</td>
-                <td class="col-mail-date">${escapeHTML(logItem.mailDate || '-')}</td>
-                <td>
-                    <div class="action-btns">
-                        <button class="btn-edit" title="수정">✏️</button>
-                        <button class="btn-delete" title="삭제">🗑️</button>
-                    </div>
-                </td>
-            `);
+            // 테이블 행 생성: DOM 요소로 직접 생성 (XSS 방지)
+
+            // 1. Checkbox
+            const tdCheckbox = document.createElement('td');
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'row-checkbox';
+            checkbox.setAttribute('data-index', tr.dataset.index);
+            tdCheckbox.appendChild(checkbox);
+            tr.appendChild(tdCheckbox);
+
+            // 2. Complete button
+            const tdComplete = document.createElement('td');
+            const btnComplete = document.createElement('button');
+            btnComplete.className = logItem.isCompleted ? 'btn-complete completed' : 'btn-complete';
+            btnComplete.title = logItem.isCompleted ? '완료됨' : '미완료';
+            btnComplete.textContent = logItem.isCompleted ? '✓' : '○';
+            tdComplete.appendChild(btnComplete);
+            tr.appendChild(tdComplete);
+
+            // 3. Result button
+            const tdResult = document.createElement('td');
+            tdResult.className = 'col-result';
+            const btnResult = document.createElement('button');
+            btnResult.className = 'btn-result' +
+                (logItem.testResult === 'pass' ? ' pass' :
+                 logItem.testResult === 'fail' ? ' fail' : '');
+            btnResult.title = logItem.testResult === 'pass' ? '적합' :
+                             logItem.testResult === 'fail' ? '부적합' : '미판정 (클릭하여 변경)';
+            btnResult.textContent = logItem.testResult === 'pass' ? '적합' :
+                                   logItem.testResult === 'fail' ? '부적합' : '-';
+            tdResult.appendChild(btnResult);
+            tr.appendChild(tdResult);
+
+            // 4. Reception number
+            const tdReceptionNumber = document.createElement('td');
+            tdReceptionNumber.textContent = logItem.receptionNumber || '-';
+            tr.appendChild(tdReceptionNumber);
+
+            // 5. Date
+            const tdDate = document.createElement('td');
+            tdDate.textContent = logItem.date || '-';
+            tr.appendChild(tdDate);
+
+            // 6. Name
+            const tdName = document.createElement('td');
+            tdName.textContent = safeName;
+            tr.appendChild(tdName);
+
+            // 7. Applicant type (hidden)
+            const tdApplicantType = document.createElement('td');
+            tdApplicantType.className = 'col-applicant-type col-hidden';
+            tdApplicantType.textContent = applicantType;
+            tr.appendChild(tdApplicantType);
+
+            // 8. Birth/Corp number (hidden)
+            const tdBirthCorp = document.createElement('td');
+            tdBirthCorp.className = 'col-birth-corp col-hidden';
+            tdBirthCorp.textContent = birthOrCorp;
+            tr.appendChild(tdBirthCorp);
+
+            // 9. Address (with tooltip)
+            const tdAddress = document.createElement('td');
+            tdAddress.className = 'text-truncate';
+            tdAddress.setAttribute('data-tooltip', safeAddress);
+            tdAddress.textContent = safeAddressRoad;
+            tr.appendChild(tdAddress);
+
+            // 10. Phone
+            const tdPhone = document.createElement('td');
+            tdPhone.textContent = safePhone;
+            tr.appendChild(tdPhone);
+
+            // 11. Sampling location
+            const tdSamplingLocation = document.createElement('td');
+            tdSamplingLocation.textContent = safeSamplingLocation;
+            tr.appendChild(tdSamplingLocation);
+
+            // 12. Crop name (with tree age if present)
+            const tdCropName = document.createElement('td');
+            tdCropName.textContent = safeCropName + (logItem.treeAge ? ' (' + logItem.treeAge + '년생)' : '');
+            tr.appendChild(tdCropName);
+
+            // 13. Sampling date
+            const tdSamplingDate = document.createElement('td');
+            tdSamplingDate.textContent = logItem.samplingDate || '-';
+            tr.appendChild(tdSamplingDate);
+
+            // 14. Analysis items (with tooltip)
+            const tdAnalysisItems = document.createElement('td');
+            tdAnalysisItems.className = 'text-truncate';
+            tdAnalysisItems.setAttribute('data-tooltip', analysisItemsStr);
+            tdAnalysisItems.textContent = analysisItemsDisplay;
+            tr.appendChild(tdAnalysisItems);
+
+            // 15. Purpose
+            const tdPurpose = document.createElement('td');
+            tdPurpose.textContent = logItem.purpose || '-';
+            tr.appendChild(tdPurpose);
+
+            // 16. Reception method
+            const tdMethod = document.createElement('td');
+            tdMethod.textContent = methodText;
+            tr.appendChild(tdMethod);
+
+            // 17. Note (with tooltip)
+            const tdNote = document.createElement('td');
+            tdNote.className = 'text-truncate';
+            tdNote.setAttribute('data-tooltip', safeNote);
+            tdNote.textContent = safeNote;
+            tr.appendChild(tdNote);
+
+            // 18. Mail date
+            const tdMailDate = document.createElement('td');
+            tdMailDate.className = 'col-mail-date';
+            tdMailDate.textContent = logItem.mailDate || '-';
+            tr.appendChild(tdMailDate);
+
+            // 19. Action buttons
+            const tdActions = document.createElement('td');
+            const actionDiv = document.createElement('div');
+            actionDiv.className = 'action-btns';
+
+            const btnEdit = document.createElement('button');
+            btnEdit.className = 'btn-edit';
+            btnEdit.title = '수정';
+            btnEdit.textContent = '✏️';
+
+            const btnDelete = document.createElement('button');
+            btnDelete.className = 'btn-delete';
+            btnDelete.title = '삭제';
+            btnDelete.textContent = '🗑️';
+
+            actionDiv.appendChild(btnEdit);
+            actionDiv.appendChild(btnDelete);
+            tdActions.appendChild(actionDiv);
+            tr.appendChild(tdActions);
 
             tableBody.appendChild(tr);
         });
