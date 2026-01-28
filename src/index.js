@@ -239,15 +239,10 @@ const createWindow = () => {
 // Electron 초기화 완료 후 브라우저 창 생성 준비
 app.whenReady().then(() => {
   // CSP (Content-Security-Policy) 및 보안 헤더 설정
-  // 메인 프레임(자체 HTML)에만 적용, iframe/subFrame 제외
-  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
-    // 메인 프레임이 아니거나 file:// 프로토콜이 아니면 원본 헤더 유지
-    const isMainFrame = details.resourceType === 'mainFrame';
-    const isLocalFile = details.url.startsWith('file://');
-    if (!isMainFrame || !isLocalFile) {
-      callback({ responseHeaders: details.responseHeaders });
-      return;
-    }
+  // file:// 프로토콜에만 적용 (외부 URL은 가로채지 않음)
+  session.defaultSession.webRequest.onHeadersReceived(
+    { urls: ['file:///*'] },  // 필터: file:// URL만 가로채기 (macOS/Linux)
+    (details, callback) => {
     callback({
       responseHeaders: {
         ...details.responseHeaders,

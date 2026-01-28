@@ -30,6 +30,7 @@ class BaseSampleManager {
         this.itemsPerPage = 100;
         this.totalPages = 1;
         this.isCloudSyncing = false;
+        this.cloudSyncPromise = null;  // Promise-based lock
 
         // DOM 참조 (서브클래스에서 설정)
         this.form = null;
@@ -56,6 +57,8 @@ class BaseSampleManager {
      */
     async init() {
         try {
+            this.log(` 초기화 시작`);
+
             // FileAPI 초기화
             if (this.FileAPI) {
                 await this.FileAPI.init(this.getCurrentYear());
@@ -67,14 +70,17 @@ class BaseSampleManager {
             // 자동 저장 초기화
             await this.initAutoSave();
 
+            // UI 초기화를 먼저 수행 (DOM 요소 캐싱)
+            this.initUI();
+
             // 데이터가 있는 연도 찾기
             this.selectedYear = this.findYearWithData();
+            this.log(` 선택된 연도:`, this.selectedYear);
 
             // 선택된 연도의 데이터 로드
+            this.log(` loadYearData 호출 전`);
             await this.loadYearData(this.selectedYear);
-
-            // UI 초기화
-            this.initUI();
+            this.log(` loadYearData 완료, 데이터 개수:`, this.sampleLogs ? this.sampleLogs.length : 0);
 
             // 이벤트 리스너 설정
             this.setupEventListeners();
@@ -143,7 +149,7 @@ class BaseSampleManager {
                         return year.toString();
                     }
                 } catch (e) {
-                    // 잘못된 데이터 무시
+                    this.log('JSON 파싱 오류 (무시됨):', key, e.message);
                 }
             }
         }
@@ -172,7 +178,7 @@ class BaseSampleManager {
     /**
      * 데이터 저장
      */
-    saveLogs() {
+    async saveLogs() {
         const yearStorageKey = this.getStorageKey(this.selectedYear);
 
         // ID 생성 (없는 경우)
@@ -181,18 +187,29 @@ class BaseSampleManager {
             id: item.id || this.generateId()
         }));
 
-        // localStorage 저장
-        localStorage.setItem(yearStorageKey, JSON.stringify(this.sampleLogs));
-        this.log('💾 로컬 저장 완료:', this.sampleLogs.length, '건');
+        // Firebase가 활성화되어 있으면 Firebase에 먼저 저장
+        if (window.firebaseConfig?.isEnabled()) {
+            try {
+                this.log(` Firebase에 데이터 저장 중...`);
+                await window.firestoreDb.batchSave(this.moduleKey, parseInt(this.selectedYear), this.sampleLogs);
+                this.log('☁️ Firebase 저장 완료:', this.sampleLogs.length, '건');
 
-        // Firebase 저장
-        if (window.firestoreDb?.isEnabled()) {
-            window.firestoreDb.batchSave(this.moduleKey, parseInt(this.selectedYear), this.sampleLogs)
-                .then(() => this.log('☁️ Firebase 저장 완료'))
-                .catch(err => {
-                    (window.logger?.error || console.error)('Firebase 저장 실패:', err);
-                    this.showToast('클라우드 동기화 실패', 'error');
-                });
+                // 성공 후 localStorage에 캐싱
+                localStorage.setItem(yearStorageKey, JSON.stringify(this.sampleLogs));
+                this.log(` localStorage에 캐싱 완료`);
+            } catch (err) {
+                (window.logger?.error || console.error)('Firebase 저장 실패:', err);
+                this.showToast('Firebase 저장 실패', 'error');
+
+                // Firebase 저장 실패 시에만 localStorage를 primary로 사용
+                localStorage.setItem(yearStorageKey, JSON.stringify(this.sampleLogs));
+                this.log('💾 로컬 저장으로 폴백');
+            }
+        } else {
+            // Firebase가 비활성화된 경우에만 localStorage 사용
+            this.log(` Firebase 비활성화, localStorage에만 저장`);
+            localStorage.setItem(yearStorageKey, JSON.stringify(this.sampleLogs));
+            this.log('💾 로컬 저장 완료:', this.sampleLogs.length, '건');
         }
 
         // 자동 저장 트리거
@@ -203,21 +220,41 @@ class BaseSampleManager {
     }
 
     /**
-     * 샘플 삭제
+     * 샘플 삭제 - Firebase 우선
      * @param {string} id - 삭제할 샘플 ID
      */
-    deleteSample(id) {
-        this.sampleLogs = this.sampleLogs.filter(l => String(l.id) !== id);
-        this.saveLogs();
-        this.renderLogs(this.sampleLogs);
+    async deleteSample(id) {
+        // Firebase가 활성화되어 있으면 Firebase에서 먼저 삭제
+        if (window.firebaseConfig?.isEnabled()) {
+            try {
+                this.log(` Firebase에서 데이터 삭제 중... ID:`, id);
+                await window.firestoreDb.delete(this.moduleKey, parseInt(this.selectedYear), id);
+                this.log('☁️ Firebase 삭제 완료:', id);
 
-        if (window.firestoreDb?.isEnabled()) {
-            window.firestoreDb.delete(this.moduleKey, parseInt(this.selectedYear), id)
-                .then(() => this.log('☁️ Firebase 삭제 완료:', id))
-                .catch(err => (window.logger?.error || console.error)('Firebase 삭제 실패:', err));
+                // Firebase 삭제 성공 후 로컬 데이터도 업데이트
+                this.sampleLogs = this.sampleLogs.filter(l => String(l.id) !== id);
+
+                // localStorage 캐시 업데이트
+                const yearStorageKey = this.getStorageKey(this.selectedYear);
+                localStorage.setItem(yearStorageKey, JSON.stringify(this.sampleLogs));
+
+                // UI 업데이트
+                this.renderLogs(this.sampleLogs);
+                this.updateRecordCount();
+
+                this.showToast('삭제되었습니다.', 'success');
+            } catch (err) {
+                (window.logger?.error || console.error)('Firebase 삭제 실패:', err);
+                this.showToast('Firebase 삭제 실패', 'error');
+            }
+        } else {
+            // Firebase가 비활성화된 경우에만 로컬 삭제
+            this.log(` Firebase 비활성화, 로컬에서만 삭제`);
+            this.sampleLogs = this.sampleLogs.filter(l => String(l.id) !== id);
+            await this.saveLogs();
+            this.renderLogs(this.sampleLogs);
+            this.showToast('삭제되었습니다.', 'success');
         }
-
-        this.showToast('삭제되었습니다.', 'success');
     }
 
     /**
@@ -229,44 +266,84 @@ class BaseSampleManager {
 
         try {
             const yearStorageKey = this.getStorageKey(year);
+            this.log(` loadYearData - storageKey:`, yearStorageKey);
 
-            // 로컬 데이터 먼저 로드
-            const localData = localStorage.getItem(yearStorageKey);
-            let localLogs = [];
-
-            if (localData) {
+            // Firebase가 활성화되어 있으면 Firebase에서 먼저 데이터 로드
+            if (window.firebaseConfig?.isEnabled()) {
                 try {
-                    localLogs = JSON.parse(localData);
-                    if (!Array.isArray(localLogs)) {
-                        localLogs = [];
+                    this.log(` Firebase에서 데이터 로드 시작`);
+                    const firebaseLogs = await this.loadFromFirebase(year);
+
+                    if (firebaseLogs && firebaseLogs.length > 0) {
+                        this.log(` Firebase 데이터:`, firebaseLogs.length, '건');
+                        this.sampleLogs = firebaseLogs;
+
+                        // Firebase 데이터를 localStorage에 저장 (캐싱)
+                        localStorage.setItem(yearStorageKey, JSON.stringify(firebaseLogs));
+                        this.log(` Firebase 데이터를 localStorage에 캐싱`);
+                    } else {
+                        this.log(` Firebase에 데이터 없음, localStorage 확인`);
+                        // Firebase에 데이터가 없으면 localStorage 확인
+                        const localData = localStorage.getItem(yearStorageKey);
+                        if (localData) {
+                            try {
+                                this.sampleLogs = JSON.parse(localData);
+                                if (!Array.isArray(this.sampleLogs)) {
+                                    this.sampleLogs = [];
+                                }
+                            } catch (e) {
+                                this.sampleLogs = [];
+                            }
+                        } else {
+                            this.sampleLogs = [];
+                        }
                     }
-                } catch (e) {
-                    (window.logger?.error || console.error)('로컬 데이터 파싱 에러:', e);
-                    localLogs = [];
-                }
-            }
-
-            // Firebase 데이터와 동기화
-            if (window.firestoreDb?.isEnabled()) {
-                try {
-                    await this.syncWithCloud(year, localLogs);
                 } catch (error) {
-                    (window.logger?.error || console.error)('클라우드 동기화 실패:', error);
-                    // 동기화 실패해도 로컬 데이터는 사용
+                    (window.logger?.error || console.error)('Firebase 로드 실패:', error);
+                    // Firebase 로드 실패 시 localStorage 폴백
+                    const localData = localStorage.getItem(yearStorageKey);
+                    if (localData) {
+                        try {
+                            this.sampleLogs = JSON.parse(localData);
+                        } catch (e) {
+                            this.sampleLogs = [];
+                        }
+                    } else {
+                        this.sampleLogs = [];
+                    }
+                }
+            } else {
+                this.log(` Firebase 비활성화, localStorage에서 로드`);
+                // Firebase가 비활성화되어 있으면 localStorage에서 로드
+                const localData = localStorage.getItem(yearStorageKey);
+                if (localData) {
+                    try {
+                        this.sampleLogs = JSON.parse(localData);
+                        if (!Array.isArray(this.sampleLogs)) {
+                            this.sampleLogs = [];
+                        }
+                    } catch (e) {
+                        this.sampleLogs = [];
+                    }
+                } else {
+                    this.sampleLogs = [];
                 }
             }
 
-            // 최종 데이터 로드
-            const finalData = localStorage.getItem(yearStorageKey);
-            if (finalData) {
-                this.sampleLogs = JSON.parse(finalData);
-            } else {
-                this.sampleLogs = localLogs;
-            }
+            this.log(` 최종 sampleLogs 설정:`, this.sampleLogs.length, '건');
 
             // UI 업데이트
             this.renderLogs(this.sampleLogs);
             this.updateRecordCount();
+
+            // 다음 접수번호 설정 (서브클래스에서 구현된 경우)
+            if (typeof this.generateNextReceptionNumber === 'function') {
+                const nextNumber = this.generateNextReceptionNumber();
+                const receptionNumberInput = document.getElementById('receptionNumber');
+                if (receptionNumberInput && nextNumber) {
+                    receptionNumberInput.value = nextNumber;
+                }
+            }
 
             // FileAPI 경로 업데이트
             if (this.FileAPI) {
@@ -289,30 +366,42 @@ class BaseSampleManager {
      * @param {Array} localLogs - 로컬 로그 데이터
      */
     async syncWithCloud(year, localLogs) {
-        if (!window.firestoreDb?.isEnabled() || this.isCloudSyncing) {
+        if (!window.firebaseConfig?.isEnabled()) {
             return;
         }
 
-        this.isCloudSyncing = true;
-        this.log('☁️ 클라우드 동기화 시작');
-
-        try {
-            const firebaseLogs = await this.loadFromFirebase(year);
-
-            if (firebaseLogs && firebaseLogs.length > 0) {
-                const mergedLogs = this.smartMerge(localLogs, firebaseLogs);
-
-                if (mergedLogs.length !== localLogs.length ||
-                    this.hasChanges(localLogs, mergedLogs)) {
-
-                    this.sampleLogs = mergedLogs;
-                    localStorage.setItem(this.getStorageKey(year), JSON.stringify(mergedLogs));
-                    this.log('✅ 클라우드 데이터 병합 완료');
-                }
-            }
-        } finally {
-            this.isCloudSyncing = false;
+        // Promise-based lock: 이미 동기화 중이면 기존 작업 완료 대기
+        if (this.cloudSyncPromise) {
+            this.log('⏳ 기존 동기화 작업 대기 중...');
+            await this.cloudSyncPromise;
+            return;
         }
+
+        this.cloudSyncPromise = (async () => {
+            this.isCloudSyncing = true;
+            this.log('☁️ 클라우드 동기화 시작');
+
+            try {
+                const firebaseLogs = await this.loadFromFirebase(year);
+
+                if (firebaseLogs && firebaseLogs.length > 0) {
+                    const mergedLogs = this.smartMerge(localLogs, firebaseLogs);
+
+                    if (mergedLogs.length !== localLogs.length ||
+                        this.hasChanges(localLogs, mergedLogs)) {
+
+                        this.sampleLogs = mergedLogs;
+                        localStorage.setItem(this.getStorageKey(year), JSON.stringify(mergedLogs));
+                        this.log('✅ 클라우드 데이터 병합 완료');
+                    }
+                }
+            } finally {
+                this.isCloudSyncing = false;
+                this.cloudSyncPromise = null;
+            }
+        })();
+
+        await this.cloudSyncPromise;
     }
 
     /**
@@ -321,10 +410,21 @@ class BaseSampleManager {
      */
     async loadFromFirebase(year) {
         try {
-            return await window.firestoreDb.loadAll(this.moduleKey, parseInt(year));
+            this.log(` Firebase getAll 호출 - moduleKey: ${this.moduleKey}, year: ${year}`);
+            this.log(` Firebase 상태:`, {
+                isEnabled: window.firestoreDb?.isEnabled ? window.firestoreDb.isEnabled() : 'isEnabled 메서드 없음',
+                getAll: typeof window.firestoreDb?.getAll,
+                firestoreDb: !!window.firestoreDb
+            });
+
+            const data = await window.firestoreDb.getAll(this.moduleKey, parseInt(year));
+            this.log(` Firebase 응답:`, data ? `${data.length}건` : 'null/undefined');
+            this.log(` Firebase 데이터 샘플:`, data && data.length > 0 ? data[0] : 'No data');
+            return data || [];
         } catch (error) {
+            console.error(`[${this.moduleName}] Firebase 로드 오류 상세:`, error);
             (window.logger?.error || console.error)('Firebase 로드 실패:', error);
-            return null;
+            return [];
         }
     }
 
@@ -431,7 +531,13 @@ class BaseSampleManager {
      * 데이터 해시 생성
      */
     hashData(data) {
-        return JSON.stringify(data).length.toString();
+        const str = JSON.stringify(data);
+        let hash = 5381;
+        for (let i = 0; i < str.length; i++) {
+            hash = ((hash << 5) + hash) + str.charCodeAt(i);
+            hash = hash & hash; // Convert to 32bit integer
+        }
+        return hash.toString();
     }
 
     // ========================================
@@ -622,7 +728,7 @@ class BaseSampleManager {
      * 고유 ID 생성
      */
     generateId() {
-        return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+        return Date.now().toString(36) + Math.random().toString(36).substring(2, 11);
     }
 
     /**
@@ -630,7 +736,7 @@ class BaseSampleManager {
      */
     log(...args) {
         if (this.debug) {
-            console.log(`[${this.moduleName}]`, ...args);
+            (window.logger?.debug || console.log)(`[${this.moduleName}]`, ...args);
         }
     }
 

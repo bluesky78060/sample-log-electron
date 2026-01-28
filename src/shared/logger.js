@@ -27,6 +27,13 @@ class Logger {
             warn: 2,
             error: 3
         };
+
+        // 메서드 바인딩 (this 컨텍스트 유지)
+        this.debug = this.debug.bind(this);
+        this.info = this.info.bind(this);
+        this.warn = this.warn.bind(this);
+        this.error = this.error.bind(this);
+        this.addToBuffer = this.addToBuffer.bind(this);
     }
 
     /**

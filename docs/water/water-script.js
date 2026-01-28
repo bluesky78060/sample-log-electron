@@ -17,13 +17,13 @@ const STORAGE_KEY = 'waterSampleLogs';
 const AUTO_SAVE_FILE = 'water-autosave.json';
 
 /** @type {boolean} 디버그 모드 (프로덕션에서는 false) */
-const DEBUG = false;
+const DEBUG = true;  // 임시로 디버그 활성화
 
 /**
  * 고유 ID 생성 함수 (충돌 방지)
  * @returns {string} 고유 ID
  */
-const generateId = () => Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+const generateId = () => Date.now().toString(36) + Math.random().toString(36).substring(2, 11);
 
 /**
  * 디버그 로그 함수
@@ -37,12 +37,29 @@ const log = (...args) => DEBUG && console.log(...args);
 const FileAPI = window.createFileAPI('water');
 
 document.addEventListener('DOMContentLoaded', async () => {
+    console.log('🚀 수질분석 페이지 로드 시작');
+    console.log('DOMContentLoaded 이벤트 발생');
     log('🚀 수질분석 페이지 로드 시작');
     log(window.isElectron ? '🖥️ Electron 환경' : '🌐 웹 브라우저 환경');
 
+    // 필수 요소 체크
+    console.log('필수 요소 체크:', {
+        form: !!document.getElementById('sampleForm'),
+        tableBody: !!document.getElementById('logTableBody'),
+        SampleUtils: !!window.SampleUtils,
+        showToast: !!window.showToast
+    });
+
     // 파일 API 초기화 (현재 년도로)
     const currentYear = new Date().getFullYear().toString();
-    await FileAPI.init(currentYear);
+    try {
+        console.log('FileAPI 초기화 시작, FileAPI:', !!FileAPI);
+        await FileAPI.init(currentYear);
+        console.log('FileAPI 초기화 완료');
+    } catch (error) {
+        console.error('초기화 중 에러 발생:', error);
+        return;
+    }
 
     // Firebase 초기화와 자동 저장 초기화를 병렬로 실행 (async-parallel)
     let firebaseReady = false;
@@ -1087,7 +1104,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 1. ID가 없는 항목에 ID 추가 (로컬 저장 전에 처리)
         sampleLogs = sampleLogs.map(item => ({
             ...item,
-            id: item.id || (Date.now().toString(36) + Math.random().toString(36).substr(2, 9))
+            id: item.id || (Date.now().toString(36) + Math.random().toString(36).substring(2, 11))
         }));
 
         // 2. 로컬(localStorage)에 먼저 저장
@@ -2411,7 +2428,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 const dataWithIds = sampleLogs.map(item => ({
                     ...item,
-                    id: item.id || (Date.now().toString(36) + Math.random().toString(36).substr(2, 9))
+                    id: item.id || (Date.now().toString(36) + Math.random().toString(36).substring(2, 11))
                 }));
 
                 await window.firestoreDb.batchSave('water', parseInt(selectedYear), dataWithIds);

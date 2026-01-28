@@ -276,12 +276,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const cloudData = await window.firestoreDb.getAll('heavyMetal', parseInt(year), { skipOrder: true });
 
                 if (cloudData && cloudData.length > 0) {
-                    const localData = SampleUtils.safeParseJSON(yearStorageKey, []);
+                    // Firebase 데이터를 primary로 사용
+                    sampleLogs = cloudData;
+                    log('☁️ Firebase 데이터 로드 완료:', sampleLogs.length, '건');
 
-                    // 스마트 병합: 최신 데이터 선택
-                    const mergedData = smartMerge(localData, cloudData);
-                    sampleLogs = mergedData.data;
-                    localStorage.setItem(yearStorageKey, JSON.stringify(mergedData.data));
+                    // localStorage에 캐싱
+                    localStorage.setItem(yearStorageKey, JSON.stringify(sampleLogs));
+                    log('💾 로컬 캐싱 완료');
 
                     renderLogs(sampleLogs);
                     const receptionInput = document.getElementById('receptionNumber');
@@ -290,28 +291,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                     updateListViewTitle();
 
-                    if (mergedData.hasChanges) {
-                        log('☁️ Firebase에서 동기화 완료:', mergedData.data.length, '건');
-                        const msgs = [];
-                        if (mergedData.updated > 0) msgs.push(`${mergedData.updated}건 업데이트`);
-                        if (mergedData.added > 0) msgs.push(`${mergedData.added}건 추가`);
-                        if (mergedData.deleted > 0) msgs.push(`${mergedData.deleted}건 삭제`);
-                        showToast(`클라우드에서 동기화됨 (${msgs.join(', ')})`, 'success');
-
-                        // 자동저장 실행 (JSON 파일)
-                        const autoSaveEnabled = localStorage.getItem('heavyMetalAutoSaveEnabled') === 'true';
-                        if (autoSaveEnabled && window.isElectron && FileAPI.autoSavePath) {
-                            SampleUtils.performAutoSave({
-                                FileAPI: FileAPI,
-                                moduleKey: 'heavyMetal',
-                                data: sampleLogs,
-                                log: log
-                            });
-                        }
-                    } else {
-                        log('☁️ Firebase 로드 완료:', cloudData.length, '건');
+                    // 자동저장 실행 (JSON 파일)
+                    const autoSaveEnabled = localStorage.getItem('heavyMetalAutoSaveEnabled') === 'true';
+                    if (autoSaveEnabled && window.isElectron && FileAPI.autoSavePath) {
+                        SampleUtils.performAutoSave({
+                            FileAPI: FileAPI,
+                            moduleKey: 'heavyMetal',
+                            data: sampleLogs,
+                            log: log
+                        });
                     }
                     return;
+                } else {
+                    log('☁️ Firebase에 데이터 없음, localStorage 확인');
                 }
             } catch (error) {
                 window.logger.error('Firebase 로드 실패, 로컬 데이터 사용:', error);
@@ -950,30 +942,40 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ========================================
     // 데이터 저장 및 로드
     // ========================================
-    function saveData() {
+    async function saveData() {
         const yearStorageKey = getStorageKey(selectedYear);
 
-        // 1. ID가 없는 항목에 ID 추가 (로컬 저장 전에 처리)
+        // 1. ID가 없는 항목에 ID 추가
         sampleLogs = sampleLogs.map(item => ({
             ...item,
-            id: item.id || (Date.now().toString(36) + Math.random().toString(36).substr(2, 9))
+            id: item.id || (Date.now().toString(36) + Math.random().toString(36).substring(2, 11))
         }));
 
-        // 2. 로컬(localStorage)에 먼저 저장
-        localStorage.setItem(yearStorageKey, JSON.stringify(sampleLogs));
-        log('💾 로컬 저장 완료:', sampleLogs.length, '건');
-
-        // 3. Firebase 클라우드에 마이그레이션 (백그라운드)
+        // 2. Firebase가 활성화되어 있으면 Firebase에 먼저 저장
         if (window.firestoreDb?.isEnabled()) {
-            window.firestoreDb.batchSave('heavyMetal', parseInt(selectedYear), sampleLogs)
-                .then(() => log('☁️ Firebase 마이그레이션 완료'))
-                .catch(err => {
-                    window.logger.error('Firebase 마이그레이션 실패:', err);
-                    showToast('클라우드 동기화 실패', 'error');
-                });
+            try {
+                log('☁️ Firebase에 데이터 저장 중...');
+                await window.firestoreDb.batchSave('heavyMetal', parseInt(selectedYear), sampleLogs);
+                log('☁️ Firebase 저장 완료:', sampleLogs.length, '건');
+
+                // Firebase 저장 성공 후 localStorage에 캐싱
+                localStorage.setItem(yearStorageKey, JSON.stringify(sampleLogs));
+                log('💾 로컬 캐싱 완료');
+            } catch (err) {
+                window.logger.error('Firebase 저장 실패:', err);
+                showToast('클라우드 저장 실패', 'error');
+
+                // Firebase 실패 시 localStorage를 primary로 사용
+                localStorage.setItem(yearStorageKey, JSON.stringify(sampleLogs));
+                log('💾 로컬 저장으로 폴백');
+            }
+        } else {
+            // Firebase가 비활성화된 경우에만 localStorage 사용
+            localStorage.setItem(yearStorageKey, JSON.stringify(sampleLogs));
+            log('💾 로컬 저장 완료:', sampleLogs.length, '건');
         }
 
-        // 4. 자동 저장
+        // 3. 자동 저장
         autoSaveToFile();
     }
 
@@ -1575,7 +1577,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 const dataWithIds = sampleLogs.map(item => ({
                     ...item,
-                    id: item.id || (Date.now().toString(36) + Math.random().toString(36).substr(2, 9))
+                    id: item.id || (Date.now().toString(36) + Math.random().toString(36).substring(2, 11))
                 }));
 
                 await window.firestoreDb.batchSave('heavyMetal', parseInt(selectedYear), dataWithIds);

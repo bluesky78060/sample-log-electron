@@ -13,7 +13,7 @@ class WaterSampleManager extends BaseSampleManager {
             moduleKey: 'water',
             moduleName: '수질분석',
             storageKey: 'waterSampleLogs',
-            debug: false
+            debug: true  // 디버깅 활성화
         });
 
         // 수질분석 전용 상태
@@ -25,12 +25,28 @@ class WaterSampleManager extends BaseSampleManager {
      * 초기화 - 부모 클래스 초기화 + 수질분석 특화 초기화
      */
     async init() {
+        this.log(' WaterSampleManager 초기화 시작');
         await super.init();
+        this.log(' 부모 클래스 초기화 완료');
 
         // 수질분석 전용 초기화
         this.initSamplingLocations();
         this.initSamplingCrops();
         this.initWaterSpecificElements();
+
+        this.log(' 초기화 완료, sampleLogs:', this.sampleLogs?.length || 0, '건');
+    }
+
+    /**
+     * DOM 요소 캐싱 오버라이드 - Water 모듈용 ID 사용
+     */
+    cacheElements() {
+        this.form = document.getElementById('sampleForm');
+        this.tableBody = document.getElementById('logTableBody'); // Water 모듈용 ID
+        this.emptyState = document.querySelector('.empty-state');
+        this.recordCountEl = document.getElementById('recordCount');
+
+        this.log(` cacheElements - tableBody:`, !!this.tableBody);
     }
 
     /**
@@ -173,17 +189,42 @@ class WaterSampleManager extends BaseSampleManager {
      * 로그 렌더링 (수질분석 테이블)
      */
     renderLogs(logs) {
-        if (!this.tableBody) return;
+        this.log(` renderLogs 호출, logs:`, logs ? logs.length : 0, '건');
+
+        if (!this.tableBody) {
+            console.error(`[${this.moduleName}] tableBody가 없음!`);
+            return;
+        }
+
+        // PaginationManager 초기화 (아직 없으면)
+        if (!this.paginationManager && window.PaginationManager) {
+            this.paginationManager = new window.PaginationManager({
+                storageKey: 'waterItemsPerPage',
+                defaultItemsPerPage: 100,
+                onPageChange: () => {
+                    // 페이지 변경 시 updateRecordCount만 호출
+                    this.updateRecordCount();
+                },
+                renderRow: (log) => this.createTableRow(log)
+            });
+
+            // 테이블 요소 설정
+            this.paginationManager.setTableElements(this.tableBody, this.emptyState);
+        }
 
         // 기존 pagination.js 사용
         if (this.paginationManager) {
-            this.paginationManager.setData(logs);
+            this.log(` paginationManager.setData 호출`);
+            this.paginationManager.setData(logs || []);
             this.paginationManager.render();
         } else {
+            this.log(` paginationManager 없음, 직접 렌더링`);
             // 폴백: 직접 렌더링
             this.tableBody.innerHTML = '';
 
-            if (logs.length === 0) {
+            const safeLog = logs || [];
+
+            if (safeLog.length === 0) {
                 if (this.emptyState) {
                     this.emptyState.style.display = 'flex';
                 }
@@ -194,7 +235,7 @@ class WaterSampleManager extends BaseSampleManager {
                 this.emptyState.style.display = 'none';
             }
 
-            logs.forEach(log => {
+            safeLog.forEach(log => {
                 const row = this.createTableRow(log);
                 this.tableBody.appendChild(row);
             });
@@ -207,59 +248,201 @@ class WaterSampleManager extends BaseSampleManager {
      * 테이블 행 생성
      */
     createTableRow(log) {
-        const tr = document.createElement('tr');
-
-        // 채취장소 표시
-        const samplingLocation = Array.isArray(log.samplingLocation)
-            ? log.samplingLocation.join(', ')
-            : log.samplingLocation || '';
-
-        // 채취작물 표시
-        const samplingCrops = Array.isArray(log.samplingCrops)
-            ? log.samplingCrops.join(', ')
-            : log.samplingCrops || '';
+        const row = document.createElement('tr');
 
         // 완료 여부에 따른 스타일
-        if (log.completed) {
-            tr.classList.add('completed');
+        if (log.isComplete) {
+            row.classList.add('completed');
         }
 
-        tr.innerHTML = `
-            <td>
-                <input type="checkbox" class="select-sample" value="${log.id}">
-            </td>
-            <td>
-                <button class="btn-link edit-btn" onclick="waterManager.editSample('${log.id}')">
-                    ${log.receptionNumber || '-'}
-                </button>
-            </td>
-            <td>${log.date || '-'}</td>
-            <td>${log.sampleName || '-'}</td>
-            <td>${log.applicantName || '-'}</td>
-            <td>${log.phoneNumber || '-'}</td>
-            <td class="address-cell">${log.address || '-'}</td>
-            <td>${samplingLocation}</td>
-            <td>${samplingCrops}</td>
-            <td>${log.receptionMethod || '-'}</td>
-            <td>
-                ${log.completed
-                    ? '<span class="badge badge-success">완료</span>'
-                    : '<span class="badge badge-secondary">미완료</span>'}
-            </td>
-            <td>
-                <button class="btn btn-sm btn-danger" onclick="waterManager.confirmDelete('${log.id}')">
-                    <i class="fas fa-trash"></i> 삭제
-                </button>
-            </td>
-        `;
+        // 법인 여부 확인
+        const applicantType = log.applicantType || '개인';
+        const birthOrCorp = applicantType === '법인' ? (log.corpNumber || '-') : (log.birthDate || '-');
 
-        return tr;
+        // 1. Checkbox column
+        const tdCheckbox = document.createElement('td');
+        tdCheckbox.className = 'col-checkbox';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'row-checkbox';
+        checkbox.dataset.id = log.id;
+        tdCheckbox.appendChild(checkbox);
+        row.appendChild(tdCheckbox);
+
+        // 2. 완료 표시
+        const tdComplete = document.createElement('td');
+        tdComplete.className = 'col-complete';
+        const btnComplete = document.createElement('button');
+        btnComplete.className = `btn-complete ${log.isComplete ? 'completed' : ''}`;
+        btnComplete.dataset.id = log.id;
+        btnComplete.title = log.isComplete ? '완료됨' : '완료 표시';
+        btnComplete.textContent = log.isComplete ? '✅' : '⬜';
+        btnComplete.onclick = () => window.toggleComplete && window.toggleComplete(log.id);
+        tdComplete.appendChild(btnComplete);
+        row.appendChild(tdComplete);
+
+        // 3. 판정 (검사 결과)
+        const tdResult = document.createElement('td');
+        tdResult.className = 'col-result';
+        const btnResult = document.createElement('button');
+        btnResult.className = `btn-result ${log.testResult === 'pass' ? 'pass' : log.testResult === 'fail' ? 'fail' : ''}`;
+        btnResult.dataset.id = log.id;
+        btnResult.title = log.testResult === 'pass' ? '적합' : log.testResult === 'fail' ? '부적합' : '미판정 (클릭하여 변경)';
+        btnResult.textContent = log.testResult === 'pass' ? '적합' : log.testResult === 'fail' ? '부적합' : '-';
+        btnResult.onclick = () => window.toggleResult && window.toggleResult(log.id);
+        tdResult.appendChild(btnResult);
+        row.appendChild(tdResult);
+
+        // 4. 접수번호
+        const tdReceptionNumber = document.createElement('td');
+        const editBtn = document.createElement('button');
+        editBtn.className = 'btn-link edit-btn';
+        editBtn.onclick = () => this.editSample(log.id);
+        editBtn.textContent = log.receptionNumber || '-';
+        tdReceptionNumber.appendChild(editBtn);
+        row.appendChild(tdReceptionNumber);
+
+        // 5. 접수일자
+        const tdDate = document.createElement('td');
+        tdDate.textContent = log.date || '-';
+        row.appendChild(tdDate);
+
+        // 6. 법인여부 (hidden)
+        const tdApplicantType = document.createElement('td');
+        tdApplicantType.className = 'col-applicant-type hidden';
+        tdApplicantType.textContent = applicantType;
+        row.appendChild(tdApplicantType);
+
+        // 7. 생년월일/법인번호 (hidden)
+        const tdBirthCorp = document.createElement('td');
+        tdBirthCorp.className = 'col-birth-corp hidden';
+        tdBirthCorp.textContent = birthOrCorp;
+        row.appendChild(tdBirthCorp);
+
+        // 8. 성명
+        const tdName = document.createElement('td');
+        tdName.textContent = log.name || log.applicantName || '-';
+        row.appendChild(tdName);
+
+        // 9. 우편번호 (hidden)
+        const tdZipcode = document.createElement('td');
+        tdZipcode.className = 'col-zipcode hidden';
+        tdZipcode.textContent = log.addressPostcode || '-';
+        row.appendChild(tdZipcode);
+
+        // 10. 주소
+        const tdAddress = document.createElement('td');
+        tdAddress.className = 'text-truncate';
+        const fullAddress = log.address || '-';
+        tdAddress.dataset.tooltip = fullAddress;
+        tdAddress.textContent = fullAddress;
+        row.appendChild(tdAddress);
+
+        // 11. 시료명
+        const tdSampleName = document.createElement('td');
+        tdSampleName.textContent = log.sampleName || '-';
+        row.appendChild(tdSampleName);
+
+        // 12. 시료수
+        const tdSampleCount = document.createElement('td');
+        tdSampleCount.textContent = `${log.sampleCount || 1}점`;
+        row.appendChild(tdSampleCount);
+
+        // 13. 채취장소
+        const tdSamplingLocation = document.createElement('td');
+        tdSamplingLocation.className = 'text-truncate';
+        const samplingLocation = log.samplingLocation || '-';
+        tdSamplingLocation.dataset.tooltip = samplingLocation;
+        tdSamplingLocation.textContent = samplingLocation;
+        row.appendChild(tdSamplingLocation);
+
+        // 14. 주작목
+        const tdMainCrop = document.createElement('td');
+        tdMainCrop.className = 'text-truncate';
+        const mainCrop = log.mainCrop || '-';
+        tdMainCrop.dataset.tooltip = mainCrop;
+        tdMainCrop.textContent = mainCrop;
+        row.appendChild(tdMainCrop);
+
+        // 15. 목적
+        const tdPurpose = document.createElement('td');
+        tdPurpose.textContent = log.purpose || '-';
+        row.appendChild(tdPurpose);
+
+        // 16. 검사항목
+        const tdTestItems = document.createElement('td');
+        tdTestItems.textContent = log.testItems || '-';
+        row.appendChild(tdTestItems);
+
+        // 17. 연락처
+        const tdPhoneNumber = document.createElement('td');
+        tdPhoneNumber.textContent = log.phoneNumber || '-';
+        row.appendChild(tdPhoneNumber);
+
+        // 18. 통보방법
+        const tdReceptionMethod = document.createElement('td');
+        tdReceptionMethod.textContent = log.receptionMethod || '-';
+        row.appendChild(tdReceptionMethod);
+
+        // 19. 비고
+        const tdNote = document.createElement('td');
+        tdNote.className = 'col-note';
+        tdNote.textContent = log.note || '-';
+        row.appendChild(tdNote);
+
+        // 20. 발송일자
+        const tdMailDate = document.createElement('td');
+        tdMailDate.className = 'col-mail-date';
+        tdMailDate.textContent = log.mailDate || '-';
+        row.appendChild(tdMailDate);
+
+        // 21. 관리
+        const tdAction = document.createElement('td');
+        tdAction.className = 'col-action';
+
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'table-actions';
+
+        // 수정 버튼
+        const editBtn = document.createElement('button');
+        editBtn.className = 'btn-edit';
+        editBtn.dataset.id = log.id;
+        editBtn.textContent = '수정';
+        // water-script.js의 전역 함수와 호환
+        if (window.editSample) {
+            editBtn.onclick = () => window.editSample(log.id);
+        } else {
+            editBtn.onclick = () => this.editSample(log.id);
+        }
+
+        // 삭제 버튼
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'btn-delete';
+        deleteBtn.dataset.id = log.id;
+        deleteBtn.textContent = '삭제';
+        // water-script.js의 전역 함수와 호환
+        if (window.deleteSample) {
+            deleteBtn.onclick = () => {
+                if (confirm('이 항목을 삭제하시겠습니까?')) {
+                    window.deleteSample(log.id);
+                }
+            };
+        } else {
+            deleteBtn.onclick = () => this.confirmDelete(log.id);
+        }
+
+        actionsDiv.appendChild(editBtn);
+        actionsDiv.appendChild(deleteBtn);
+        tdAction.appendChild(actionsDiv);
+        row.appendChild(tdAction);
+
+        return row;
     }
 
     /**
      * 폼 제출
      */
-    submitForm() {
+    async submitForm() {
         const formData = new FormData(this.form);
         const samplingLocations = this.getAllSamplingLocations();
         const samplingCrops = this.getAllSamplingCrops();
@@ -273,17 +456,35 @@ class WaterSampleManager extends BaseSampleManager {
             return;
         }
 
+        // 폼 데이터에서 신청인 유형 확인
+        const applicantType = formData.get('applicantType') || '개인';
+
         const baseData = {
             date: formData.get('date'),
-            sampleName: formData.get('sampleName'),
-            applicantName: formData.get('applicantName'),
+            applicantType: applicantType,
+            birthDate: applicantType === '개인' ? formData.get('birthDate') : '',
+            corpNumber: applicantType === '법인' ? formData.get('corpNumber') : '',
+            name: formData.get('name'),
             phoneNumber: formData.get('phoneNumber'),
             address: formData.get('address'),
-            detailAddress: formData.get('detailAddress'),
-            samplingLocation: samplingLocations,
-            samplingCrops: samplingCrops,
+            addressPostcode: formData.get('addressPostcode'),
+            addressRoad: formData.get('addressRoad'),
+            addressDetail: formData.get('addressDetail'),
+            sampleName: formData.get('sampleName'),
+            sampleCount: formData.get('sampleCount') || '1',
+            samplingLocation: samplingLocations.join(', '),  // water-script.js는 문자열로 저장
+            samplingLocations: samplingLocations,  // 배열로도 저장
+            mainCrop: samplingCrops.join(', '),  // water-script.js는 mainCrop 사용
+            samplingCrops: samplingCrops,  // 호환성을 위해 배열로도 저장
+            purpose: formData.get('purpose'),
+            testItems: formData.get('testItems'),
             receptionMethod: formData.get('receptionMethod'),
-            completed: formData.get('completed') === 'on'
+            note: formData.get('note'),
+            isComplete: false,  // water-script.js는 isComplete 사용
+            testResult: null,  // 초기값은 null
+            mailDate: '',  // 발송일자는 나중에 입력
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
         };
 
         // 편집 모드
@@ -294,7 +495,7 @@ class WaterSampleManager extends BaseSampleManager {
                     receptionNumber: receptionNumbers[0],
                     id: existingLog.id
                 });
-                this.saveLogs();
+                await this.saveLogs();
                 this.showToast('수정되었습니다.', 'success');
                 this.resetForm();
                 this.switchView('list');
@@ -310,7 +511,7 @@ class WaterSampleManager extends BaseSampleManager {
         }));
 
         this.sampleLogs.push(...newLogs);
-        this.saveLogs();
+        await this.saveLogs();
 
         this.showToast(`${newLogs.length}건이 등록되었습니다.`, 'success');
         this.resetForm();
@@ -319,6 +520,13 @@ class WaterSampleManager extends BaseSampleManager {
         const continuousInput = document.getElementById('continuousInput');
         if (!continuousInput || !continuousInput.checked) {
             this.switchView('list');
+        } else {
+            // 연속 입력 모드에서는 다음 접수번호 설정
+            const nextNumber = this.generateNextReceptionNumber();
+            const receptionNumberInput = document.getElementById('receptionNumber');
+            if (receptionNumberInput && nextNumber) {
+                receptionNumberInput.value = nextNumber;
+            }
         }
     }
 
@@ -329,22 +537,49 @@ class WaterSampleManager extends BaseSampleManager {
         const log = this.sampleLogs.find(l => String(l.id) === id);
         if (!log) return;
 
+        // 신청인 유형 설정
+        const applicantType = log.applicantType || '개인';
+        const typeRadios = document.querySelectorAll('input[name="applicantType"]');
+        typeRadios.forEach(radio => {
+            radio.checked = radio.value === applicantType;
+        });
+
         // 폼 필드에 데이터 채우기
         document.getElementById('receptionNumber').value = log.receptionNumber || '';
         document.getElementById('date').value = log.date || '';
-        document.getElementById('sampleName').value = log.sampleName || '';
-        document.getElementById('applicantName').value = log.applicantName || '';
+
+        if (applicantType === '개인' && document.getElementById('birthDate')) {
+            document.getElementById('birthDate').value = log.birthDate || '';
+        }
+        if (applicantType === '법인' && document.getElementById('corpNumber')) {
+            document.getElementById('corpNumber').value = log.corpNumber || '';
+        }
+
+        document.getElementById('name').value = log.name || log.applicantName || '';
         document.getElementById('phoneNumber').value = log.phoneNumber || '';
         document.getElementById('address').value = log.address || '';
-        document.getElementById('detailAddress').value = log.detailAddress || '';
+        document.getElementById('addressPostcode').value = log.addressPostcode || '';
+        document.getElementById('addressRoad').value = log.addressRoad || '';
+        document.getElementById('addressDetail').value = log.addressDetail || log.detailAddress || '';
+        document.getElementById('sampleName').value = log.sampleName || '';
+        document.getElementById('sampleCount').value = log.sampleCount || '1';
+        document.getElementById('purpose').value = log.purpose || '';
+        document.getElementById('testItems').value = log.testItems || '';
         document.getElementById('receptionMethod').value = log.receptionMethod || '직접수령';
-        document.getElementById('completed').checked = log.completed || false;
 
-        // 채취장소 설정
-        this.setSamplingLocations(log.samplingLocation);
+        if (document.getElementById('note')) {
+            document.getElementById('note').value = log.note || '';
+        }
 
-        // 채취작물 설정
-        this.setSamplingCrops(log.samplingCrops);
+        // 채취장소 설정 (문자열을 배열로 변환)
+        const samplingLocations = log.samplingLocations ||
+                                (log.samplingLocation ? log.samplingLocation.split(',').map(s => s.trim()) : []);
+        this.setSamplingLocations(samplingLocations);
+
+        // 채취작물 설정 (문자열을 배열로 변환)
+        const samplingCrops = log.samplingCrops ||
+                            (log.mainCrop ? log.mainCrop.split(',').map(s => s.trim()) : []);
+        this.setSamplingCrops(samplingCrops);
 
         // 수령방법 버튼 활성화
         const methodBtns = document.querySelectorAll('.method-btn');
@@ -436,6 +671,13 @@ class WaterSampleManager extends BaseSampleManager {
 
         document.getElementById('receptionMethod').value = '직접수령';
 
+        // 다음 접수번호 설정
+        const nextNumber = this.generateNextReceptionNumber();
+        const receptionNumberInput = document.getElementById('receptionNumber');
+        if (receptionNumberInput && nextNumber) {
+            receptionNumberInput.value = nextNumber;
+        }
+
         this.editingId = null;
     }
 
@@ -462,22 +704,36 @@ class WaterSampleManager extends BaseSampleManager {
     }
 
     /**
-     * 페이지네이션 초기화 오버라이드
+     * 다음 접수번호 생성
      */
-    initPagination() {
-        // 기존 pagination.js의 PaginationManager 사용
-        if (window.PaginationManager) {
-            this.paginationManager = new window.PaginationManager({
-                storageKey: 'waterItemsPerPage',
-                defaultItemsPerPage: 100,
-                onPageChange: () => this.renderLogs(this.sampleLogs),
-                renderRow: (log) => this.createTableRow(log)
-            });
+    generateNextReceptionNumber() {
+        let maxNumber = 0;
 
-            // 테이블 요소 설정
-            this.paginationManager.setTableElements(this.tableBody, this.emptyState);
-        }
+        this.sampleLogs.forEach(log => {
+            if (log.receptionNumber) {
+                // 수질은 쉼표로 구분된 개별 번호 형식 (예: "5, 6, 7")
+                // 마지막 번호를 찾아서 그 다음 번호를 반환
+                const numbers = log.receptionNumber.split(',')
+                    .map(n => parseInt(n.trim(), 10))
+                    .filter(n => !isNaN(n));
+
+                if (numbers.length > 0) {
+                    const lastNum = Math.max(...numbers);
+                    if (lastNum > maxNumber) {
+                        maxNumber = lastNum;
+                    }
+                }
+            }
+        });
+
+        return String(maxNumber + 1);
     }
+
+    /**
+     * 페이지네이션 초기화 오버라이드 - 삭제
+     * BaseSampleManager의 기본 구현 사용
+     */
+    // initPagination() 메서드를 완전히 제거하여 부모 클래스의 구현을 사용
 }
 
 // 전역 인스턴스 생성

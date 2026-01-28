@@ -53,6 +53,29 @@ function getCollectionName(sampleType, year) {
 }
 
 /**
+ * ID 정규화 - 항상 문자열로 통일
+ * @param {string|number} id - 원본 ID
+ * @returns {string} 정규화된 문자열 ID
+ */
+function normalizeId(id) {
+    if (id == null) return '';
+    return String(id);
+}
+
+/**
+ * 데이터 배열의 ID 정규화
+ * @param {Array} data - 데이터 배열
+ * @returns {Array} ID가 정규화된 데이터 배열
+ */
+function normalizeDataIds(data) {
+    if (!Array.isArray(data)) return data;
+    return data.map(item => ({
+        ...item,
+        id: normalizeId(item.id)
+    }));
+}
+
+/**
  * 단일 문서 저장/업데이트 (compat 버전)
  * @param {string} sampleType - 시료 타입
  * @param {number} year - 연도
@@ -134,12 +157,16 @@ async function getAllDocuments(sampleType, year, options = {}) {
         const collectionName = getCollectionName(sampleType, year);
         let queryRef = db.collection(collectionName);
 
-        // 정렬 옵션
+        // 정렬 옵션 - 오름차순으로 변경 (오래된 데이터가 위로)
         if (!options.skipOrder) {
             try {
-                queryRef = queryRef.orderBy('updatedAt', 'desc');
+                queryRef = queryRef.orderBy('createdAt', 'asc');  // createdAt 기준 오름차순
             } catch (indexError) {
-                (window.logger?.warn || console.warn)('[Firestore] 인덱스 없음, 정렬 없이 조회:', indexError.message);
+                try {
+                    queryRef = queryRef.orderBy('updatedAt', 'asc');  // createdAt가 없으면 updatedAt 사용
+                } catch (indexError2) {
+                    (window.logger?.warn || console.warn)('[Firestore] 인덱스 없음, 정렬 없이 조회:', indexError2.message);
+                }
             }
         }
 
@@ -150,17 +177,18 @@ async function getAllDocuments(sampleType, year, options = {}) {
             documents.push({ id: doc.id, ...doc.data() });
         });
 
-        // skipOrder인 경우 로컬에서 정렬
+        // skipOrder인 경우 로컬에서 정렬 (오름차순)
         if (options.skipOrder && documents.length > 0) {
             documents.sort((a, b) => {
-                const aTime = a.updatedAt?.seconds || 0;
-                const bTime = b.updatedAt?.seconds || 0;
-                return bTime - aTime;
+                // createdAt 우선, 없으면 updatedAt 사용
+                const aTime = (a.createdAt?.seconds || a.updatedAt?.seconds || 0);
+                const bTime = (b.createdAt?.seconds || b.updatedAt?.seconds || 0);
+                return aTime - bTime;  // 오름차순
             });
         }
 
         logFirestore(`조회 완료: ${collectionName} (${documents.length}건)`);
-        return documents;
+        return normalizeDataIds(documents);
     } catch (error) {
         (window.logger?.error || console.error)('Firestore 전체 조회 실패:', error);
         return [];
@@ -266,26 +294,12 @@ async function batchSave(sampleType, year, documents) {
             const batch = db.batch();
 
             chunk.forEach((docData) => {
-                // ID 유효성 검사 - 문자열로 변환 (원본 ID 유지)
-                let docId = docData.id;
+                // ID 정규화 - 항상 문자열로 통일
+                let docId = normalizeId(docData.id).trim();
 
-                // ID 유효성 검사를 먼저 수행
-                const isValidId = (() => {
-                    if (docId === null || docId === undefined) return false;
-                    if (typeof docId === 'number' && !isNaN(docId)) return true;
-                    if (typeof docId === 'string' && docId.trim() !== '') return true;
-                    return false;
-                })();
-
-                if (!isValidId) {
-                    // ID가 없거나 유효하지 않으면 새로 생성
+                // ID가 없거나 유효하지 않으면 새로 생성
+                if (!docId) {
                     docId = generateUniqueId();
-                } else if (typeof docId === 'number') {
-                    // 숫자형 ID는 문자열로 변환
-                    docId = String(docId);
-                } else {
-                    // 문자열 ID는 trim 처리
-                    docId = String(docId).trim();
                 }
 
                 const docRef = db.collection(collectionName).doc(docId);
