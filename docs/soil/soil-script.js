@@ -4288,6 +4288,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     closeRegistrationModal.addEventListener('click', closeRegistrationResultModal);
     closeResultBtn.addEventListener('click', closeRegistrationResultModal);
 
+    // 수정 버튼 클릭 이벤트
+    const editResultBtn = document.getElementById('editResultBtn');
+    if (editResultBtn) {
+        editResultBtn.addEventListener('click', () => {
+            if (currentRegistrationData) {
+                closeRegistrationResultModal();
+                populateFormForEdit(currentRegistrationData);
+            }
+        });
+    }
+
     // 오버레이 클릭으로 닫기
     registrationResultModal.querySelector('.modal-overlay').addEventListener('click', closeRegistrationResultModal);
 

@@ -239,7 +239,10 @@ const createWindow = () => {
 // Electron 초기화 완료 후 브라우저 창 생성 준비
 app.whenReady().then(() => {
   // CSP (Content-Security-Policy) 및 보안 헤더 설정
-  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+  // file:// 프로토콜에만 적용 (외부 URL은 가로채지 않음)
+  session.defaultSession.webRequest.onHeadersReceived(
+    { urls: ['file:///*'] },  // 필터: file:// URL만 가로채기 (macOS/Linux)
+    (details, callback) => {
     callback({
       responseHeaders: {
         ...details.responseHeaders,
@@ -252,6 +255,7 @@ app.whenReady().then(() => {
           "font-src 'self' file: https://fonts.gstatic.com; " +
           "connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.ipify.org https://www.gstatic.com https://cdnjs.cloudflare.com; " +
           "img-src 'self' file: data:; " +
+          "frame-src 'self' https://t1.daumcdn.net https://postcode.map.daum.net https://*.daumcdn.net; " +  // Daum 우편번호 API iframe
           "object-src 'none'; " +  // Flash, Java 등 플러그인 차단
           "base-uri 'self'; " +     // <base> 태그 제한
           "form-action 'self'; " +   // 폼 제출 대상 제한

@@ -590,6 +590,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 수정 모드 상태 변수 (상단에 선언)
     let editingId = null;
+    let lastRegisteredId = null;  // 마지막 등록된 시료 ID (모달 수정 버튼용)
 
     // ========================================
     // 동적 채취장소 관리
@@ -1051,6 +1052,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     function showRegistrationResult(data) {
         if (!registrationResultModal || !resultTableBody) return;
 
+        // 마지막 등록된 시료 ID 저장 (수정 버튼용)
+        lastRegisteredId = data.id || null;
+
         // XSS 방지: 사용자 입력 데이터 이스케이프
         const safeName = escapeHTML(data.name);
         const safePhone = escapeHTML(data.phoneNumber);
@@ -1087,6 +1091,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (closeResultBtn) {
         closeResultBtn.addEventListener('click', () => {
             registrationResultModal.classList.add('hidden');
+        });
+    }
+    // 수정 버튼 클릭 이벤트
+    const editResultBtn = document.getElementById('editResultBtn');
+    if (editResultBtn) {
+        editResultBtn.addEventListener('click', () => {
+            if (lastRegisteredId) {
+                registrationResultModal.classList.add('hidden');
+                editSample(String(lastRegisteredId));
+            }
         });
     }
     if (registrationResultModal) {
