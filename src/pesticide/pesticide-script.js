@@ -4078,6 +4078,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // Name
             const tdName = document.createElement('td');
+            tdName.className = 'col-name';
             tdName.textContent = safeName;
             tr.appendChild(tdName);
 

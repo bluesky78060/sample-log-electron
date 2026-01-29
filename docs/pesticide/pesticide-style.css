@@ -169,8 +169,11 @@
     width: 110px;
 }
 
-.col-name {
+.col-name,
+.pesticide-navbar ~ .main-content .col-name,
+.pesticide-navbar ~ .main-content .data-table .col-name {
     width: 100px;
+    text-align: center;
 }
 
 .col-contact {
