@@ -609,7 +609,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 수정 모드 상태 변수
     let editingId = null;
-    let lastRegisteredId = null;  // 마지막 등록된 시료 ID (모달 수정 버튼용)
+    let currentRegistrationData = null;  // 마지막 등록된 시료 데이터 (모달 수정 버튼용)
 
     // ========================================
     // 폼 제출
@@ -773,65 +773,58 @@ document.addEventListener('DOMContentLoaded', async () => {
     function showRegistrationResult(data) {
         if (!registrationResultModal || !resultTableBody) return;
 
-        // 마지막 등록된 시료 ID 저장 (수정 버튼용)
-        lastRegisteredId = data.id || null;
+        // 마지막 등록된 시료 데이터 저장 (수정 버튼용)
+        currentRegistrationData = data;
 
-        // XSS 방지: 사용자 입력 데이터 이스케이프
-        const safeFarmName = escapeHTML(data.farmName || '-');
-        const safeName = escapeHTML(data.name);
-        const safePhone = escapeHTML(data.phoneNumber);
-        const safeSampleType = escapeHTML(data.sampleType);
-        const safeAnimalType = escapeHTML(data.animalType);
-        const safeProductionDate = escapeHTML(data.productionDate || '-');
-        const safeRawMaterials = escapeHTML(data.rawMaterials || '-');
-        const safePurpose = escapeHTML(data.purpose || '-');
-        const safeReceptionMethod = escapeHTML(data.receptionMethod || '-');
-        const safeNote = escapeHTML(data.note || '-');
+        // 테이블 행 데이터
+        const rows = [
+            { label: '접수번호', value: data.receptionNumber },
+            { label: '접수일자', value: data.date },
+            { label: '상호(농장명)', value: data.farmName },
+            { label: '성명(대표자)', value: data.name },
+            { label: '연락처', value: data.phoneNumber },
+            { label: '시료종류', value: data.sampleType },
+            { label: '축종', value: data.animalType },
+            { label: '생산일자', value: data.productionDate },
+            { label: '시료수', value: `${data.sampleCount || 1}점` },
+            { label: '원료 및 투입비율', value: data.rawMaterials },
+            { label: '목적(용도)', value: data.purpose },
+            { label: '통보방법', value: data.receptionMethod },
+            { label: '비고', value: data.note }
+        ];
 
-        // 테이블 행 HTML: 개별 데이터는 이미 escapeHTML로 이스케이프됨
-        resultTableBody.innerHTML = sanitizeHTML(`
-            <tr><th>접수번호</th><td>${escapeHTML(data.receptionNumber)}</td></tr>
-            <tr><th>접수일자</th><td>${escapeHTML(data.date)}</td></tr>
-            <tr><th>상호(농장명)</th><td>${safeFarmName}</td></tr>
-            <tr><th>성명(대표자)</th><td>${safeName}</td></tr>
-            <tr><th>연락처</th><td>${safePhone}</td></tr>
-            <tr><th>시료종류</th><td>${safeSampleType}</td></tr>
-            <tr><th>축종</th><td>${safeAnimalType}</td></tr>
-            <tr><th>생산일자</th><td>${safeProductionDate}</td></tr>
-            <tr><th>시료수</th><td>${escapeHTML(String(data.sampleCount || 1))}점</td></tr>
-            <tr><th>원료 및 투입비율</th><td>${safeRawMaterials}</td></tr>
-            <tr><th>목적(용도)</th><td>${safePurpose}</td></tr>
-            <tr><th>통보방법</th><td>${safeReceptionMethod}</td></tr>
-            <tr><th>비고</th><td>${safeNote}</td></tr>
-        `);
+        // 공통 유틸리티 사용
+        BaseSampleManager.buildResultTable(resultTableBody, rows);
 
         registrationResultModal.classList.remove('hidden');
     }
 
-    if (closeRegistrationModal) {
-        closeRegistrationModal.addEventListener('click', () => {
+    function closeRegistrationResultModal() {
+        if (registrationResultModal) {
             registrationResultModal.classList.add('hidden');
-        });
+        }
+        currentRegistrationData = null;
+    }
+
+    if (closeRegistrationModal) {
+        closeRegistrationModal.addEventListener('click', closeRegistrationResultModal);
     }
     if (closeResultBtn) {
-        closeResultBtn.addEventListener('click', () => {
-            registrationResultModal.classList.add('hidden');
-        });
+        closeResultBtn.addEventListener('click', closeRegistrationResultModal);
     }
     // 수정 버튼 클릭 이벤트
     const editResultBtn = document.getElementById('editResultBtn');
     if (editResultBtn) {
         editResultBtn.addEventListener('click', () => {
-            if (lastRegisteredId) {
-                registrationResultModal.classList.add('hidden');
-                editSample(String(lastRegisteredId));
+            if (currentRegistrationData) {
+                const dataToEdit = currentRegistrationData;
+                closeRegistrationResultModal();
+                editSample(String(dataToEdit.id));
             }
         });
     }
     if (registrationResultModal) {
-        registrationResultModal.querySelector('.modal-overlay').addEventListener('click', () => {
-            registrationResultModal.classList.add('hidden');
-        });
+        registrationResultModal.querySelector('.modal-overlay').addEventListener('click', closeRegistrationResultModal);
     }
 
     // ========================================

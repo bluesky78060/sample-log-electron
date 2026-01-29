@@ -590,7 +590,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 수정 모드 상태 변수 (상단에 선언)
     let editingId = null;
-    let lastRegisteredId = null;  // 마지막 등록된 시료 ID (모달 수정 버튼용)
+    let currentRegistrationData = null;  // 마지막 등록된 시료 데이터 (모달 수정 버튼용)
 
     // ========================================
     // 동적 채취장소 관리
@@ -1052,61 +1052,56 @@ document.addEventListener('DOMContentLoaded', async () => {
     function showRegistrationResult(data) {
         if (!registrationResultModal || !resultTableBody) return;
 
-        // 마지막 등록된 시료 ID 저장 (수정 버튼용)
-        lastRegisteredId = data.id || null;
+        // 마지막 등록된 시료 데이터 저장 (수정 버튼용)
+        currentRegistrationData = data;
 
-        // XSS 방지: 사용자 입력 데이터 이스케이프
-        const safeName = escapeHTML(data.name);
-        const safePhone = escapeHTML(data.phoneNumber);
-        const safeSampleName = escapeHTML(data.sampleName);
-        const safeSamplingLocation = escapeHTML(data.samplingLocation);
-        const safePurpose = escapeHTML(data.purpose);
-        const safeTestItems = escapeHTML(data.testItems);
-        const safeReceptionMethod = escapeHTML(data.receptionMethod || '-');
-        const safeNote = escapeHTML(data.note || '-');
+        // 테이블 행 데이터
+        const rows = [
+            { label: '접수번호', value: data.receptionNumber },
+            { label: '접수일자', value: data.date },
+            { label: '성명', value: data.name },
+            { label: '연락처', value: data.phoneNumber },
+            { label: '시료명', value: data.sampleName },
+            { label: '시료수', value: `${data.sampleCount}점` },
+            { label: '채취장소', value: data.samplingLocation },
+            { label: '목적', value: data.purpose },
+            { label: '검사항목', value: data.testItems },
+            { label: '통보방법', value: data.receptionMethod },
+            { label: '비고', value: data.note }
+        ];
 
-        // 테이블 행 HTML: 개별 데이터는 이미 escapeHTML로 이스케이프됨
-        resultTableBody.innerHTML = sanitizeHTML(`
-            <tr><th>접수번호</th><td>${escapeHTML(data.receptionNumber)}</td></tr>
-            <tr><th>접수일자</th><td>${escapeHTML(data.date)}</td></tr>
-            <tr><th>성명</th><td>${safeName}</td></tr>
-            <tr><th>연락처</th><td>${safePhone}</td></tr>
-            <tr><th>시료명</th><td>${safeSampleName}</td></tr>
-            <tr><th>시료수</th><td>${escapeHTML(String(data.sampleCount))}점</td></tr>
-            <tr><th>채취장소</th><td>${safeSamplingLocation}</td></tr>
-            <tr><th>목적</th><td>${safePurpose}</td></tr>
-            <tr><th>검사항목</th><td>${safeTestItems}</td></tr>
-            <tr><th>통보방법</th><td>${safeReceptionMethod}</td></tr>
-            <tr><th>비고</th><td>${safeNote}</td></tr>
-        `);
+        // 공통 유틸리티 사용
+        BaseSampleManager.buildResultTable(resultTableBody, rows);
 
         registrationResultModal.classList.remove('hidden');
     }
 
-    if (closeRegistrationModal) {
-        closeRegistrationModal.addEventListener('click', () => {
+    function closeRegistrationResultModal() {
+        if (registrationResultModal) {
             registrationResultModal.classList.add('hidden');
-        });
+        }
+        currentRegistrationData = null;
+    }
+
+    if (closeRegistrationModal) {
+        closeRegistrationModal.addEventListener('click', closeRegistrationResultModal);
     }
     if (closeResultBtn) {
-        closeResultBtn.addEventListener('click', () => {
-            registrationResultModal.classList.add('hidden');
-        });
+        closeResultBtn.addEventListener('click', closeRegistrationResultModal);
     }
     // 수정 버튼 클릭 이벤트
     const editResultBtn = document.getElementById('editResultBtn');
     if (editResultBtn) {
         editResultBtn.addEventListener('click', () => {
-            if (lastRegisteredId) {
-                registrationResultModal.classList.add('hidden');
-                editSample(String(lastRegisteredId));
+            if (currentRegistrationData) {
+                const dataToEdit = currentRegistrationData;
+                closeRegistrationResultModal();
+                editSample(String(dataToEdit.id));
             }
         });
     }
     if (registrationResultModal) {
-        registrationResultModal.querySelector('.modal-overlay').addEventListener('click', () => {
-            registrationResultModal.classList.add('hidden');
-        });
+        registrationResultModal.querySelector('.modal-overlay').addEventListener('click', closeRegistrationResultModal);
     }
 
     // ========================================

@@ -893,6 +893,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else {
             sampleLogs.push(data);
             showToast('접수가 등록되었습니다.', 'success');
+            // 등록 결과 모달 표시
+            showRegistrationResult(data);
         }
 
         saveData();
@@ -2207,6 +2209,116 @@ document.addEventListener('DOMContentLoaded', async () => {
             }));
 
             window.location.href = '../label-print/index.html';
+        });
+    }
+
+    // ========================================
+    // 등록 결과 모달
+    // ========================================
+    const registrationResultModal = document.getElementById('registrationResultModal');
+    const closeRegistrationModal = document.getElementById('closeRegistrationModal');
+    const closeResultBtn = document.getElementById('closeResultBtn');
+    const exportResultBtn = document.getElementById('exportResultBtn');
+    const resultTableBody = document.getElementById('resultTableBody');
+    let currentRegistrationData = null;
+
+    function showRegistrationResult(logData) {
+        currentRegistrationData = logData;
+
+        // 테이블 행 데이터
+        const rows = [
+            { label: '접수번호', value: logData.receptionNumber },
+            { label: '접수일자', value: logData.date },
+            { label: '성명', value: logData.name },
+            { label: '전화번호', value: logData.phoneNumber },
+            { label: '주소', value: logData.address || '-' },
+            { label: '채취장소', value: logData.samplingLocation || '-' },
+            { label: '재배작물', value: logData.cropName || '-' },
+            { label: '수령', value: logData.treeAge ? `${logData.treeAge}년` : '-' },
+            { label: '시료채취일', value: logData.samplingDate || '-' },
+            { label: '시료수', value: `${logData.sampleCount || 1}점` },
+            { label: '분석항목', value: (logData.analysisItems || []).join(', ') || '-' },
+            { label: '목적(용도)', value: logData.purpose || '-' },
+            { label: '수령방법', value: logData.receptionMethod || '-' },
+            { label: '비고', value: logData.note || '-' }
+        ];
+
+        // 공통 유틸리티로 테이블 생성 (XSS 방지)
+        BaseSampleManager.buildResultTable(resultTableBody, rows);
+
+        // 모달 표시
+        if (registrationResultModal) {
+            registrationResultModal.classList.remove('hidden');
+        }
+    }
+
+    function closeRegistrationResultModal() {
+        if (registrationResultModal) {
+            registrationResultModal.classList.add('hidden');
+        }
+        currentRegistrationData = null;
+    }
+
+    // 모달 닫기 이벤트
+    if (closeRegistrationModal) {
+        closeRegistrationModal.addEventListener('click', closeRegistrationResultModal);
+    }
+    if (closeResultBtn) {
+        closeResultBtn.addEventListener('click', closeRegistrationResultModal);
+    }
+
+    // 수정 버튼 클릭 이벤트
+    const editResultBtn = document.getElementById('editResultBtn');
+    if (editResultBtn) {
+        editResultBtn.addEventListener('click', () => {
+            if (currentRegistrationData) {
+                const dataToEdit = currentRegistrationData;  // 데이터 복사 (모달 닫기 전)
+                const idx = sampleLogs.findIndex(l => l.id === dataToEdit.id);
+                closeRegistrationResultModal();
+                if (idx >= 0) {
+                    editLog(idx);
+                }
+            }
+        });
+    }
+
+    // 오버레이 클릭으로 닫기
+    if (registrationResultModal) {
+        const overlay = registrationResultModal.querySelector('.modal-overlay');
+        if (overlay) {
+            overlay.addEventListener('click', closeRegistrationResultModal);
+        }
+    }
+
+    // 엑셀로 내보내기
+    if (exportResultBtn) {
+        exportResultBtn.addEventListener('click', () => {
+            if (!currentRegistrationData) return;
+
+            const excelData = [{
+                '접수번호': currentRegistrationData.receptionNumber,
+                '접수일자': currentRegistrationData.date,
+                '성명': currentRegistrationData.name,
+                '전화번호': currentRegistrationData.phoneNumber,
+                '주소': currentRegistrationData.address || '-',
+                '채취장소': currentRegistrationData.samplingLocation || '-',
+                '재배작물': currentRegistrationData.cropName || '-',
+                '수령': currentRegistrationData.treeAge ? `${currentRegistrationData.treeAge}년` : '-',
+                '시료채취일': currentRegistrationData.samplingDate || '-',
+                '시료수': `${currentRegistrationData.sampleCount || 1}점`,
+                '분석항목': (currentRegistrationData.analysisItems || []).join(', ') || '-',
+                '목적(용도)': currentRegistrationData.purpose || '-',
+                '수령방법': currentRegistrationData.receptionMethod || '-',
+                '비고': currentRegistrationData.note || '-'
+            }];
+
+            const ws = XLSX.utils.json_to_sheet(excelData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, '등록결과');
+
+            const fileName = `중금속_등록결과_${currentRegistrationData.receptionNumber}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+            showToast('엑셀 파일이 다운로드되었습니다.', 'success');
         });
     }
 

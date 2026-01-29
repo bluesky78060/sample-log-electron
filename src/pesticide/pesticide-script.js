@@ -4309,7 +4309,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     function showRegistrationResult(logData) {
         currentRegistrationData = logData;
 
-        // 테이블 데이터 생성
+        // 테이블 행 데이터
         const rows = [
             { label: '접수번호', value: logData.receptionNumber },
             { label: '접수일자', value: logData.date },
@@ -4321,17 +4321,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             { label: '수령 방법', value: logData.receptionMethod || '-' },
             { label: '생산자 성명', value: logData.producerName || '-' },
             { label: '생산지 주소', value: logData.producerAddress || '-' },
-            { label: '의뢰물품명', value: logData.requestContent ? `<div class="request-content">${logData.requestContent.replace(/\n/g, '<br>')}</div>` : '-' },
+            { label: '의뢰물품명', value: logData.requestContent || '-', isMultiline: true },
             { label: '비고', value: logData.note || '-' }
         ];
 
-        // 테이블 생성
-        resultTableBody.innerHTML = sanitizeHTML(rows.map(row => `
-            <tr>
-                <td>${row.label}</td>
-                <td>${row.value}</td>
-            </tr>
-        `).join(''));
+        // 공통 유틸리티로 테이블 생성 (XSS 방지)
+        BaseSampleManager.buildResultTable(resultTableBody, rows);
 
         // 모달 표시
         registrationResultModal.classList.remove('hidden');
@@ -4351,8 +4346,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (editResultBtn) {
         editResultBtn.addEventListener('click', () => {
             if (currentRegistrationData) {
+                const dataToEdit = currentRegistrationData;  // 데이터 복사 (모달 닫기 전)
                 closeRegistrationResultModal();
-                populateFormForEdit(currentRegistrationData);
+                populateFormForEdit(dataToEdit);
             }
         });
     }

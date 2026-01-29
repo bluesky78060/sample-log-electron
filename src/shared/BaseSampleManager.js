@@ -814,6 +814,48 @@ class BaseSampleManager {
     onAfterSave(data) {
         // 서브클래스에서 오버라이드 가능
     }
+
+    // ========================================
+    // 정적 유틸리티 메서드
+    // ========================================
+
+    /**
+     * 등록 결과 테이블 빌드 (DOM 직접 조작으로 XSS 방지)
+     * @param {HTMLElement} tableBody - tbody 요소
+     * @param {Array<{label: string, value: string, isMultiline?: boolean}>} rows - 테이블 행 데이터
+     */
+    static buildResultTable(tableBody, rows) {
+        if (!tableBody) return;
+
+        tableBody.innerHTML = '';
+
+        rows.forEach(({ label, value, isMultiline }) => {
+            const tr = document.createElement('tr');
+            const th = document.createElement('th');
+            const td = document.createElement('td');
+
+            th.textContent = label;
+
+            if (isMultiline && value && value !== '-') {
+                // 줄바꿈을 <br>로 변환 (의뢰물품명 등)
+                const div = document.createElement('div');
+                div.className = 'request-content';
+                String(value).split('\n').forEach((line, idx, arr) => {
+                    div.appendChild(document.createTextNode(line));
+                    if (idx < arr.length - 1) {
+                        div.appendChild(document.createElement('br'));
+                    }
+                });
+                td.appendChild(div);
+            } else {
+                td.textContent = value || '-';
+            }
+
+            tr.appendChild(th);
+            tr.appendChild(td);
+            tableBody.appendChild(tr);
+        });
+    }
 }
 
 // 전역으로 내보내기

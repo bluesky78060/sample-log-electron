@@ -2139,17 +2139,20 @@ input[type="number"] {
     background-color: #f0f9ff;
 }
 
+.result-table th,
 .result-table td {
     padding: 10px 12px;
     border-right: 1px solid var(--gray-200);
+    text-align: left;
 }
 
-.result-table td:first-child {
+.result-table th {
     font-weight: 600;
     background-color: #f3f4f6;
     color: var(--gray-700);
     width: 140px;
     white-space: nowrap;
+    border-right: 1px solid var(--gray-200);
 }
 
 .result-table td:last-child {
@@ -3614,9 +3617,8 @@ input[type="number"] {
 }
 
 .btn-cancel:focus-visible {
-    outline: none;
-    ring: 2px solid hsl(var(--ring));
-    ring-offset: 2px;
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
 }
 
 .btn-confirm {
@@ -3641,9 +3643,34 @@ input[type="number"] {
 }
 
 .btn-confirm:focus-visible {
-    outline: none;
-    ring: 2px solid hsl(var(--ring));
-    ring-offset: 2px;
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+}
+
+.btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.625rem 1.25rem;
+    background: var(--gray-100);
+    color: var(--gray-700);
+    border: 1px solid var(--gray-300);
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-secondary:hover {
+    background: var(--gray-200);
+    border-color: var(--gray-400);
+    color: var(--gray-900);
+}
+
+.btn-secondary:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
 }
 
 /* =============================================

@@ -4223,8 +4223,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     function showRegistrationResult(logData) {
         currentRegistrationData = logData;
 
-        // 테이블 데이터 생성
-        const rows = [
+        // 기본 정보 행 추가
+        const basicRows = [
             { label: '접수번호', value: logData.receptionNumber },
             { label: '접수일자', value: logData.date },
             { label: '성명', value: logData.name },
@@ -4236,44 +4236,71 @@ document.addEventListener('DOMContentLoaded', async () => {
             { label: '비고', value: logData.note || '-' }
         ];
 
-        // 필지 정보 추가
+        // 공통 유틸리티로 기본 테이블 생성 (XSS 방지)
+        BaseSampleManager.buildResultTable(resultTableBody, basicRows);
+
+        // 필지 정보 추가 (토양 전용)
         if (logData.parcels && logData.parcels.length > 0) {
-            const parcelsHtml = logData.parcels.map((parcel, idx) => {
-                const cropsHtml = parcel.crops.length > 0
-                    ? `<div class="crop-list">
-                        ${parcel.crops.map(crop =>
-                            `<span class="crop-tag">${crop.name}: ${formatArea(crop.area)}m²</span>`
-                        ).join('')}
-                       </div>`
-                    : '<span class="text-gray">작물 정보 없음</span>';
+            const tr = document.createElement('tr');
+            const th = document.createElement('th');
+            th.textContent = '필지 정보';
+            th.style.verticalAlign = 'top';
 
-                const subLotsText = parcel.subLots.length > 0
-                    ? `하위 지번: ${parcel.subLots.map(s => typeof s === 'string' ? s : s.lotAddress).join(', ')}`
-                    : '';
+            const td = document.createElement('td');
+            const parcelsDiv = document.createElement('div');
+            parcelsDiv.className = 'parcels-section';
 
-                return `
-                    <div class="parcel-item">
-                        <div class="parcel-header">필지 ${idx + 1}</div>
-                        <div>${parcel.lotAddress}</div>
-                        ${subLotsText ? `<div class="text-sm text-gray">${subLotsText}</div>` : ''}
-                        ${cropsHtml}
-                    </div>
-                `;
-            }).join('');
+            logData.parcels.forEach((parcel, idx) => {
+                const parcelDiv = document.createElement('div');
+                parcelDiv.className = 'parcel-item';
 
-            rows.push({
-                label: '필지 정보',
-                value: `<div class="parcels-section">${parcelsHtml}</div>`
+                // 필지 헤더
+                const header = document.createElement('div');
+                header.className = 'parcel-header';
+                header.textContent = `필지 ${idx + 1}`;
+                parcelDiv.appendChild(header);
+
+                // 지번 주소
+                const addressDiv = document.createElement('div');
+                addressDiv.textContent = parcel.lotAddress;
+                parcelDiv.appendChild(addressDiv);
+
+                // 하위 지번
+                if (parcel.subLots && parcel.subLots.length > 0) {
+                    const subLotsDiv = document.createElement('div');
+                    subLotsDiv.className = 'text-sm text-gray';
+                    subLotsDiv.textContent = '하위 지번: ' + parcel.subLots.map(s =>
+                        typeof s === 'string' ? s : s.lotAddress
+                    ).join(', ');
+                    parcelDiv.appendChild(subLotsDiv);
+                }
+
+                // 작물 정보
+                if (parcel.crops && parcel.crops.length > 0) {
+                    const cropList = document.createElement('div');
+                    cropList.className = 'crop-list';
+                    parcel.crops.forEach(crop => {
+                        const cropTag = document.createElement('span');
+                        cropTag.className = 'crop-tag';
+                        cropTag.textContent = `${crop.name}: ${formatArea(crop.area)}m²`;
+                        cropList.appendChild(cropTag);
+                    });
+                    parcelDiv.appendChild(cropList);
+                } else {
+                    const noCrop = document.createElement('span');
+                    noCrop.className = 'text-gray';
+                    noCrop.textContent = '작물 정보 없음';
+                    parcelDiv.appendChild(noCrop);
+                }
+
+                parcelsDiv.appendChild(parcelDiv);
             });
-        }
 
-        // 테이블 생성
-        resultTableBody.innerHTML = sanitizeHTML(rows.map(row => `
-            <tr>
-                <td>${row.label}</td>
-                <td>${row.value}</td>
-            </tr>
-        `).join(''));
+            td.appendChild(parcelsDiv);
+            tr.appendChild(th);
+            tr.appendChild(td);
+            resultTableBody.appendChild(tr);
+        }
 
         // 모달 표시
         registrationResultModal.classList.remove('hidden');
@@ -4293,8 +4320,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (editResultBtn) {
         editResultBtn.addEventListener('click', () => {
             if (currentRegistrationData) {
+                const dataToEdit = currentRegistrationData;  // 데이터 복사 (모달 닫기 전)
                 closeRegistrationResultModal();
-                populateFormForEdit(currentRegistrationData);
+                populateFormForEdit(dataToEdit);
             }
         });
     }
