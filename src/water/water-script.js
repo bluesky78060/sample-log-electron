@@ -16,9 +16,6 @@ const STORAGE_KEY = 'waterSampleLogs';
 /** @type {string} */
 const AUTO_SAVE_FILE = 'water-autosave.json';
 
-/** @type {boolean} 디버그 모드 (프로덕션에서는 false) */
-const DEBUG = true;  // 임시로 디버그 활성화
-
 /**
  * 고유 ID 생성 함수 (충돌 방지)
  * @returns {string} 고유 ID
@@ -26,11 +23,11 @@ const DEBUG = true;  // 임시로 디버그 활성화
 const generateId = () => Date.now().toString(36) + Math.random().toString(36).substring(2, 11);
 
 /**
- * 디버그 로그 함수
+ * 디버그 로그 함수 (window.DEBUG 사용 - constants.js에서 설정)
  * @param {...any} args - 로그 인자
  * @returns {void}
  */
-const log = (...args) => DEBUG && console.log(...args);
+const log = (...args) => window.DEBUG && console.log(...args);
 
 // 공통 모듈에서 가져온 변수/함수 사용 (../shared/*.js)
 // window.isElectron, window.createFileAPI 등 전역 변수 사용

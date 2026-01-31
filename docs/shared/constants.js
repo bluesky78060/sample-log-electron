@@ -4,6 +4,31 @@
 // ========================================
 
 /**
+ * DEBUG 모드 설정
+ * - 개발 환경에서만 활성화
+ * - localStorage에서 DEBUG_MODE=true로 수동 활성화 가능
+ */
+const DEBUG = (() => {
+    // Node.js 환경 (Electron main process)
+    if (typeof process !== 'undefined' && process.env) {
+        if (process.env.NODE_ENV === 'development') return true;
+    }
+
+    // 브라우저 환경
+    if (typeof localStorage !== 'undefined') {
+        if (localStorage.getItem('DEBUG_MODE') === 'true') return true;
+    }
+
+    // 기본값: false (프로덕션)
+    return false;
+})();
+
+/**
+ * 앱 버전
+ */
+const APP_VERSION = '1.7.45';
+
+/**
  * 페이지네이션 관련 상수
  */
 const PAGINATION = {
@@ -125,6 +150,8 @@ const APPLICANT_TYPE = {
 
 // 전역으로 내보내기
 window.APP_CONSTANTS = {
+    DEBUG,
+    APP_VERSION,
     PAGINATION,
     TIMER,
     AUTOCOMPLETE,
@@ -140,6 +167,8 @@ window.APP_CONSTANTS = {
 };
 
 // 개별 상수도 전역으로 내보내기 (기존 코드 호환성)
+window.DEBUG = DEBUG;
+window.APP_VERSION = APP_VERSION;
 window.PAGINATION = PAGINATION;
 window.TIMER = TIMER;
 window.AUTOCOMPLETE = AUTOCOMPLETE;

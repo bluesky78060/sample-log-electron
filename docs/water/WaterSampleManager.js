@@ -13,7 +13,7 @@ class WaterSampleManager extends BaseSampleManager {
             moduleKey: 'water',
             moduleName: '수질분석',
             storageKey: 'waterSampleLogs',
-            debug: true  // 디버깅 활성화
+            debug: window.DEBUG || false  // 환경 상수 사용
         });
 
         // 수질분석 전용 상태
@@ -94,7 +94,7 @@ class WaterSampleManager extends BaseSampleManager {
     }
 
     /**
-     * 채취장소 추가
+     * 채취장소 추가 (XSS 방지를 위해 DOM API 사용)
      */
     addSamplingLocation() {
         const wrapper = document.getElementById('samplingLocationsWrapper');
@@ -102,15 +102,23 @@ class WaterSampleManager extends BaseSampleManager {
 
         const div = document.createElement('div');
         div.className = 'sampling-location-item';
-        div.innerHTML = `
-            <input type="text"
-                name="samplingLocation[]"
-                placeholder="채취장소 ${this.samplingLocationCount}"
-                class="form-control">
-            <button type="button" class="btn btn-danger btn-sm" onclick="waterManager.removeSamplingLocation(this)">삭제</button>
-        `;
 
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.name = 'samplingLocation[]';
+        input.placeholder = `채취장소 ${this.samplingLocationCount}`;
+        input.className = 'form-control';
+
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'btn btn-danger btn-sm';
+        button.textContent = '삭제';
+        button.addEventListener('click', () => this.removeSamplingLocation(button));
+
+        div.appendChild(input);
+        div.appendChild(button);
         wrapper.appendChild(div);
+
         this.samplingLocationCount++;
     }
 
@@ -128,7 +136,7 @@ class WaterSampleManager extends BaseSampleManager {
     }
 
     /**
-     * 채취작물 추가
+     * 채취작물 추가 (XSS 방지를 위해 DOM API 사용)
      */
     addSamplingCrop() {
         const wrapper = document.getElementById('samplingCropsWrapper');
@@ -137,18 +145,35 @@ class WaterSampleManager extends BaseSampleManager {
         const div = document.createElement('div');
         div.className = 'crop-item';
 
+        const select = document.createElement('select');
+        select.name = 'samplingCrop[]';
+        select.className = 'form-control';
+
+        // 기본 옵션
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = '작물 선택';
+        select.appendChild(defaultOption);
+
+        // 작물 목록 옵션 추가
         const cropList = window.cropData ? Object.keys(window.cropData).sort() : [];
-        const options = cropList.map(crop => `<option value="${crop}">${crop}</option>`).join('');
+        cropList.forEach(crop => {
+            const option = document.createElement('option');
+            option.value = crop;
+            option.textContent = crop;
+            select.appendChild(option);
+        });
 
-        div.innerHTML = `
-            <select name="samplingCrop[]" class="form-control">
-                <option value="">작물 선택</option>
-                ${options}
-            </select>
-            <button type="button" class="btn btn-danger btn-sm" onclick="waterManager.removeSamplingCrop(this)">삭제</button>
-        `;
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'btn btn-danger btn-sm';
+        button.textContent = '삭제';
+        button.addEventListener('click', () => this.removeSamplingCrop(button));
 
+        div.appendChild(select);
+        div.appendChild(button);
         wrapper.appendChild(div);
+
         this.cropItemCount++;
     }
 

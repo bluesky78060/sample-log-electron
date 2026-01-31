@@ -16,15 +16,12 @@ const STORAGE_KEY = 'pesticideSampleLogs';
 /** @type {string} */
 const AUTO_SAVE_FILE = 'pesticide-autosave.json';
 
-/** @type {boolean} 디버그 모드 (프로덕션에서는 false) */
-const DEBUG = false;
-
 /**
- * 디버그 로그 함수
+ * 디버그 로그 함수 (window.DEBUG 사용 - constants.js에서 설정)
  * @param {...any} args - 로그 인자
  * @returns {void}
  */
-const log = (...args) => DEBUG && console.log(...args);
+const log = (...args) => window.DEBUG && console.log(...args);
 
 // ========================================
 // 페이지네이션 상태

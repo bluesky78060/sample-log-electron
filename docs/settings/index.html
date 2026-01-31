@@ -428,42 +428,30 @@
             <h2>
                 <span>🌐</span>
                 네트워크 접근 제어
-                <span id="networkAccessStatus" class="status-badge disconnected">● 비활성</span>
+                <span id="networkAccessStatus" class="status-badge disconnected">● 확인 중</span>
             </h2>
 
             <div class="alert alert-info">
-                <strong>게이트웨이 체크란?</strong><br>
-                허용된 게이트웨이 주소를 설정하면, 같은 네트워크에 있는 사용자만 Firebase 데이터에 접근할 수 있습니다.
+                <strong>네트워크 접근 제어란?</strong><br>
+                Electron 앱에서는 항상 접근이 허용되며, 웹 환경에서는 설정된 게이트웨이 서브넷에서만 Firebase 데이터에 접근할 수 있습니다.
             </div>
 
-            <div style="margin-bottom: 1rem;">
-                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                    <input type="checkbox" id="networkCheckEnabled">
-                    <span>네트워크 체크 활성화</span>
-                </label>
+            <div style="margin-top: 1rem; padding: 0.75rem; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+                <div style="font-size: 0.85rem; color: #64748b;">
+                    <div style="margin-bottom: 0.5rem;">환경: <strong id="currentEnvironment">확인 중...</strong></div>
+                    <div style="margin-bottom: 0.5rem;">허용된 게이트웨이: <strong id="allowedGateway" style="font-family: monospace;">확인 중...</strong></div>
+                    <div style="margin-bottom: 0.5rem;">현재 공인 IP: <strong id="currentPublicIP" style="font-family: monospace;">확인 중...</strong></div>
+                    <div>접근 상태: <strong id="currentAccessStatus">확인 중...</strong></div>
+                </div>
             </div>
 
-            <div id="networkAccessSettings" style="display: none;">
-                <div class="form-group">
-                    <label>허용된 게이트웨이 주소</label>
-                    <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
-                        <input type="text" id="gatewayInput" placeholder="예: 192.168.1.1" style="flex: 1;">
-                        <button type="button" id="addGatewayBtn" class="btn btn-primary" style="white-space: nowrap;">추가</button>
-                    </div>
-                    <ul id="gatewayList" style="list-style: none; padding: 0; margin: 0;"></ul>
-                </div>
+            <div style="margin-top: 1rem;">
+                <button type="button" id="checkNetworkBtn" class="btn btn-secondary">네트워크 상태 확인</button>
+            </div>
 
-                <div style="margin-top: 1rem; padding: 0.75rem; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
-                    <div style="font-size: 0.8rem; color: #64748b;">
-                        <div>공인 IP: <strong id="currentPublicIP">확인 중...</strong></div>
-                        <div>로컬 IP: <strong id="currentLocalIP">확인 중...</strong></div>
-                        <div>접근 상태: <strong id="currentAccessStatus">확인 중...</strong></div>
-                    </div>
-                </div>
-
-                <div style="margin-top: 1rem;">
-                    <button type="button" id="checkNetworkBtn" class="btn btn-secondary">네트워크 상태 확인</button>
-                </div>
+            <div class="alert alert-warning" style="margin-top: 1rem;">
+                <strong>게이트웨이 변경 방법:</strong><br>
+                <code>src/shared/network-config.js</code> 파일에서 <code>ALLOWED_GATEWAY</code> 값을 수정하세요.
             </div>
         </div>
 
@@ -514,11 +502,14 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <!-- 네트워크 접근 제어 (Firebase 초기화 전에 로드) -->
     <script src="../shared/logger.js"></script>
+    <script src="../shared/network-config.js"></script>
     <script src="../shared/network-access.js"></script>
     <!-- Firebase 스크립트 -->
     <script src="../shared/firebase-config.js"></script>
     <script src="../shared/firestore-db.js"></script>
     <script src="../shared/storage-manager.js"></script>
+    <!-- XSS 방지를 위한 DOMPurify -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
     <script src="../shared/sanitize.js"></script>
     <script src="../shared/theme.js"></script>
     <script>
@@ -894,13 +885,14 @@
             }
         });
 
-        // 마이그레이션 목록 렌더링 (모든 연도 포함)
+        // 마이그레이션 목록 렌더링 (모든 연도 포함, DOM API 사용 - XSS 방지)
         function renderMigrationList() {
             const container = document.getElementById('migrationList');
             const currentYear = new Date().getFullYear();
             const MIN_YEAR = 2020;
 
-            let html = '';
+            container.innerHTML = '';
+
             SAMPLE_TYPES.forEach(type => {
                 // 모든 연도의 데이터 수집
                 let totalCount = 0;
@@ -916,25 +908,42 @@
                     }
                 }
 
-                html += `
-                    <div class="migration-item">
-                        <div class="migration-item-info">
-                            <span class="migration-item-icon">${type.icon}</span>
-                            <div>
-                                <div class="migration-item-name">${type.name}</div>
-                                <div class="migration-item-count">${totalCount}건 ${yearDetails.length > 0 ? '(' + yearDetails.join(', ') + ')' : ''}</div>
-                            </div>
-                        </div>
-                        <button class="btn btn-primary btn-sm"
-                                onclick="migrateTypeAllYears('${type.key}', '${type.storagePrefix}')"
-                                ${totalCount === 0 ? 'disabled' : ''}>
-                            마이그레이션
-                        </button>
-                    </div>
-                `;
-            });
+                // DOM 요소 생성
+                const item = document.createElement('div');
+                item.className = 'migration-item';
 
-            container.innerHTML = sanitizeHTML(html);
+                const info = document.createElement('div');
+                info.className = 'migration-item-info';
+
+                const icon = document.createElement('span');
+                icon.className = 'migration-item-icon';
+                icon.textContent = type.icon;
+
+                const textDiv = document.createElement('div');
+
+                const name = document.createElement('div');
+                name.className = 'migration-item-name';
+                name.textContent = type.name;
+
+                const count = document.createElement('div');
+                count.className = 'migration-item-count';
+                count.textContent = `${totalCount}건 ${yearDetails.length > 0 ? '(' + yearDetails.join(', ') + ')' : ''}`;
+
+                textDiv.appendChild(name);
+                textDiv.appendChild(count);
+                info.appendChild(icon);
+                info.appendChild(textDiv);
+
+                const btn = document.createElement('button');
+                btn.className = 'btn btn-primary btn-sm';
+                btn.textContent = '마이그레이션';
+                btn.disabled = totalCount === 0;
+                btn.addEventListener('click', () => migrateTypeAllYears(type.key, type.storagePrefix));
+
+                item.appendChild(info);
+                item.appendChild(btn);
+                container.appendChild(item);
+            });
         }
 
         // 개별 타입의 모든 연도 마이그레이션
@@ -1060,116 +1069,51 @@
         function initNetworkAccessUI() {
             if (!window.NetworkAccess) return;
 
-            const config = NetworkAccess.loadConfig();
-            const enabledCheckbox = document.getElementById('networkCheckEnabled');
-            const settingsDiv = document.getElementById('networkAccessSettings');
             const statusEl = document.getElementById('networkAccessStatus');
+            const envEl = document.getElementById('currentEnvironment');
+            const gatewayEl = document.getElementById('allowedGateway');
+            const publicIPEl = document.getElementById('currentPublicIP');
+            const accessEl = document.getElementById('currentAccessStatus');
 
-            // 초기 상태 설정
-            enabledCheckbox.checked = config.enabled;
-            settingsDiv.style.display = config.enabled ? 'block' : 'none';
-            if (config.enabled) {
-                statusEl.className = 'status-badge connected';
-                statusEl.textContent = '● 활성';
+            // 환경 표시
+            const isElectron = window.electronAPI?.isElectron === true || window.location.protocol === 'file:';
+            envEl.textContent = isElectron ? 'Electron (항상 허용)' : '웹 브라우저';
+
+            // 허용된 게이트웨이 표시
+            const allowedGateway = NetworkAccess.getAllowedGateway();
+            if (allowedGateway) {
+                gatewayEl.textContent = allowedGateway;
+            } else {
+                gatewayEl.textContent = '설정 없음';
+                gatewayEl.style.color = '#dc2626';
             }
-
-            // 활성화 체크박스
-            enabledCheckbox.addEventListener('change', () => {
-                const enabled = enabledCheckbox.checked;
-                NetworkAccess.setEnabled(enabled);
-                settingsDiv.style.display = enabled ? 'block' : 'none';
-                statusEl.className = enabled ? 'status-badge connected' : 'status-badge disconnected';
-                statusEl.textContent = enabled ? '● 활성' : '● 비활성';
-                if (enabled) refreshNetworkStatus();
-            });
-
-            // IP 주소 유효성 검증 (각 옥텟 0-255)
-            function isValidIP(ip) {
-                if (!/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(ip)) return false;
-                return ip.split('.').every(octet => {
-                    const num = parseInt(octet, 10);
-                    return num >= 0 && num <= 255;
-                });
-            }
-
-            // 게이트웨이 목록 렌더링 (DOM API 사용 - XSS 방지)
-            function renderGatewayList() {
-                const listEl = document.getElementById('gatewayList');
-                const cfg = NetworkAccess.loadConfig();
-                const gateways = cfg.allowedGateways || [];
-                listEl.innerHTML = '';
-
-                if (gateways.length === 0) {
-                    const emptyLi = document.createElement('li');
-                    emptyLi.style.cssText = 'color: #94a3b8; font-size: 0.8rem; padding: 0.5rem 0;';
-                    emptyLi.textContent = '등록된 게이트웨이 없음';
-                    listEl.appendChild(emptyLi);
-                    return;
-                }
-
-                gateways.forEach(gw => {
-                    const li = document.createElement('li');
-                    li.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 0.4rem 0.75rem; background: #f0fdf4; border-radius: 6px; margin-bottom: 0.25rem; border: 1px solid #bbf7d0;';
-
-                    const span = document.createElement('span');
-                    span.style.fontFamily = 'monospace';
-                    span.textContent = gw;
-
-                    const btn = document.createElement('button');
-                    btn.type = 'button';
-                    btn.style.cssText = 'background: none; border: none; color: #ef4444; cursor: pointer; font-size: 1.1rem;';
-                    btn.textContent = '×';
-                    btn.addEventListener('click', () => {
-                        NetworkAccess.removeAllowedGateway(gw);
-                        renderGatewayList();
-                    });
-
-                    li.appendChild(span);
-                    li.appendChild(btn);
-                    listEl.appendChild(li);
-                });
-            }
-
-            // 게이트웨이 추가
-            document.getElementById('addGatewayBtn').addEventListener('click', () => {
-                const input = document.getElementById('gatewayInput');
-                const gateway = input.value.trim();
-                if (!gateway) return;
-                if (!isValidIP(gateway)) {
-                    alert('올바른 IP 주소를 입력하세요. (예: 192.168.1.1)\n각 숫자는 0~255 범위여야 합니다.');
-                    return;
-                }
-                NetworkAccess.addAllowedGateway(gateway);
-                input.value = '';
-                renderGatewayList();
-            });
 
             // 네트워크 상태 확인
             async function refreshNetworkStatus() {
-                const publicIPEl = document.getElementById('currentPublicIP');
-                const localIPEl = document.getElementById('currentLocalIP');
-                const accessEl = document.getElementById('currentAccessStatus');
-
                 publicIPEl.textContent = '확인 중...';
-                localIPEl.textContent = '확인 중...';
                 accessEl.textContent = '확인 중...';
 
                 const publicIP = await NetworkAccess.getCurrentIP();
                 publicIPEl.textContent = publicIP || '확인 불가';
 
-                const localIP = await NetworkAccess.getLocalIP();
-                localIPEl.textContent = localIP || '감지 불가 (브라우저 제한)';
-
                 const access = await NetworkAccess.checkAccess();
                 accessEl.textContent = access.allowed ? `허용 (${access.reason})` : `거부 (${access.reason})`;
                 accessEl.style.color = access.allowed ? '#16a34a' : '#dc2626';
+
+                // 상태 배지 업데이트
+                if (access.allowed) {
+                    statusEl.className = 'status-badge connected';
+                    statusEl.textContent = '● 허용';
+                } else {
+                    statusEl.className = 'status-badge disconnected';
+                    statusEl.textContent = '● 거부';
+                }
             }
 
             document.getElementById('checkNetworkBtn').addEventListener('click', refreshNetworkStatus);
 
-            // 초기 렌더링
-            renderGatewayList();
-            if (config.enabled) refreshNetworkStatus();
+            // 초기 상태 확인
+            refreshNetworkStatus();
         }
 
         initNetworkAccessUI();

@@ -556,6 +556,80 @@ class BaseSampleManager {
 
         // 페이지네이션 초기화
         this.initPagination();
+
+        // 이벤트 위임 설정
+        this.setupTableEventDelegation();
+    }
+
+    /**
+     * 테이블 이벤트 위임 설정 (메모리 효율적인 이벤트 처리)
+     */
+    setupTableEventDelegation() {
+        if (!this.tableBody || !window.EventDelegator) return;
+
+        this.tableDelegator = new window.EventDelegator(this.tableBody);
+
+        // 수정 버튼
+        this.tableDelegator.on('click', '.btn-edit', (e, target) => {
+            const id = target.dataset.id;
+            if (id) this.editSample(id);
+        });
+
+        // 삭제 버튼
+        this.tableDelegator.on('click', '.btn-delete', (e, target) => {
+            const id = target.dataset.id;
+            if (id && confirm('이 항목을 삭제하시겠습니까?')) {
+                this.deleteSample(id);
+            }
+        });
+
+        // 완료 토글 버튼
+        this.tableDelegator.on('click', '.btn-complete', (e, target) => {
+            const id = target.dataset.id;
+            if (id && typeof this.toggleComplete === 'function') {
+                this.toggleComplete(id);
+            }
+        });
+
+        // 판정 토글 버튼
+        this.tableDelegator.on('click', '.btn-result', (e, target) => {
+            const id = target.dataset.id;
+            if (id && typeof this.toggleResult === 'function') {
+                this.toggleResult(id);
+            }
+        });
+
+        // 접수번호 클릭 (편집)
+        this.tableDelegator.on('click', '.btn-link.edit-btn', (e, target) => {
+            e.preventDefault();
+            const row = target.closest('tr');
+            const editBtn = row?.querySelector('.btn-edit');
+            const id = editBtn?.dataset.id;
+            if (id) this.editSample(id);
+        });
+    }
+
+    /**
+     * 리소스 정리 (메모리 누수 방지)
+     */
+    destroy() {
+        // 이벤트 위임 정리
+        if (this.tableDelegator) {
+            this.tableDelegator.destroy();
+            this.tableDelegator = null;
+        }
+
+        // 자동 저장 타이머 정리
+        if (this.autoSaveTimer) {
+            clearTimeout(this.autoSaveTimer);
+            this.autoSaveTimer = null;
+        }
+
+        // 참조 정리
+        this.form = null;
+        this.tableBody = null;
+        this.emptyState = null;
+        this.recordCountEl = null;
     }
 
     /**
