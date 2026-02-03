@@ -583,12 +583,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            // 자동완성 제안
+            // 자동완성 제안 (산 지번 옵션 포함)
             if (typeof suggestRegionVillages === 'function') {
-                const suggestions = suggestRegionVillages(value, null);
+                const suggestions = suggestRegionVillages(value, null, true);
                 if (suggestions.length > 0) {
-                    samplingLocationAutocomplete.innerHTML = sanitizeHTML(suggestions.slice(0, 10).map(suggestion => `
-                        <li data-village="${suggestion.village}" data-district="${suggestion.district}" data-region="${suggestion.region}">
+                    samplingLocationAutocomplete.innerHTML = sanitizeHTML(suggestions.slice(0, 20).map(suggestion => `
+                        <li data-village="${suggestion.village}" data-district="${suggestion.district}" data-region-key="${suggestion.regionKey}" data-region="${suggestion.region || ''}" data-is-mountain="${suggestion.isMountain}">
                             ${suggestion.displayText}
                         </li>
                     `).join(''));
@@ -616,7 +616,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         // 여러 지역에서 중복되는 경우 (isDuplicate: true) - 드롭다운 표시
                         if (result.isDuplicate && result.locations) {
                             samplingLocationAutocomplete.innerHTML = sanitizeHTML(result.locations.map(loc => `
-                                <li data-village="${result.villageName}" data-district="${loc.district}" data-region="${loc.region}" data-lot="${result.lotNumber || ''}">
+                                <li data-village="${result.villageName}" data-district="${loc.district}" data-region-key="${loc.regionKey}" data-lot="${result.lotNumber || ''}">
                                     ${loc.fullAddress} ${result.lotNumber || ''}
                                 </li>
                             `).join(''));
@@ -625,7 +625,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         // 단일 지역 내 중복인 경우
                         else if (result.alternatives && result.alternatives.length > 1) {
                             samplingLocationAutocomplete.innerHTML = sanitizeHTML(result.alternatives.map(district => `
-                                <li data-village="${result.village}" data-district="${district}" data-lot="${result.lotNumber || ''}" data-region="${result.region}">
+                                <li data-village="${result.village}" data-district="${district}" data-lot="${result.lotNumber || ''}" data-region-key="${result.regionKey}">
                                     ${result.region} ${district} ${result.village} ${result.lotNumber || ''}
                                 </li>
                             `).join(''));
@@ -646,17 +646,25 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (e.target.tagName === 'LI') {
                 const village = e.target.dataset.village;
                 const district = e.target.dataset.district;
-                const region = e.target.dataset.region;
+                const regionKey = e.target.dataset.regionKey;
+                const isMountain = e.target.dataset.isMountain === 'true';
                 const lot = e.target.dataset.lot;
 
-                // 클릭 시 전체 주소로 변환
+                // 로컬 지역명 매핑
+                const LOCAL_REGIONS = { 'bonghwa': '봉화군', 'yeongju': '영주시', 'uljin': '울진군' };
+                const region = e.target.dataset.region || LOCAL_REGIONS[regionKey] || regionKey;
+
+                // 산 지번이면 "리 산" 형식
+                const villageWithMountain = isMountain ? `${village} 산` : village;
+
+                // 클릭 시 전체 주소로 변환 (산 키워드 제외)
                 const currentValue = samplingLocationInput.value.trim();
-                const match = currentValue.match(/(\d+[\d\-]*)$/);
-                const lotNumber = lot || (match ? match[1] : '');
+                const match = currentValue.match(/\d+(-\d+)?$/);
+                const lotNumber = lot || (match ? match[0] : '');
 
                 const fullAddress = lotNumber
-                    ? `${region} ${district} ${village} ${lotNumber}`
-                    : `${region} ${district} ${village}`;
+                    ? `${region} ${district} ${villageWithMountain} ${lotNumber}`
+                    : `${region} ${district} ${villageWithMountain}`;
 
                 samplingLocationInput.value = fullAddress;
                 samplingLocationAutocomplete.innerHTML = '';
@@ -1051,10 +1059,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             // 접수 방법 텍스트
             const methodText = logItem.receptionMethod || '-';
 
+            // 뷰용 주소: 시도 패턴이 있을 때만 제거
+            const addressRoad = logItem.addressRoad || '-';
+            const displayAddress = addressRoad !== '-' && SIDO_PATTERN.test(addressRoad)
+                ? addressRoad.replace(SIDO_PATTERN, '')
+                : addressRoad;
+
             // XSS 방지: 사용자 입력 데이터 이스케이프
             const safeName = escapeHTML(logItem.name || '-');
             const safeAddress = escapeHTML(logItem.address || '');
             const safeAddressRoad = escapeHTML(logItem.addressRoad || '-');
+            const safeDisplayAddress = escapeHTML(displayAddress);
             const safePhone = escapeHTML(logItem.phoneNumber || '-');
             const safeSamplingLocation = escapeHTML(logItem.samplingLocation || '-');
             const safeCropName = escapeHTML(logItem.cropName || '-');
@@ -1125,11 +1140,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             tdBirthCorp.textContent = birthOrCorp;
             tr.appendChild(tdBirthCorp);
 
-            // 9. Address (with tooltip)
+            // 9. Address - 시도 제외하고 전체 표시
             const tdAddress = document.createElement('td');
-            tdAddress.className = 'text-truncate';
-            tdAddress.setAttribute('data-tooltip', safeAddress);
-            tdAddress.textContent = safeAddressRoad;
+            tdAddress.className = 'col-address';
+            tdAddress.textContent = safeDisplayAddress;
             tr.appendChild(tdAddress);
 
             // 10. Phone
@@ -1402,6 +1416,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 // 주소 파싱 (시도, 시군구, 읍면동, 나머지주소 분리)
                 const addressParts = parseAddressParts(log.addressRoad || log.address || '');
+                // 전체 주소
+                const fullAddress = [log.addressRoad, log.addressDetail].filter(Boolean).join(' ') || '-';
 
                 // 법인여부 및 생년월일/법인번호
                 const applicantType = log.applicantType || '개인';
@@ -1419,6 +1435,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     '시군구': addressParts.sigungu || '-',
                     '읍면동': addressParts.eupmyeondong || '-',
                     '나머지주소': (addressParts.rest + (log.addressDetail ? ' ' + log.addressDetail : '')).trim() || '-',
+                    '전체주소': fullAddress,
                     '시료채취장소': log.samplingLocation || '-',
                     '재배작물': log.cropName || '-',
                     '과수년생': log.treeAge || '-',

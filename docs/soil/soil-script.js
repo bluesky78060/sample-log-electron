@@ -741,13 +741,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                                        value="${safeLotAddress}">
                                 <ul class="lot-address-autocomplete-list" id="lotAutocomplete-${parcel.id}"></ul>
                             </div>
-                            <label class="mountain-checkbox-label">
-                                <input type="checkbox" class="mountain-checkbox"
-                                       id="mountain-${parcel.id}"
-                                       data-id="${parcel.id}"
-                                       ${parcel.isMountain ? 'checked' : ''}>
-                                <span class="mountain-checkbox-text">산</span>
-                            </label>
                         </div>
                     </div>
                     <div class="crop-area-row">
@@ -953,11 +946,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             if (value.length > 0 && typeof suggestRegionVillages === 'function') {
-                const suggestions = suggestRegionVillages(value, ['bonghwa', 'yeongju', 'uljin']);
+                // 세 번째 인자 true: 산 지번 옵션 포함
+                const suggestions = suggestRegionVillages(value, ['bonghwa', 'yeongju', 'uljin'], true);
 
                 if (suggestions.length > 0) {
                     autocompleteList.innerHTML = sanitizeHTML(suggestions.map(item => `
-                        <li data-village="${item.village}" data-district="${item.district}" data-region="${item.region}">
+                        <li data-village="${item.village}" data-district="${item.district}" data-region-key="${item.regionKey}" data-region="${item.region || ''}" data-is-mountain="${item.isMountain}">
                             ${item.displayText}
                         </li>
                     `).join(''));
@@ -999,7 +993,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         else if (result.alternatives && result.alternatives.length > 1) {
                             // 같은 지역 내 중복 리 선택 UI 표시
                             autocompleteList.innerHTML = sanitizeHTML(result.alternatives.map(district => `
-                                <li data-village="${result.village}" data-district="${district}" data-lot="${result.lotNumber}" data-region="${result.region}">
+                                <li data-village="${result.village}" data-district="${district}" data-lot="${result.lotNumber}" data-region-key="${result.regionKey}">
                                     ${result.region} ${district} ${result.village} ${result.lotNumber || ''}
                                 </li>
                             `).join(''));
@@ -1020,17 +1014,25 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (e.target.tagName === 'LI') {
                 const village = e.target.dataset.village;
                 const district = e.target.dataset.district;
-                const region = e.target.dataset.region || '봉화군';
+                const regionKey = e.target.dataset.regionKey;
+                const isMountain = e.target.dataset.isMountain === 'true';
                 const lotNumber = e.target.dataset.lot || '';
 
-                // 기존 입력에서 지번 추출
+                // 로컬 지역명 매핑
+                const LOCAL_REGIONS = { 'bonghwa': '봉화군', 'yeongju': '영주시', 'uljin': '울진군' };
+                const region = e.target.dataset.region || LOCAL_REGIONS[regionKey] || regionKey;
+
+                // 산 지번이면 "리 산" 형식
+                const villageWithMountain = isMountain ? `${village} 산` : village;
+
+                // 기존 입력에서 지번 추출 (산 키워드 제외)
                 const currentValue = lotInput.value.trim();
-                const match = currentValue.match(/(\d+[\d\-]*)$/);
-                const extractedLotNumber = lotNumber || (match ? match[1] : '');
+                const match = currentValue.match(/\d+(-\d+)?$/);
+                const extractedLotNumber = lotNumber || (match ? match[0] : '');
 
                 const fullAddress = extractedLotNumber
-                    ? `${region} ${district} ${village} ${extractedLotNumber}`
-                    : `${region} ${district} ${village}`;
+                    ? `${region} ${district} ${villageWithMountain} ${extractedLotNumber}`
+                    : `${region} ${district} ${villageWithMountain}`;
 
                 lotInput.value = fullAddress;
                 autocompleteList.classList.remove('show');
@@ -1064,11 +1066,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             if (value.length > 0 && typeof suggestRegionVillages === 'function') {
-                const suggestions = suggestRegionVillages(value, ['bonghwa', 'yeongju', 'uljin']);
+                // 세 번째 인자 true: 산 지번 옵션 포함
+                const suggestions = suggestRegionVillages(value, ['bonghwa', 'yeongju', 'uljin'], true);
 
                 if (suggestions.length > 0) {
                     autocompleteList.innerHTML = sanitizeHTML(suggestions.map(item => `
-                        <li data-village="${item.village}" data-district="${item.district}" data-region="${item.region}">
+                        <li data-village="${item.village}" data-district="${item.district}" data-region-key="${item.regionKey}" data-region="${item.region || ''}" data-is-mountain="${item.isMountain}">
                             ${item.displayText}
                         </li>
                     `).join(''));
@@ -1108,7 +1111,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         else if (result.alternatives && result.alternatives.length > 1) {
                             // 같은 지역 내 중복 리 선택 UI 표시
                             autocompleteList.innerHTML = sanitizeHTML(result.alternatives.map(district => `
-                                <li data-village="${result.village}" data-district="${district}" data-lot="${result.lotNumber}" data-region="${result.region}">
+                                <li data-village="${result.village}" data-district="${district}" data-lot="${result.lotNumber}" data-region-key="${result.regionKey}">
                                     ${result.region} ${district} ${result.village} ${result.lotNumber || ''}
                                 </li>
                             `).join(''));
@@ -1128,17 +1131,25 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (e.target.tagName === 'LI') {
                 const village = e.target.dataset.village;
                 const district = e.target.dataset.district;
-                const region = e.target.dataset.region || '봉화군';
+                const regionKey = e.target.dataset.regionKey;
+                const isMountain = e.target.dataset.isMountain === 'true';
                 const lotNumber = e.target.dataset.lot || '';
 
-                // 기존 입력에서 지번 추출
+                // 로컬 지역명 매핑
+                const LOCAL_REGIONS = { 'bonghwa': '봉화군', 'yeongju': '영주시', 'uljin': '울진군' };
+                const region = e.target.dataset.region || LOCAL_REGIONS[regionKey] || regionKey;
+
+                // 산 지번이면 "리 산" 형식
+                const villageWithMountain = isMountain ? `${village} 산` : village;
+
+                // 기존 입력에서 지번 추출 (산 키워드 제외)
                 const currentValue = subLotInput.value.trim();
-                const match = currentValue.match(/(\d+[\d\-]*)$/);
-                const extractedLotNumber = lotNumber || (match ? match[1] : '');
+                const match = currentValue.match(/\d+(-\d+)?$/);
+                const extractedLotNumber = lotNumber || (match ? match[0] : '');
 
                 const fullAddress = extractedLotNumber
-                    ? `${region} ${district} ${village} ${extractedLotNumber}`
-                    : `${region} ${district} ${village}`;
+                    ? `${region} ${district} ${villageWithMountain} ${extractedLotNumber}`
+                    : `${region} ${district} ${villageWithMountain}`;
 
                 subLotInput.value = fullAddress;
                 autocompleteList.classList.remove('show');
@@ -3409,6 +3420,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         reversedLogs.forEach(log => {
             // 주소 파싱 (시도, 시군구, 읍면동, 나머지주소 분리)
             const addressParts = parseAddressParts(log.address || '');
+            // 전체 주소
+            const fullAddress = log.address || '-';
 
             if (log.parcels && log.parcels.length > 0) {
                 log.parcels.forEach((parcel, pIdx) => {
@@ -3435,6 +3448,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         '시군구': addressParts.sigungu || '-',
                         '읍면동': addressParts.eupmyeondong || '-',
                         '나머지주소': addressParts.rest || '-',
+                        '전체주소': fullAddress,
                         '필지 주소': excelLotAddress,
                         '작물': cropsDisplay,
                         '면적(m²)': totalArea > 0 ? totalArea : '-',
@@ -3468,6 +3482,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 '시군구': addressParts.sigungu || '-',
                                 '읍면동': addressParts.eupmyeondong || '-',
                                 '나머지주소': addressParts.rest || '-',
+                                '전체주소': fullAddress,
                                 '필지 주소': subLotAddress,
                                 '작물': subLotCropsDisplay,
                                 '면적(m²)': subLotTotalArea > 0 ? subLotTotalArea : '-',
@@ -3492,6 +3507,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     '시군구': addressParts.sigungu || '-',
                     '읍면동': addressParts.eupmyeondong || '-',
                     '나머지주소': addressParts.rest || '-',
+                    '전체주소': fullAddress,
                     '필지 주소': log.lotAddress || '-',
                     '작물': log.cropsDisplay || '-',
                     '면적(m²)': log.area || '-',
@@ -3918,9 +3934,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const zipcode = zipMatch ? zipMatch[1] : '';
                 const addressOnly = zipMatch ? addressFull.replace(zipMatch[0], '') : addressFull;
 
+                // 뷰용 주소: 시도 패턴이 있을 때만 제거
+                const displayAddress = addressOnly && addressOnly !== '-' && SIDO_PATTERN.test(addressOnly)
+                    ? addressOnly.replace(SIDO_PATTERN, '')
+                    : (addressOnly || '-');
+
                 // XSS 방지: 사용자 입력 데이터 이스케이프
                 const safeName = escapeHTML(row.name);
                 const safeAddress = escapeHTML(addressOnly || '-');
+                const safeDisplayAddress = escapeHTML(displayAddress);
                 const safeLotAddress = escapeHTML(row._lotAddress);
                 const safeCrops = escapeHTML(row._cropsDisplay);
                 const safePhone = escapeHTML(row.phoneNumber || '-');
@@ -3984,11 +4006,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 tdZipcode.textContent = zipcode || '-';
                 tr.appendChild(tdZipcode);
 
-                // 주소
+                // 주소 - 시도 제외하고 전체 표시
                 const tdAddress = document.createElement('td');
-                tdAddress.className = 'text-truncate';
-                tdAddress.setAttribute('data-tooltip', addressOnly || '-');
-                tdAddress.textContent = addressOnly || '-';
+                tdAddress.className = 'col-address';
+                tdAddress.textContent = safeDisplayAddress;
                 tr.appendChild(tdAddress);
 
                 // 필지 주소

@@ -1184,3 +1184,20 @@
     background: rgba(220, 38, 38, 0.5);
     border-color: rgba(252, 165, 165, 0.7);
 }
+
+/* 주소 컬럼 스타일 - 고정 너비 두 줄 표시 */
+.pesticide-navbar ~ .main-content .col-address,
+.pesticide-navbar ~ .main-content .col-producer-address {
+    width: 250px;
+    min-width: 250px;
+    max-width: 250px;
+}
+
+/* 주소 데이터 셀 왼쪽 정렬 + 두 줄 표시 */
+.pesticide-navbar ~ .main-content td.col-address,
+.pesticide-navbar ~ .main-content td.col-producer-address {
+    text-align: left;
+    white-space: normal;
+    word-break: keep-all;
+    line-height: 1.4;
+}

@@ -66,10 +66,10 @@ function validateFilePath(filePath) {
         return { valid: false, error: 'URL 인코딩된 경로는 허용되지 않습니다.' };
     }
 
-    // 3. 파일명 유효성 검사
+    // 3. 파일명 유효성 검사 - 위험한 문자만 차단
     const basename = path.basename(filePath);
-    const validFilenameRegex = /^[a-zA-Z0-9가-힣\-_.() ]+$/;
-    if (basename && !validFilenameRegex.test(basename)) {
+    const invalidFilenameChars = /[<>:"|?*\x00-\x1f\\]/;
+    if (basename && invalidFilenameChars.test(basename)) {
         return { valid: false, error: '파일명에 허용되지 않은 문자가 포함되어 있습니다.' };
     }
 

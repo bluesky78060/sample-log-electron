@@ -648,6 +648,19 @@ const BONGHWA_DATA = {
     }
 };
 
+// ========================================
+// 공통 상수 (다른 스크립트에서 재사용)
+// window 객체에 추가하여 전역 접근 가능하도록 함
+// ========================================
+
+// 자동완성 최대 결과 수 (산 지번 옵션 포함 시 결과 2배)
+const MAX_AUTOCOMPLETE_RESULTS = 30;
+window.MAX_AUTOCOMPLETE_RESULTS = MAX_AUTOCOMPLETE_RESULTS;
+
+// 시도 제거 패턴 (주소 표시용)
+const SIDO_PATTERN = /^(서울|부산|대구|인천|광주|대전|울산|세종|경기|강원|충북|충남|전북|전남|경북|경남|제주|경기도|강원도|충청북도|충청남도|전라북도|전라남도|경상북도|경상남도|제주도|제주특별자치도)\s*/;
+window.SIDO_PATTERN = SIDO_PATTERN;
+
 // 지역명 매핑 (재사용을 위해 상수로 분리)
 const REGION_NAMES = {
     'pohang': '포항시',
@@ -674,6 +687,7 @@ const REGION_NAMES = {
     'yeongju': '영주시',
     'uljin': '울진군'
 };
+window.REGION_NAMES = REGION_NAMES;
 
 /**
  * 지역별 주소 파싱 (봉화군, 영주시, 울진군)
@@ -682,12 +696,15 @@ function parseRegionAddress(input, region = 'bonghwa') {
     if (!input || typeof input !== 'string') return null;
 
     const trimmed = input.trim();
-    const match = trimmed.match(/^([가-힣]+[리동])\s*(\d+[\d\-]*)?$/);
+    // "산" 키워드를 포함한 지번 파싱 지원
+    const match = trimmed.match(/^([가-힣]+[리동])\s*(산\s*)?(\d+[\d\-]*)?$/);
 
     if (!match) return null;
 
     const villageName = match[1];
-    const lotNumber = match[2] || '';
+    const isMountainLot = !!match[2];
+    const lotNumberPart = match[3] || '';
+    const lotNumber = isMountainLot && lotNumberPart ? `산 ${lotNumberPart}` : lotNumberPart;
 
     const regionData = REGION_DATA[region];
     if (!regionData) return null;
@@ -717,8 +734,11 @@ function parseBonghwaAddress(input) {
 
 /**
  * 리 이름 자동완성 제안 목록 반환 (다중 지역 지원)
+ * @param {string} input - 사용자 입력
+ * @param {string[]|null} regions - 검색할 지역 목록
+ * @param {boolean} includeMountain - 산 지번 옵션 포함 여부 (기본: false)
  */
-function suggestRegionVillages(input, regions = null) {
+function suggestRegionVillages(input, regions = null, includeMountain = false) {
     if (!input || typeof input !== 'string') return [];
 
     const trimmed = input.trim().toLowerCase();
@@ -728,32 +748,54 @@ function suggestRegionVillages(input, regions = null) {
     const searchRegions = regions || Object.keys(REGION_DATA);
 
     const results = [];
-    const villageInput = trimmed.replace(/\s*\d+[\d\-]*$/, '');
+    // "산" 키워드와 지번 제거하여 리 이름만 추출
+    const hasMountainKeyword = /산/.test(trimmed);
+    const villageInput = trimmed.replace(/\s*(산\s*)?\d+[\d\-]*$/, '');
 
-    searchRegions.forEach(region => {
-        const regionData = REGION_DATA[region];
+    searchRegions.forEach(regionKey => {
+        const regionData = REGION_DATA[regionKey];
         if (!regionData) return;
 
         for (const [village, district] of Object.entries(regionData.villages)) {
             if (village.includes(villageInput)) {
-                results.push({
-                    village,
-                    district,
-                    region: REGION_NAMES[region],
-                    displayText: `${village} (${REGION_NAMES[region]} ${district})`
-                });
+                // 일반 지번 옵션 (산 키워드가 입력에 없을 때만)
+                if (!hasMountainKeyword) {
+                    results.push({
+                        village,
+                        district,
+                        regionKey,
+                        region: REGION_NAMES[regionKey],
+                        isMountain: false,
+                        displayText: `${village} (${REGION_NAMES[regionKey]} ${district})`
+                    });
+                }
+
+                // 산 지번 옵션 (includeMountain이 true이거나 산 키워드가 입력에 있을 때)
+                if (includeMountain || hasMountainKeyword) {
+                    results.push({
+                        village,
+                        district,
+                        regionKey,
+                        region: REGION_NAMES[regionKey],
+                        isMountain: true,
+                        displayText: `${village} 산 (${REGION_NAMES[regionKey]} ${district})`
+                    });
+                }
             }
         }
     });
 
-    // 가나다순 정렬
+    // 가나다순 정렬 (산 지번은 일반 지번 다음에)
     results.sort((a, b) => {
         const regionCompare = a.region.localeCompare(b.region, 'ko');
         if (regionCompare !== 0) return regionCompare;
-        return a.village.localeCompare(b.village, 'ko');
+        const villageCompare = a.village.localeCompare(b.village, 'ko');
+        if (villageCompare !== 0) return villageCompare;
+        // 같은 리면 일반 지번 먼저, 산 지번 나중에
+        return a.isMountain ? 1 : -1;
     });
 
-    return results.slice(0, 20);
+    return results.slice(0, MAX_AUTOCOMPLETE_RESULTS);
 }
 
 /**
@@ -796,12 +838,16 @@ function parseParcelAddress(input) {
     if (!input || typeof input !== 'string') return null;
 
     const trimmed = input.trim();
-    const match = trimmed.match(/^([가-힣]+[리동])\s*(\d+[\d\-]*)?$/);
+    // "산" 키워드를 포함한 지번 파싱 지원 (예: "삼계리 산 123", "삼계리 산123", "삼계리 123")
+    const match = trimmed.match(/^([가-힣]+[리동])\s*(산\s*)?(\d+[\d\-]*)?$/);
 
     if (!match) return null;
 
     const villageName = match[1];
-    const lotNumber = match[2] || '';
+    const isMountainLot = !!match[2];  // "산" 여부
+    const lotNumberPart = match[3] || '';
+    // "산" 지번이면 "산 123" 형식으로, 아니면 그냥 숫자
+    const lotNumber = isMountainLot && lotNumberPart ? `산 ${lotNumberPart}` : lotNumberPart;
 
     // 중복 체크
     const duplicates = checkCrossRegionDuplicate(villageName);

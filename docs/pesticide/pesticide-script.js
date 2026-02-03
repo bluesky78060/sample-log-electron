@@ -303,11 +303,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // 1글자 이상 입력 시 자동완성 표시
             if (value.length > 0 && typeof suggestRegionVillages === 'function') {
-                const suggestions = suggestRegionVillages(value, ['bonghwa', 'yeongju', 'uljin']);
+                // 세 번째 인자 true: 산 지번 옵션 포함
+                const suggestions = suggestRegionVillages(value, ['bonghwa', 'yeongju', 'uljin'], true);
 
                 if (suggestions.length > 0) {
                     producerAddressAutocomplete.innerHTML = sanitizeHTML(suggestions.map(item => `
-                        <li data-village="${item.village}" data-district="${item.district}" data-region="${item.region}">
+                        <li data-village="${item.village}" data-district="${item.district}" data-region-key="${item.regionKey}" data-region="${item.region || ''}" data-is-mountain="${item.isMountain}">
                             ${item.displayText}
                         </li>
                     `).join(''));
@@ -361,18 +362,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (e.target.tagName === 'LI') {
                 const village = e.target.dataset.village;
                 const district = e.target.dataset.district;
-                const region = e.target.dataset.region;
+                const regionKey = e.target.dataset.regionKey;
+                const isMountain = e.target.dataset.isMountain === 'true';
 
-                // 지역명 변환
-                const regionNames = {
-                    'bonghwa': '봉화군',
-                    'yeongju': '영주시',
-                    'uljin': '울진군'
-                };
+                // 로컬 지역명 매핑 (전역 변수 의존 없이)
+                const LOCAL_REGIONS = { 'bonghwa': '봉화군', 'yeongju': '영주시', 'uljin': '울진군' };
 
-                const fullAddress = `${regionNames[region]} ${district} ${village}`;
+                // 산 지번이면 "리 산" 형식
+                const villageWithMountain = isMountain ? `${village} 산` : village;
+                const region = e.target.dataset.region || LOCAL_REGIONS[regionKey] || regionKey;
+                const fullAddress = `${region} ${district} ${villageWithMountain}`;
 
-                // 지번 번호 유지
+                // 지번 번호만 유지 (산 키워드 제외)
                 const currentValue = producerAddressInput.value.trim();
                 const numberMatch = currentValue.match(/\d+(-\d+)?$/);
                 const number = numberMatch ? ' ' + numberMatch[0] : '';
@@ -524,11 +525,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             if (value.length > 0 && typeof suggestRegionVillages === 'function') {
-                const suggestions = suggestRegionVillages(value, ['bonghwa', 'yeongju', 'uljin']);
+                // 세 번째 인자 true: 산 지번 옵션 포함
+                const suggestions = suggestRegionVillages(value, ['bonghwa', 'yeongju', 'uljin'], true);
 
                 if (suggestions.length > 0) {
                     autocompleteList.innerHTML = sanitizeHTML(suggestions.map(item => `
-                        <li data-village="${item.village}" data-district="${item.district}" data-region="${item.region}">
+                        <li data-village="${item.village}" data-district="${item.district}" data-region-key="${item.regionKey}" data-region="${item.region || ''}" data-is-mountain="${item.isMountain}">
                             ${item.displayText}
                         </li>
                     `).join(''));
@@ -571,16 +573,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (e.target.tagName === 'LI') {
                 const village = e.target.dataset.village;
                 const district = e.target.dataset.district;
-                const region = e.target.dataset.region;
+                const regionKey = e.target.dataset.regionKey;
+                const isMountain = e.target.dataset.isMountain === 'true';
 
-                const regionNames = {
-                    'bonghwa': '봉화군',
-                    'yeongju': '영주시',
-                    'uljin': '울진군'
-                };
+                // 로컬 지역명 매핑
+                const LOCAL_REGIONS = { 'bonghwa': '봉화군', 'yeongju': '영주시', 'uljin': '울진군' };
 
-                const fullAddress = `${regionNames[region]} ${district} ${village}`;
+                // 산 지번이면 "리 산" 형식
+                const villageWithMountain = isMountain ? `${village} 산` : village;
+                const region = e.target.dataset.region || LOCAL_REGIONS[regionKey] || regionKey;
+                const fullAddress = `${region} ${district} ${villageWithMountain}`;
                 const currentValue = addressInput.value.trim();
+                // 지번 번호만 매칭 (산 키워드 제외)
                 const match = currentValue.match(/\d+(-\d+)?$/);
                 const number = match ? ' ' + match[0] : '';
 
@@ -1216,11 +1220,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             if (value.length > 0 && typeof suggestRegionVillages === 'function') {
-                const suggestions = suggestRegionVillages(value, ['bonghwa', 'yeongju', 'uljin']);
+                // 세 번째 인자 true: 산 지번 옵션 포함
+                const suggestions = suggestRegionVillages(value, ['bonghwa', 'yeongju', 'uljin'], true);
 
                 if (suggestions.length > 0) {
                     autocompleteList.innerHTML = sanitizeHTML(suggestions.map(item => `
-                        <li data-village="${item.village}" data-district="${item.district}" data-region="${item.region}">
+                        <li data-village="${item.village}" data-district="${item.district}" data-region-key="${item.regionKey}" data-region="${item.region || ''}" data-is-mountain="${item.isMountain}">
                             ${item.displayText}
                         </li>
                     `).join(''));
@@ -1262,7 +1267,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         else if (result.alternatives && result.alternatives.length > 1) {
                             // 같은 지역 내 중복 리 선택 UI 표시
                             autocompleteList.innerHTML = sanitizeHTML(result.alternatives.map(district => `
-                                <li data-village="${result.village}" data-district="${district}" data-lot="${result.lotNumber}" data-region="${result.region}">
+                                <li data-village="${result.village}" data-district="${district}" data-lot="${result.lotNumber}" data-region-key="${result.regionKey}">
                                     ${result.region} ${district} ${result.village} ${result.lotNumber || ''}
                                 </li>
                             `).join(''));
@@ -1283,17 +1288,25 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (e.target.tagName === 'LI') {
                 const village = e.target.dataset.village;
                 const district = e.target.dataset.district;
-                const region = e.target.dataset.region || '봉화군';
+                const regionKey = e.target.dataset.regionKey;
+                const isMountain = e.target.dataset.isMountain === 'true';
                 const lotNumber = e.target.dataset.lot || '';
 
-                // 기존 입력에서 지번 추출
+                // 로컬 지역명 매핑
+                const LOCAL_REGIONS = { 'bonghwa': '봉화군', 'yeongju': '영주시', 'uljin': '울진군' };
+                const region = e.target.dataset.region || LOCAL_REGIONS[regionKey] || regionKey;
+
+                // 산 지번이면 "리 산" 형식
+                const villageWithMountain = isMountain ? `${village} 산` : village;
+
+                // 기존 입력에서 지번 추출 (산 키워드 제외)
                 const currentValue = lotInput.value.trim();
-                const match = currentValue.match(/(\d+[\d\-]*)$/);
-                const extractedLotNumber = lotNumber || (match ? match[1] : '');
+                const match = currentValue.match(/\d+(-\d+)?$/);
+                const extractedLotNumber = lotNumber || (match ? match[0] : '');
 
                 const fullAddress = extractedLotNumber
-                    ? `${region} ${district} ${village} ${extractedLotNumber}`
-                    : `${region} ${district} ${village}`;
+                    ? `${region} ${district} ${villageWithMountain} ${extractedLotNumber}`
+                    : `${region} ${district} ${villageWithMountain}`;
 
                 lotInput.value = fullAddress;
                 autocompleteList.classList.remove('show');
@@ -1327,11 +1340,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             if (value.length > 0 && typeof suggestRegionVillages === 'function') {
-                const suggestions = suggestRegionVillages(value, ['bonghwa', 'yeongju', 'uljin']);
+                // 세 번째 인자 true: 산 지번 옵션 포함
+                const suggestions = suggestRegionVillages(value, ['bonghwa', 'yeongju', 'uljin'], true);
 
                 if (suggestions.length > 0) {
                     autocompleteList.innerHTML = sanitizeHTML(suggestions.map(item => `
-                        <li data-village="${item.village}" data-district="${item.district}" data-region="${item.region}">
+                        <li data-village="${item.village}" data-district="${item.district}" data-region-key="${item.regionKey}" data-region="${item.region || ''}" data-is-mountain="${item.isMountain}">
                             ${item.displayText}
                         </li>
                     `).join(''));
@@ -1356,7 +1370,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             if (result.alternatives && result.alternatives.length > 1) {
                                 // 중복 리 선택 UI 표시
                                 autocompleteList.innerHTML = sanitizeHTML(result.alternatives.map(district => `
-                                    <li data-village="${result.village}" data-district="${district}" data-region="${result.region}" data-lot="${result.lotNumber}">
+                                    <li data-village="${result.village}" data-district="${district}" data-region-key="${result.regionKey}" data-lot="${result.lotNumber}">
                                         ${result.region} ${district} ${result.village} ${result.lotNumber || ''}
                                     </li>
                                 `).join(''));
@@ -1377,17 +1391,25 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (e.target.tagName === 'LI') {
                 const village = e.target.dataset.village;
                 const district = e.target.dataset.district;
-                const region = e.target.dataset.region || '봉화군';
+                const regionKey = e.target.dataset.regionKey;
+                const isMountain = e.target.dataset.isMountain === 'true';
                 const lotNumber = e.target.dataset.lot || '';
 
-                // 기존 입력에서 지번 추출
+                // 로컬 지역명 매핑
+                const LOCAL_REGIONS = { 'bonghwa': '봉화군', 'yeongju': '영주시', 'uljin': '울진군' };
+                const region = e.target.dataset.region || LOCAL_REGIONS[regionKey] || regionKey;
+
+                // 산 지번이면 "리 산" 형식
+                const villageWithMountain = isMountain ? `${village} 산` : village;
+
+                // 기존 입력에서 지번 추출 (산 키워드 제외)
                 const currentValue = subLotInput.value.trim();
-                const match = currentValue.match(/(\d+[\d\-]*)$/);
-                const extractedLotNumber = lotNumber || (match ? match[1] : '');
+                const match = currentValue.match(/\d+(-\d+)?$/);
+                const extractedLotNumber = lotNumber || (match ? match[0] : '');
 
                 const fullAddress = extractedLotNumber
-                    ? `${region} ${district} ${village} ${extractedLotNumber}`
-                    : `${region} ${district} ${village}`;
+                    ? `${region} ${district} ${villageWithMountain} ${extractedLotNumber}`
+                    : `${region} ${district} ${villageWithMountain}`;
 
                 subLotInput.value = fullAddress;
                 autocompleteList.classList.remove('show');
@@ -3478,6 +3500,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // 도로명주소에서 시도/시군구/읍면동 분리
             const addressParts = parseAddressParts(log.addressRoad || log.address || '');
+            // 전체 주소
+            const fullAddress = [log.addressRoad, log.addressDetail].filter(Boolean).join(' ') || '-';
 
             if (log.parcels && log.parcels.length > 0) {
                 log.parcels.forEach((parcel, pIdx) => {
@@ -3504,6 +3528,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         '시군구': addressParts.sigungu || '-',
                         '읍면동': addressParts.eupmyeondong || '-',
                         '나머지주소': (addressParts.rest + (log.addressDetail ? ' ' + log.addressDetail : '')).trim() || '-',
+                        '전체주소': fullAddress,
                         '필지 주소': parcel.lotAddress || '-',
                         '작물': cropsDisplay,
                         '수령 방법': log.receptionMethod || '-',
@@ -3539,6 +3564,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 '시군구': addressParts.sigungu || '-',
                                 '읍면동': addressParts.eupmyeondong || '-',
                                 '나머지주소': (addressParts.rest + (log.addressDetail ? ' ' + log.addressDetail : '')).trim() || '-',
+                                '전체주소': fullAddress,
                                 '필지 주소': subLotAddress,
                                 '작물': subLotCropsDisplay,
                                 '수령 방법': log.receptionMethod || '-',
@@ -3565,6 +3591,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     '시군구': addressParts.sigungu || '-',
                     '읍면동': addressParts.eupmyeondong || '-',
                     '나머지주소': (addressParts.rest + (log.addressDetail ? ' ' + log.addressDetail : '')).trim() || '-',
+                    '전체주소': fullAddress,
                     '필지 주소': log.producerAddress || log.lotAddress || '-',
                     '작물': log.requestContent || log.cropsDisplay || '-',
                     '수령 방법': log.receptionMethod || '-',
@@ -3979,7 +4006,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             tr.className = isCompleted ? 'row-completed' : '';
             const methodText = row.receptionMethod || '-';
 
-            const addressFull = row.address || '';
+            const addressFull = row.addressRoad || row.address || '';
             const zipMatch = addressFull.match(/^\((\d{5})\)\s*/);
             const zipcode = row.addressPostcode || (zipMatch ? zipMatch[1] : '');
             const addressOnly = zipMatch ? addressFull.replace(zipMatch[0], '') : addressFull;
@@ -3988,10 +4015,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             const applicantType = row.applicantType || '개인';
             const birthOrCorp = applicantType === '법인' ? (row.corpNumber || '-') : (row.birthDate || '-');
 
+            // 뷰용 주소: 시도 패턴이 있을 때만 제거
+            const displayAddress = addressOnly && addressOnly !== '-' && SIDO_PATTERN.test(addressOnly)
+                ? addressOnly.replace(SIDO_PATTERN, '')
+                : (addressOnly || '-');
+
             // XSS 방지: 사용자 입력 데이터 이스케이프
             const safeName = escapeHTML(row.name);
             const safeAddress = escapeHTML(addressOnly || '-');
+            const safeDisplayAddress = escapeHTML(displayAddress);
             const safeProducerName = escapeHTML(row.producerName || '-');
+            // 생산지 주소: 원본 그대로 표시
             const safeProducerAddress = escapeHTML(row.producerAddress || '-');
             const safeRequestContent = escapeHTML(row.requestContent || '-');
             const safePhone = escapeHTML(row.phoneNumber || '-');
@@ -4085,11 +4119,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             tdZipcode.textContent = zipcode || '-';
             tr.appendChild(tdZipcode);
 
-            // Address (truncated with tooltip)
+            // Address - 시도 제외하고 전체 표시
             const tdAddress = document.createElement('td');
-            tdAddress.className = 'text-truncate';
-            tdAddress.dataset.tooltip = safeAddress;
-            tdAddress.textContent = safeAddress;
+            tdAddress.className = 'col-address';
+            tdAddress.textContent = safeDisplayAddress;
             tr.appendChild(tdAddress);
 
             // Producer name
@@ -4097,8 +4130,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             tdProducerName.textContent = safeProducerName;
             tr.appendChild(tdProducerName);
 
-            // Producer address
+            // Producer address - 왼쪽 정렬
             const tdProducerAddress = document.createElement('td');
+            tdProducerAddress.className = 'col-producer-address';
             tdProducerAddress.textContent = safeProducerAddress;
             tr.appendChild(tdProducerAddress);
 

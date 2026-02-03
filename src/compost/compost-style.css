@@ -719,19 +719,27 @@
     display: table-cell;
 }
 
-/* 주소 컬럼 스타일 */
+/* 주소 컬럼 스타일 - 고정 너비 두 줄 표시 */
 .compost-navbar ~ .main-content .col-address {
-    max-width: 200px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    width: 250px;
+    min-width: 250px;
+    max-width: 250px;
 }
 
-/* 농장주소 컬럼 스타일 */
+/* 농장주소 컬럼 스타일 - 고정 너비 두 줄 표시 */
 .compost-navbar ~ .main-content .col-farm-address {
-    min-width: 200px;
+    width: 250px;
+    min-width: 250px;
+    max-width: 250px;
+}
+
+/* 주소, 농장주소 데이터 셀 왼쪽 정렬 + 두 줄 표시 */
+.compost-navbar ~ .main-content td.col-address,
+.compost-navbar ~ .main-content td.col-farm-address {
+    text-align: left;
     white-space: normal;
     word-break: keep-all;
+    line-height: 1.4;
 }
 
 /* 레이아웃: form-two-column 클래스 사용 (style.css 공통 스타일) */

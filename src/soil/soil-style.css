@@ -852,3 +852,18 @@ select#listYearSelect.list-year-select option {
     border-color: rgba(34, 197, 94, 0.4);
     color: #86efac;
 }
+
+/* 주소 컬럼 스타일 - 고정 너비 두 줄 표시 */
+.soil-navbar ~ .main-content .col-address {
+    width: 250px;
+    min-width: 250px;
+    max-width: 250px;
+}
+
+/* 주소 데이터 셀 왼쪽 정렬 + 두 줄 표시 */
+.soil-navbar ~ .main-content td.col-address {
+    text-align: left;
+    white-space: normal;
+    word-break: keep-all;
+    line-height: 1.4;
+}
