@@ -604,7 +604,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         item.innerHTML = sanitizeHTML(`
             <span class="location-number">${index + 1}</span>
             <div class="location-autocomplete-wrapper">
-                <input type="text" class="sampling-location-input" name="samplingLocations[]" required placeholder="리+지번 입력 (예: 내성리 123)">
+                <input type="text" class="sampling-location-input" name="samplingLocations[]" required placeholder="리+지번 입력 (예: 내성리 123, 내성리 산 45)">
                 <ul class="location-autocomplete-list"></ul>
             </div>
             <input type="text" class="sampling-crop-input" name="samplingCrops[]" placeholder="주작목">
@@ -1280,22 +1280,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             tdAddress.textContent = safeDisplayAddress;
             row.appendChild(tdAddress);
 
-            // 11. Sample name
-            const tdSampleName = document.createElement('td');
-            tdSampleName.textContent = safeSampleName;
-            row.appendChild(tdSampleName);
-
-            // 12. Sample count
-            const tdSampleCount = document.createElement('td');
-            tdSampleCount.textContent = `${String(log.sampleCount || 1)}점`;
-            row.appendChild(tdSampleCount);
-
-            // 13. Sampling location (with tooltip)
+            // 11. Sampling location (with tooltip)
             const tdSamplingLocation = document.createElement('td');
             tdSamplingLocation.className = 'text-truncate';
             tdSamplingLocation.dataset.tooltip = safeSamplingLocation;
             tdSamplingLocation.textContent = safeSamplingLocation;
             row.appendChild(tdSamplingLocation);
+
+            // 12. Sample name
+            const tdSampleName = document.createElement('td');
+            tdSampleName.textContent = safeSampleName;
+            row.appendChild(tdSampleName);
+
+            // 13. Sample count
+            const tdSampleCount = document.createElement('td');
+            tdSampleCount.textContent = `${String(log.sampleCount || 1)}점`;
+            row.appendChild(tdSampleCount);
 
             // 14. Main crop (with tooltip)
             const tdMainCrop = document.createElement('td');
@@ -2308,9 +2308,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     '나머지주소': (addressParts.rest + (log.addressDetail ? ' ' + log.addressDetail : '')).trim() || '-',
                     '전체주소': fullAddress,
                     '우편번호': log.addressPostcode || '-',
+                    '채취장소': log.samplingLocation || '-',
                     '시료명': log.sampleName || '-',
                     '시료수': log.sampleCount || '-',
-                    '채취장소': log.samplingLocation || '-',
                     '주작목': log.mainCrop || '-',
                     '목적': log.purpose || '-',
                     '검사항목': log.testItems || '-',
@@ -2337,9 +2337,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 { wch: 10 },  // 읍면동
                 { wch: 30 },  // 나머지주소
                 { wch: 8 },   // 우편번호
+                { wch: 25 },  // 채취장소
                 { wch: 15 },  // 시료명
                 { wch: 8 },   // 시료수
-                { wch: 25 },  // 채취장소
                 { wch: 15 },  // 주작목
                 { wch: 15 },  // 목적
                 { wch: 25 },  // 검사항목

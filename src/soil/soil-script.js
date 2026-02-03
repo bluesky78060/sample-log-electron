@@ -737,7 +737,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                        id="lot-address-${parcel.id}"
                                        name="lot-address-${parcel.id}"
                                        data-id="${parcel.id}"
-                                       placeholder="예: 문단리 224"
+                                       placeholder="예: 문단리 224, 문단리 산 423"
                                        value="${safeLotAddress}">
                                 <ul class="lot-address-autocomplete-list" id="lotAutocomplete-${parcel.id}"></ul>
                             </div>
@@ -797,7 +797,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                        id="sub-lot-${parcel.id}"
                                        name="sub-lot-${parcel.id}"
                                        data-id="${parcel.id}"
-                                       placeholder="예 : 문단리 123">
+                                       placeholder="예: 문단리 224, 문단리 산 423">
                                 <ul class="lot-address-autocomplete-list" id="subLotAutocomplete-${parcel.id}"></ul>
                             </div>
                             <button type="button" class="btn-add-sub-lot-icon" data-id="${parcel.id}" title="하위 필지 추가">+</button>
@@ -2004,10 +2004,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             const parcel = parcels.find(p => p.id === currentParcelIdForCrop);
             const receptionNumber = getReceptionNumber();
 
-            // 기존 첫 번째 작물(직접 입력 필드)은 유지하고 나머지를 모달에서 추가한 작물로 교체
-            const firstCrop = parcel.crops[0] || { name: '', area: '', code: '' };
-
-            parcel.crops = [firstCrop, ...validCrops];
+            // 모달에서 관리하는 작물 목록으로 교체 (중복 방지)
+            parcel.crops = validCrops;
 
             log('📋 작물 저장 완료:', parcel.crops);
 

@@ -363,23 +363,23 @@ class WaterSampleManager extends BaseSampleManager {
         tdAddress.textContent = fullAddress;
         row.appendChild(tdAddress);
 
-        // 11. 시료명
-        const tdSampleName = document.createElement('td');
-        tdSampleName.textContent = log.sampleName || '-';
-        row.appendChild(tdSampleName);
-
-        // 12. 시료수
-        const tdSampleCount = document.createElement('td');
-        tdSampleCount.textContent = `${log.sampleCount || 1}점`;
-        row.appendChild(tdSampleCount);
-
-        // 13. 채취장소
+        // 11. 채취장소
         const tdSamplingLocation = document.createElement('td');
         tdSamplingLocation.className = 'text-truncate';
         const samplingLocation = log.samplingLocation || '-';
         tdSamplingLocation.dataset.tooltip = samplingLocation;
         tdSamplingLocation.textContent = samplingLocation;
         row.appendChild(tdSamplingLocation);
+
+        // 12. 시료명
+        const tdSampleName = document.createElement('td');
+        tdSampleName.textContent = log.sampleName || '-';
+        row.appendChild(tdSampleName);
+
+        // 13. 시료수
+        const tdSampleCount = document.createElement('td');
+        tdSampleCount.textContent = `${log.sampleCount || 1}점`;
+        row.appendChild(tdSampleCount);
 
         // 14. 주작목
         const tdMainCrop = document.createElement('td');

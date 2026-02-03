@@ -451,7 +451,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div class="form-field full-width">
                     <label>생산지 주소 <span class="label-hint">* 리+지번 입력 후 Enter</span></label>
                     <div class="producer-address-autocomplete-wrapper">
-                        <input type="text" class="request-producer-address" name="producerAddress[]" placeholder="예: 문단리 123">
+                        <input type="text" class="request-producer-address" name="producerAddress[]" placeholder="예: 문단리 123, 문단리 산 45">
                         <ul class="producer-address-autocomplete-list"></ul>
                     </div>
                 </div>
@@ -758,6 +758,37 @@ document.addEventListener('DOMContentLoaded', async () => {
         log('📂 기존 데이터를 년도별 저장소로 마이그레이션:', sampleLogs.length, '건');
     }
 
+    // 생산지 주소 마이그레이션 (면+리만 있는 주소에 봉화군 추가)
+    function migrateProducerAddress(logs) {
+        // 봉화군 면 목록
+        const bonghwaDistricts = ['봉화읍', '물야면', '봉성면', '법전면', '춘양면', '소천면', '재산면', '명호면', '상운면', '석포면'];
+        const districtPattern = new RegExp(`^(${bonghwaDistricts.join('|')})\\s+`);
+
+        let migrated = 0;
+        logs.forEach(log => {
+            if (log.producerAddress) {
+                const addr = log.producerAddress.trim();
+                // 이미 시군이 포함된 경우 스킵
+                if (addr.startsWith('봉화군') || addr.startsWith('영주시') || addr.startsWith('울진군') || addr.startsWith('경상북도')) {
+                    return;
+                }
+                // 봉화군 면으로 시작하는 경우 앞에 봉화군 추가
+                if (districtPattern.test(addr)) {
+                    log.producerAddress = '봉화군 ' + addr;
+                    migrated++;
+                }
+            }
+        });
+        return migrated;
+    }
+
+    // 로드된 데이터에 마이그레이션 적용
+    const migratedCount = migrateProducerAddress(sampleLogs);
+    if (migratedCount > 0) {
+        localStorage.setItem(getStorageKey(selectedYear), JSON.stringify(sampleLogs));
+        log('📍 생산지 주소 마이그레이션:', migratedCount, '건');
+    }
+
     // Firebase에서 데이터 로드 (클라우드 동기화)
     async function loadFromFirebase(year) {
         try {
@@ -802,6 +833,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                     sampleLogs = cloudData;
                     log('☁️ Firebase 데이터 로드 완료:', sampleLogs.length, '건');
 
+                    // 생산지 주소 마이그레이션 적용
+                    const migrated = migrateProducerAddress(sampleLogs);
+                    if (migrated > 0) {
+                        log('📍 생산지 주소 마이그레이션:', migrated, '건');
+                    }
+
                     // localStorage에 캐싱
                     localStorage.setItem(yearStorageKey, JSON.stringify(sampleLogs));
                     log('💾 로컬 캐싱 완료');
@@ -834,6 +871,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // 2. Firebase 사용 불가 또는 데이터 없음 → 로컬에서 로드
         sampleLogs = SampleUtils.safeParseJSON(yearStorageKey, []);
+
+        // 생산지 주소 마이그레이션 적용
+        const migrated = migrateProducerAddress(sampleLogs);
+        if (migrated > 0) {
+            localStorage.setItem(yearStorageKey, JSON.stringify(sampleLogs));
+            log('📍 생산지 주소 마이그레이션:', migrated, '건');
+        }
+
         renderLogs(sampleLogs);
 
         const receptionInput = document.getElementById('receptionNumber');
@@ -1033,7 +1078,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                    id="lot-address-${parcel.id}"
                                    name="lot-address-${parcel.id}"
                                    data-id="${parcel.id}"
-                                   placeholder="예: 문단리 224"
+                                   placeholder="예: 문단리 224, 문단리 산 45"
                                    value="${safeLotAddressParcel}">
                             <ul class="lot-address-autocomplete-list" id="lotAutocomplete-${parcel.id}"></ul>
                         </div>
@@ -1092,7 +1137,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                        id="sub-lot-${parcel.id}"
                                        name="sub-lot-${parcel.id}"
                                        data-id="${parcel.id}"
-                                       placeholder="예 : 문단리 123">
+                                       placeholder="예: 문단리 224, 문단리 산 45">
                                 <ul class="lot-address-autocomplete-list" id="subLotAutocomplete-${parcel.id}"></ul>
                             </div>
                             <button type="button" class="btn-add-sub-lot-icon" data-id="${parcel.id}" title="하위 필지 추가">+</button>
@@ -2398,13 +2443,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!modal || !tableBody) return;
 
         // 테이블 내용 생성
-        const rows = logs.map(log => `
+        const rows = logs.map(log => {
+            const addrWithoutSido = (log.producerAddress || '-').replace(/^경상북도\s*/, '');
+            return `
             <tr>
                 <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${log.receptionNumber}</td>
-                <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${log.producerAddress || '-'}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${addrWithoutSido}</td>
                 <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${log.requestContent || '-'}</td>
             </tr>
-        `).join('');
+        `;
+        }).join('');
 
         tableBody.innerHTML = sanitizeHTML(`
             <div style="margin-bottom: 16px; text-align: center;">
@@ -4025,8 +4073,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             const safeAddress = escapeHTML(addressOnly || '-');
             const safeDisplayAddress = escapeHTML(displayAddress);
             const safeProducerName = escapeHTML(row.producerName || '-');
-            // 생산지 주소: 원본 그대로 표시
-            const safeProducerAddress = escapeHTML(row.producerAddress || '-');
+            // 생산지 주소: 경상북도 제거 후 표시
+            const producerAddrWithoutSido = (row.producerAddress || '-').replace(/^경상북도\s*/, '');
+            const safeProducerAddress = escapeHTML(producerAddrWithoutSido);
             const safeRequestContent = escapeHTML(row.requestContent || '-');
             const safePhone = escapeHTML(row.phoneNumber || '-');
             const safeNote = escapeHTML(row.note || '-');

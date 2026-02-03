@@ -1157,3 +1157,8 @@ textarea:focus {
     word-break: keep-all;
     line-height: 1.4;
 }
+
+/* 채취장소 왼쪽 정렬 */
+.water-navbar ~ .main-content td.text-truncate {
+    text-align: left;
+}

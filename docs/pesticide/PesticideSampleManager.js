@@ -62,7 +62,9 @@ class PesticideSampleManager extends BaseSampleManager {
         const safeName = escapeHTML(log.name || '-');
         const safeAddress = escapeHTML(addressOnly || '-');
         const safeProducerName = escapeHTML(log.producerName || '-');
-        const safeProducerAddress = escapeHTML(log.producerAddress || '-');
+        // 생산지 주소: 경상북도 제거 후 표시
+        const producerAddrWithoutSido = (log.producerAddress || '-').replace(/^경상북도\s*/, '');
+        const safeProducerAddress = escapeHTML(producerAddrWithoutSido);
         const safeRequestContent = escapeHTML(log.requestContent || '-');
         const safePhone = escapeHTML(log.phoneNumber || '-');
         const safeNote = escapeHTML(log.note || '-');
