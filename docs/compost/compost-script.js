@@ -997,6 +997,54 @@ document.addEventListener('DOMContentLoaded', async () => {
             tdMoisture.appendChild(inputMoisture);
             row.appendChild(tdMoisture);
 
+            // 3-3. Heavy metal (중금속) - 축종에 따라 다른 입력 필드
+            const tdHeavyMetal = document.createElement('td');
+            tdHeavyMetal.className = 'col-heavy-metal';
+            const animalType = logItem.animalType || '';
+
+            if (animalType === '소') {
+                // 소: 염분 입력
+                const inputSalt = document.createElement('input');
+                inputSalt.type = 'text';
+                inputSalt.className = 'heavy-metal-input salt-input';
+                inputSalt.dataset.id = logItem.id;
+                inputSalt.dataset.field = 'salt';
+                inputSalt.value = logItem.salt || '';
+                inputSalt.placeholder = '염분%';
+                inputSalt.maxLength = 10;
+                tdHeavyMetal.appendChild(inputSalt);
+            } else if (animalType === '돼지') {
+                // 돼지: 구리, 아연 입력
+                const wrapper = document.createElement('div');
+                wrapper.className = 'heavy-metal-wrapper';
+
+                const inputCopper = document.createElement('input');
+                inputCopper.type = 'text';
+                inputCopper.className = 'heavy-metal-input copper-input';
+                inputCopper.dataset.id = logItem.id;
+                inputCopper.dataset.field = 'copper';
+                inputCopper.value = logItem.copper || '';
+                inputCopper.placeholder = 'Cu';
+                inputCopper.maxLength = 10;
+
+                const inputZinc = document.createElement('input');
+                inputZinc.type = 'text';
+                inputZinc.className = 'heavy-metal-input zinc-input';
+                inputZinc.dataset.id = logItem.id;
+                inputZinc.dataset.field = 'zinc';
+                inputZinc.value = logItem.zinc || '';
+                inputZinc.placeholder = 'Zn';
+                inputZinc.maxLength = 10;
+
+                wrapper.appendChild(inputCopper);
+                wrapper.appendChild(inputZinc);
+                tdHeavyMetal.appendChild(wrapper);
+            } else {
+                // 기타: 빈 셀
+                tdHeavyMetal.textContent = '-';
+            }
+            row.appendChild(tdHeavyMetal);
+
             // 4. Reception number
             const tdReceptionNumber = document.createElement('td');
             tdReceptionNumber.textContent = logItem.receptionNumber || '-';
@@ -1290,7 +1338,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // 함수율 입력 변경 이벤트 (blur 시 저장)
+    // 함수율/중금속 입력 변경 이벤트 (blur 시 저장)
     tableBody?.addEventListener('blur', (e) => {
         const moistureInput = e.target.closest('.moisture-input');
         if (moistureInput) {
@@ -1298,9 +1346,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             updateMoisture(id, moistureInput.value);
             return;
         }
+
+        const heavyMetalInput = e.target.closest('.heavy-metal-input');
+        if (heavyMetalInput) {
+            const id = heavyMetalInput.dataset.id;
+            const field = heavyMetalInput.dataset.field;
+            updateHeavyMetal(id, field, heavyMetalInput.value);
+            return;
+        }
     }, true); // capture phase for blur event
 
-    // 함수율 Enter 키 입력 시 저장
+    // 함수율/중금속 Enter 키 입력 시 저장
     tableBody?.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
             const moistureInput = e.target.closest('.moisture-input');
@@ -1308,6 +1364,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const id = moistureInput.dataset.id;
                 updateMoisture(id, moistureInput.value);
                 moistureInput.blur();
+                return;
+            }
+
+            const heavyMetalInput = e.target.closest('.heavy-metal-input');
+            if (heavyMetalInput) {
+                const id = heavyMetalInput.dataset.id;
+                const field = heavyMetalInput.dataset.field;
+                updateHeavyMetal(id, field, heavyMetalInput.value);
+                heavyMetalInput.blur();
                 return;
             }
         }
@@ -1336,6 +1401,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             logItem.updatedAt = new Date().toISOString();
             saveLogs();
             log('함수율 업데이트:', id, value);
+        }
+    }
+
+    // 중금속 업데이트 (salt, copper, zinc)
+    function updateHeavyMetal(id, field, value) {
+        const logItem = sampleLogs.find(l => String(l.id) === id);
+        if (logItem) {
+            logItem[field] = value;
+            logItem.updatedAt = new Date().toISOString();
+            saveLogs();
+            log('중금속 업데이트:', id, field, value);
         }
     }
 
