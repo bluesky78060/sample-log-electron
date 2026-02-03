@@ -1269,6 +1269,9 @@ div.animal-type-options label.checkbox-card.small div.checkbox-content {
     background: white;
     cursor: pointer;
     transition: all 0.2s ease;
+    -webkit-appearance: menulist;
+    -moz-appearance: menulist;
+    appearance: menulist;
 }
 
 .maturity-select:focus {
@@ -1308,6 +1311,9 @@ div.animal-type-options label.checkbox-card.small div.checkbox-content {
     background: rgba(69, 26, 3, 0.8);
     color: #fcd34d;
     border-color: rgba(217, 119, 6, 0.4);
+    -webkit-appearance: menulist !important;
+    -moz-appearance: menulist !important;
+    appearance: menulist !important;
 }
 
 [data-theme="dark"] .maturity-select:focus {

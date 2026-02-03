@@ -1240,6 +1240,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 테이블 이벤트 위임 (한 번만 등록)
     tableBody?.addEventListener('click', (e) => {
+        // select, input 요소 클릭 시 이벤트 무시 (드롭다운/입력 동작 보호)
+        if (e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT' || e.target.tagName === 'OPTION') {
+            return;
+        }
+
         // 완료 버튼
         const completeBtn = e.target.closest('.btn-complete');
         if (completeBtn) {
