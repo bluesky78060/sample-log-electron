@@ -1346,61 +1346,6 @@ div.animal-type-options label.checkbox-card.small div.checkbox-content {
     color: rgba(252, 211, 77, 0.5);
 }
 
-/* 중금속 컬럼 */
-.col-heavy-metal {
-    width: 120px;
-    min-width: 120px;
-    text-align: center;
-}
-
-.heavy-metal-wrapper {
-    display: flex;
-    gap: 4px;
-    justify-content: center;
-}
-
-.heavy-metal-input {
-    width: 100%;
-    max-width: 50px;
-    padding: 4px 6px;
-    font-size: 0.7rem;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    text-align: center;
-    transition: all 0.2s ease;
-}
-
-.heavy-metal-input.salt-input {
-    max-width: 70px;
-}
-
-.heavy-metal-input:focus {
-    outline: none;
-    border-color: #f59e0b;
-    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
-}
-
-.heavy-metal-input::placeholder {
-    color: #9ca3af;
-    font-size: 0.65rem;
-}
-
-/* 다크 모드 중금속 입력 */
-[data-theme="dark"] .heavy-metal-input {
-    background: rgba(69, 26, 3, 0.8);
-    color: #fcd34d;
-    border-color: rgba(217, 119, 6, 0.4);
-}
-
-[data-theme="dark"] .heavy-metal-input:focus {
-    border-color: #f59e0b;
-    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3);
-}
-
-[data-theme="dark"] .heavy-metal-input::placeholder {
-    color: rgba(252, 211, 77, 0.5);
-}
-
 /* 다크 모드 판정 버튼 */
 [data-theme="dark"] .btn-result {
     background: rgba(69, 26, 3, 0.6);
