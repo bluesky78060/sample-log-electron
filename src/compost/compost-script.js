@@ -967,6 +967,36 @@ document.addEventListener('DOMContentLoaded', async () => {
             tdResult.appendChild(btnResult);
             row.appendChild(tdResult);
 
+            // 3-1. Maturity level (부숙도) dropdown
+            const tdMaturity = document.createElement('td');
+            tdMaturity.className = 'col-maturity';
+            const selectMaturity = document.createElement('select');
+            selectMaturity.className = 'maturity-select';
+            selectMaturity.dataset.id = logItem.id;
+            const maturityOptions = ['', '부숙초기', '부숙중기', '부숙후기', '부숙완료'];
+            maturityOptions.forEach(opt => {
+                const option = document.createElement('option');
+                option.value = opt;
+                option.textContent = opt || '-';
+                if (logItem.maturity === opt) option.selected = true;
+                selectMaturity.appendChild(option);
+            });
+            tdMaturity.appendChild(selectMaturity);
+            row.appendChild(tdMaturity);
+
+            // 3-2. Moisture content (함수율) input
+            const tdMoisture = document.createElement('td');
+            tdMoisture.className = 'col-moisture';
+            const inputMoisture = document.createElement('input');
+            inputMoisture.type = 'text';
+            inputMoisture.className = 'moisture-input';
+            inputMoisture.dataset.id = logItem.id;
+            inputMoisture.value = logItem.moisture || '';
+            inputMoisture.placeholder = '%';
+            inputMoisture.maxLength = 10;
+            tdMoisture.appendChild(inputMoisture);
+            row.appendChild(tdMoisture);
+
             // 4. Reception number
             const tdReceptionNumber = document.createElement('td');
             tdReceptionNumber.textContent = logItem.receptionNumber || '-';
@@ -1245,8 +1275,63 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
+    // 부숙도 드롭다운 변경 이벤트
+    tableBody?.addEventListener('change', (e) => {
+        const maturitySelect = e.target.closest('.maturity-select');
+        if (maturitySelect) {
+            const id = maturitySelect.dataset.id;
+            updateMaturity(id, maturitySelect.value);
+            return;
+        }
+    });
+
+    // 함수율 입력 변경 이벤트 (blur 시 저장)
+    tableBody?.addEventListener('blur', (e) => {
+        const moistureInput = e.target.closest('.moisture-input');
+        if (moistureInput) {
+            const id = moistureInput.dataset.id;
+            updateMoisture(id, moistureInput.value);
+            return;
+        }
+    }, true); // capture phase for blur event
+
+    // 함수율 Enter 키 입력 시 저장
+    tableBody?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            const moistureInput = e.target.closest('.moisture-input');
+            if (moistureInput) {
+                const id = moistureInput.dataset.id;
+                updateMoisture(id, moistureInput.value);
+                moistureInput.blur();
+                return;
+            }
+        }
+    });
+
     function bindTableEvents() {
         // 이벤트 위임으로 대체됨 - 이 함수는 호환성을 위해 유지
+    }
+
+    // 부숙도 업데이트
+    function updateMaturity(id, value) {
+        const logItem = sampleLogs.find(l => String(l.id) === id);
+        if (logItem) {
+            logItem.maturity = value;
+            logItem.updatedAt = new Date().toISOString();
+            saveLogs();
+            log('부숙도 업데이트:', id, value);
+        }
+    }
+
+    // 함수율 업데이트
+    function updateMoisture(id, value) {
+        const logItem = sampleLogs.find(l => String(l.id) === id);
+        if (logItem) {
+            logItem.moisture = value;
+            logItem.updatedAt = new Date().toISOString();
+            saveLogs();
+            log('함수율 업데이트:', id, value);
+        }
     }
 
     function toggleComplete(id) {
