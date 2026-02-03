@@ -1298,7 +1298,7 @@ div.animal-type-options label.checkbox-card.small div.checkbox-content {
     padding: 4px 8px;
     font-size: 0.75rem;
     border: 1px solid #d1d5db;
-    border-radius: 6px;
+    border-radius: 3px;
     text-align: center;
     transition: all 0.2s ease;
 }
