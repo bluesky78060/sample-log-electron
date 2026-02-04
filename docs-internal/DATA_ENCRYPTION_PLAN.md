@@ -503,6 +503,123 @@ function deriveKeyFromFile(fileContent) {
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
+### 6.7 기존 데이터 마이그레이션 전략
+
+암호화 적용 시 기존 평문 데이터의 처리 방법입니다.
+
+#### 6.7.1 저장소별 마이그레이션 정책
+
+| 저장소 | 마이그레이션 | 설명 |
+|--------|-------------|------|
+| **localStorage** | 불필요 | 캐시 목적, 평문 유지 |
+| **Firebase** | 점진적 | 수정 시 암호화 적용 |
+| **로컬 백업 (.json)** | 자동 | .enc로 자동 변환 |
+
+#### 6.7.2 localStorage (변경 없음)
+
+```
+현재: 평문 JSON 저장
+변경: 없음 (캐시 목적)
+
+이유:
+- localStorage는 앱 내 임시 캐시 용도
+- 실제 영구 저장은 Firebase와 로컬 백업이 담당
+- 암호화하면 성능만 저하됨
+```
+
+#### 6.7.3 Firebase (점진적 마이그레이션)
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  Firebase 점진적 마이그레이션                                        │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  [읽기 시]                                                          │
+│    데이터 로드 → 암호화 여부 판별 → 복호화 or 평문 그대로            │
+│                                                                     │
+│  [쓰기 시]                                                          │
+│    데이터 수정 → 민감 필드 암호화 → 저장                            │
+│                                                                     │
+│  결과: 사용자가 수정한 레코드만 자연스럽게 암호화됨                  │
+│        기존 레코드는 읽기 가능 상태 유지                             │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**암호화 여부 판별 로직:**
+```javascript
+function isEncrypted(fieldValue) {
+  // 암호화된 데이터는 항상 "ENC:" 접두사로 시작
+  return typeof fieldValue === 'string' && fieldValue.startsWith('ENC:');
+}
+
+function readField(fieldValue, key) {
+  if (isEncrypted(fieldValue)) {
+    return decryptFromFirebase(fieldValue.substring(4), key);
+  }
+  return fieldValue;  // 평문 그대로 반환
+}
+```
+
+#### 6.7.4 로컬 백업 파일 (자동 마이그레이션)
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  로컬 백업 자동 마이그레이션                                         │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  앱 시작 시:                                                        │
+│    1. .json 파일 존재 확인                                          │
+│    2. 존재하면:                                                     │
+│       - 내용 읽기                                                   │
+│       - 암호화하여 .enc 파일로 저장                                 │
+│       - 원본 .json → .json.backup 으로 이름 변경 (삭제 안 함)       │
+│    3. 이후 자동 저장은 .enc 파일에만 수행                           │
+│                                                                     │
+│  복구 필요 시:                                                      │
+│    - .enc 파일 우선 사용 (복호화)                                   │
+│    - .enc 없으면 .json.backup 사용 (평문)                           │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**마이그레이션 코드 예시:**
+```javascript
+async function migrateJsonToEncrypted(basePath, year) {
+  const jsonPath = `${basePath}/auto-save-soil-${year}.json`;
+  const encPath = `${basePath}/auto-save-soil-${year}.enc`;
+  const backupPath = `${basePath}/auto-save-soil-${year}.json.backup`;
+
+  // .json 파일이 존재하고 .enc 파일이 없는 경우만 마이그레이션
+  if (await fileExists(jsonPath) && !await fileExists(encPath)) {
+    const plainData = await readFile(jsonPath);
+    const encryptedData = encryptForBackup(plainData);
+
+    await writeFile(encPath, encryptedData);
+    await renameFile(jsonPath, backupPath);  // 원본 보존
+
+    console.log(`마이그레이션 완료: ${jsonPath} → ${encPath}`);
+  }
+}
+```
+
+#### 6.7.5 호환성 유지 기간
+
+```
+Phase 1 (출시 후 6개월):
+  - 읽기: .enc (암호화) + .json (평문) 모두 지원
+  - 쓰기: .enc (암호화)만 사용
+  - .json 파일은 .backup으로 보존
+
+Phase 2 (6개월 후):
+  - 읽기: .enc 우선, .backup 폴백
+  - 앱 설정에서 "레거시 파일 정리" 옵션 제공
+
+Phase 3 (1년 후):
+  - .backup 파일 삭제 옵션 활성화
+  - 사용자 선택에 따라 정리
+```
+
 ---
 
 ## 7. 구현 태스크 계획
