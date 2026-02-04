@@ -1129,7 +1129,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             row.appendChild(tdAction);
 
             if (logItem.isComplete) {
-                row.classList.add('completed-row');
+                row.classList.add('row-completed');
             }
 
             tableBody.appendChild(row);

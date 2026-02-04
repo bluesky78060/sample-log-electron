@@ -174,7 +174,7 @@ class CompostSampleManager extends BaseSampleManager {
 
         // 완료 여부 스타일
         if (log.isComplete) {
-            row.classList.add('completed');
+            row.classList.add('row-completed');
         }
 
         // 법인 여부 확인
