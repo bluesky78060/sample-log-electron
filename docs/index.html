@@ -1107,7 +1107,14 @@
 
     <!-- 다크 모드 스크립트 (theme.js가 자동으로 이벤트 리스너 등록) -->
     <script src="shared/theme.js"></script>
+    <!-- 캐시 관리 -->
+    <script src="shared/cache-manager.js"></script>
     <script>
+        // 매주 금요일 자동 캐시 클리어 체크
+        if (window.CacheManager) {
+            CacheManager.checkAndAutoClean();
+        }
+
         // 버전 정보 자동 표시
         (async function() {
             const versionEl = document.getElementById('appVersion');
