@@ -2479,7 +2479,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const autoSaveData = await window.loadFromAutoSaveFile();
         if (autoSaveData && autoSaveData.length > 0) {
             sampleLogs = autoSaveData;
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(sampleLogs));
+            localStorage.setItem(getStorageKey(selectedYear), JSON.stringify(sampleLogs));
             log('📂 수질 자동 저장 파일에서 데이터 로드됨:', autoSaveData.length, '건');
             renderLogs(sampleLogs);
         }

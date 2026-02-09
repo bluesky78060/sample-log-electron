@@ -2399,7 +2399,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         log('🔍 로드된 데이터:', autoSaveData);
         if (autoSaveData && autoSaveData.length > 0) {
             sampleLogs = autoSaveData;
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(sampleLogs));
+            localStorage.setItem(getStorageKey(selectedYear), JSON.stringify(sampleLogs));
             log('📂 퇴액비 자동 저장 파일에서 데이터 로드됨:', autoSaveData.length, '건');
             renderLogs(sampleLogs);
         }

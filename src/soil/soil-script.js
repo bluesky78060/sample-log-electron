@@ -660,6 +660,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             isMountain: false, // 산 여부
             subLots: [], // 이제 { lotAddress: string, crops: [{name, area}] } 형태의 객체 배열
             crops: [],
+            category: '', // 필지별 구분
+            purpose: '', // 필지별 목적(용도)
             note: '' // 필지별 비고
         };
         parcels.push(parcel);
@@ -693,35 +695,29 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // 필지별 구분 (논/밭/과수/시설)
         const parcelCategory = parcel.category || '';
+        const parcelPurpose = parcel.purpose || '';
 
         card.innerHTML = sanitizeHTML(`
             <div class="parcel-card-header">
                 <h4>필지 ${parcelNumber}</h4>
-                <div class="parcel-category-radios" data-id="${parcel.id}">
-                    <label class="parcel-category-label">
-                        <input type="radio" name="parcel-category-${parcel.id}" value="" ${parcelCategory === '' ? 'checked' : ''}>
-                        <span>-</span>
-                    </label>
-                    <label class="parcel-category-label">
-                        <input type="radio" name="parcel-category-${parcel.id}" value="논" ${parcelCategory === '논' ? 'checked' : ''}>
-                        <span>논</span>
-                    </label>
-                    <label class="parcel-category-label">
-                        <input type="radio" name="parcel-category-${parcel.id}" value="밭" ${parcelCategory === '밭' ? 'checked' : ''}>
-                        <span>밭</span>
-                    </label>
-                    <label class="parcel-category-label">
-                        <input type="radio" name="parcel-category-${parcel.id}" value="과수" ${parcelCategory === '과수' ? 'checked' : ''}>
-                        <span>과수</span>
-                    </label>
-                    <label class="parcel-category-label">
-                        <input type="radio" name="parcel-category-${parcel.id}" value="시설" ${parcelCategory === '시설' ? 'checked' : ''}>
-                        <span>시설</span>
-                    </label>
-                    <label class="parcel-category-label">
-                        <input type="radio" name="parcel-category-${parcel.id}" value="임야" ${parcelCategory === '임야' ? 'checked' : ''}>
-                        <span>임야</span>
-                    </label>
+                <div class="parcel-header-selects">
+                    <select class="parcel-category-select" data-id="${parcel.id}" id="parcel-category-${parcel.id}">
+                        <option value="">구분</option>
+                        <option value="논" ${parcelCategory === '논' ? 'selected' : ''}>논</option>
+                        <option value="밭" ${parcelCategory === '밭' ? 'selected' : ''}>밭</option>
+                        <option value="과수" ${parcelCategory === '과수' ? 'selected' : ''}>과수</option>
+                        <option value="시설" ${parcelCategory === '시설' ? 'selected' : ''}>시설</option>
+                        <option value="임야" ${parcelCategory === '임야' ? 'selected' : ''}>임야</option>
+                        <option value="성토" ${parcelCategory === '성토' ? 'selected' : ''}>성토</option>
+                    </select>
+                    <select class="parcel-purpose-select" data-id="${parcel.id}" id="parcel-purpose-${parcel.id}">
+                        <option value="">용도</option>
+                        <option value="일반재배" ${parcelPurpose === '일반재배' ? 'selected' : ''}>일반재배</option>
+                        <option value="무농약" ${parcelPurpose === '무농약' ? 'selected' : ''}>무농약</option>
+                        <option value="유기" ${parcelPurpose === '유기' ? 'selected' : ''}>유기</option>
+                        <option value="GAP" ${parcelPurpose === 'GAP' ? 'selected' : ''}>GAP</option>
+                        <option value="저탄소" ${parcelPurpose === '저탄소' ? 'selected' : ''}>저탄소</option>
+                    </select>
                 </div>
                 <button type="button" class="btn-remove-parcel" data-id="${parcel.id}">삭제</button>
             </div>
@@ -874,30 +870,46 @@ document.addEventListener('DOMContentLoaded', async () => {
         bindSubLotAutocomplete(parcel.id);
         // 면적 단위 변환 이벤트 바인딩
         bindAreaUnitConversion(parcel.id);
-        // 필지별 구분 라디오 버튼 이벤트 바인딩
-        bindParcelCategoryRadio(parcel.id);
+        // 필지별 구분/목적 드롭다운 이벤트 바인딩
+        bindParcelSelects(parcel.id);
 
         log(`   ✅ 모든 이벤트 바인딩 완료`);
     }
 
-    // 필지별 구분 라디오 버튼 이벤트 바인딩
-    function bindParcelCategoryRadio(parcelId) {
-        const radioContainer = document.querySelector(`.parcel-category-radios[data-id="${parcelId}"]`);
-        if (!radioContainer) return;
+    // 필지별 구분/목적 드롭다운 이벤트 바인딩
+    function bindParcelSelects(parcelId) {
+        const categorySelect = document.getElementById(`parcel-category-${parcelId}`);
+        const purposeSelect = document.getElementById(`parcel-purpose-${parcelId}`);
 
-        const radios = radioContainer.querySelectorAll('input[type="radio"]');
-        radios.forEach(radio => {
-            radio.addEventListener('change', (e) => {
-                const category = e.target.value;
+        function toggleHasValue(selectEl) {
+            selectEl.classList.toggle('has-value', selectEl.value !== '');
+        }
+
+        if (categorySelect) {
+            toggleHasValue(categorySelect);
+            categorySelect.addEventListener('change', (e) => {
+                toggleHasValue(e.target);
                 const parcel = parcels.find(p => p.id === parcelId);
                 if (parcel) {
-                    parcel.category = category;
-                    log(`📍 필지 ${parcelId} 구분 변경: ${category || '없음'}`);
-                    updateSummary();
-                    triggerAutoSave();
+                    parcel.category = e.target.value;
+                    log(`📍 필지 ${parcelId} 구분 변경: ${e.target.value || '없음'}`);
+                    updateParcelsData();
                 }
             });
-        });
+        }
+
+        if (purposeSelect) {
+            toggleHasValue(purposeSelect);
+            purposeSelect.addEventListener('change', (e) => {
+                toggleHasValue(e.target);
+                const parcel = parcels.find(p => p.id === parcelId);
+                if (parcel) {
+                    parcel.purpose = e.target.value;
+                    log(`📍 필지 ${parcelId} 목적 변경: ${e.target.value || '없음'}`);
+                    updateParcelsData();
+                }
+            });
+        }
     }
 
     // 면적 단위 변환 이벤트 바인딩
@@ -2043,8 +2055,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             const existingLog = sampleLogs[logIndex];
             // 첫 번째 필지의 구분이 있으면 해당 값 사용
             const firstParcelCategory = validParcels[0]?.category;
+            const firstParcelPurpose = validParcels[0]?.purpose;
             const mainSubCategory = formData.get('subCategory') || '-';
             const effectiveSubCategory = firstParcelCategory || mainSubCategory;
+            const effectivePurpose = firstParcelPurpose || formData.get('purpose');
 
             const updatedLog = {
                 ...existingLog,
@@ -2054,7 +2068,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 phoneNumber: formData.get('phoneNumber'),
                 address: formData.get('address'),
                 subCategory: effectiveSubCategory,
-                purpose: formData.get('purpose'),
+                purpose: effectivePurpose,
                 receptionMethod: formData.get('receptionMethod') || '-',
                 note: formData.get('note') || '',
                 parcels: validParcels.map(p => ({
@@ -2064,6 +2078,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     subLots: [...p.subLots],
                     crops: p.crops.map(c => ({ ...c })),
                     category: p.category || '', // 필지별 구분 저장
+                    purpose: p.purpose || '', // 필지별 목적 저장
                     note: p.note || '' // 필지별 비고 저장
                 })),
                 updatedAt: new Date().toISOString()
@@ -2155,12 +2170,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // 필지별 구분이 있으면 필지별 구분 사용, 없으면 메인 구분 사용
             const parcelSubCategory = parcel.category || commonData.subCategory;
+            const parcelPurpose = parcel.purpose || commonData.purpose;
 
             return {
                 id: crypto.randomUUID(),
                 receptionNumber,
                 ...commonData,
                 subCategory: parcelSubCategory, // 필지별 구분 우선 적용
+                purpose: parcelPurpose, // 필지별 목적 우선 적용
                 groupId, // 같은 접수건임을 표시
                 parcelIndex: index + 1,
                 totalParcels: validParcels.length,
@@ -2171,6 +2188,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     subLots: [...parcel.subLots],
                     crops: parcel.crops.map(c => ({ ...c })),
                     category: parcel.category || '', // 필지별 구분 저장
+                    purpose: parcel.purpose || '', // 필지별 목적 저장
                     note: parcel.note || '' // 필지별 비고 저장
                 }],
                 // 호환성을 위한 기존 필드
@@ -2641,6 +2659,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     subLots: parcel.subLots ? [...parcel.subLots] : [],
                     crops: parcel.crops ? parcel.crops.map(c => ({ ...c })) : [],
                     category: parcel.category || '', // 필지별 구분 불러오기
+                    purpose: parcel.purpose || '', // 필지별 목적 불러오기
                     note: parcel.note || '' // 필지별 비고 불러오기
                 };
                 parcels.push(newParcel);
@@ -3439,7 +3458,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         '접수번호': log.receptionNumber,
                         '접수일자': log.date,
                         '구분': log.subCategory || '-',
-                        '목적(용도)': log.purpose || '-',
+                        '목적(용도)': parcel.purpose || log.purpose || '-',
                         '성명': log.name,
                         '전화번호': log.phoneNumber,
                         '시도': addressParts.sido || '-',
@@ -3473,7 +3492,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 '접수번호': `${log.receptionNumber}-${sIdx + 1}`,
                                 '접수일자': log.date,
                                 '구분': log.subCategory || '-',
-                                '목적(용도)': log.purpose || '-',
+                                '목적(용도)': parcel.purpose || log.purpose || '-',
                                 '성명': log.name,
                                 '전화번호': log.phoneNumber,
                                 '시도': addressParts.sido || '-',
@@ -3798,7 +3817,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                         _displayNumber: log.receptionNumber,
                         _lotAddress: lotAddressDisplay,
                         _cropsDisplay: cropsDisplay,
-                        _areaDisplay: areaDisplay
+                        _areaDisplay: areaDisplay,
+                        _parcelPurpose: parcel.purpose || ''
                     });
                     subLotIndex++;
 
@@ -3838,7 +3858,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 _displayNumber: `${log.receptionNumber}-${idx + 1}`,
                                 _lotAddress: lotAddress,
                                 _cropsDisplay: subLotCropsDisplay,
-                                _areaDisplay: subAreaDisplay
+                                _areaDisplay: subAreaDisplay,
+                                _parcelPurpose: parcel.purpose || ''
                             });
                             subLotIndex++;
                         });
@@ -3990,7 +4011,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 // 목적
                 const tdPurpose = document.createElement('td');
-                tdPurpose.textContent = row.purpose || '-';
+                tdPurpose.textContent = row._parcelPurpose || row.purpose || '-';
                 tr.appendChild(tdPurpose);
 
                 // 성명

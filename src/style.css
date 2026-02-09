@@ -1695,6 +1695,50 @@ select#completedFilter:focus {
     font-weight: 600;
 }
 
+/* 필지별 구분/용도 드롭다운 */
+.parcel-header-selects {
+    display: flex;
+    gap: 0.375rem;
+    margin-left: auto;
+    margin-right: 0.75rem;
+}
+
+.parcel-category-select,
+.parcel-purpose-select {
+    padding: 0.175rem 0.4rem;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    color: var(--gray-700);
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: var(--transition);
+    outline: none;
+    min-width: 0;
+}
+
+.parcel-category-select:hover,
+.parcel-purpose-select:hover {
+    background: var(--gray-100);
+    border-color: var(--gray-300);
+}
+
+.parcel-category-select:focus,
+.parcel-purpose-select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px var(--primary-light);
+}
+
+/* 값이 선택된 상태 (빈 값이 아닐 때 JS에서 클래스 추가) */
+.parcel-category-select.has-value,
+.parcel-purpose-select.has-value {
+    background: var(--primary-light);
+    color: var(--primary);
+    border-color: var(--primary);
+    font-weight: 600;
+}
+
 /* ShadCN Remove Parcel Button */
 .btn-remove-parcel {
     display: inline-flex;
@@ -5407,6 +5451,32 @@ select {
     background: var(--gray-100);
     border-color: var(--gray-200);
     color: var(--gray-500);
+}
+
+/* 다크 모드 필지 드롭다운 */
+[data-theme="dark"] .parcel-category-select,
+[data-theme="dark"] .parcel-purpose-select {
+    background: var(--gray-100);
+    border-color: var(--gray-200);
+    color: var(--gray-600);
+}
+
+[data-theme="dark"] .parcel-category-select:hover,
+[data-theme="dark"] .parcel-purpose-select:hover {
+    background: var(--gray-200);
+    border-color: var(--gray-300);
+}
+
+[data-theme="dark"] .parcel-category-select:focus,
+[data-theme="dark"] .parcel-purpose-select:focus {
+    border-color: var(--primary);
+}
+
+[data-theme="dark"] .parcel-category-select.has-value,
+[data-theme="dark"] .parcel-purpose-select.has-value {
+    background: rgba(var(--primary-rgb, 34, 197, 94), 0.15);
+    color: var(--primary);
+    border-color: var(--primary);
 }
 
 /* 다크 모드 검색 버튼 */

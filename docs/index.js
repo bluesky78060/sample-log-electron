@@ -86,6 +86,16 @@ function validateFilePath(filePath) {
         path.join(app.getPath('downloads'), 'SampleLog')  // 다운로드 폴더 내 앱 전용 폴더
     ];
 
+    // 사용자가 설정한 자동저장 폴더도 허용 경로에 추가
+    try {
+        const settings = loadSettings();
+        if (settings.autoSaveFolder) {
+            allowedDirs.push(settings.autoSaveFolder);
+        }
+    } catch (e) {
+        // 설정 로드 실패 시 무시
+    }
+
     try {
         // 경로를 절대 경로로 변환
         const absolutePath = path.resolve(filePath);
@@ -250,12 +260,12 @@ app.whenReady().then(() => {
           "default-src 'self' file:; " +
           // unsafe-eval 제거 완료: eval(), Function(), setTimeout(string) 사용 차단
           // unsafe-inline은 단계적 마이그레이션을 위해 일시적으로 유지 (추후 해시 방식으로 전환 예정)
-          "script-src 'self' 'unsafe-inline' file: https://cdn.tailwindcss.com https://www.gstatic.com https://cdn.sheetjs.com https://t1.daumcdn.net https://cdnjs.cloudflare.com; " +
+          "script-src 'self' 'unsafe-inline' file: https://cdn.tailwindcss.com https://www.gstatic.com https://cdn.sheetjs.com https://t1.kakaocdn.net https://t1.daumcdn.net https://cdnjs.cloudflare.com; " +
           "style-src 'self' 'unsafe-inline' file: https://fonts.googleapis.com; " +
           "font-src 'self' file: https://fonts.gstatic.com; " +
           "connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.ipify.org https://www.gstatic.com https://cdnjs.cloudflare.com; " +
           "img-src 'self' file: data:; " +
-          "frame-src 'self' https://t1.daumcdn.net https://postcode.map.daum.net https://*.daumcdn.net; " +  // Daum 우편번호 API iframe
+          "frame-src 'self' https://t1.kakaocdn.net https://postcode.map.kakao.com https://*.kakaocdn.net https://t1.daumcdn.net https://postcode.map.daum.net https://*.daumcdn.net; " +  // Kakao 우편번호 API iframe (전환기간 중 기존 도메인 유지)
           "object-src 'none'; " +  // Flash, Java 등 플러그인 차단
           "base-uri 'self'; " +     // <base> 태그 제한
           "form-action 'self'; " +   // 폼 제출 대상 제한

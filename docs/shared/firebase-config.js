@@ -260,11 +260,11 @@ async function initializeFirebase() {
             }
         }
 
-        // 오프라인 지원 활성화
+        // 오프라인 지원 활성화 (멀티탭 동기화 모드)
         try {
-            await db.enablePersistence();
+            await db.enablePersistence({ synchronizeTabs: true });
             isOfflineEnabled = true;
-            logFirebase('오프라인 지원 활성화됨');
+            logFirebase('오프라인 지원 활성화됨 (멀티탭 동기화)');
         } catch (err) {
             (window.logger?.warn || console.warn)('[Firebase] 오프라인 지원 에러:', err.code, err.message);
             if (err.code === 'failed-precondition') {
