@@ -186,6 +186,13 @@ async function initializeFirebase() {
         return true;
     }
 
+    // 오프라인 상태 확인
+    if (!navigator.onLine) {
+        logFirebase('오프라인 상태 - 로컬 모드로 동작');
+        (window.logger?.info || console.info)('[Firebase] 인터넷 연결 없음. 로컬 모드로 동작합니다.');
+        return false;
+    }
+
     // 네트워크 접근 체크 (웹 환경용)
     if (window.NetworkAccess) {
         const accessResult = await window.NetworkAccess.checkAccess();
@@ -276,6 +283,21 @@ async function initializeFirebase() {
 
         isFirebaseEnabled = true;
         logFirebase('초기화 완료:', firebaseConfigData.projectId);
+
+        // 오프라인/온라인 전환 시 Firestore 네트워크 제어
+        window.addEventListener('offline', () => {
+            logFirebase('네트워크 끊김 감지 - Firestore 네트워크 비활성화');
+            if (db) {
+                db.disableNetwork().catch(() => {});
+            }
+        });
+        window.addEventListener('online', () => {
+            logFirebase('네트워크 복구 감지 - Firestore 네트워크 활성화');
+            if (db) {
+                db.enableNetwork().catch(() => {});
+            }
+        });
+
         return true;
     } catch (error) {
         (window.logger?.error || console.error)('[Firebase] 초기화 실패:', error);

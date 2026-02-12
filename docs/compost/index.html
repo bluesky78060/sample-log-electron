@@ -135,6 +135,11 @@
         <!-- 유틸리티 -->
         <div class="navbar-utils">
             <button type="button" id="exportBtn" class="util-btn" title="엑셀 내보내기">📥</button>
+            <button type="button" id="downloadTemplateNavBtn" class="util-btn" title="엑셀 서식 다운로드">📄</button>
+            <label for="excelImportInput" class="util-btn" title="엑셀 가져오기">
+                📊
+                <input type="file" id="excelImportInput" accept=".xlsx,.xls,.csv" hidden>
+            </label>
             <button type="button" id="saveJsonBtn" class="util-btn" title="JSON 저장">💾</button>
             <label for="loadJsonInput" class="util-btn" title="JSON 불러오기">
                 📂
@@ -712,6 +717,84 @@
 
     <!-- 토스트 컨테이너 -->
     <div id="toastContainer" class="toast-container"></div>
+
+    <!-- 엑셀 가져오기 모달 -->
+    <div id="excelImportModal" class="modal hidden">
+        <div class="modal-overlay"></div>
+        <div class="modal-content modal-xlarge">
+            <div class="modal-header">
+                <h3>📊 엑셀 파일 가져오기</h3>
+                <button type="button" class="modal-close" id="closeExcelImportModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="excelImportStep1">
+                    <p class="import-step-title">1단계: 공통 정보 입력</p>
+                    <p class="import-step-desc">엑셀에 없는 공통 정보를 입력하세요. 엑셀 데이터에 해당 열이 있으면 엑셀 값이 우선됩니다.</p>
+                    <div class="import-common-fields">
+                        <div class="import-field-row">
+                            <div class="import-field">
+                                <label for="importDate">접수일자 <span class="required">*</span></label>
+                                <input type="date" id="importDate" required>
+                            </div>
+                            <div class="import-field">
+                                <label for="importName">대표자 성명</label>
+                                <input type="text" id="importName" placeholder="성명">
+                            </div>
+                            <div class="import-field">
+                                <label for="importPhone">전화번호</label>
+                                <input type="text" id="importPhone" placeholder="010-0000-0000">
+                            </div>
+                        </div>
+                        <div class="import-field-row">
+                            <div class="import-field">
+                                <label for="importAddress">주소</label>
+                                <input type="text" id="importAddress" placeholder="주소">
+                            </div>
+                            <div class="import-field">
+                                <label for="importMethod">통보방법</label>
+                                <select id="importMethod">
+                                    <option value="우편">우편</option>
+                                    <option value="이메일">이메일</option>
+                                    <option value="팩스">팩스</option>
+                                    <option value="방문">방문</option>
+                                </select>
+                            </div>
+                            <div class="import-field">
+                                <label for="importPurpose">검사목적</label>
+                                <input type="text" id="importPurpose" placeholder="검사목적/용도" value="비료공정규격">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="import-template-area">
+                        <button type="button" id="downloadTemplateBtn" class="btn-template-download">📄 엑셀 서식 다운로드</button>
+                        <span class="template-hint">서식에 맞춰 데이터를 입력하면 컬럼 매핑이 자동으로 됩니다.</span>
+                    </div>
+                </div>
+                <div id="excelImportStep2" class="hidden">
+                    <p class="import-step-title">2단계: 컬럼 매핑</p>
+                    <p class="import-step-desc">엑셀 열을 앱 필드에 매핑하세요. 자동 매핑이 완료되었습니다.</p>
+                    <div id="columnMappingArea" class="column-mapping-area"></div>
+                </div>
+                <div id="excelImportStep3" class="hidden">
+                    <p class="import-step-title">3단계: 데이터 미리보기</p>
+                    <p class="import-step-desc" id="previewSummary">총 0건의 데이터를 가져옵니다.</p>
+                    <div id="previewTableWrap" class="preview-table-wrap">
+                        <table id="previewTable" class="preview-table">
+                            <thead id="previewTableHead"></thead>
+                            <tbody id="previewTableBody"></tbody>
+                        </table>
+                    </div>
+                    <div id="importWarnings" class="import-warnings hidden"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="excelImportPrevBtn" class="btn-cancel hidden">이전</button>
+                <div class="modal-footer-spacer"></div>
+                <button type="button" id="cancelExcelImportBtn" class="btn-cancel">취소</button>
+                <button type="button" id="excelImportNextBtn" class="btn-confirm">다음</button>
+            </div>
+        </div>
+    </div>
 
     <!-- 다음 우편번호 서비스 -->
     <script src="https://t1.kakaocdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
