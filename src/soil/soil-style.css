@@ -1176,3 +1176,23 @@ select#listYearSelect.list-year-select option {
     word-break: keep-all;
     line-height: 1.4;
 }
+
+/* 농가별 구분선 */
+tr.farm-separator {
+    height: 6px;
+    background: linear-gradient(to right, transparent, var(--soil-primary-light), transparent);
+    pointer-events: none;
+}
+
+tr.farm-separator td {
+    padding: 0 !important;
+    border: none !important;
+    background: linear-gradient(to right, transparent 5%, var(--soil-primary) 20%, var(--soil-primary) 80%, transparent 95%);
+    height: 2px;
+    line-height: 0;
+    font-size: 0;
+}
+
+tr.farm-separator:hover {
+    background: linear-gradient(to right, transparent, var(--soil-primary-light), transparent);
+}

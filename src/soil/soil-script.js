@@ -4399,7 +4399,21 @@ document.addEventListener('DOMContentLoaded', async () => {
             const endIndex = startIndex + itemsPerPage;
             const pageRows = currentFlatRows.slice(startIndex, endIndex);
 
+            // 농가별 구분선을 위한 이전 성명 추적
+            let prevName = startIndex > 0 ? (currentFlatRows[startIndex - 1]?.name || null) : null;
+
             pageRows.forEach((row) => {
+                // 농가별 구분선: 성명이 변경되면 구분선 삽입
+                if (prevName !== null && row.name !== prevName) {
+                    const separatorTr = document.createElement('tr');
+                    separatorTr.className = 'farm-separator';
+                    const separatorTd = document.createElement('td');
+                    separatorTd.colSpan = 17;
+                    separatorTr.appendChild(separatorTd);
+                    tableBody.appendChild(separatorTr);
+                }
+                prevName = row.name;
+
                 // 하위 카테고리와 재배 작물을 합쳐서 표시
                 let subCategoryDisplay = row.subCategory || '';
                 if (row._cropsDisplay !== '-') {
