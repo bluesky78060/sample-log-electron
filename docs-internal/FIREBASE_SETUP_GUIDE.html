@@ -1,0 +1,1338 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firebase 설정 가이드 - 시료 접수 대장</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Malgun Gothic', '맑은 고딕', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            line-height: 1.8;
+            color: #1e293b;
+            background: #f1f5f9;
+            padding: 2rem 1rem;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+
+        /* 헤더 */
+        .header {
+            background: linear-gradient(135deg, #1e40af, #3b82f6);
+            color: #fff;
+            padding: 2.5rem 2rem;
+            text-align: center;
+        }
+        .header h1 { font-size: 1.75rem; margin-bottom: 0.5rem; }
+        .header p { font-size: 0.95rem; opacity: 0.9; }
+
+        .header-meta {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-top: 1.25rem;
+            flex-wrap: wrap;
+        }
+        .header-meta span {
+            background: rgba(255,255,255,0.15);
+            padding: 0.35rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+        }
+
+        /* 본문 */
+        .content { padding: 2rem; }
+
+        /* 진행 단계 바 */
+        .progress-bar {
+            display: flex;
+            justify-content: space-between;
+            background: #f8fafc;
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            overflow-x: auto;
+            gap: 0.25rem;
+        }
+        .progress-step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 0.7rem;
+            color: #94a3b8;
+            min-width: 60px;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .progress-step:hover { color: #3b82f6; }
+        .progress-step .num {
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            background: #e2e8f0;
+            color: #64748b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.8rem;
+            margin-bottom: 0.3rem;
+            transition: all 0.2s;
+        }
+        .progress-step:hover .num { background: #3b82f6; color: #fff; }
+
+        /* 소개 박스 */
+        .intro-box {
+            background: linear-gradient(135deg, #eff6ff, #dbeafe);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            border-left: 4px solid #3b82f6;
+        }
+        .intro-box h2 { font-size: 1.1rem; color: #1e40af; margin-bottom: 0.5rem; }
+        .intro-box ul { list-style: none; padding: 0; }
+        .intro-box li { padding: 0.25rem 0; padding-left: 1.5rem; position: relative; }
+        .intro-box li::before { content: '✓'; position: absolute; left: 0; color: #3b82f6; font-weight: 700; }
+
+        /* 섹션 */
+        .section {
+            margin-bottom: 2.5rem;
+            scroll-margin-top: 1rem;
+        }
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.25rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        .section-number {
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #1e40af, #3b82f6);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+        .section-header h2 { font-size: 1.3rem; color: #1e293b; }
+
+        .section-desc {
+            background: #f8fafc;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            color: #64748b;
+            font-size: 0.9rem;
+            border-left: 3px solid #94a3b8;
+        }
+
+        /* 스텝 */
+        .step {
+            background: #fafbfc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+        }
+        .step-title {
+            font-weight: 700;
+            color: #334155;
+            margin-bottom: 0.75rem;
+            font-size: 1rem;
+        }
+        .step ol, .step ul { padding-left: 1.5rem; }
+        .step li { margin-bottom: 0.5rem; }
+
+        /* 코드 블록 */
+        .code-block {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 1rem 1.25rem;
+            border-radius: 8px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 0.85rem;
+            margin: 0.75rem 0;
+            overflow-x: auto;
+            line-height: 1.6;
+            position: relative;
+        }
+        .code-block .copy-btn {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: #475569;
+            color: #e2e8f0;
+            border: none;
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .code-block .copy-btn:hover { background: #64748b; }
+        .code-block .copy-btn.copied { background: #22c55e; }
+
+        /* JSON 강조 */
+        .json-key { color: #93c5fd; }
+        .json-value { color: #86efac; }
+        .json-bracket { color: #fbbf24; }
+
+        /* 다이어그램 */
+        .diagram {
+            background: #f8fafc;
+            border: 1px dashed #cbd5e1;
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 0.85rem;
+            margin: 0.75rem 0;
+            color: #475569;
+            line-height: 1.5;
+            white-space: pre;
+        }
+
+        /* 알림 박스 */
+        .alert {
+            padding: 1rem 1.25rem;
+            border-radius: 8px;
+            margin: 0.75rem 0;
+            font-size: 0.9rem;
+        }
+        .alert-warning {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            color: #92400e;
+        }
+        .alert-success {
+            background: #dcfce7;
+            border-left: 4px solid #22c55e;
+            color: #166534;
+        }
+        .alert-info {
+            background: #dbeafe;
+            border-left: 4px solid #3b82f6;
+            color: #1e40af;
+        }
+        .alert-danger {
+            background: #fee2e2;
+            border-left: 4px solid #ef4444;
+            color: #991b1b;
+        }
+        .alert strong { display: block; margin-bottom: 0.25rem; }
+
+        /* 키워드 강조 */
+        .keyword {
+            background: #dbeafe;
+            color: #1e40af;
+            padding: 0.1rem 0.4rem;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+        .file-name {
+            background: #fef3c7;
+            color: #92400e;
+            padding: 0.1rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'Consolas', monospace;
+            font-size: 0.9em;
+        }
+
+        /* 라디오 선택 */
+        .radio-group {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            margin: 0.5rem 0;
+        }
+        .radio-item {
+            padding: 0.35rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .radio-item .circle {
+            width: 18px; height: 18px;
+            border-radius: 50%;
+            border: 2px solid #cbd5e1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .radio-item.selected .circle {
+            border-color: #3b82f6;
+            background: #3b82f6;
+        }
+        .radio-item.selected .circle::after {
+            content: '';
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: #fff;
+        }
+        .radio-item.selected { font-weight: 600; color: #1e40af; }
+
+        /* 탭 */
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #e2e8f0;
+            margin-bottom: 1rem;
+        }
+        .tab {
+            padding: 0.6rem 1.25rem;
+            cursor: pointer;
+            font-weight: 500;
+            color: #64748b;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+        }
+        .tab:hover { color: #3b82f6; }
+        .tab.active {
+            color: #1e40af;
+            border-bottom-color: #3b82f6;
+            font-weight: 700;
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* 체크리스트 */
+        .checklist {
+            list-style: none;
+            padding: 0;
+        }
+        .checklist li {
+            padding: 0.6rem 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            border-bottom: 1px solid #f1f5f9;
+            cursor: pointer;
+            transition: background 0.15s;
+            border-radius: 6px;
+        }
+        .checklist li:hover { background: #f8fafc; }
+        .checklist li .check-box {
+            width: 22px; height: 22px;
+            border: 2px solid #cbd5e1;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+        .checklist li.checked .check-box {
+            background: #22c55e;
+            border-color: #22c55e;
+        }
+        .checklist li.checked .check-box::after {
+            content: '✓';
+            color: #fff;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+        .checklist li.checked span { text-decoration: line-through; color: #94a3b8; }
+
+        /* FAQ */
+        .faq-item {
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            margin-bottom: 0.75rem;
+            overflow: hidden;
+        }
+        .faq-question {
+            padding: 1rem 1.25rem;
+            background: #f8fafc;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.2s;
+        }
+        .faq-question:hover { background: #f1f5f9; }
+        .faq-arrow { transition: transform 0.2s; font-size: 0.8rem; color: #94a3b8; }
+        .faq-item.open .faq-arrow { transform: rotate(180deg); }
+        .faq-answer {
+            padding: 0 1.25rem;
+            max-height: 0;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+        .faq-item.open .faq-answer {
+            padding: 1rem 1.25rem;
+            max-height: 300px;
+        }
+
+        /* 문제 해결 */
+        .trouble-item {
+            background: #fff;
+            border: 1px solid #fecaca;
+            border-radius: 10px;
+            padding: 1.25rem;
+            margin-bottom: 0.75rem;
+        }
+        .trouble-item h4 {
+            color: #dc2626;
+            margin-bottom: 0.5rem;
+        }
+        .trouble-item ol { padding-left: 1.5rem; }
+        .trouble-item li { margin-bottom: 0.3rem; font-size: 0.9rem; }
+
+        /* 푸터 */
+        .footer {
+            background: #f8fafc;
+            padding: 1.5rem 2rem;
+            text-align: center;
+            color: #94a3b8;
+            font-size: 0.8rem;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        /* 스크린샷 이미지 */
+        .screenshot {
+            margin: 1rem 0;
+            text-align: center;
+        }
+        .screenshot img {
+            max-width: 100%;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+        }
+        .screenshot-caption {
+            margin-top: 0.5rem;
+            font-size: 0.85rem;
+            color: #64748b;
+            font-style: italic;
+        }
+
+        /* 인쇄 */
+        @media print {
+            body { background: #fff; padding: 0; }
+            .container { box-shadow: none; }
+            .copy-btn { display: none !important; }
+            .progress-bar { display: none; }
+        }
+
+        /* 반응형 */
+        @media (max-width: 600px) {
+            body { padding: 0.5rem; }
+            .content { padding: 1.25rem; }
+            .header { padding: 1.5rem 1rem; }
+            .header h1 { font-size: 1.3rem; }
+            .header-meta { gap: 0.5rem; }
+            .header-meta span { font-size: 0.75rem; padding: 0.25rem 0.6rem; }
+            .progress-bar { padding: 0.75rem; }
+            .section-header h2 { font-size: 1.1rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- 헤더 -->
+    <div class="header">
+        <h1>Firebase 설정 가이드</h1>
+        <p>시료 접수 대장 앱을 위한 클라우드 저장소 설정 (테스트 모드)</p>
+        <div class="header-meta">
+            <span>대상: 초보자</span>
+            <span>소요: 약 20~30분</span>
+            <span>난이도: 쉬움</span>
+        </div>
+    </div>
+
+    <div class="content">
+
+        <!-- 진행 단계 바 -->
+        <div class="progress-bar">
+            <a class="progress-step" href="#section-1" style="text-decoration:none;">
+                <div class="num">1</div>
+                <span>준비</span>
+            </a>
+            <a class="progress-step" href="#section-2" style="text-decoration:none;">
+                <div class="num">2</div>
+                <span>프로젝트</span>
+            </a>
+            <a class="progress-step" href="#section-3" style="text-decoration:none;">
+                <div class="num">3</div>
+                <span>DB 생성</span>
+            </a>
+            <a class="progress-step" href="#section-4" style="text-decoration:none;">
+                <div class="num">4</div>
+                <span>인증</span>
+            </a>
+            <a class="progress-step" href="#section-5" style="text-decoration:none;">
+                <div class="num">5</div>
+                <span>설정값</span>
+            </a>
+            <a class="progress-step" href="#section-6" style="text-decoration:none;">
+                <div class="num">6</div>
+                <span>JSON파일</span>
+            </a>
+            <a class="progress-step" href="#section-7" style="text-decoration:none;">
+                <div class="num">7</div>
+                <span>보안규칙</span>
+            </a>
+            <a class="progress-step" href="#section-8" style="text-decoration:none;">
+                <div class="num">8</div>
+                <span>확인</span>
+            </a>
+        </div>
+
+        <!-- 소개 -->
+        <div class="intro-box">
+            <h2>Firebase가 뭔가요?</h2>
+            <p>Firebase는 <strong>Google에서 제공하는 무료 클라우드 저장소</strong>입니다.<br>시료 접수 데이터를 인터넷에 안전하게 저장할 수 있게 해줍니다.</p>
+            <ul style="margin-top: 0.5rem;">
+                <li>여러 컴퓨터에서 같은 데이터를 볼 수 있음</li>
+                <li>자동 백업 효과</li>
+                <li>인터넷만 연결되면 언제 어디서나 접근 가능</li>
+            </ul>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- 1단계: 시작하기 전에 -->
+        <!-- ============================================ -->
+        <div class="section" id="section-1">
+            <div class="section-header">
+                <div class="section-number">1</div>
+                <h2>시작하기 전에</h2>
+            </div>
+
+            <div class="step">
+                <div class="step-title">필요한 것</div>
+                <ul>
+                    <li><strong>Google 계정</strong> &mdash; 없으면 <a href="https://google.com" target="_blank">google.com</a>에서 무료로 만들 수 있습니다</li>
+                    <li><strong>웹 브라우저</strong> &mdash; Chrome 권장 (Edge, Firefox도 가능)</li>
+                    <li><strong>인터넷 연결</strong> &mdash; 항상 연결되어 있어야 합니다</li>
+                </ul>
+            </div>
+
+            <div class="step">
+                <div class="step-title">준비 사항</div>
+                <ol>
+                    <li>Google 계정으로 <strong>로그인</strong>해 놓으세요</li>
+                    <li>새 탭을 열어서 Firebase 콘솔에 접속할 준비를 하세요</li>
+                </ol>
+            </div>
+
+            <div class="alert alert-info">
+                <strong>💡 팁</strong>
+                이 가이드를 인쇄하거나 다른 창에 띄워놓으면서 따라하면 편합니다.
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- 2단계: Firebase 프로젝트 만들기 -->
+        <!-- ============================================ -->
+        <div class="section" id="section-2">
+            <div class="section-header">
+                <div class="section-number">2</div>
+                <h2>Firebase 프로젝트 만들기</h2>
+            </div>
+
+            <div class="step">
+                <div class="step-title">Step 1: Firebase 콘솔 접속</div>
+                <ol>
+                    <li>웹 브라우저에서 아래 주소를 입력하세요</li>
+                </ol>
+                <div class="code-block">
+                    <button class="copy-btn" onclick="copyText(this, 'https://console.firebase.google.com')">복사</button>
+                    https://console.firebase.google.com
+                </div>
+                <ol start="2">
+                    <li>Google 계정으로 로그인 &mdash; <span class="keyword">"계속"</span> 버튼을 클릭하면 자동 로그인됩니다</li>
+                </ol>
+            </div>
+
+            <div class="step">
+                <div class="step-title">Step 2: 새 프로젝트 만들기</div>
+                <ol>
+                    <li><span class="keyword">"프로젝트 추가"</span> 버튼 클릭 (큰 파란 버튼)</li>
+                    <li><strong>프로젝트 이름</strong> 입력 (예: <span class="file-name">my-sample-log</span>)
+                        <ul>
+                            <li>영문, 숫자, 하이픈(-)만 사용 가능</li>
+                            <li>공백은 안 됩니다</li>
+                            <li>나중에 변경할 수 없으므로 신중하게 입력하세요</li>
+                        </ul>
+                    </li>
+                    <li>체크박스 확인
+                        <ul>
+                            <li>"Firebase 약관에 동의합니다" ✅ 체크</li>
+                            <li>"Google Analytics 약관" ✅ 체크 (선택사항)</li>
+                        </ul>
+                    </li>
+                    <li><span class="keyword">"프로젝트 만들기"</span> 클릭</li>
+                </ol>
+            </div>
+
+            <div class="screenshot">
+                <img src="screenshots/01-project-name.png" alt="프로젝트 이름 입력 화면" loading="lazy">
+                <div class="screenshot-caption">▲ 프로젝트 이름 입력 화면</div>
+            </div>
+
+            <div class="screenshot">
+                <img src="screenshots/02-gemini-settings.png" alt="Gemini 사용 설정 - '계속' 클릭" loading="lazy">
+                <div class="screenshot-caption">▲ Gemini 사용 설정 - '계속' 클릭</div>
+            </div>
+
+            <div class="screenshot">
+                <img src="screenshots/03-analytics.png" alt="Google 애널리틱스 설정 - '계속' 클릭" loading="lazy">
+                <div class="screenshot-caption">▲ Google 애널리틱스 설정 - '계속' 클릭</div>
+            </div>
+
+            <div class="screenshot">
+                <img src="screenshots/04-analytics-config.png" alt="애널리틱스 구성 - 'Default Account for Firebase' 선택 후 '프로젝트 만들기' 클릭" loading="lazy">
+                <div class="screenshot-caption">▲ 애널리틱스 구성 - 'Default Account for Firebase' 선택 후 '프로젝트 만들기' 클릭</div>
+            </div>
+
+            <div class="step">
+                <div class="step-title">Step 3: 프로젝트 생성 대기</div>
+                <ul>
+                    <li>화면에 로딩 표시가 나옵니다</li>
+                    <li><strong>1~2분 정도 기다려주세요</strong></li>
+                    <li>완료되면 새로운 화면이 나타납니다</li>
+                </ul>
+            </div>
+
+            <div class="screenshot">
+                <img src="screenshots/05-project-ready.png" alt="프로젝트가 준비되었습니다 - '계속' 클릭" loading="lazy">
+                <div class="screenshot-caption">▲ 프로젝트가 준비되었습니다 - '계속' 클릭</div>
+            </div>
+
+            <div class="alert alert-success">
+                <strong>✅ 확인</strong>
+                "프로젝트가 준비되었습니다" 메시지가 보이면 성공입니다!
+            </div>
+
+            <div class="screenshot">
+                <img src="screenshots/06-dashboard.png" alt="Firebase 프로젝트 대시보드 화면" loading="lazy">
+                <div class="screenshot-caption">▲ Firebase 프로젝트 대시보드 화면</div>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- 3단계: Firestore 데이터베이스 만들기 -->
+        <!-- ============================================ -->
+        <div class="section" id="section-3">
+            <div class="section-header">
+                <div class="section-number">3</div>
+                <h2>Firestore 데이터베이스 만들기</h2>
+            </div>
+            <div class="section-desc">Firestore는 데이터를 저장하는 구름 저장소(데이터베이스)입니다.</div>
+
+            <div class="step">
+                <div class="step-title">Step 1: Firestore 메뉴 찾기</div>
+                <ol>
+                    <li>왼쪽 메뉴에서 <span class="keyword">"빌드"</span> 섹션 찾기</li>
+                </ol>
+                <div class="diagram">  빌드
+  ├─ <strong style="color:#3b82f6;">Firestore Database</strong>  ← 여기!
+  ├─ Realtime Database
+  └─ Storage</div>
+                <ol start="2">
+                    <li><span class="keyword">"Firestore Database"</span> 클릭</li>
+                </ol>
+            </div>
+
+            <div class="screenshot">
+                <img src="screenshots/07-firestore-start.png" alt="Firestore Database 메뉴 - '데이터베이스 만들기' 클릭" loading="lazy">
+                <div class="screenshot-caption">▲ Firestore Database 메뉴 - '데이터베이스 만들기' 클릭</div>
+            </div>
+
+            <div class="step">
+                <div class="step-title">Step 2: 데이터베이스 만들기</div>
+                <ol>
+                    <li><span class="keyword">"데이터베이스 만들기"</span> 버튼 클릭 (파란 버튼)</li>
+                    <li><strong>[1단계] 버전 선택</strong> → <span class="keyword">"Standard 버전"</span> 선택 → <span class="keyword">"다음"</span> 클릭</li>
+                    <li><strong>[2단계] 데이터베이스 ID 및 위치 선택</strong> (매우 중요!)
+                        <div class="alert alert-info" style="margin-top:0.5rem;">
+                            <strong>💡 추천: asia-northeast3 (Seoul)</strong>
+                            한국에서 가장 빠른 응답 속도를 제공합니다.
+                        </div>
+                    </li>
+                    <li><strong>[3단계] 보안 규칙 구성</strong> → <strong>"테스트 모드에서 시작"</strong> 선택
+                        <div class="radio-group">
+                            <div class="radio-item"><span class="circle"></span> 프로덕션 모드</div>
+                            <div class="radio-item selected"><span class="circle"></span> <strong>테스트 모드</strong> ← 이것 선택!</div>
+                        </div>
+                    </li>
+                    <li><span class="keyword">"만들기"</span> 클릭</li>
+                </ol>
+            </div>
+
+            <div class="screenshot">
+                <img src="screenshots/08-firestore-version.png" alt="버전 선택 - 'Standard 버전' 선택 후 '다음' 클릭" loading="lazy">
+                <div class="screenshot-caption">▲ 버전 선택 - 'Standard 버전' 선택 후 '다음' 클릭</div>
+            </div>
+
+            <div class="alert alert-warning">
+                <strong>⚠️ 중요 안내</strong>
+                <ul style="margin-top:0.25rem; padding-left:1.25rem;">
+                    <li>테스트 모드는 <strong>30일 후 자동 만료</strong>됩니다</li>
+                    <li>무료 개발용이고 보안이 낮습니다 (테스트용)</li>
+                    <li>30일 후에는 <a href="#section-7">7단계</a>에서 보안 규칙을 업데이트해야 합니다</li>
+                </ul>
+            </div>
+
+            <div class="step">
+                <div class="step-title">Step 3: 생성 대기</div>
+                <ul>
+                    <li>로딩 표시가 나옵니다</li>
+                    <li><strong>30초~1분 정도 기다려주세요</strong></li>
+                </ul>
+            </div>
+
+            <div class="alert alert-success">
+                <strong>✅ 확인</strong>
+                빈 컬렉션 화면이 보이면 성공입니다!
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- 4단계: 익명 인증 활성화 -->
+        <!-- ============================================ -->
+        <div class="section" id="section-4">
+            <div class="section-header">
+                <div class="section-number">4</div>
+                <h2>익명 인증 활성화</h2>
+            </div>
+            <div class="section-desc">사용자 로그인 없이도 데이터를 저장/읽을 수 있게 해줍니다.</div>
+
+            <div class="step">
+                <div class="step-title">Step 1: Authentication 메뉴</div>
+                <ol>
+                    <li>왼쪽 메뉴에서 <span class="keyword">"빌드"</span> → <span class="keyword">"Authentication"</span> 클릭</li>
+                </ol>
+            </div>
+
+            <div class="step">
+                <div class="step-title">Step 2: 로그인 방법 추가</div>
+                <ol>
+                    <li><span class="keyword">"시작하기"</span> 버튼 클릭</li>
+                    <li>위쪽 <span class="keyword">"로그인 방법"</span> 탭 클릭</li>
+                </ol>
+                <div class="diagram">  [ <strong style="color:#3b82f6;">로그인 방법</strong> ]  [ 사용자 ]  [ 설정 ]
+    ↑ 여기 클릭</div>
+                <ol start="3">
+                    <li>목록에서 <span class="keyword">"익명"</span> 찾기</li>
+                </ol>
+                <div class="diagram">  ├─ 이메일/비밀번호
+  ├─ <strong style="color:#3b82f6;">익명</strong>  ← 이것!
+  ├─ Google
+  └─ ...</div>
+                <ol start="4">
+                    <li><span class="keyword">"익명"</span> 클릭</li>
+                </ol>
+            </div>
+
+            <div class="step">
+                <div class="step-title">Step 3: 익명 인증 켜기</div>
+                <ol>
+                    <li>화면 오른쪽 위에 <strong>토글 버튼</strong> 찾기</li>
+                    <li>토글을 <strong>오른쪽으로 드래그</strong> (파란색으로 변함)</li>
+                    <li>팝업이 나타나면 <span class="keyword">"사용 설정"</span> 클릭</li>
+                </ol>
+            </div>
+
+            <div class="screenshot">
+                <img src="screenshots/09-auth-anonymous.png" alt="익명 인증 - 토글을 켜고 '저장' 클릭" loading="lazy">
+                <div class="screenshot-caption">▲ 익명 인증 - 토글을 켜고 '저장' 클릭</div>
+            </div>
+
+            <div class="alert alert-success">
+                <strong>✅ 확인</strong>
+                토글이 <strong>파란색 (On)</strong>으로 변하면 성공입니다!
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- 5단계: 앱 등록하고 설정값 가져오기 -->
+        <!-- ============================================ -->
+        <div class="section" id="section-5">
+            <div class="section-header">
+                <div class="section-number">5</div>
+                <h2>앱 등록하고 설정값 가져오기</h2>
+            </div>
+            <div class="section-desc">"시료 접수 대장" 앱이 Firebase를 사용할 수 있게 승인해주는 단계입니다.</div>
+
+            <div class="step">
+                <div class="step-title">Step 1: 프로젝트 설정 열기</div>
+                <ol>
+                    <li>왼쪽 위 <strong>톱니바퀴 아이콘(⚙️)</strong> 클릭 → <span class="keyword">"일반"</span> (프로젝트 설정 페이지)</li>
+                </ol>
+            </div>
+
+            <div class="step">
+                <div class="step-title">Step 2: 앱 등록</div>
+                <ol>
+                    <li>페이지를 <strong>아래로 스크롤</strong></li>
+                    <li><span class="keyword">"내 앱"</span> 섹션 찾기</li>
+                    <li><strong>웹 아이콘 <span class="keyword">&lt;/&gt;</span></strong> 클릭 (또는 "웹앱 추가")</li>
+                </ol>
+            </div>
+
+            <div class="screenshot">
+                <img src="screenshots/10-project-settings.png" alt="프로젝트 설정 - 내 앱 섹션에서 웹 아이콘 클릭" loading="lazy">
+                <div class="screenshot-caption">▲ 프로젝트 설정 → '내 앱' 섹션에서 웹 아이콘(&lt;/&gt;) 클릭</div>
+            </div>
+
+            <div class="step">
+                <div class="step-title">Step 3: 앱 닉네임 입력</div>
+                <ol>
+                    <li>팝업에서 앱 닉네임 입력 (예: <span class="file-name">시료 접수 대장 앱</span>)</li>
+                    <li><span class="keyword">"앱 등록"</span> 클릭</li>
+                </ol>
+            </div>
+
+            <div class="step">
+                <div class="step-title">Step 4: Firebase SDK 설정값 복사</div>
+                <p>코드가 나타납니다. 아래와 비슷한 형태입니다:</p>
+                <div class="code-block">
+<span class="json-bracket">const</span> firebaseConfig = <span class="json-bracket">{</span>
+  <span class="json-key">apiKey</span>: <span class="json-value">"AIzaRy..."</span>,
+  <span class="json-key">authDomain</span>: <span class="json-value">"my-sample-log.firebaseapp.com"</span>,
+  <span class="json-key">projectId</span>: <span class="json-value">"my-sample-log"</span>,
+  <span class="json-key">storageBucket</span>: <span class="json-value">"my-sample-log.appspot.com"</span>,
+  <span class="json-key">messagingSenderId</span>: <span class="json-value">"123456789"</span>,
+  <span class="json-key">appId</span>: <span class="json-value">"1:123456789:web:abcdef123456"</span>
+<span class="json-bracket">}</span>;</div>
+                <p><strong>이 6개의 값을 모두 복사</strong>해서 메모장에 저장해놓으세요. 다음 단계에서 필요합니다.</p>
+            </div>
+
+            <div class="screenshot">
+                <img src="screenshots/11-web-app-config.png" alt="Firebase SDK 설정값 - 이 코드에서 값을 복사하세요" loading="lazy">
+                <div class="screenshot-caption">▲ Firebase SDK 설정값 - 이 코드에서 값을 복사하세요</div>
+            </div>
+
+            <div class="alert alert-info">
+                <strong>💡 팁</strong>
+                <span class="json-bracket">{</span> 다음부터 <span class="json-bracket">}</span> 전까지 모두 선택해서 복사하세요.
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- 6단계: firebase-auth.json 파일 만들기 -->
+        <!-- ============================================ -->
+        <div class="section" id="section-6">
+            <div class="section-header">
+                <div class="section-number">6</div>
+                <h2>firebase-auth.json 파일 만들기</h2>
+            </div>
+            <div class="section-desc">Firebase 설정값을 앱이 읽을 수 있는 형태로 저장하는 파일입니다.</div>
+
+            <!-- 탭: Electron / 웹 -->
+            <div class="tabs">
+                <div class="tab active" onclick="switchTab(event, 'tab-electron')">Electron 앱 사용자</div>
+                <div class="tab" onclick="switchTab(event, 'tab-web')">웹 버전 사용자</div>
+            </div>
+
+            <div id="tab-electron" class="tab-content active">
+                <div class="step">
+                    <div class="step-title">Step 1: 텍스트 편집기 열기</div>
+                    <p><strong>Windows:</strong> 시작 메뉴에서 "메모장" 검색 → 메모장 열기</p>
+                    <p><strong>macOS:</strong> Spotlight(Cmd+Space) → "텍스트 편집기" 검색 → 열기</p>
+                </div>
+
+                <div class="step">
+                    <div class="step-title">Step 2: 설정 내용 입력</div>
+                    <p>아래 내용을 <strong>그대로 복사해서</strong> 붙여넣기하세요:</p>
+                    <div class="code-block" id="json-template">
+                        <button class="copy-btn" onclick="copyJson(this)">복사</button>
+<span class="json-bracket">{</span>
+    <span class="json-key">"apiKey"</span>: <span class="json-value">"여기에_apiKey_값"</span>,
+    <span class="json-key">"authDomain"</span>: <span class="json-value">"여기에_authDomain_값"</span>,
+    <span class="json-key">"projectId"</span>: <span class="json-value">"여기에_projectId_값"</span>,
+    <span class="json-key">"storageBucket"</span>: <span class="json-value">"여기에_storageBucket_값"</span>,
+    <span class="json-key">"messagingSenderId"</span>: <span class="json-value">"여기에_messagingSenderId_값"</span>,
+    <span class="json-key">"appId"</span>: <span class="json-value">"여기에_appId_값"</span>
+<span class="json-bracket">}</span></div>
+                </div>
+
+                <div class="step">
+                    <div class="step-title">Step 3: 5단계에서 복사한 값으로 교체</div>
+                    <p>각 <span class="json-value">"여기에_XXX_값"</span> 부분을 <strong>5단계에서 복사한 값</strong>으로 바꾸세요.</p>
+                    <p style="margin-top:0.5rem;"><strong>예시:</strong></p>
+                    <div class="code-block">
+<span class="json-bracket">{</span>
+    <span class="json-key">"apiKey"</span>: <span class="json-value">"AIzaSyABCDEF123456-xyz"</span>,
+    <span class="json-key">"authDomain"</span>: <span class="json-value">"my-sample-log.firebaseapp.com"</span>,
+    <span class="json-key">"projectId"</span>: <span class="json-value">"my-sample-log"</span>,
+    <span class="json-key">"storageBucket"</span>: <span class="json-value">"my-sample-log.appspot.com"</span>,
+    <span class="json-key">"messagingSenderId"</span>: <span class="json-value">"123456789012"</span>,
+    <span class="json-key">"appId"</span>: <span class="json-value">"1:123456789012:web:abcdef123456ghi"</span>
+<span class="json-bracket">}</span></div>
+                    <div class="alert alert-info">
+                        <strong>💡 팁</strong>
+                        <ul style="padding-left:1.25rem; margin-top:0.25rem;">
+                            <li>초록색 텍스트(값) 부분만 바꾸세요</li>
+                            <li><code>{ } , : "</code> 기호는 절대 건드리면 안 됩니다!</li>
+                            <li>키 순서는 상관없습니다 (어떤 순서로 써도 동작합니다)</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-title">Step 4: "다른 이름으로 저장" (매우 중요!)</div>
+
+                    <p><strong>Windows:</strong></p>
+                    <ol>
+                        <li>메뉴: 파일 → <span class="keyword">"다른 이름으로 저장"</span></li>
+                        <li>파일 이름: <span class="file-name">firebase-auth.json</span> (정확히!)</li>
+                        <li>파일 형식: <span class="keyword">"모든 파일 (*.*)"</span> 선택</li>
+                        <li>위치: 시료 접수 대장 앱 설치 폴더</li>
+                        <li>"저장" 클릭</li>
+                    </ol>
+
+                    <div class="alert alert-danger" style="margin-top:0.75rem;">
+                        <strong>⚠️ 파일 형식을 반드시 "모든 파일"로 변경!</strong>
+                        "텍스트 문서(*.txt)"로 저장하면 파일명이 <span class="file-name">firebase-auth.json.txt</span>가 되어 앱이 인식하지 못합니다.
+                    </div>
+
+                    <p style="margin-top:1rem;"><strong>macOS:</strong></p>
+                    <ol>
+                        <li>메뉴: 파일 → <span class="keyword">"다른 이름으로 저장"</span></li>
+                        <li>파일 이름: <span class="file-name">firebase-auth.json</span></li>
+                        <li>형식: 일반 텍스트</li>
+                        <li>인코딩: UTF-8</li>
+                        <li>저장 위치: 앱 설치 폴더</li>
+                        <li>"저장" 클릭</li>
+                    </ol>
+                </div>
+
+                <div class="step">
+                    <div class="step-title">Step 5: 파일 확장자 확인</div>
+                    <p>저장 후 <strong>파일 확장자를 반드시 확인</strong>하세요:</p>
+                    <div style="background:#f0fdf4; border-radius:8px; padding:0.75rem 1rem; margin:0.5rem 0;">
+                        ✅ 올바름: &nbsp; <span class="file-name">firebase-auth.json</span>
+                    </div>
+                    <div style="background:#fef2f2; border-radius:8px; padding:0.75rem 1rem; margin:0.5rem 0;">
+                        ❌ 틀림: &nbsp; <span class="file-name">firebase-auth.json.txt</span><br>
+                        ❌ 틀림: &nbsp; <span class="file-name">firebase-auth.txt</span>
+                    </div>
+
+                    <div class="alert alert-warning" style="margin-top:0.75rem;">
+                        <strong>⚠️ Windows 확장자 표시 설정</strong>
+                        Windows 탐색기 → 보기 → "파일 확장자" 체크하면 실제 확장자를 확인할 수 있습니다.
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-web" class="tab-content">
+                <div class="step">
+                    <div class="step-title">웹 브라우저에서 앱을 사용하는 경우</div>
+                    <p>파일을 만들 필요가 없습니다! 앱 안에서 직접 설정할 수 있습니다.</p>
+                    <ol style="margin-top:0.75rem;">
+                        <li>앱의 <span class="keyword">"설정 페이지"</span> 열기</li>
+                        <li><span class="keyword">"Firebase 수동 설정"</span> 카드 찾기</li>
+                        <li>5단계에서 복사한 6개 값을 직접 입력</li>
+                        <li><span class="keyword">"저장"</span> 클릭</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- 7단계: 테스트 모드 보안 규칙 -->
+        <!-- ============================================ -->
+        <div class="section" id="section-7">
+            <div class="section-header">
+                <div class="section-number">7</div>
+                <h2>테스트 모드 보안 규칙 (30일 후)</h2>
+            </div>
+
+            <div class="alert alert-warning">
+                <strong>⚠️ 30일 후에 반드시 해야 하는 작업입니다</strong>
+                테스트 모드는 30일 후 자동 만료됩니다. 이후에는 보안 규칙을 업데이트해야 앱을 계속 사용할 수 있습니다.
+            </div>
+
+            <div class="step">
+                <div class="step-title">Step 1: Firestore 규칙 페이지 열기</div>
+                <ol>
+                    <li>Firebase 콘솔에서 <span class="keyword">"Firestore Database"</span> 클릭</li>
+                    <li>위쪽 <span class="keyword">"규칙"</span> 탭 클릭</li>
+                </ol>
+            </div>
+
+            <div class="step">
+                <div class="step-title">Step 2: 규칙 수정</div>
+                <p>현재 규칙을 <strong>모두 지우고</strong> 아래를 <strong>그대로 복사</strong>해서 붙여넣기하세요:</p>
+                <div class="code-block" id="security-rules">
+                    <button class="copy-btn" onclick="copyRules(this)">복사</button>
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}</div>
+                <div class="alert alert-info" style="margin-top:0.5rem;">
+                    <strong>💡 이 규칙의 의미</strong>
+                    로그인된 사용자만 데이터를 읽고 쓸 수 있습니다.<br>
+                    (시료 접수 대장 앱이 익명 로그인하므로 정상 작동합니다)
+                </div>
+            </div>
+
+            <div class="screenshot">
+                <img src="screenshots/12-firestore-rules.png" alt="Firestore 보안 규칙 - 위 코드를 붙여넣고 '게시' 클릭" loading="lazy">
+                <div class="screenshot-caption">▲ Firestore 보안 규칙 - 위 코드를 붙여넣고 '게시' 클릭</div>
+            </div>
+
+            <div class="step">
+                <div class="step-title">Step 3: 규칙 게시</div>
+                <ol>
+                    <li>규칙 입력창 위의 <span class="keyword">"게시"</span> 버튼 클릭</li>
+                    <li>확인 팝업에서 <span class="keyword">"게시"</span> 클릭</li>
+                    <li>로딩이 끝나면 완료!</li>
+                </ol>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- 8단계: 설정 확인하기 -->
+        <!-- ============================================ -->
+        <div class="section" id="section-8">
+            <div class="section-header">
+                <div class="section-number">8</div>
+                <h2>설정 확인하기</h2>
+            </div>
+
+            <div class="step">
+                <div class="step-title">Step 1: 시료 접수 대장 앱 실행</div>
+                <p>앱을 실행하고 <span class="keyword">"설정 페이지"</span>를 열어주세요.</p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">Step 2: Firebase 연결 상태 확인</div>
+                <p><strong>설정 페이지 → Firebase 섹션</strong>에서 확인:</p>
+                <div style="background:#f0fdf4; border:2px solid #86efac; border-radius:10px; padding:1rem 1.25rem; margin:0.75rem 0; text-align:center;">
+                    <div style="font-weight:700; font-size:1.1rem; color:#166534;">✅ 연결됨</div>
+                    <div style="color:#64748b; font-size:0.85rem; margin-top:0.25rem;">프로젝트: my-sample-log &nbsp;|&nbsp; 인증: 익명</div>
+                </div>
+                <p>위와 같이 보이면 성공입니다!</p>
+
+                <div class="alert alert-danger" style="margin-top:0.75rem;">
+                    <strong>❌ "연결 안 됨" 표시되면?</strong>
+                    <ol style="padding-left:1.25rem; margin-top:0.25rem;">
+                        <li><span class="file-name">firebase-auth.json</span> 파일이 올바르게 저장됐는지 확인</li>
+                        <li>Firebase 콘솔에서 프로젝트가 정상 상태인지 확인</li>
+                        <li>인터넷 연결 확인</li>
+                        <li>앱 재시작</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-title">Step 3: 간단한 데이터 저장 테스트</div>
+                <ol>
+                    <li>앱에서 <strong>시료 하나 등록</strong> (테스트용)</li>
+                    <li>데이터 저장</li>
+                    <li>앱을 <strong>종료했다가 다시 열기</strong></li>
+                    <li><strong>저장한 데이터가 그대로 남아있으면</strong> 성공!</li>
+                </ol>
+            </div>
+
+            <div class="alert alert-success">
+                <strong>✅ 완벽합니다!</strong>
+                Firebase가 정상 작동합니다. 이제 클라우드와 연동해서 사용할 수 있습니다.
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- 보안 안내 -->
+        <!-- ============================================ -->
+        <div class="section" id="section-security">
+            <div class="section-header">
+                <div class="section-number" style="background:linear-gradient(135deg,#dc2626,#f59e0b);">!</div>
+                <h2>보안 안내</h2>
+            </div>
+
+            <div class="step">
+                <div class="step-title">테스트 모드의 한계</div>
+                <p>테스트 모드는 <strong>누구나 데이터를 읽고 쓸 수 있습니다</strong>. 따라서:</p>
+                <ul style="margin-top:0.5rem;">
+                    <li>✅ <strong>개인 컴퓨터에서만 사용 권장</strong></li>
+                    <li>❌ 공유 네트워크에서는 미권장</li>
+                    <li>❌ 민감한 정보는 저장하지 마세요 (현재 테스트용)</li>
+                </ul>
+            </div>
+
+            <div class="step">
+                <div class="step-title">정식 서비스 전환</div>
+                <p>30일 후 정식 서비스로 전환할 때:</p>
+                <ol>
+                    <li>보안 규칙 업데이트 (<a href="#section-7">7단계</a>)</li>
+                    <li>민감한 데이터는 암호화 활성화</li>
+                    <li>백업 설정</li>
+                </ol>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- FAQ -->
+        <!-- ============================================ -->
+        <div class="section" id="section-faq">
+            <div class="section-header">
+                <div class="section-number" style="background:linear-gradient(135deg,#7c3aed,#a855f7);">?</div>
+                <h2>자주 묻는 질문 (FAQ)</h2>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFaq(this)">
+                    <span>Q1: 파일을 어디에 저장해야 하나요?</span>
+                    <span class="faq-arrow">▼</span>
+                </div>
+                <div class="faq-answer">
+                    <p>시료 접수 대장 앱이 설치된 폴더입니다:</p>
+                    <ul>
+                        <li><strong>Windows:</strong> <code>C:\Users\[사용자명]\AppData\Local\Programs\시료접수대장\</code></li>
+                        <li><strong>macOS:</strong> <code>Applications/시료접수대장.app/</code> 또는 앱이 있는 곳</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFaq(this)">
+                    <span>Q2: firebase-auth.json 파일을 잘못 저장했어요.</span>
+                    <span class="faq-arrow">▼</span>
+                </div>
+                <div class="faq-answer">
+                    <ol>
+                        <li>잘못 저장한 파일 삭제</li>
+                        <li><a href="#section-6">6단계</a>를 다시 따라하기</li>
+                        <li><strong>파일 확장자를 <code>.json</code>으로 꼭 확인</strong></li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFaq(this)">
+                    <span>Q3: 30일 후에 꼭 보안 규칙을 변경해야 하나요?</span>
+                    <span class="faq-arrow">▼</span>
+                </div>
+                <div class="faq-answer">
+                    <p>네, <strong>반드시</strong> 변경해야 합니다.</p>
+                    <ul>
+                        <li>변경하지 않으면 앱이 데이터를 저장할 수 없습니다.</li>
+                        <li>30일 지났을 때 앱에서 알림이 나타납니다.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFaq(this)">
+                    <span>Q4: 여러 사람이 같은 데이터를 공유할 수 있나요?</span>
+                    <span class="faq-arrow">▼</span>
+                </div>
+                <div class="faq-answer">
+                    <p>같은 Firebase 프로젝트를 사용하면 가능합니다. 동일한 <span class="file-name">firebase-auth.json</span> 파일을 여러 컴퓨터에 넣으면 됩니다.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFaq(this)">
+                    <span>Q5: 데이터가 손실되지 않나요?</span>
+                    <span class="faq-arrow">▼</span>
+                </div>
+                <div class="faq-answer">
+                    <p>Google 클라우드에 저장되므로 안전합니다. 하지만:</p>
+                    <ul>
+                        <li>로컬 백업도 정기적으로 하세요</li>
+                        <li>중요한 데이터는 Excel로도 내보내세요</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFaq(this)">
+                    <span>Q6: 비용이 드나요?</span>
+                    <span class="faq-arrow">▼</span>
+                </div>
+                <div class="faq-answer">
+                    <p><strong>현재는 무료입니다!</strong></p>
+                    <ul>
+                        <li>Google Firebase는 무료 사용량이 충분히 있습니다 (Spark Plan)</li>
+                        <li>소규모 사용량에서는 추가 비용이 없습니다</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- 문제 해결 -->
+        <!-- ============================================ -->
+        <div class="section" id="section-trouble">
+            <div class="section-header">
+                <div class="section-number" style="background:linear-gradient(135deg,#dc2626,#ef4444);">!</div>
+                <h2>문제 해결</h2>
+            </div>
+
+            <div class="trouble-item">
+                <h4>증상 1: "Firebase에 연결할 수 없습니다"</h4>
+                <ol>
+                    <li>인터넷 연결 확인</li>
+                    <li><span class="file-name">firebase-auth.json</span> 파일이 올바른 위치에 있는지 확인</li>
+                    <li>Firebase 콘솔에서 프로젝트 상태 확인</li>
+                    <li>앱 재시작</li>
+                </ol>
+            </div>
+
+            <div class="trouble-item">
+                <h4>증상 2: "데이터가 저장되지 않습니다"</h4>
+                <ol>
+                    <li>30일 이상 지났으면 보안 규칙 업데이트 필요 (<a href="#section-7">7단계</a>)</li>
+                    <li>Firestore 할당량 확인 (보통 충분합니다)</li>
+                    <li>권한 설정 다시 확인</li>
+                </ol>
+            </div>
+
+            <div class="trouble-item">
+                <h4>증상 3: "firebase-auth.json을 찾을 수 없습니다"</h4>
+                <ol>
+                    <li>파일명 정확히 확인: <span class="file-name">firebase-auth.json</span> (대소문자 구분!)</li>
+                    <li>파일 위치 확인 (앱 폴더와 동일 레벨)</li>
+                    <li>파일 확장자 확인 (<code>.txt</code>가 붙었으면 안 됨)</li>
+                    <li>숨김 파일 표시 설정 확인</li>
+                </ol>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- 체크리스트 -->
+        <!-- ============================================ -->
+        <div class="section" id="section-checklist">
+            <div class="section-header">
+                <div class="section-number" style="background:linear-gradient(135deg,#059669,#22c55e);">✓</div>
+                <h2>설정 완료 체크리스트</h2>
+            </div>
+
+            <p>아래 항목을 클릭하여 완료를 표시하세요:</p>
+
+            <ul class="checklist" style="margin-top:1rem;">
+                <li onclick="toggleCheck(this)"><div class="check-box"></div><span>Google 계정으로 로그인</span></li>
+                <li onclick="toggleCheck(this)"><div class="check-box"></div><span>Firebase 프로젝트 생성 (2단계)</span></li>
+                <li onclick="toggleCheck(this)"><div class="check-box"></div><span>Firestore 데이터베이스 생성 - 테스트 모드 (3단계)</span></li>
+                <li onclick="toggleCheck(this)"><div class="check-box"></div><span>익명 인증 활성화 (4단계)</span></li>
+                <li onclick="toggleCheck(this)"><div class="check-box"></div><span>앱 등록 및 설정값 복사 (5단계)</span></li>
+                <li onclick="toggleCheck(this)"><div class="check-box"></div><span>firebase-auth.json 파일 생성 및 저장 (6단계)</span></li>
+                <li onclick="toggleCheck(this)"><div class="check-box"></div><span>앱에서 Firebase 연결 상태 "연결됨" 확인 (8단계)</span></li>
+                <li onclick="toggleCheck(this)"><div class="check-box"></div><span>테스트 데이터 저장/복원 확인 (8단계)</span></li>
+            </ul>
+
+            <div id="checklist-complete" style="display:none; margin-top:1.5rem;">
+                <div class="alert alert-success">
+                    <strong>🎉 모두 완료되었습니다!</strong>
+                    이제 시료 접수 대장을 클라우드와 연동해서 사용할 수 있습니다.
+                </div>
+            </div>
+        </div>
+
+        <!-- 30일 후 체크리스트 -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-number" style="background:linear-gradient(135deg,#d97706,#f59e0b);">📅</div>
+                <h2>30일 후 체크리스트</h2>
+            </div>
+            <p>테스트 모드 만료 전에 준비하세요:</p>
+            <ul class="checklist" style="margin-top:0.75rem;">
+                <li onclick="toggleCheck(this)"><div class="check-box"></div><span>달력에 알림 설정 (30일 뒤)</span></li>
+                <li onclick="toggleCheck(this)"><div class="check-box"></div><span>보안 규칙 업데이트 방법 미리 읽기 (7단계)</span></li>
+                <li onclick="toggleCheck(this)"><div class="check-box"></div><span>중요한 데이터 백업 (메뉴 → 내보내기)</span></li>
+                <li onclick="toggleCheck(this)"><div class="check-box"></div><span>Firebase 콘솔 북마크 저장</span></li>
+            </ul>
+        </div>
+
+    </div>
+
+    <div class="footer">
+        <p>Firebase 설정 가이드 &mdash; 시료 접수 대장</p>
+        <p>마지막 업데이트: 2026-02-13 &nbsp;|&nbsp; 한국어, 초급 사용자 대상</p>
+    </div>
+</div>
+
+<script>
+    // 탭 전환
+    function switchTab(event, tabId) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        event.target.classList.add('active');
+        document.getElementById(tabId).classList.add('active');
+    }
+
+    // FAQ 토글
+    function toggleFaq(el) {
+        el.parentElement.classList.toggle('open');
+    }
+
+    // 체크리스트 토글
+    function toggleCheck(el) {
+        el.classList.toggle('checked');
+        // 완료 메시지 체크
+        const checklist = el.closest('.checklist');
+        if (checklist && checklist === document.querySelector('#section-checklist .checklist')) {
+            const total = checklist.querySelectorAll('li').length;
+            const checked = checklist.querySelectorAll('li.checked').length;
+            const completeDiv = document.getElementById('checklist-complete');
+            if (completeDiv) {
+                completeDiv.style.display = (checked === total) ? 'block' : 'none';
+            }
+        }
+    }
+
+    // 텍스트 복사
+    function copyText(btn, text) {
+        navigator.clipboard.writeText(text).then(() => {
+            btn.textContent = '복사됨!';
+            btn.classList.add('copied');
+            setTimeout(() => {
+                btn.textContent = '복사';
+                btn.classList.remove('copied');
+            }, 2000);
+        });
+    }
+
+    // JSON 템플릿 복사
+    function copyJson(btn) {
+        const text = '{\n    "apiKey": "여기에_apiKey_값",\n    "authDomain": "여기에_authDomain_값",\n    "projectId": "여기에_projectId_값",\n    "storageBucket": "여기에_storageBucket_값",\n    "messagingSenderId": "여기에_messagingSenderId_값",\n    "appId": "여기에_appId_값"\n}';
+        navigator.clipboard.writeText(text).then(() => {
+            btn.textContent = '복사됨!';
+            btn.classList.add('copied');
+            setTimeout(() => {
+                btn.textContent = '복사';
+                btn.classList.remove('copied');
+            }, 2000);
+        });
+    }
+
+    // 보안 규칙 복사
+    function copyRules(btn) {
+        const text = "rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /{document=**} {\n      allow read, write: if request.auth != null;\n    }\n  }\n}";
+        navigator.clipboard.writeText(text).then(() => {
+            btn.textContent = '복사됨!';
+            btn.classList.add('copied');
+            setTimeout(() => {
+                btn.textContent = '복사';
+                btn.classList.remove('copied');
+            }, 2000);
+        });
+    }
+</script>
+
+</body>
+</html>
