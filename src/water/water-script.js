@@ -2496,259 +2496,83 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // 엑셀 가져오기 (Excel Import)
+    // 엑셀 가져오기 (ExcelImportManager 사용)
     // ═══════════════════════════════════════════════════════════════
 
-    const APP_FIELDS = [
-        { key: 'receptionNumber', label: '접수번호' },
-        { key: 'date', label: '접수일자' },
-        { key: 'name', label: '성명' },
-        { key: 'phoneNumber', label: '전화번호' },
-        { key: 'address', label: '주소' },
-        { key: 'sampleName', label: '시료명' },
-        { key: 'samplingLocation', label: '채취장소' },
-        { key: 'mainCrop', label: '주작목' },
-        { key: 'purpose', label: '목적' },
-        { key: 'testItems', label: '검사항목' },
-        { key: 'receptionMethod', label: '통보방법' },
-        { key: 'note', label: '비고' }
-    ];
+    const excelImporter = new ExcelImportManager({
+        appFields: [
+            { key: 'receptionNumber', label: '접수번호' },
+            { key: 'date', label: '접수일자' },
+            { key: 'name', label: '성명' },
+            { key: 'phoneNumber', label: '전화번호' },
+            { key: 'address', label: '주소' },
+            { key: 'sampleName', label: '시료명' },
+            { key: 'samplingLocation', label: '채취장소' },
+            { key: 'mainCrop', label: '주작목' },
+            { key: 'purpose', label: '목적' },
+            { key: 'testItems', label: '검사항목' },
+            { key: 'receptionMethod', label: '통보방법' },
+            { key: 'note', label: '비고' }
+        ],
+        autoMapRules: {
+            '접수번호': 'receptionNumber', '번호': 'receptionNumber', 'no': 'receptionNumber',
+            '접수일자': 'date', '날짜': 'date', '일자': 'date',
+            '성명': 'name', '이름': 'name', '의뢰인': 'name', '의뢰자': 'name',
+            '전화번호': 'phoneNumber', '연락처': 'phoneNumber', '전화': 'phoneNumber', '휴대폰': 'phoneNumber',
+            '주소': 'address', '의뢰인주소': 'address',
+            '시료명': 'sampleName', '시료': 'sampleName', '수질': 'sampleName',
+            '채취장소': 'samplingLocation', '채취지': 'samplingLocation', '소재지': 'samplingLocation',
+            '주작목': 'mainCrop', '작물': 'mainCrop', '작물명': 'mainCrop',
+            '목적': 'purpose', '용도': 'purpose',
+            '검사항목': 'testItems', '분석항목': 'testItems',
+            '통보방법': 'receptionMethod', '수령방법': 'receptionMethod', '수령 방법': 'receptionMethod',
+            '비고': 'note', '메모': 'note', '참고': 'note'
+        },
+        templateConfig: {
+            headers: ['접수번호', '시료명', '채취장소', '주작목', '목적', '검사항목', '비고'],
+            sampleRow: ['1', '지하수', '봉화읍 내성리 123', '벼', '참고용', '농업용수', ''],
+            colWidths: [
+                { wch: 10 }, { wch: 10 }, { wch: 30 },
+                { wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 20 }
+            ],
+            sheetName: '수질시료',
+            fileName: '수질분석_가져오기_서식'
+        },
+        previewColumns: [
+            { key: 'receptionNumber', label: '접수번호' },
+            { key: 'date', label: '접수일자' },
+            { key: 'sampleName', label: '시료명' },
+            { key: 'name', label: '성명' },
+            { key: 'samplingLocation', label: '채취장소' },
+            { key: 'mainCrop', label: '주작목' },
+            { key: 'testItems', label: '검사항목' },
+            { key: 'note', label: '비고' }
+        ],
+        getCommonData: () => ({
+            date: document.getElementById('importDate').value || new Date().toISOString().slice(0, 10),
+            name: document.getElementById('importName').value.trim(),
+            phone: document.getElementById('importPhone').value.trim(),
+            address: document.getElementById('importAddress').value.trim(),
+            method: document.getElementById('importMethod').value,
+            purpose: document.getElementById('importPurpose').value,
+            now: new Date().toISOString()
+        }),
+        buildRecord: (getVal, parseExcelDate, common) => {
+            const receptionNumber = getVal('receptionNumber') || '';
+            const dateVal = getVal('date');
+            const date = parseExcelDate(dateVal) || common.date;
+            const name = getVal('name') || common.name;
+            const phoneNumber = getVal('phoneNumber') || common.phone;
+            const address = getVal('address') || common.address;
+            const sampleName = getVal('sampleName') || '지하수';
+            const samplingLocation = getVal('samplingLocation') || '';
+            const mainCrop = getVal('mainCrop') || '';
+            const purpose = getVal('purpose') || common.purpose;
+            const testItems = getVal('testItems') || '농업용수';
+            const receptionMethod = getVal('receptionMethod') || common.method;
+            const note = getVal('note') || '';
 
-    const AUTO_MAP_RULES = {
-        '접수번호': 'receptionNumber', '번호': 'receptionNumber', 'no': 'receptionNumber',
-        '접수일자': 'date', '날짜': 'date', '일자': 'date',
-        '성명': 'name', '이름': 'name', '의뢰인': 'name', '의뢰자': 'name',
-        '전화번호': 'phoneNumber', '연락처': 'phoneNumber', '전화': 'phoneNumber', '휴대폰': 'phoneNumber',
-        '주소': 'address', '의뢰인주소': 'address',
-        '시료명': 'sampleName', '시료': 'sampleName', '수질': 'sampleName',
-        '채취장소': 'samplingLocation', '채취지': 'samplingLocation', '소재지': 'samplingLocation',
-        '주작목': 'mainCrop', '작물': 'mainCrop', '작물명': 'mainCrop',
-        '목적': 'purpose', '용도': 'purpose',
-        '검사항목': 'testItems', '분석항목': 'testItems',
-        '통보방법': 'receptionMethod', '수령방법': 'receptionMethod', '수령 방법': 'receptionMethod',
-        '비고': 'note', '메모': 'note', '참고': 'note'
-    };
-
-    // 엘리먼트 참조
-    const excelImportInput = document.getElementById('excelImportInput');
-    const excelImportModal = document.getElementById('excelImportModal');
-    const closeExcelImportModal = document.getElementById('closeExcelImportModal');
-    const cancelExcelImportBtn = document.getElementById('cancelExcelImportBtn');
-    const excelImportNextBtn = document.getElementById('excelImportNextBtn');
-    const excelImportPrevBtn = document.getElementById('excelImportPrevBtn');
-    const step1 = document.getElementById('excelImportStep1');
-    const step2 = document.getElementById('excelImportStep2');
-    const step3 = document.getElementById('excelImportStep3');
-    const columnMappingArea = document.getElementById('columnMappingArea');
-    const previewSummary = document.getElementById('previewSummary');
-    const previewTableHead = document.getElementById('previewTableHead');
-    const previewTableBody = document.getElementById('previewTableBody');
-    const importWarnings = document.getElementById('importWarnings');
-
-    let importExcelHeaders = [];
-    let importExcelData = [];
-    let importColumnMapping = {};
-    let importParsedLogs = [];
-    let importCurrentStep = 1;
-
-    // 서식 다운로드
-    function downloadImportTemplate() {
-        const headers = ['접수번호', '시료명', '채취장소', '주작목', '목적', '검사항목', '비고'];
-        const sampleRow = ['1', '지하수', '봉화읍 내성리 123', '벼', '참고용', '농업용수', ''];
-
-        const wb = XLSX.utils.book_new();
-        const wsData = [headers, sampleRow];
-        const ws = XLSX.utils.aoa_to_sheet(wsData);
-
-        ws['!cols'] = [
-            { wch: 10 },  // 접수번호
-            { wch: 10 },  // 시료명
-            { wch: 30 },  // 채취장소
-            { wch: 12 },  // 주작목
-            { wch: 10 },  // 목적
-            { wch: 12 },  // 검사항목
-            { wch: 20 }   // 비고
-        ];
-
-        XLSX.utils.book_append_sheet(wb, ws, '수질시료');
-        XLSX.writeFile(wb, '수질분석_가져오기_서식.xlsx');
-        showToast('서식 파일을 다운로드했습니다.', 'success');
-    }
-
-    // 서식 다운로드 버튼
-    const downloadTemplateNavBtn = document.getElementById('downloadTemplateNavBtn');
-    if (downloadTemplateNavBtn) downloadTemplateNavBtn.addEventListener('click', downloadImportTemplate);
-    const downloadTemplateBtn = document.getElementById('downloadTemplateBtn');
-    if (downloadTemplateBtn) downloadTemplateBtn.addEventListener('click', downloadImportTemplate);
-
-    // 단계 표시
-    function showImportStep(step) {
-        step1.classList.toggle('hidden', step !== 1);
-        step2.classList.toggle('hidden', step !== 2);
-        step3.classList.toggle('hidden', step !== 3);
-        excelImportPrevBtn.classList.toggle('hidden', step === 1);
-        excelImportNextBtn.textContent = step === 3 ? '가져오기' : '다음';
-    }
-
-    // 파일 선택 → 파싱 → 모달 열기
-    if (excelImportInput) excelImportInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            try {
-                const data = new Uint8Array(event.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
-                const sheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[sheetName];
-                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
-
-                if (jsonData.length < 2) {
-                    showToast('데이터가 없거나 헤더만 있습니다.', 'error');
-                    return;
-                }
-
-                importExcelHeaders = jsonData[0].map(h => String(h).trim());
-                importExcelData = jsonData.slice(1).filter(row =>
-                    row.some(cell => cell !== '' && cell !== null && cell !== undefined)
-                );
-
-                if (importExcelData.length === 0) {
-                    showToast('데이터 행이 없습니다.', 'error');
-                    return;
-                }
-
-                // 자동 매핑
-                importColumnMapping = {};
-                importExcelHeaders.forEach((header, idx) => {
-                    const normalizedHeader = header.replace(/\s+/g, '').toLowerCase();
-                    for (const [pattern, field] of Object.entries(AUTO_MAP_RULES)) {
-                        if (normalizedHeader === pattern.replace(/\s+/g, '').toLowerCase() || header === pattern) {
-                            const alreadyMapped = Object.values(importColumnMapping).includes(field);
-                            if (!alreadyMapped) {
-                                importColumnMapping[idx] = field;
-                            }
-                            break;
-                        }
-                    }
-                });
-
-                importCurrentStep = 1;
-                showImportStep(1);
-                excelImportModal.classList.remove('hidden');
-            } catch (err) {
-                console.error('엑셀 파싱 오류:', err);
-                showToast('엑셀 파일을 읽을 수 없습니다.', 'error');
-            }
-        };
-        reader.readAsArrayBuffer(file);
-        excelImportInput.value = '';
-    });
-
-    // 컬럼 매핑 렌더링
-    function renderColumnMapping() {
-        columnMappingArea.innerHTML = '';
-        importExcelHeaders.forEach((header, idx) => {
-            if (!header) return;
-            const row = document.createElement('div');
-            row.className = 'mapping-row' + (importColumnMapping[idx] ? ' mapped' : '');
-            const sampleValue = importExcelData[0]?.[idx] ?? '';
-            row.innerHTML = `
-                <span class="mapping-excel-col" title="${header}">${header}</span>
-                <span class="mapping-arrow">→</span>
-                <select class="mapping-select" data-col-idx="${idx}">
-                    <option value="">-- 건너뛰기 --</option>
-                    ${APP_FIELDS.map(f =>
-                        `<option value="${f.key}" ${importColumnMapping[idx] === f.key ? 'selected' : ''}>${f.label}</option>`
-                    ).join('')}
-                </select>
-                <span class="mapping-sample" title="${sampleValue}">예: ${sampleValue}</span>
-            `;
-            const select = row.querySelector('.mapping-select');
-            select.addEventListener('change', (e) => {
-                const colIdx = parseInt(e.target.dataset.colIdx);
-                const value = e.target.value;
-                if (value) {
-                    for (const [k, v] of Object.entries(importColumnMapping)) {
-                        if (v === value && parseInt(k) !== colIdx) {
-                            delete importColumnMapping[k];
-                            const otherSelect = columnMappingArea.querySelector(`select[data-col-idx="${k}"]`);
-                            if (otherSelect) {
-                                otherSelect.value = '';
-                                otherSelect.closest('.mapping-row').classList.remove('mapped');
-                            }
-                        }
-                    }
-                    importColumnMapping[colIdx] = value;
-                } else {
-                    delete importColumnMapping[colIdx];
-                }
-                row.classList.toggle('mapped', !!value);
-            });
-            columnMappingArea.appendChild(row);
-        });
-    }
-
-    // 미리보기 빌드
-    function buildPreview() {
-        const now = new Date().toISOString();
-        const commonDate = document.getElementById('importDate').value || new Date().toISOString().slice(0, 10);
-        const commonName = document.getElementById('importName').value.trim();
-        const commonPhone = document.getElementById('importPhone').value.trim();
-        const commonAddress = document.getElementById('importAddress').value.trim();
-        const commonMethod = document.getElementById('importMethod').value;
-        const commonPurpose = document.getElementById('importPurpose').value;
-
-        const fieldToCol = {};
-        for (const [colIdx, field] of Object.entries(importColumnMapping)) {
-            fieldToCol[field] = parseInt(colIdx);
-        }
-
-        const warnings = [];
-        importParsedLogs = [];
-
-        const getVal = (row, field) => {
-            if (fieldToCol[field] !== undefined) {
-                const val = row[fieldToCol[field]];
-                return val !== undefined && val !== null ? String(val).trim() : '';
-            }
-            return '';
-        };
-
-        const parseExcelDate = (val) => {
-            if (!val) return '';
-            if (typeof val === 'string' && val.match(/^\d{4}[-./]\d{1,2}[-./]\d{1,2}$/)) {
-                return val.replace(/[./]/g, '-');
-            }
-            if (typeof val === 'number' && val > 30000 && val < 100000) {
-                const date = new Date((val - 25569) * 86400 * 1000);
-                return date.toISOString().slice(0, 10);
-            }
-            return String(val);
-        };
-
-        importExcelData.forEach((row, rowIdx) => {
-            const receptionNumber = getVal(row, 'receptionNumber') || '';
-            const dateVal = getVal(row, 'date');
-            const date = parseExcelDate(dateVal) || commonDate;
-            const name = getVal(row, 'name') || commonName;
-            const phoneNumber = getVal(row, 'phoneNumber') || commonPhone;
-            const address = getVal(row, 'address') || commonAddress;
-            const sampleName = getVal(row, 'sampleName') || '지하수';
-            const samplingLocation = getVal(row, 'samplingLocation') || '';
-            const mainCrop = getVal(row, 'mainCrop') || '';
-            const purpose = getVal(row, 'purpose') || commonPurpose;
-            const testItems = getVal(row, 'testItems') || '농업용수';
-            const receptionMethod = getVal(row, 'receptionMethod') || commonMethod;
-            const note = getVal(row, 'note') || '';
-
-            if (!samplingLocation && !name && !sampleName) {
-                warnings.push(`행 ${rowIdx + 2}: 채취장소, 성명, 시료명이 모두 비어 있어 건너뜁니다.`);
-                return;
-            }
-
-            const logEntry = {
+            return {
                 id: generateId(),
                 receptionNumber,
                 date,
@@ -2770,76 +2594,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                 testItems,
                 note,
                 isComplete: false,
-                createdAt: now,
-                updatedAt: now
+                createdAt: common.now,
+                updatedAt: common.now
             };
-            importParsedLogs.push(logEntry);
-        });
-
-        // 접수번호 자동 채번
-        const hasReceptionNumbers = importParsedLogs.some(l => l.receptionNumber !== '');
-        if (!hasReceptionNumbers) {
-            let maxNum = 0;
-            sampleLogs.forEach(log => {
-                if (log.receptionNumber) {
-                    const n = parseInt(log.receptionNumber, 10);
-                    if (!isNaN(n) && n > maxNum) maxNum = n;
-                }
-            });
-            importParsedLogs.forEach((l, i) => {
-                l.receptionNumber = String(maxNum + i + 1);
-            });
-        }
-
-        previewSummary.textContent = `총 ${importParsedLogs.length}건의 데이터를 가져옵니다.`;
-        previewTableHead.innerHTML = `<tr>
-            <th>접수번호</th><th>접수일자</th><th>시료명</th><th>성명</th>
-            <th>채취장소</th><th>주작목</th><th>검사항목</th><th>비고</th>
-        </tr>`;
-        previewTableBody.innerHTML = importParsedLogs.map(l => `<tr>
-            <td>${l.receptionNumber}</td>
-            <td>${l.date}</td>
-            <td>${l.sampleName}</td>
-            <td>${l.name}</td>
-            <td>${l.samplingLocation}</td>
-            <td>${l.mainCrop}</td>
-            <td>${l.testItems}</td>
-            <td>${l.note}</td>
-        </tr>`).join('');
-
-        if (warnings.length > 0) {
-            importWarnings.innerHTML = warnings.join('<br>');
-            importWarnings.classList.remove('hidden');
-        } else {
-            importWarnings.classList.add('hidden');
-        }
-    }
-
-    // 다음/가져오기 버튼
-    if (excelImportNextBtn) excelImportNextBtn.addEventListener('click', () => {
-        if (importCurrentStep === 1) {
-            const importDate = document.getElementById('importDate').value;
-            if (!importDate) {
-                showToast('접수일자를 입력하세요.', 'error');
-                return;
+        },
+        skipRowCheck: (record, rowIdx) => {
+            if (!record.samplingLocation && !record.name && !record.sampleName) {
+                return `행 ${rowIdx + 2}: 채취장소, 성명, 시료명이 모두 비어 있어 건너뜁니다.`;
             }
-            importCurrentStep = 2;
-            renderColumnMapping();
-            showImportStep(2);
-        } else if (importCurrentStep === 2) {
-            if (Object.keys(importColumnMapping).length === 0) {
-                showToast('최소 1개의 컬럼을 매핑하세요.', 'error');
-                return;
-            }
-            importCurrentStep = 3;
-            buildPreview();
-            showImportStep(3);
-        } else if (importCurrentStep === 3) {
-            if (importParsedLogs.length === 0) {
-                showToast('가져올 데이터가 없습니다.', 'error');
-                return;
-            }
-            importParsedLogs.forEach(logEntry => sampleLogs.push(logEntry));
+            return null;
+        },
+        getExistingLogs: () => sampleLogs,
+        onImportComplete: (records) => {
+            records.forEach(logEntry => sampleLogs.push(logEntry));
             sampleLogs.sort((a, b) => {
                 const numA = parseInt(a.receptionNumber) || 0;
                 const numB = parseInt(b.receptionNumber) || 0;
@@ -2848,31 +2615,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
             saveLogs();
             renderLogs(sampleLogs);
-            excelImportModal.classList.add('hidden');
-            showToast(`${importParsedLogs.length}건의 데이터를 가져왔습니다.`, 'success');
-
-            importParsedLogs = [];
-            importExcelData = [];
-            importExcelHeaders = [];
-            importColumnMapping = {};
         }
     });
-
-    // 이전 버튼
-    if (excelImportPrevBtn) excelImportPrevBtn.addEventListener('click', () => {
-        if (importCurrentStep === 2) { importCurrentStep = 1; showImportStep(1); }
-        else if (importCurrentStep === 3) { importCurrentStep = 2; showImportStep(2); }
-    });
-
-    // 모달 닫기
-    const closeImportModal = () => {
-        excelImportModal.classList.add('hidden');
-        importCurrentStep = 1;
-        showImportStep(1);
-    };
-    if (closeExcelImportModal) closeExcelImportModal.addEventListener('click', closeImportModal);
-    if (cancelExcelImportBtn) cancelExcelImportBtn.addEventListener('click', closeImportModal);
-    excelImportModal?.querySelector('.modal-overlay')?.addEventListener('click', closeImportModal);
+    excelImporter.init();
 
     // ========================================
     // 초기 렌더링
