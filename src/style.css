@@ -3309,15 +3309,9 @@ input[type="number"] {
     padding: 0.5rem;
 }
 
-/* 비고 열 - 가변 너비 + 스크롤 */
-.data-table th.col-note {
-    min-width: 80px;
-    max-width: 200px;
-}
-
+/* 비고 열 */
+.data-table th.col-note,
 .data-table td.col-note {
-    min-width: 80px;
-    max-width: 200px;
     text-align: left;
     padding: 0.5rem;
 }
@@ -3332,28 +3326,8 @@ input[type="number"] {
 }
 
 .note-cell {
-    max-width: 180px;
-    overflow-x: auto;
-    white-space: nowrap;
-    scrollbar-width: thin;
-    scrollbar-color: var(--gray-300) transparent;
-}
-
-.note-cell::-webkit-scrollbar {
-    height: 4px;
-}
-
-.note-cell::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.note-cell::-webkit-scrollbar-thumb {
-    background: var(--gray-300);
-    border-radius: 2px;
-}
-
-.note-cell::-webkit-scrollbar-thumb:hover {
-    background: var(--gray-400);
+    word-break: keep-all;
+    line-height: 1.4;
 }
 
 /* 텍스트 말줄임 처리 (공통) */
