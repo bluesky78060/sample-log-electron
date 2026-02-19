@@ -276,3 +276,4 @@ function showSyncResults(results) {
 
 // 동기화 버튼 클릭 이벤트
 syncBtn?.addEventListener('click', syncAllData);
+

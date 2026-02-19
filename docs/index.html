@@ -96,7 +96,7 @@
         }
 
         .container {
-            max-width: 900px;
+            max-width: 1300px;
             width: 100%;
             position: relative;
             z-index: 1;
@@ -179,7 +179,7 @@
 
         .sample-types {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(5, 1fr);
             gap: 1.5rem;
             margin-bottom: 2rem;
         }
@@ -377,7 +377,7 @@
         .settings-btn {
             position: fixed;
             top: 20px;
-            right: 220px;
+            right: 280px;
             width: 48px;
             height: 48px;
             background: linear-gradient(135deg, #64748b, #475569);
@@ -499,6 +499,79 @@
             opacity: 1;
             visibility: visible;
             transform: translateX(-50%) translateY(0);
+        }
+
+        /* 릴리즈 노트 버튼 */
+        .release-btn {
+            position: fixed;
+            top: 20px;
+            right: 220px;
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 1000;
+            animation: fadeIn 1s ease-out 0.8s both;
+            cursor: pointer;
+            border: none;
+        }
+
+        .release-btn:hover {
+            transform: scale(1.15);
+            box-shadow: 0 8px 25px rgba(245, 158, 11, 0.5);
+        }
+
+        .release-btn span {
+            font-size: 1.5rem;
+            transition: transform 0.3s ease;
+        }
+
+        .release-btn .tooltip {
+            position: absolute;
+            top: 56px;
+            left: 50%;
+            transform: translateX(-50%) translateY(5px);
+            background: #1e293b;
+            color: white;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.2s ease;
+            pointer-events: none;
+        }
+
+        .release-btn .tooltip::before {
+            content: '';
+            position: absolute;
+            top: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 6px solid transparent;
+            border-bottom-color: #1e293b;
+        }
+
+        .release-btn:hover .tooltip {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        [data-theme="dark"] .release-btn {
+            background: linear-gradient(135deg, #f59e0b, #b45309);
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+        }
+
+        [data-theme="dark"] .release-btn:hover {
+            box-shadow: 0 8px 25px rgba(245, 158, 11, 0.4);
         }
 
         /* 반응형 조정 */
@@ -695,7 +768,7 @@
         .sync-btn {
             position: fixed;
             top: 20px;
-            right: 280px;
+            right: 340px;
             width: 48px;
             height: 48px;
             background: linear-gradient(135deg, #22c55e, #16a34a);
@@ -1013,6 +1086,12 @@
         <span class="tooltip">설명서</span>
     </a>
 
+    <!-- 릴리즈 노트 버튼 -->
+    <a href="release/index.html" class="release-btn" title="릴리즈 노트">
+        <span>📋</span>
+        <span class="tooltip">릴리즈 노트</span>
+    </a>
+
     <!-- 동기화 결과 모달 -->
     <div class="sync-modal" id="syncModal">
         <div class="sync-modal-content">
@@ -1083,7 +1162,7 @@
 
         <div class="footer">
             <p id="orgNameDisplay">봉화군농업기술센터 안전성분석센터</p>
-            <p class="version-info" id="appVersion">v1.7.52</p>
+            <p class="version-info" id="appVersion">v1.7.53</p>
             <!-- 클라우드 동기화 상태 -->
             <p class="sync-status" id="syncStatus" style="display: none;">
                 <span class="sync-icon">☁️</span>
