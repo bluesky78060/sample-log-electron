@@ -1,0 +1,47 @@
+{
+  "version": "2.0",
+  "lastUpdated": "2026-02-19T01:09:14.930Z",
+  "activeFeatures": [
+    "sample-log-electron"
+  ],
+  "primaryFeature": "sample-log-electron",
+  "features": {
+    "sample-log-electron": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-02-19T01:09:09.870Z",
+        "lastUpdated": "2026-02-19T01:09:14.930Z"
+      },
+      "lastFile": "/Users/leechanhee/sample-log-electron/src/index.js"
+    }
+  },
+  "pipeline": {
+    "currentPhase": 1,
+    "level": "Dynamic",
+    "phaseHistory": []
+  },
+  "session": {
+    "startedAt": "2026-02-19T01:09:09.870Z",
+    "onboardingCompleted": false,
+    "lastActivity": "2026-02-19T01:09:14.930Z"
+  },
+  "history": [
+    {
+      "timestamp": "2026-02-19T01:09:09.870Z",
+      "feature": "sample-log-electron",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-02-19T01:09:14.930Z",
+      "feature": "sample-log-electron",
+      "phase": "do",
+      "action": "updated"
+    }
+  ]
+}

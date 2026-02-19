@@ -235,8 +235,10 @@ class ExcelImportManager {
 
             const sampleValue = this._excelData[0]?.[idx] ?? '';
 
+            const safeHeader = window.escapeHTML(header);
+            const safeSampleValue = window.escapeHTML(String(sampleValue || ''));
             row.innerHTML = `
-                <span class="mapping-excel-col" title="${header}">${header}</span>
+                <span class="mapping-excel-col" title="${safeHeader}">${safeHeader}</span>
                 <span class="mapping-arrow">\u2192</span>
                 <select class="mapping-select" data-col-idx="${idx}">
                     <option value="">-- 건너뛰기 --</option>
@@ -244,7 +246,7 @@ class ExcelImportManager {
                         `<option value="${f.key}" ${this._columnMapping[idx] === f.key ? 'selected' : ''}>${f.label}</option>`
                     ).join('')}
                 </select>
-                <span class="mapping-sample" title="${sampleValue}">예: ${sampleValue}</span>
+                <span class="mapping-sample" title="${safeSampleValue}">예: ${safeSampleValue}</span>
             `;
 
             const select = row.querySelector('.mapping-select');
@@ -398,7 +400,7 @@ class ExcelImportManager {
         // 헤더
         const cols = this.config.previewColumns;
         this._els.previewHead.innerHTML = '<tr>' +
-            cols.map(c => `<th>${c.label}</th>`).join('') +
+            cols.map(c => `<th>${window.escapeHTML(c.label)}</th>`).join('') +
             '</tr>';
 
         // 본문
@@ -410,7 +412,7 @@ class ExcelImportManager {
                     if (custom !== undefined) return `<td>${custom}</td>`;
                 }
                 const val = l[c.key];
-                return `<td>${escapeHTML(val !== undefined && val !== null ? String(val) : '')}</td>`;
+                return `<td>${window.escapeHTML(val !== undefined && val !== null ? String(val) : '')}</td>`;
             }).join('');
             return `<tr>${cells}</tr>`;
         }).join('');

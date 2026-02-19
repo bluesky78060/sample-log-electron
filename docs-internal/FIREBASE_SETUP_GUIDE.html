@@ -167,6 +167,7 @@
             overflow-x: auto;
             line-height: 1.6;
             position: relative;
+            white-space: pre;
         }
         .code-block .copy-btn {
             position: absolute;
@@ -1016,10 +1017,29 @@ service cloud.firestore {
             <div class="step">
                 <div class="step-title">Step 1: 시료 접수 대장 앱 실행</div>
                 <p>앱을 실행하고 <span class="keyword">"설정 페이지"</span>를 열어주세요.</p>
+                <ol>
+                    <li>메인 화면 왼쪽 위 <span class="keyword">"← 메인으로 돌아가기"</span> 옆의 <strong>설정(⚙️)</strong> 아이콘 클릭</li>
+                    <li>또는 각 시료 페이지 상단의 <strong>설정</strong> 링크 클릭</li>
+                </ol>
             </div>
 
             <div class="step">
-                <div class="step-title">Step 2: Firebase 연결 상태 확인</div>
+                <div class="step-title">Step 2: firebase-auth.json 파일 등록</div>
+                <p><strong>설정 페이지 → Firebase 인증 파일</strong> 섹션에서:</p>
+                <ol>
+                    <li><span class="keyword">"파일 선택"</span> 버튼을 클릭하거나, 파일을 드래그해서 놓으세요</li>
+                    <li><a href="#section-6">6단계</a>에서 만든 <span class="file-name">firebase-auth.json</span> 파일을 선택하세요</li>
+                    <li><span class="keyword">"연결 테스트"</span> 버튼을 클릭하여 연결을 확인하세요</li>
+                </ol>
+            </div>
+
+            <div class="screenshot">
+                <img src="screenshots/13-app-settings-page.png" alt="앱 설정 페이지 - Firebase 인증 파일 등록 화면" loading="lazy">
+                <div class="screenshot-caption">▲ 앱 설정 페이지 - Firebase 인증 파일 등록 및 암호화 설정 화면</div>
+            </div>
+
+            <div class="step">
+                <div class="step-title">Step 3: Firebase 연결 상태 확인</div>
                 <p><strong>설정 페이지 → Firebase 섹션</strong>에서 확인:</p>
                 <div style="background:#f0fdf4; border:2px solid #86efac; border-radius:10px; padding:1rem 1.25rem; margin:0.75rem 0; text-align:center;">
                     <div style="font-weight:700; font-size:1.1rem; color:#166534;">✅ 연결됨</div>
@@ -1039,7 +1059,7 @@ service cloud.firestore {
             </div>
 
             <div class="step">
-                <div class="step-title">Step 3: 간단한 데이터 저장 테스트</div>
+                <div class="step-title">Step 4: 간단한 데이터 저장 테스트</div>
                 <ol>
                     <li>앱에서 <strong>시료 하나 등록</strong> (테스트용)</li>
                     <li>데이터 저장</li>

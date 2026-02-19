@@ -89,7 +89,7 @@ FileAPI.autoSave = async function(content) {
             await writable.close();
             return true;
         } catch (e) {
-            window.logger.error('자동 저장 실패:', e);
+            (window.logger?.error || console.error)('자동 저장 실패:', e);
             return false;
         }
     }
@@ -117,7 +117,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
         } catch (err) {
-            window.logger.warn('Firebase 초기화 실패, 로컬 모드로 동작:', err);
+            (window.logger?.warn || console.warn)('Firebase 초기화 실패, 로컬 모드로 동작:', err);
         }
         return false;
     })();
@@ -150,6 +150,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const dateInput = document.getElementById('date');
     const samplingDateInput = document.getElementById('samplingDate');
     const recordCountEl = document.getElementById('recordCount');
+    let listViewStale = true; // 목록 뷰 갱신 필요 여부
     const navItems = document.querySelectorAll('.nav-btn');
     const views = document.querySelectorAll('.view');
 
@@ -196,7 +197,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // safeParseJSON 사용으로 에러 핸들링
     let sampleLogs = SampleUtils.safeParseJSON(getStorageKey(selectedYear), []);
-    let editingIndex = -1;
+    let editingId = null;
     let isAllSelected = false;
     let autoSaveFileHandle = null;  // Web 환경 자동저장 파일 핸들
 
@@ -257,13 +258,26 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
         } catch (error) {
-            window.logger.error('Firebase 데이터 로드 실패:', error);
+            (window.logger?.error || console.error)('Firebase 데이터 로드 실패:', error);
         }
         return null;
     }
 
+    // 완료 상태 필드명 마이그레이션 함수 (completed/isCompleted → isComplete)
+    function migrateCompletedField(logs) {
+        return logs.map(log => {
+            if (log.completed !== undefined || log.isCompleted !== undefined) {
+                log.isComplete = log.isComplete || log.isCompleted || log.completed || false;
+                delete log.completed;
+                delete log.isCompleted;
+            }
+            return log;
+        });
+    }
+
     // 년도별 데이터 로드 함수 (Firebase 우선, 로컬 폴백)
     async function loadYearData(year) {
+        listViewStale = true; // 연도 전환 시 목록 뷰 갱신 필요
         const yearStorageKey = getStorageKey(year);
 
         // 1. Firebase에서 먼저 로드 시도
@@ -275,6 +289,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (cloudData && cloudData.length > 0) {
                     // Firebase 데이터를 primary로 사용
                     sampleLogs = cloudData;
+                    // 완료 상태 필드명 마이그레이션 (completed/isCompleted → isComplete)
+                    sampleLogs = migrateCompletedField(sampleLogs);
                     log('☁️ Firebase 데이터 로드 완료:', sampleLogs.length, '건');
 
                     // localStorage에 캐싱
@@ -303,12 +319,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                     log('☁️ Firebase에 데이터 없음, localStorage 확인');
                 }
             } catch (error) {
-                window.logger.error('Firebase 로드 실패, 로컬 데이터 사용:', error);
+                (window.logger?.error || console.error)('Firebase 로드 실패, 로컬 데이터 사용:', error);
             }
         }
 
         // 2. Firebase 사용 불가 또는 데이터 없음 → 로컬에서 로드
         sampleLogs = SampleUtils.safeParseJSON(yearStorageKey, []);
+        // 완료 상태 필드명 마이그레이션 (completed/isCompleted → isComplete)
+        sampleLogs = migrateCompletedField(sampleLogs);
         renderLogs(sampleLogs);
 
         const receptionInput = document.getElementById('receptionNumber');
@@ -367,7 +385,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 log('☁️ 로컬과 클라우드 데이터 동일 (', localData.length, '건)');
             }
         } catch (error) {
-            window.logger.error('클라우드 동기화 실패:', error);
+            (window.logger?.error || console.error)('클라우드 동기화 실패:', error);
         }
     }
 
@@ -436,8 +454,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (targetView) targetView.classList.add('active');
         if (targetNav) targetNav.classList.add('active');
 
-        if (viewName === 'list') {
+        if (viewName === 'list' && listViewStale) {
             renderLogs();
+            listViewStale = false;
         }
     }
 
@@ -865,7 +884,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // 데이터 수집
         const data = {
-            id: editingIndex >= 0 ? sampleLogs[editingIndex].id : Date.now(),
+            id: editingId ? editingId : SampleUtils.generateUUID(),
             receptionNumber: document.getElementById('receptionNumber')?.value || generateNextReceptionNumber(),
             date: document.getElementById('date')?.value || today,
             name: name,
@@ -886,15 +905,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             purpose: selectedPurpose,
             receptionMethod: receptionMethodInput?.value || '',
             note: document.getElementById('note')?.value || '',
-            isCompleted: editingIndex >= 0 ? sampleLogs[editingIndex].isCompleted : false,
-            createdAt: editingIndex >= 0 ? sampleLogs[editingIndex].createdAt : new Date().toISOString(),
+            isComplete: editingId ? (sampleLogs.find(l => l.id === editingId)?.isComplete || false) : false,
+            createdAt: editingId ? (sampleLogs.find(l => l.id === editingId)?.createdAt || new Date().toISOString()) : new Date().toISOString(),
             updatedAt: new Date().toISOString()
         };
 
-        if (editingIndex >= 0) {
-            sampleLogs[editingIndex] = data;
+        if (editingId) {
+            const editIdx = sampleLogs.findIndex(l => l.id === editingId);
+            if (editIdx >= 0) sampleLogs[editIdx] = data;
             showToast('접수 정보가 수정되었습니다.', 'success');
-            editingIndex = -1;
+            editingId = null;
         } else {
             sampleLogs.push(data);
             showToast('접수가 등록되었습니다.', 'success');
@@ -909,7 +929,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function resetForm() {
         form?.reset();
-        editingIndex = -1;
+        editingId = null;
 
         // 네비게이션 바 버튼 원래대로 복원
         const navSubmitBtn = document.getElementById('navSubmitBtn');
@@ -951,12 +971,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ========================================
     async function saveData() {
         const yearStorageKey = getStorageKey(selectedYear);
+        listViewStale = true; // 데이터 변경 시 목록 뷰 갱신 필요
 
         // 1. ID가 없는 항목에 ID 추가
         sampleLogs = sampleLogs.map(item => ({
             ...item,
-            id: item.id || (Date.now().toString(36) + Math.random().toString(36).substring(2, 11))
+            id: item.id || SampleUtils.generateUUID()
         }));
+
+        // 직렬화 1회만 수행
+        const serialized = JSON.stringify(sampleLogs);
 
         // 2. Firebase가 활성화되어 있으면 Firebase에 먼저 저장
         if (window.firestoreDb?.isEnabled()) {
@@ -966,19 +990,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                 log('☁️ Firebase 저장 완료:', sampleLogs.length, '건');
 
                 // Firebase 저장 성공 후 localStorage에 캐싱
-                localStorage.setItem(yearStorageKey, JSON.stringify(sampleLogs));
+                localStorage.setItem(yearStorageKey, serialized);
                 log('💾 로컬 캐싱 완료');
             } catch (err) {
-                window.logger.error('Firebase 저장 실패:', err);
+                (window.logger?.error || console.error)('Firebase 저장 실패:', err);
                 showToast('클라우드 저장 실패', 'error');
 
                 // Firebase 실패 시 localStorage를 primary로 사용
-                localStorage.setItem(yearStorageKey, JSON.stringify(sampleLogs));
+                localStorage.setItem(yearStorageKey, serialized);
                 log('💾 로컬 저장으로 폴백');
             }
         } else {
             // Firebase가 비활성화된 경우에만 localStorage 사용
-            localStorage.setItem(yearStorageKey, JSON.stringify(sampleLogs));
+            localStorage.setItem(yearStorageKey, serialized);
             log('💾 로컬 저장 완료:', sampleLogs.length, '건');
         }
 
@@ -1044,6 +1068,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const pageData = currentLogsData.slice(startIndex, endIndex);
 
         tableBody.innerHTML = '';
+        const fragment = document.createDocumentFragment();
         pageData.forEach((logItem) => {
             const tr = document.createElement('tr');
             tr.dataset.index = sampleLogs.indexOf(logItem);
@@ -1093,9 +1118,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             // 2. Complete button
             const tdComplete = document.createElement('td');
             const btnComplete = document.createElement('button');
-            btnComplete.className = logItem.isCompleted ? 'btn-complete completed' : 'btn-complete';
-            btnComplete.title = logItem.isCompleted ? '완료됨' : '미완료';
-            btnComplete.textContent = logItem.isCompleted ? '✓' : '○';
+            btnComplete.className = logItem.isComplete ? 'btn-complete completed' : 'btn-complete';
+            btnComplete.title = logItem.isComplete ? '완료됨' : '미완료';
+            btnComplete.textContent = logItem.isComplete ? '✓' : '○';
             tdComplete.appendChild(btnComplete);
             tr.appendChild(tdComplete);
 
@@ -1216,8 +1241,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             tdActions.appendChild(actionDiv);
             tr.appendChild(tdActions);
 
-            tableBody.appendChild(tr);
+            fragment.appendChild(tr);
         });
+        tableBody.appendChild(fragment);
 
         updatePaginationUI();
     }
@@ -1245,7 +1271,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function renderPageNumbers() {
         if (!pageNumbersContainer) return;
-        pageNumbersContainer.innerHTML = '';
+        if (totalPages <= 1) {
+            pageNumbersContainer.innerHTML = '';
+            return;
+        }
 
         const maxVisiblePages = 5;
         let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
@@ -1255,18 +1284,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             startPage = Math.max(1, endPage - maxVisiblePages + 1);
         }
 
+        const fragment = document.createDocumentFragment();
+
         if (startPage > 1) {
-            pageNumbersContainer.appendChild(createPageButton(1));
+            fragment.appendChild(createPageButton(1));
             if (startPage > 2) {
                 const ellipsis = document.createElement('span');
                 ellipsis.className = 'page-ellipsis';
                 ellipsis.textContent = '...';
-                pageNumbersContainer.appendChild(ellipsis);
+                fragment.appendChild(ellipsis);
             }
         }
 
         for (let i = startPage; i <= endPage; i++) {
-            pageNumbersContainer.appendChild(createPageButton(i));
+            fragment.appendChild(createPageButton(i));
         }
 
         if (endPage < totalPages) {
@@ -1274,10 +1305,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const ellipsis = document.createElement('span');
                 ellipsis.className = 'page-ellipsis';
                 ellipsis.textContent = '...';
-                pageNumbersContainer.appendChild(ellipsis);
+                fragment.appendChild(ellipsis);
             }
-            pageNumbersContainer.appendChild(createPageButton(totalPages));
+            fragment.appendChild(createPageButton(totalPages));
         }
+
+        pageNumbersContainer.innerHTML = '';
+        pageNumbersContainer.appendChild(fragment);
     }
 
     function createPageButton(pageNum) {
@@ -1326,7 +1360,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const log = sampleLogs[index];
         if (!log) return;
 
-        editingIndex = index;
+        editingId = log.id;
 
         // 폼에 데이터 채우기
         document.getElementById('receptionNumber').value = log.receptionNumber || '';
@@ -1455,7 +1489,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     '목적': log.purpose || '-',
                     '수령방법': log.receptionMethod || '-',
                     '비고': log.note || '-',
-                    '완료여부': (log.isCompleted || log.completed) ? '완료' : '미완료',
+                    '완료여부': log.isComplete ? '완료' : '미완료',
                     '등록일시': log.createdAt ? new Date(log.createdAt).toLocaleString('ko-KR') : '-'
                 };
             });
@@ -1558,20 +1592,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             try {
                 if (window.firebaseConfig?.initialize) {
                     firebaseInitialized = await window.firebaseConfig.initialize();
-                    window.logger.info('Firebase 초기화 결과:', firebaseInitialized);
+                    (window.logger?.info || console.info)('Firebase 초기화 결과:', firebaseInitialized);
                 }
             } catch (err) {
-                window.logger.error('Firebase 초기화 에러:', err);
+                (window.logger?.error || console.error)('Firebase 초기화 에러:', err);
                 initError = err;
             }
 
             try {
                 if (firebaseInitialized && window.firestoreDb?.init) {
                     firestoreInitialized = await window.firestoreDb.init();
-                    window.logger.info('Firestore 초기화 결과:', firestoreInitialized);
+                    (window.logger?.info || console.info)('Firestore 초기화 결과:', firestoreInitialized);
                 }
             } catch (err) {
-                window.logger.error('Firestore 초기화 에러:', err);
+                (window.logger?.error || console.error)('Firestore 초기화 에러:', err);
                 initError = err;
             }
 
@@ -1603,7 +1637,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 const dataWithIds = sampleLogs.map(item => ({
                     ...item,
-                    id: item.id || (Date.now().toString(36) + Math.random().toString(36).substring(2, 11))
+                    id: item.id || SampleUtils.generateUUID()
                 }));
 
                 await window.firestoreDb.batchSave('heavyMetal', parseInt(selectedYear), dataWithIds);
@@ -1613,7 +1647,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 showToast(`${dataWithIds.length}건 클라우드 업로드 완료`, 'success');
             } catch (error) {
-                window.logger.error('마이그레이션 실패:', error);
+                (window.logger?.error || console.error)('마이그레이션 실패:', error);
                 showToast('클라우드 업로드 실패: ' + error.message, 'error');
             } finally {
                 migrateBtn.disabled = false;
@@ -1643,7 +1677,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // 완료 토글
         if (e.target.closest('.btn-complete')) {
-            sampleLogs[realIdx].isCompleted = !sampleLogs[realIdx].isCompleted;
+            sampleLogs[realIdx].isComplete = !sampleLogs[realIdx].isComplete;
             sampleLogs[realIdx].updatedAt = new Date().toISOString();
             saveData();
             renderLogs();
@@ -1686,7 +1720,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Firebase에서도 삭제
                 if (deletedId && window.firestoreDb?.isEnabled()) {
                     window.firestoreDb.delete('heavy-metal', parseInt(selectedYear), deletedId)
-                        .catch(err => window.logger.error('Firebase 삭제 실패:', err));
+                        .catch(err => (window.logger?.error || console.error)('Firebase 삭제 실패:', err));
                 }
             }
             return;
@@ -1730,7 +1764,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         window.firestoreDb.delete('heavy-metal', parseInt(selectedYear), id)
                     ))
                         .then(() => log('☁️ Firebase 일괄 삭제 완료:', deletedIds.length, '건'))
-                        .catch(err => window.logger.error('Firebase 일괄 삭제 실패:', err));
+                        .catch(err => (window.logger?.error || console.error)('Firebase 일괄 삭제 실패:', err));
                 }
             }
         });
@@ -1879,9 +1913,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             // 완료 상태 필터
             let matchesCompleted = true;
             if (currentSearchFilter.completed === 'completed') {
-                matchesCompleted = log.completed === true;
+                matchesCompleted = log.isComplete === true;
             } else if (currentSearchFilter.completed === 'incomplete') {
-                matchesCompleted = !log.completed;
+                matchesCompleted = !log.isComplete;
             }
 
             return matchesName && matchesReception && matchesDate && matchesCompleted;
@@ -2005,7 +2039,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('statTotalCount').textContent = sampleLogs.length;
 
         // 완료/미완료
-        const completed = sampleLogs.filter(l => l.isCompleted).length;
+        const completed = sampleLogs.filter(l => l.isComplete).length;
         document.getElementById('statCompletedCount').textContent = completed;
         document.getElementById('statPendingCount').textContent = sampleLogs.length - completed;
 
@@ -2049,7 +2083,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const monthNum = log.date.substring(5, 7);
                 if (byMonth[monthNum]) {
                     byMonth[monthNum].count++;
-                    if (log.isCompleted) {
+                    if (log.isComplete) {
                         byMonth[monthNum].completed++;
                     } else {
                         byMonth[monthNum].pending++;
@@ -2461,7 +2495,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 purpose,
                 receptionMethod,
                 note,
-                isCompleted: false,
+                isComplete: false,
                 createdAt: common.now
             };
         },
@@ -2474,7 +2508,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         getExistingLogs: () => sampleLogs,
         onImportComplete: (records) => {
             records.forEach(logEntry => {
-                logEntry.id = Date.now().toString(36) + Math.random().toString(36).substring(2, 11);
+                logEntry.id = SampleUtils.generateUUID();
                 sampleLogs.push(logEntry);
             });
             sampleLogs.sort((a, b) => {

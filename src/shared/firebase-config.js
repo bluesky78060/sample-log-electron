@@ -5,6 +5,8 @@
  * 인증 파일(firebase-auth.json)이 있어야 Firebase에 접근 가능
  * 인증 파일이 없으면 로컬 모드로만 동작
  */
+import firebase from 'firebase/compat/app';
+import 'firebase/compat/auth';
 
 // ========================================
 // Firebase 초기화 상태

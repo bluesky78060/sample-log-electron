@@ -265,7 +265,13 @@ async function triggerSync() {
  * @returns {string} 고유 ID
  */
 function generateId() {
-    return Date.now().toString(36) + Math.random().toString(36).substring(2, 11);
+    if (typeof window !== 'undefined' && window.SampleUtils?.generateUUID) {
+        return window.SampleUtils.generateUUID();
+    }
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+        return crypto.randomUUID();
+    }
+    return Date.now().toString(36) + Array.from(crypto.getRandomValues(new Uint8Array(6)), b => b.toString(36)).join('').substring(0, 9);
 }
 
 /**

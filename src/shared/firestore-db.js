@@ -9,6 +9,8 @@
  * - heavyMetalSamples: 토양 중금속 시료
  * - pesticideSamples: 잔류농약 시료
  */
+import firebase from 'firebase/compat/app';
+import 'firebase/compat/firestore';
 
 /**
  * 디버그 모드 - 개발 환경에서만 활성화
@@ -372,8 +374,8 @@ function generateUniqueId() {
     if (typeof crypto !== 'undefined' && crypto.randomUUID) {
         return crypto.randomUUID();
     }
-    // 폴백: 타임스탬프 + 랜덤 문자열
-    return Date.now().toString(36) + Math.random().toString(36).substring(2, 11);
+    // 폴백: 타임스탬프 + crypto 안전 난수
+    return Date.now().toString(36) + Array.from(crypto.getRandomValues(new Uint8Array(6)), b => b.toString(36)).join('').substring(0, 9);
 }
 
 /**

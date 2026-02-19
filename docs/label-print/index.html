@@ -10,7 +10,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@100;300;400;500;700;900&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="label-print.css">
     <style>
         :root {
             --gradient-start: #4f46e5;
@@ -931,6 +930,11 @@
             color: white;
         }
     </style>
+  <script type="module" crossorigin src="../assets/labelPrint-B4TNrdD9.js"></script>
+  <link rel="modulepreload" crossorigin href="../assets/theme-B1IWQwI6.js">
+  <link rel="modulepreload" crossorigin href="../assets/xlsx-CY41JvjH.js">
+  <link rel="modulepreload" crossorigin href="../assets/purify.es-A66Cw1IH.js">
+  <link rel="stylesheet" crossorigin href="../assets/labelPrint-_isVb8xm.css">
 </head>
 <body>
     <div class="container">
@@ -1066,17 +1070,5 @@
         </div>
     </div>
 
-    <!-- XLSX 라이브러리 (라벨 출력용) -->
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
-    <!-- DOMPurify for XSS prevention -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js" integrity="sha384-cwS6YdhLI7XS60eoDiC+egV0qHp8zI+Cms46R0nbn8JrmoAzV9uFL60etMZhAnSu" crossorigin="anonymous"></script>
-    <script src="../shared/sanitize.js"></script>
-    <!-- 다크 모드 테마 -->
-    <script src="../shared/theme.js"></script>
-
-    <!-- 로거 -->
-    <script src="../shared/logger.js"></script>
-
-    <script src="label-app.js"></script>
 </body>
 </html>

@@ -17,12 +17,6 @@ const STORAGE_KEY = 'waterSampleLogs';
 const AUTO_SAVE_FILE = 'water-autosave.json';
 
 /**
- * 고유 ID 생성 함수 (충돌 방지)
- * @returns {string} 고유 ID
- */
-const generateId = () => Date.now().toString(36) + Math.random().toString(36).substring(2, 11);
-
-/**
  * 디버그 로그 함수 (window.DEBUG 사용 - constants.js에서 설정)
  * @param {...any} args - 로그 인자
  * @returns {void}
@@ -34,13 +28,11 @@ const log = (...args) => window.DEBUG && console.log(...args);
 const FileAPI = window.createFileAPI('water');
 
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('🚀 수질분석 페이지 로드 시작');
-    console.log('DOMContentLoaded 이벤트 발생');
     log('🚀 수질분석 페이지 로드 시작');
     log(window.isElectron ? '🖥️ Electron 환경' : '🌐 웹 브라우저 환경');
 
     // 필수 요소 체크
-    console.log('필수 요소 체크:', {
+    log('필수 요소 체크:', {
         form: !!document.getElementById('sampleForm'),
         tableBody: !!document.getElementById('logTableBody'),
         SampleUtils: !!window.SampleUtils,
@@ -50,11 +42,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 파일 API 초기화 (현재 년도로)
     const currentYear = new Date().getFullYear().toString();
     try {
-        console.log('FileAPI 초기화 시작, FileAPI:', !!FileAPI);
+        log('FileAPI 초기화 시작, FileAPI:', !!FileAPI);
         await FileAPI.init(currentYear);
-        console.log('FileAPI 초기화 완료');
+        log('FileAPI 초기화 완료');
     } catch (error) {
-        console.error('초기화 중 에러 발생:', error);
+        (window.logger?.error || console.error)('초기화 중 에러 발생:', error);
         return;
     }
 
@@ -107,6 +99,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const navItems = document.querySelectorAll('.nav-btn');
     const views = document.querySelectorAll('.view');
     const recordCountEl = document.getElementById('recordCount');
+    let listViewStale = true; // 목록 뷰 갱신 필요 여부
     const paginationContainer = document.getElementById('pagination');
 
     // ========================================
@@ -225,13 +218,26 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
         } catch (error) {
-            window.logger.error('Firebase 데이터 로드 실패:', error);
+            (window.logger?.error || console.error)('Firebase 데이터 로드 실패:', error);
         }
         return null;
     }
 
+    // 완료 상태 필드명 마이그레이션 함수 (completed/isCompleted → isComplete)
+    function migrateCompletedField(logs) {
+        return logs.map(log => {
+            if (log.completed !== undefined || log.isCompleted !== undefined) {
+                log.isComplete = log.isComplete || log.isCompleted || log.completed || false;
+                delete log.completed;
+                delete log.isCompleted;
+            }
+            return log;
+        });
+    }
+
     // 년도별 데이터 로드 함수 (Firebase 우선, 로컬 폴백)
     async function loadYearData(year) {
+        listViewStale = true; // 연도 전환 시 목록 뷰 갱신 필요
         const yearStorageKey = getStorageKey(year);
 
         // 1. Firebase에서 먼저 로드 시도
@@ -246,6 +252,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     // 스마트 병합: 최신 데이터 선택
                     const mergedData = smartMerge(localData, cloudData);
                     sampleLogs = mergedData.data;
+                    // 완료 상태 필드명 마이그레이션 (completed/isCompleted → isComplete)
+                    sampleLogs = migrateCompletedField(sampleLogs);
                     localStorage.setItem(yearStorageKey, JSON.stringify(mergedData.data));
 
                     renderLogs(sampleLogs);
@@ -279,12 +287,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                     return;
                 }
             } catch (error) {
-                window.logger.error('Firebase 로드 실패, 로컬 데이터 사용:', error);
+                (window.logger?.error || console.error)('Firebase 로드 실패, 로컬 데이터 사용:', error);
             }
         }
 
         // 2. Firebase 사용 불가 또는 데이터 없음 → 로컬에서 로드
         sampleLogs = SampleUtils.safeParseJSON(yearStorageKey, []);
+        // 완료 상태 필드명 마이그레이션 (completed/isCompleted → isComplete)
+        sampleLogs = migrateCompletedField(sampleLogs);
         renderLogs(sampleLogs);
 
         const receptionInput = document.getElementById('receptionNumber');
@@ -334,7 +344,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (autoSaveEnabled && window.isElectron && FileAPI.autoSavePath) {
                     SampleUtils.performAutoSave({
                         FileAPI: FileAPI,
-                        moduleKey: SAMPLE_TYPE,
+                        moduleKey: 'water',
                         data: sampleLogs,
                         log: log
                     });
@@ -343,7 +353,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 log('☁️ 로컬과 클라우드 데이터 동일 (', localData.length, '건)');
             }
         } catch (error) {
-            window.logger.error('클라우드 동기화 실패:', error);
+            (window.logger?.error || console.error)('클라우드 동기화 실패:', error);
         }
     }
 
@@ -410,8 +420,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (targetView) targetView.classList.add('active');
         if (targetNav) targetNav.classList.add('active');
 
-        if (viewName === 'list') {
+        if (viewName === 'list' && listViewStale) {
             renderLogs(sampleLogs);
+            listViewStale = false;
         }
     }
 
@@ -960,7 +971,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         for (let i = 0; i < samplingLocations.length; i++) {
             const data = {
                 ...commonData,
-                id: generateId(),
+                id: SampleUtils.generateUUID(),
                 receptionNumber: receptionNumbers[i] || String(parseInt(receptionNumbers[0], 10) + i),
                 sampleCount: '1', // 각 행은 시료 1개
                 samplingLocation: samplingLocations[i] || '',
@@ -1119,15 +1130,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ========================================
     function saveLogs() {
         const yearStorageKey = getStorageKey(selectedYear);
+        listViewStale = true; // 데이터 변경 시 목록 뷰 갱신 필요
 
         // 1. ID가 없는 항목에 ID 추가 (로컬 저장 전에 처리)
         sampleLogs = sampleLogs.map(item => ({
             ...item,
-            id: item.id || (Date.now().toString(36) + Math.random().toString(36).substring(2, 11))
+            id: item.id || SampleUtils.generateUUID()
         }));
 
+        // 직렬화 1회만 수행
+        const serialized = JSON.stringify(sampleLogs);
+
         // 2. 로컬(localStorage)에 먼저 저장
-        localStorage.setItem(yearStorageKey, JSON.stringify(sampleLogs));
+        localStorage.setItem(yearStorageKey, serialized);
         updateRecordCount();
         log('💾 로컬 저장 완료:', sampleLogs.length, '건');
 
@@ -1136,7 +1151,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.firestoreDb.batchSave('water', parseInt(selectedYear), sampleLogs)
                 .then(() => log('☁️ Firebase 마이그레이션 완료'))
                 .catch(err => {
-                    window.logger.error('Firebase 마이그레이션 실패:', err);
+                    (window.logger?.error || console.error)('Firebase 마이그레이션 실패:', err);
                     showToast('클라우드 동기화 실패', 'error');
                 });
         }
@@ -1154,9 +1169,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     function renderLogs(logs) {
         tableBody.innerHTML = '';
 
-        if (logs.length === 0) {
+        if (!logs || logs.length === 0) {
             emptyState.style.display = 'flex';
             if (paginationContainer) paginationContainer.style.display = 'none';
+            currentDisplayLogs = [];
+            updateRecordCount();
+            updatePaginationUI();
             return;
         }
 
@@ -1171,13 +1189,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
 
         // 페이지네이션 계산
-        totalPages = Math.ceil(currentDisplayLogs.length / itemsPerPage);
-        if (currentPage > totalPages) currentPage = totalPages || 1;
+        totalPages = Math.ceil(currentDisplayLogs.length / itemsPerPage) || 1;
+        if (currentPage > totalPages) currentPage = totalPages;
+        if (currentPage < 1) currentPage = 1;
 
-        // 현재 페이지 데이터 추출
+        renderCurrentPage();  // DOM 생성 위임
+    }
+
+    function renderCurrentPage() {
+        tableBody.innerHTML = '';
+
+        if (currentDisplayLogs.length === 0) {
+            updateRecordCount();
+            updatePaginationUI();
+            return;
+        }
+
         const startIndex = (currentPage - 1) * itemsPerPage;
-        const endIndex = startIndex + itemsPerPage;
+        const endIndex = Math.min(startIndex + itemsPerPage, currentDisplayLogs.length);
         const pageLogs = currentDisplayLogs.slice(startIndex, endIndex);
+
+        const fragment = document.createDocumentFragment();
 
         pageLogs.forEach(log => {
             const row = document.createElement('tr');
@@ -1358,11 +1390,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 row.classList.add('row-completed');
             }
 
-            tableBody.appendChild(row);
+            fragment.appendChild(row);  // tableBody 대신 fragment에 추가
         });
 
+        tableBody.appendChild(fragment);  // 한 번만 DOM에 추가
+
         // 이벤트 바인딩
-        bindTableEvents();
+        if (typeof bindTableEvents === 'function') bindTableEvents();
         updateRecordCount();
         updatePaginationUI();
     }
@@ -1389,9 +1423,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function renderPageNumbers() {
         if (!pageNumbersContainer) return;
-        pageNumbersContainer.innerHTML = '';
-
-        if (totalPages <= 1) return;
+        if (totalPages <= 1) {
+            pageNumbersContainer.innerHTML = '';
+            return;
+        }
 
         const maxVisiblePages = 5;
         let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
@@ -1401,18 +1436,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             startPage = Math.max(1, endPage - maxVisiblePages + 1);
         }
 
+        const fragment = document.createDocumentFragment();
+
         if (startPage > 1) {
-            pageNumbersContainer.appendChild(createPageButton(1));
+            fragment.appendChild(createPageButton(1));
             if (startPage > 2) {
                 const ellipsis = document.createElement('span');
                 ellipsis.className = 'page-ellipsis';
                 ellipsis.textContent = '...';
-                pageNumbersContainer.appendChild(ellipsis);
+                fragment.appendChild(ellipsis);
             }
         }
 
         for (let i = startPage; i <= endPage; i++) {
-            pageNumbersContainer.appendChild(createPageButton(i));
+            fragment.appendChild(createPageButton(i));
         }
 
         if (endPage < totalPages) {
@@ -1420,10 +1457,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const ellipsis = document.createElement('span');
                 ellipsis.className = 'page-ellipsis';
                 ellipsis.textContent = '...';
-                pageNumbersContainer.appendChild(ellipsis);
+                fragment.appendChild(ellipsis);
             }
-            pageNumbersContainer.appendChild(createPageButton(totalPages));
+            fragment.appendChild(createPageButton(totalPages));
         }
+
+        pageNumbersContainer.innerHTML = '';
+        pageNumbersContainer.appendChild(fragment);
     }
 
     function createPageButton(pageNum) {
@@ -1437,7 +1477,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     function goToPage(page) {
         if (page < 1 || page > totalPages || page === currentPage) return;
         currentPage = page;
-        renderLogs(sampleLogs);
+        renderCurrentPage();  // renderLogs(sampleLogs) 대신 현재 페이지만 재렌더
         const tableContainer = document.querySelector('.table-container');
         if (tableContainer) tableContainer.scrollTop = 0;
     }
@@ -1534,7 +1574,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (window.firestoreDb?.isEnabled()) {
             window.firestoreDb.delete('water', parseInt(selectedYear), id)
                 .then(() => log('☁️ Firebase 삭제 완료:', id))
-                .catch(err => window.logger.error('Firebase 삭제 실패:', err));
+                .catch(err => (window.logger?.error || console.error)('Firebase 삭제 실패:', err));
         }
 
         showToast('삭제되었습니다.', 'success');
@@ -1628,7 +1668,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 navSubmitBtn.classList.add('btn-edit-mode');
             }
         } catch (error) {
-            window.logger.error('editSample 에러:', error);
+            (window.logger?.error || console.error)('editSample 에러:', error);
             showToast('수정 모드 전환 중 오류가 발생했습니다.', 'error');
         }
     }
@@ -1785,7 +1825,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         window.firestoreDb.delete('water', parseInt(selectedYear), id)
                     ))
                         .then(() => log('☁️ Firebase 일괄 삭제 완료:', selectedIds.length, '건'))
-                        .catch(err => window.logger.error('Firebase 일괄 삭제 실패:', err));
+                        .catch(err => (window.logger?.error || console.error)('Firebase 일괄 삭제 실패:', err));
                 }
 
                 showToast(`${selectedIds.length}건이 삭제되었습니다.`, 'success');
@@ -2160,9 +2200,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             // 완료 상태 필터
             let matchesCompleted = true;
             if (currentSearchFilter.completed === 'completed') {
-                matchesCompleted = log.completed === true;
+                matchesCompleted = log.isComplete === true;
             } else if (currentSearchFilter.completed === 'incomplete') {
-                matchesCompleted = !log.completed;
+                matchesCompleted = !log.isComplete;
             }
 
             return matchesName && matchesReception && matchesDate && matchesCompleted;
@@ -2420,20 +2460,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             try {
                 if (window.firebaseConfig?.initialize) {
                     firebaseInitialized = await window.firebaseConfig.initialize();
-                    window.logger.info('Firebase 초기화 결과:', firebaseInitialized);
+                    (window.logger?.info || console.info)('Firebase 초기화 결과:', firebaseInitialized);
                 }
             } catch (err) {
-                window.logger.error('Firebase 초기화 에러:', err);
+                (window.logger?.error || console.error)('Firebase 초기화 에러:', err);
                 initError = err;
             }
 
             try {
                 if (firebaseInitialized && window.firestoreDb?.init) {
                     firestoreInitialized = await window.firestoreDb.init();
-                    window.logger.info('Firestore 초기화 결과:', firestoreInitialized);
+                    (window.logger?.info || console.info)('Firestore 초기화 결과:', firestoreInitialized);
                 }
             } catch (err) {
-                window.logger.error('Firestore 초기화 에러:', err);
+                (window.logger?.error || console.error)('Firestore 초기화 에러:', err);
                 initError = err;
             }
 
@@ -2465,7 +2505,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 const dataWithIds = sampleLogs.map(item => ({
                     ...item,
-                    id: item.id || (Date.now().toString(36) + Math.random().toString(36).substring(2, 11))
+                    id: item.id || SampleUtils.generateUUID()
                 }));
 
                 await window.firestoreDb.batchSave('water', parseInt(selectedYear), dataWithIds);
@@ -2475,7 +2515,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 showToast(`${dataWithIds.length}건 클라우드 업로드 완료`, 'success');
             } catch (error) {
-                window.logger.error('마이그레이션 실패:', error);
+                (window.logger?.error || console.error)('마이그레이션 실패:', error);
                 showToast('클라우드 업로드 실패: ' + error.message, 'error');
             } finally {
                 migrateBtn.disabled = false;
@@ -2573,7 +2613,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const note = getVal('note') || '';
 
             return {
-                id: generateId(),
+                id: SampleUtils.generateUUID(),
                 receptionNumber,
                 date,
                 applicantType: '개인',

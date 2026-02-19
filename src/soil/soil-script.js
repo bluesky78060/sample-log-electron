@@ -173,6 +173,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const views = document.querySelectorAll('.view');
     const recordCountEl = document.getElementById('recordCount');
     const emptyParcels = document.getElementById('emptyParcels');
+    let listViewStale = true; // 목록 뷰 갱신 필요 여부
 
     // 뷰 전환 함수
     function switchView(viewName) {
@@ -185,9 +186,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (targetView) targetView.classList.add('active');
         if (targetNav) targetNav.classList.add('active');
 
-        // 목록 뷰로 전환 시 테이블 새로고침
-        if (viewName === 'list') {
+        // 목록 뷰로 전환 시 데이터 변경이 있을 때만 새로고침
+        if (viewName === 'list' && listViewStale) {
             renderLogs(sampleLogs);
+            listViewStale = false;
         }
     }
 
@@ -251,7 +253,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 log('   - emptyParcels 숨김');
             }
         } else {
-            window.logger.error('❌ emptyParcels 요소를 찾을 수 없습니다!');
+            (window.logger?.error || console.error)('❌ emptyParcels 요소를 찾을 수 없습니다!');
         }
     }
 
@@ -353,14 +355,27 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
         } catch (error) {
-            window.logger.error('Firebase 데이터 로드 실패:', error);
+            (window.logger?.error || console.error)('Firebase 데이터 로드 실패:', error);
         }
         return null;
+    }
+
+    // 완료 상태 필드명 마이그레이션 함수 (completed/isCompleted → isComplete)
+    function migrateCompletedField(logs) {
+        return logs.map(log => {
+            if (log.completed !== undefined || log.isCompleted !== undefined) {
+                log.isComplete = log.isComplete || log.isCompleted || log.completed || false;
+                delete log.completed;
+                delete log.isCompleted;
+            }
+            return log;
+        });
     }
 
     // 년도별 데이터 로드 함수 (Firebase 우선, 로컬 폴백)
     async function loadYearData(year) {
         const yearStorageKey = getStorageKey(year);
+        listViewStale = true; // 연도 전환 시 목록 뷰 갱신 필요
 
         // 1. Firebase에서 먼저 로드 시도
         if (window.firestoreDb?.isEnabled()) {
@@ -371,6 +386,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (cloudData && cloudData.length > 0) {
                     // Firebase 데이터를 primary로 사용
                     sampleLogs = cloudData;
+                    // 완료 상태 필드명 마이그레이션 (completed/isCompleted → isComplete)
+                    sampleLogs = migrateCompletedField(sampleLogs);
                     log('☁️ Firebase 데이터 로드 완료:', sampleLogs.length, '건');
 
                     // localStorage에 캐싱
@@ -389,7 +406,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (autoSaveEnabled && window.isElectron && FileAPI.autoSavePath) {
                         SampleUtils.performAutoSave({
                             FileAPI: FileAPI,
-                            moduleKey: SAMPLE_TYPE,
+                            moduleKey: 'soil',
                             data: sampleLogs,
                             log: log
                         });
@@ -399,12 +416,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                     log('☁️ Firebase에 데이터 없음, localStorage 확인');
                 }
             } catch (error) {
-                window.logger.error('Firebase 로드 실패, 로컬 데이터 사용:', error);
+                (window.logger?.error || console.error)('Firebase 로드 실패, 로컬 데이터 사용:', error);
             }
         }
 
         // 2. Firebase 사용 불가 또는 데이터 없음 → 로컬에서 로드
         sampleLogs = SampleUtils.safeParseJSON(yearStorageKey, []);
+        // 완료 상태 필드명 마이그레이션 (completed/isCompleted → isComplete)
+        sampleLogs = migrateCompletedField(sampleLogs);
         renderLogs(sampleLogs);
 
         const receptionInput = document.getElementById('receptionNumber');
@@ -454,7 +473,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (autoSaveEnabled && window.isElectron && FileAPI.autoSavePath) {
                     SampleUtils.performAutoSave({
                         FileAPI: FileAPI,
-                        moduleKey: SAMPLE_TYPE,
+                        moduleKey: 'soil',
                         data: sampleLogs,
                         log: log
                     });
@@ -463,7 +482,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 log('☁️ 로컬과 클라우드 데이터 동일 (', localData.length, '건)');
             }
         } catch (error) {
-            window.logger.error('클라우드 동기화 실패:', error);
+            (window.logger?.error || console.error)('클라우드 동기화 실패:', error);
         }
     }
 
@@ -620,7 +639,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     log(`   - addParcelBtn: ${addParcelBtn ? '✅ 찾음' : '❌ 없음'}`);
 
     if (!parcelsContainer) {
-        window.logger.error('❌ 치명적 오류: parcelsContainer를 찾을 수 없습니다!');
+        (window.logger?.error || console.error)('❌ 치명적 오류: parcelsContainer를 찾을 수 없습니다!');
     }
 
     let parcels = []; // 필지 배열
@@ -855,7 +874,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         `);
 
         if (!parcelsContainer) {
-            window.logger.error('❌ parcelsContainer를 찾을 수 없습니다!');
+            (window.logger?.error || console.error)('❌ parcelsContainer를 찾을 수 없습니다!');
             return;
         }
 
@@ -2407,9 +2426,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             // 완료 상태 필터
             let matchesCompleted = true;
             if (currentSearchFilter.completed === 'completed') {
-                matchesCompleted = log.completed === true;
+                matchesCompleted = log.isComplete === true;
             } else if (currentSearchFilter.completed === 'incomplete') {
-                matchesCompleted = !log.completed;
+                matchesCompleted = !log.isComplete;
             }
 
             return matchesName && matchesReception && matchesDate && matchesLot && matchesPurpose && matchesCompleted;
@@ -2707,7 +2726,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const log = sampleLogs.find(l => String(l.id) === id);
             if (log) {
                 // 완료 상태 토글
-                const newCompletedStatus = !log.completed;
+                const newCompletedStatus = !log.isComplete;
 
                 // 접수번호에서 기본 번호 추출 (예: "2025-001-1" -> "2025-001")
                 const receptionNumber = log.receptionNumber || '';
@@ -2721,7 +2740,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 // 모든 관련 시료의 완료 상태 업데이트
                 relatedLogs.forEach(relatedLog => {
-                    relatedLog.completed = newCompletedStatus;
+                    relatedLog.isComplete = newCompletedStatus;
                     relatedLog.updatedAt = new Date().toISOString();
 
                     // 각 행의 UI 업데이트 (동일한 ID를 가진 모든 행을 찾아야 함)
@@ -2771,7 +2790,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (window.firestoreDb?.isEnabled()) {
                     window.firestoreDb.delete('soil', parseInt(selectedYear), id)
                         .then(() => log('☁️ Firebase 삭제 완료:', id))
-                        .catch(err => window.logger.error('Firebase 삭제 실패:', err));
+                        .catch(err => (window.logger?.error || console.error)('Firebase 삭제 실패:', err));
                 }
 
                 // 삭제한 항목이 수정 중이던 항목이면 수정 모드 취소
@@ -2985,7 +3004,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     window.firestoreDb.delete('soil', parseInt(selectedYear), id)
                 ))
                     .then(() => log('☁️ Firebase 일괄 삭제 완료:', selectedIds.length, '건'))
-                    .catch(err => window.logger.error('Firebase 일괄 삭제 실패:', err));
+                    .catch(err => (window.logger?.error || console.error)('Firebase 일괄 삭제 실패:', err));
             }
 
             // 전체 선택 체크박스 해제
@@ -3140,7 +3159,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function calculateStatistics() {
         const total = sampleLogs.length;
-        const completed = sampleLogs.filter(log => log.isCompleted).length;
+        const completed = sampleLogs.filter(log => log.isComplete).length;
         const pending = total - completed;
 
         // 구분별 집계 (논/밭/과수/시설/임야/성토)
@@ -3203,7 +3222,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const monthNum = log.date.substring(5, 7); // MM
                 if (byMonth[monthNum]) {
                     byMonth[monthNum].count++;
-                    if (log.isCompleted) {
+                    if (log.isComplete) {
                         byMonth[monthNum].completed++;
                     } else {
                         byMonth[monthNum].pending++;
@@ -3481,7 +3500,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         '면적(m²)': totalArea > 0 ? totalArea : '-',
                         '수령 방법': log.receptionMethod || '-',
                         '비고': log.note || '-',
-                        '완료여부': (log.isCompleted || log.completed) ? '완료' : '미완료',
+                        '완료여부': log.isComplete ? '완료' : '미완료',
                         '등록일시': log.createdAt ? new Date(log.createdAt).toLocaleString('ko-KR') : '-'
                     });
 
@@ -3515,7 +3534,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 '면적(m²)': subLotTotalArea > 0 ? subLotTotalArea : '-',
                                 '수령 방법': log.receptionMethod || '-',
                                 '비고': log.note || '-',
-                                '완료여부': (log.isCompleted || log.completed) ? '완료' : '미완료',
+                                '완료여부': log.isComplete ? '완료' : '미완료',
                                 '등록일시': log.createdAt ? new Date(log.createdAt).toLocaleString('ko-KR') : '-'
                             });
                         });
@@ -3540,7 +3559,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     '면적(m²)': log.area || '-',
                     '수령 방법': log.receptionMethod || '-',
                     '비고': log.note || '-',
-                    '완료여부': (log.isCompleted || log.completed) ? '완료' : '미완료',
+                    '완료여부': log.isComplete ? '완료' : '미완료',
                     '등록일시': log.createdAt ? new Date(log.createdAt).toLocaleString('ko-KR') : '-'
                 });
             }
@@ -3812,20 +3831,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             try {
                 if (window.firebaseConfig?.initialize) {
                     firebaseInitialized = await window.firebaseConfig.initialize();
-                    window.logger.info('Firebase 초기화 결과:', firebaseInitialized);
+                    (window.logger?.info || console.info)('Firebase 초기화 결과:', firebaseInitialized);
                 }
             } catch (err) {
-                window.logger.error('Firebase 초기화 에러:', err);
+                (window.logger?.error || console.error)('Firebase 초기화 에러:', err);
                 initError = err;
             }
 
             try {
                 if (firebaseInitialized && window.firestoreDb?.init) {
                     firestoreInitialized = await window.firestoreDb.init();
-                    window.logger.info('Firestore 초기화 결과:', firestoreInitialized);
+                    (window.logger?.info || console.info)('Firestore 초기화 결과:', firestoreInitialized);
                 }
             } catch (err) {
-                window.logger.error('Firestore 초기화 에러:', err);
+                (window.logger?.error || console.error)('Firestore 초기화 에러:', err);
                 initError = err;
             }
 
@@ -3858,7 +3877,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // ID가 없는 항목에 ID 추가
                 const dataWithIds = sampleLogs.map(item => ({
                     ...item,
-                    id: item.id || (Date.now().toString(36) + Math.random().toString(36).substring(2, 11))
+                    id: item.id || SampleUtils.generateUUID()
                 }));
 
                 await window.firestoreDb.batchSave('soil', parseInt(selectedYear), dataWithIds);
@@ -3869,7 +3888,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 showToast(`${dataWithIds.length}건 클라우드 업로드 완료`, 'success');
             } catch (error) {
-                window.logger.error('마이그레이션 실패:', error);
+                (window.logger?.error || console.error)('마이그레이션 실패:', error);
                 showToast('클라우드 업로드 실패: ' + error.message, 'error');
             } finally {
                 migrateBtn.disabled = false;
@@ -3896,12 +3915,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ========================================
     async function saveLogs() {
         const yearStorageKey = getStorageKey(selectedYear);
+        listViewStale = true; // 데이터 변경 시 목록 뷰 갱신 필요
 
         // 1. ID가 없는 항목에 ID 추가
         sampleLogs = sampleLogs.map(item => ({
             ...item,
-            id: item.id || (Date.now().toString(36) + Math.random().toString(36).substring(2, 11))
+            id: item.id || SampleUtils.generateUUID()
         }));
+
+        // 직렬화 1회만 수행
+        const serialized = JSON.stringify(sampleLogs);
 
         // 2. Firebase가 활성화되어 있으면 Firebase에 먼저 저장
         if (window.firestoreDb?.isEnabled()) {
@@ -3911,19 +3934,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                 log('☁️ Firebase 저장 완료:', sampleLogs.length, '건');
 
                 // Firebase 저장 성공 후 localStorage에 캐싱
-                localStorage.setItem(yearStorageKey, JSON.stringify(sampleLogs));
+                localStorage.setItem(yearStorageKey, serialized);
                 log('💾 로컬 캐싱 완료');
             } catch (err) {
-                window.logger.error('Firebase 저장 실패:', err);
+                (window.logger?.error || console.error)('Firebase 저장 실패:', err);
                 showToast('클라우드 저장 실패', 'error');
 
                 // Firebase 실패 시 localStorage를 primary로 사용
-                localStorage.setItem(yearStorageKey, JSON.stringify(sampleLogs));
+                localStorage.setItem(yearStorageKey, serialized);
                 log('💾 로컬 저장으로 폴백');
             }
         } else {
             // Firebase가 비활성화된 경우에만 localStorage 사용
-            localStorage.setItem(yearStorageKey, JSON.stringify(sampleLogs));
+            localStorage.setItem(yearStorageKey, serialized);
             log('💾 로컬 저장 완료:', sampleLogs.length, '건');
         }
 
@@ -4066,216 +4089,234 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 레코드 카운트 업데이트
         updateRecordCount();
 
-        if (logs.length === 0) {
+        if (!logs || logs.length === 0) {
             emptyState.classList.remove('hidden');
             if (paginationContainer) paginationContainer.style.display = 'none';
-        } else {
-            emptyState.classList.add('hidden');
-            if (paginationContainer) paginationContainer.style.display = 'flex';
-
-            // 접수번호 기준 오름차순 정렬
-            const sortedLogs = [...logs].sort((a, b) => {
-                const numA = parseInt(a.receptionNumber, 10) || 0;
-                const numB = parseInt(b.receptionNumber, 10) || 0;
-                return numA - numB;
-            });
-
-            // 데이터 평탄화
-            currentFlatRows = flattenLogsForTable(sortedLogs);
-
-            // 페이지네이션 계산
-            totalPages = Math.ceil(currentFlatRows.length / itemsPerPage);
-            if (currentPage > totalPages) currentPage = totalPages || 1;
-
-            // 현재 페이지 데이터 추출
-            const startIndex = (currentPage - 1) * itemsPerPage;
-            const endIndex = startIndex + itemsPerPage;
-            const pageRows = currentFlatRows.slice(startIndex, endIndex);
-
-            // 농가별 구분선을 위한 이전 성명 추적
-            let prevName = startIndex > 0 ? (currentFlatRows[startIndex - 1]?.name || null) : null;
-
-            pageRows.forEach((row) => {
-                // 농가별 구분선: 성명이 변경되면 구분선 삽입
-                if (prevName !== null && row.name !== prevName) {
-                    const separatorTr = document.createElement('tr');
-                    separatorTr.className = 'farm-separator';
-                    const separatorTd = document.createElement('td');
-                    separatorTd.colSpan = 17;
-                    separatorTr.appendChild(separatorTd);
-                    tableBody.appendChild(separatorTr);
-                }
-                prevName = row.name;
-
-                // 하위 카테고리와 재배 작물을 합쳐서 표시
-                let subCategoryDisplay = row.subCategory || '';
-                if (row._cropsDisplay !== '-') {
-                    subCategoryDisplay = subCategoryDisplay
-                        ? `${subCategoryDisplay} (${row._cropsDisplay})`
-                        : row._cropsDisplay;
-                }
-                subCategoryDisplay = subCategoryDisplay || '-';
-
-                // 완료 상태 확인
-                const isCompleted = row.completed || false;
-
-                const tr = document.createElement('tr');
-                tr.className = isCompleted ? 'row-completed' : '';
-                // 수령 방법 텍스트
-                const methodText = row.receptionMethod || '-';
-
-                // 주소에서 우편번호 분리 (예: "(12345) 서울시..." -> 우편번호: "12345", 주소: "서울시...")
-                const addressFull = row.address || '';
-                const zipMatch = addressFull.match(/^\((\d{5})\)\s*/);
-                const zipcode = zipMatch ? zipMatch[1] : '';
-                const addressOnly = zipMatch ? addressFull.replace(zipMatch[0], '') : addressFull;
-
-                // 뷰용 주소: 시도 패턴이 있을 때만 제거
-                const displayAddress = addressOnly && addressOnly !== '-' && SIDO_PATTERN.test(addressOnly)
-                    ? addressOnly.replace(SIDO_PATTERN, '')
-                    : (addressOnly || '-');
-
-                // XSS 방지: 사용자 입력 데이터 이스케이프
-                const safeName = escapeHTML(row.name);
-                const safeAddress = escapeHTML(addressOnly || '-');
-                const safeDisplayAddress = escapeHTML(displayAddress);
-                const safeLotAddress = escapeHTML(row._lotAddress);
-                const safeCrops = escapeHTML(row._cropsDisplay);
-                const safePhone = escapeHTML(row.phoneNumber || '-');
-                // 비고: 전체 비고 + 필지별 비고 결합
-                const parcelNote = row.parcels && row.parcels[0] && row.parcels[0].note ? row.parcels[0].note : '';
-                const combinedNote = [row.note, parcelNote].filter(n => n && n.trim()).join(' / ') || '-';
-                const safeNote = escapeHTML(combinedNote);
-                const safeMethod = escapeHTML(methodText);
-
-                tr.dataset.id = row.id;
-
-                // 체크박스 열
-                const tdCheckbox = document.createElement('td');
-                tdCheckbox.className = 'col-checkbox';
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.className = 'row-checkbox';
-                checkbox.dataset.id = row.id;
-                tdCheckbox.appendChild(checkbox);
-                tr.appendChild(tdCheckbox);
-
-                // 완료 버튼 열
-                const tdComplete = document.createElement('td');
-                tdComplete.className = 'col-complete';
-                const btnComplete = document.createElement('button');
-                btnComplete.className = `btn-complete ${isCompleted ? 'completed' : ''}`;
-                btnComplete.dataset.id = row.id;
-                btnComplete.title = isCompleted ? '완료 취소' : '완료';
-                btnComplete.textContent = isCompleted ? '✔' : '';
-                tdComplete.appendChild(btnComplete);
-                tr.appendChild(tdComplete);
-
-                // 접수번호
-                const tdNumber = document.createElement('td');
-                tdNumber.textContent = row._displayNumber;
-                tr.appendChild(tdNumber);
-
-                // 날짜
-                const tdDate = document.createElement('td');
-                tdDate.textContent = row.date;
-                tr.appendChild(tdDate);
-
-                // 하위 카테고리
-                const tdSubCategory = document.createElement('td');
-                tdSubCategory.textContent = row.subCategory || '-';
-                tr.appendChild(tdSubCategory);
-
-                // 목적
-                const tdPurpose = document.createElement('td');
-                tdPurpose.textContent = row._parcelPurpose || row.purpose || '-';
-                tr.appendChild(tdPurpose);
-
-                // 성명
-                const tdName = document.createElement('td');
-                tdName.textContent = row.name;
-                tr.appendChild(tdName);
-
-                // 우편번호
-                const tdZipcode = document.createElement('td');
-                tdZipcode.className = 'col-zipcode';
-                tdZipcode.textContent = zipcode || '-';
-                tr.appendChild(tdZipcode);
-
-                // 주소 - 시도 제외하고 전체 표시
-                const tdAddress = document.createElement('td');
-                tdAddress.className = 'col-address';
-                tdAddress.textContent = safeDisplayAddress;
-                tr.appendChild(tdAddress);
-
-                // 필지 주소
-                const tdLotAddress = document.createElement('td');
-                tdLotAddress.textContent = row._lotAddress;
-                tr.appendChild(tdLotAddress);
-
-                // 작물
-                const tdCrops = document.createElement('td');
-                tdCrops.className = 'text-truncate';
-                tdCrops.setAttribute('data-tooltip', row._cropsDisplay);
-                tdCrops.textContent = row._cropsDisplay;
-                tr.appendChild(tdCrops);
-
-                // 면적
-                const tdArea = document.createElement('td');
-                tdArea.textContent = row._areaDisplay;
-                tr.appendChild(tdArea);
-
-                // 전화번호
-                const tdPhone = document.createElement('td');
-                tdPhone.textContent = row.phoneNumber || '-';
-                tr.appendChild(tdPhone);
-
-                // 수령방법
-                const tdMethod = document.createElement('td');
-                tdMethod.textContent = methodText;
-                tr.appendChild(tdMethod);
-
-                // 비고
-                const tdNote = document.createElement('td');
-                tdNote.className = 'col-note';
-                tdNote.title = combinedNote;
-                const noteDiv = document.createElement('div');
-                noteDiv.className = 'note-cell';
-                noteDiv.textContent = combinedNote;
-                tdNote.appendChild(noteDiv);
-                tr.appendChild(tdNote);
-
-                // 우편일자
-                const tdMailDate = document.createElement('td');
-                tdMailDate.className = 'col-mail-date';
-                tdMailDate.textContent = row.mailDate || '-';
-                tr.appendChild(tdMailDate);
-
-                // 액션 버튼
-                const tdAction = document.createElement('td');
-                const actionsDiv = document.createElement('div');
-                actionsDiv.className = 'table-actions';
-
-                const btnEdit = document.createElement('button');
-                btnEdit.className = 'btn-edit';
-                btnEdit.dataset.id = row.id;
-                btnEdit.textContent = '수정';
-
-                const btnDelete = document.createElement('button');
-                btnDelete.className = 'btn-delete';
-                btnDelete.dataset.id = row.id;
-                btnDelete.textContent = '삭제';
-
-                actionsDiv.appendChild(btnEdit);
-                actionsDiv.appendChild(btnDelete);
-                tdAction.appendChild(actionsDiv);
-                tr.appendChild(tdAction);
-                tableBody.appendChild(tr);
-            });
-
-            // 페이지네이션 UI 업데이트
+            currentFlatRows = [];
             updatePaginationUI();
+            return;
         }
+
+        emptyState.classList.add('hidden');
+        if (paginationContainer) paginationContainer.style.display = 'flex';
+
+        // 접수번호 기준 오름차순 정렬
+        const sortedLogs = [...logs].sort((a, b) => {
+            const numA = parseInt(a.receptionNumber, 10) || 0;
+            const numB = parseInt(b.receptionNumber, 10) || 0;
+            return numA - numB;
+        });
+
+        // 데이터 평탄화
+        currentFlatRows = flattenLogsForTable(sortedLogs);
+
+        // 페이지네이션 계산
+        totalPages = Math.ceil(currentFlatRows.length / itemsPerPage) || 1;
+        if (currentPage > totalPages) currentPage = totalPages;
+        if (currentPage < 1) currentPage = 1;
+
+        renderCurrentPage();
+    }
+
+    function renderCurrentPage() {
+        tableBody.innerHTML = '';
+
+        if (currentFlatRows.length === 0) {
+            updatePaginationUI();
+            return;
+        }
+
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = Math.min(startIndex + itemsPerPage, currentFlatRows.length);
+        const pageRows = currentFlatRows.slice(startIndex, endIndex);
+
+        const fragment = document.createDocumentFragment();
+
+        // 농가별 구분선을 위한 이전 성명 추적
+        let prevName = startIndex > 0 ? (currentFlatRows[startIndex - 1]?.name || null) : null;
+
+        pageRows.forEach((row) => {
+            // 농가별 구분선: 성명이 변경되면 구분선 삽입
+            if (prevName !== null && row.name !== prevName) {
+                const separatorTr = document.createElement('tr');
+                separatorTr.className = 'farm-separator';
+                const separatorTd = document.createElement('td');
+                separatorTd.colSpan = 17;
+                separatorTr.appendChild(separatorTd);
+                fragment.appendChild(separatorTr);
+            }
+            prevName = row.name;
+
+            // 하위 카테고리와 재배 작물을 합쳐서 표시
+            let subCategoryDisplay = row.subCategory || '';
+            if (row._cropsDisplay !== '-') {
+                subCategoryDisplay = subCategoryDisplay
+                    ? `${subCategoryDisplay} (${row._cropsDisplay})`
+                    : row._cropsDisplay;
+            }
+            subCategoryDisplay = subCategoryDisplay || '-';
+
+            // 완료 상태 확인
+            const isComplete = row.isComplete || false;
+
+            const tr = document.createElement('tr');
+            tr.className = isComplete ? 'row-completed' : '';
+            // 수령 방법 텍스트
+            const methodText = row.receptionMethod || '-';
+
+            // 주소에서 우편번호 분리 (예: "(12345) 서울시..." -> 우편번호: "12345", 주소: "서울시...")
+            const addressFull = row.address || '';
+            const zipMatch = addressFull.match(/^\((\d{5})\)\s*/);
+            const zipcode = zipMatch ? zipMatch[1] : '';
+            const addressOnly = zipMatch ? addressFull.replace(zipMatch[0], '') : addressFull;
+
+            // 뷰용 주소: 시도 패턴이 있을 때만 제거
+            const displayAddress = addressOnly && addressOnly !== '-' && SIDO_PATTERN.test(addressOnly)
+                ? addressOnly.replace(SIDO_PATTERN, '')
+                : (addressOnly || '-');
+
+            // XSS 방지: 사용자 입력 데이터 이스케이프
+            const safeName = escapeHTML(row.name);
+            const safeAddress = escapeHTML(addressOnly || '-');
+            const safeDisplayAddress = escapeHTML(displayAddress);
+            const safeLotAddress = escapeHTML(row._lotAddress);
+            const safeCrops = escapeHTML(row._cropsDisplay);
+            const safePhone = escapeHTML(row.phoneNumber || '-');
+            // 비고: 전체 비고 + 필지별 비고 결합
+            const parcelNote = row.parcels && row.parcels[0] && row.parcels[0].note ? row.parcels[0].note : '';
+            const combinedNote = [row.note, parcelNote].filter(n => n && n.trim()).join(' / ') || '-';
+            const safeNote = escapeHTML(combinedNote);
+            const safeMethod = escapeHTML(methodText);
+
+            tr.dataset.id = row.id;
+
+            // 체크박스 열
+            const tdCheckbox = document.createElement('td');
+            tdCheckbox.className = 'col-checkbox';
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'row-checkbox';
+            checkbox.dataset.id = row.id;
+            tdCheckbox.appendChild(checkbox);
+            tr.appendChild(tdCheckbox);
+
+            // 완료 버튼 열
+            const tdComplete = document.createElement('td');
+            tdComplete.className = 'col-complete';
+            const btnComplete = document.createElement('button');
+            btnComplete.className = `btn-complete ${isComplete ? 'completed' : ''}`;
+            btnComplete.dataset.id = row.id;
+            btnComplete.title = isComplete ? '완료 취소' : '완료';
+            btnComplete.textContent = isComplete ? '✔' : '';
+            tdComplete.appendChild(btnComplete);
+            tr.appendChild(tdComplete);
+
+            // 접수번호
+            const tdNumber = document.createElement('td');
+            tdNumber.textContent = row._displayNumber;
+            tr.appendChild(tdNumber);
+
+            // 날짜
+            const tdDate = document.createElement('td');
+            tdDate.textContent = row.date;
+            tr.appendChild(tdDate);
+
+            // 하위 카테고리
+            const tdSubCategory = document.createElement('td');
+            tdSubCategory.textContent = row.subCategory || '-';
+            tr.appendChild(tdSubCategory);
+
+            // 목적
+            const tdPurpose = document.createElement('td');
+            tdPurpose.textContent = row._parcelPurpose || row.purpose || '-';
+            tr.appendChild(tdPurpose);
+
+            // 성명
+            const tdName = document.createElement('td');
+            tdName.textContent = row.name;
+            tr.appendChild(tdName);
+
+            // 우편번호
+            const tdZipcode = document.createElement('td');
+            tdZipcode.className = 'col-zipcode';
+            tdZipcode.textContent = zipcode || '-';
+            tr.appendChild(tdZipcode);
+
+            // 주소 - 시도 제외하고 전체 표시
+            const tdAddress = document.createElement('td');
+            tdAddress.className = 'col-address';
+            tdAddress.textContent = safeDisplayAddress;
+            tr.appendChild(tdAddress);
+
+            // 필지 주소
+            const tdLotAddress = document.createElement('td');
+            tdLotAddress.textContent = row._lotAddress;
+            tr.appendChild(tdLotAddress);
+
+            // 작물
+            const tdCrops = document.createElement('td');
+            tdCrops.className = 'text-truncate';
+            tdCrops.setAttribute('data-tooltip', row._cropsDisplay);
+            tdCrops.textContent = row._cropsDisplay;
+            tr.appendChild(tdCrops);
+
+            // 면적
+            const tdArea = document.createElement('td');
+            tdArea.textContent = row._areaDisplay;
+            tr.appendChild(tdArea);
+
+            // 전화번호
+            const tdPhone = document.createElement('td');
+            tdPhone.textContent = row.phoneNumber || '-';
+            tr.appendChild(tdPhone);
+
+            // 수령방법
+            const tdMethod = document.createElement('td');
+            tdMethod.textContent = methodText;
+            tr.appendChild(tdMethod);
+
+            // 비고
+            const tdNote = document.createElement('td');
+            tdNote.className = 'col-note';
+            tdNote.title = combinedNote;
+            const noteDiv = document.createElement('div');
+            noteDiv.className = 'note-cell';
+            noteDiv.textContent = combinedNote;
+            tdNote.appendChild(noteDiv);
+            tr.appendChild(tdNote);
+
+            // 우편일자
+            const tdMailDate = document.createElement('td');
+            tdMailDate.className = 'col-mail-date';
+            tdMailDate.textContent = row.mailDate || '-';
+            tr.appendChild(tdMailDate);
+
+            // 액션 버튼
+            const tdAction = document.createElement('td');
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'table-actions';
+
+            const btnEdit = document.createElement('button');
+            btnEdit.className = 'btn-edit';
+            btnEdit.dataset.id = row.id;
+            btnEdit.textContent = '수정';
+
+            const btnDelete = document.createElement('button');
+            btnDelete.className = 'btn-delete';
+            btnDelete.dataset.id = row.id;
+            btnDelete.textContent = '삭제';
+
+            actionsDiv.appendChild(btnEdit);
+            actionsDiv.appendChild(btnDelete);
+            tdAction.appendChild(actionsDiv);
+            tr.appendChild(tdAction);
+            fragment.appendChild(tr);
+        });
+
+        tableBody.appendChild(fragment);
+
+        // 페이지네이션 UI 업데이트
+        updatePaginationUI();
     }
 
     // ========================================
@@ -4303,9 +4344,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function renderPageNumbers() {
         if (!pageNumbersContainer) return;
-        pageNumbersContainer.innerHTML = '';
 
-        if (totalPages <= 1) return;
+        if (totalPages <= 1) {
+            pageNumbersContainer.innerHTML = '';
+            return;
+        }
 
         const maxVisiblePages = 5;
         let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
@@ -4315,20 +4358,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             startPage = Math.max(1, endPage - maxVisiblePages + 1);
         }
 
+        const fragment = document.createDocumentFragment();
+
         // 첫 페이지 표시
         if (startPage > 1) {
-            pageNumbersContainer.appendChild(createPageButton(1));
+            fragment.appendChild(createPageButton(1));
             if (startPage > 2) {
                 const ellipsis = document.createElement('span');
                 ellipsis.className = 'page-ellipsis';
                 ellipsis.textContent = '...';
-                pageNumbersContainer.appendChild(ellipsis);
+                fragment.appendChild(ellipsis);
             }
         }
 
         // 중간 페이지들
         for (let i = startPage; i <= endPage; i++) {
-            pageNumbersContainer.appendChild(createPageButton(i));
+            fragment.appendChild(createPageButton(i));
         }
 
         // 마지막 페이지 표시
@@ -4337,10 +4382,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const ellipsis = document.createElement('span');
                 ellipsis.className = 'page-ellipsis';
                 ellipsis.textContent = '...';
-                pageNumbersContainer.appendChild(ellipsis);
+                fragment.appendChild(ellipsis);
             }
-            pageNumbersContainer.appendChild(createPageButton(totalPages));
+            fragment.appendChild(createPageButton(totalPages));
         }
+
+        pageNumbersContainer.innerHTML = '';
+        pageNumbersContainer.appendChild(fragment);
     }
 
     function createPageButton(pageNum) {
@@ -4354,7 +4402,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     function goToPage(page) {
         if (page < 1 || page > totalPages || page === currentPage) return;
         currentPage = page;
-        renderLogs(sampleLogs);
+        renderCurrentPage();
         // 테이블 상단으로 스크롤
         const tableContainer = document.querySelector('.table-container');
         if (tableContainer) tableContainer.scrollTop = 0;

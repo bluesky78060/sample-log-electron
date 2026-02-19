@@ -440,10 +440,18 @@ class BaseSampleManager {
     }
 
     /**
-     * 데이터 변경 감지
+     * 데이터 변경 감지 (최적화: 배열의 경우 id/updatedAt만 비교)
      */
     hasChanges(data1, data2) {
-        return JSON.stringify(data1) !== JSON.stringify(data2);
+        if (!Array.isArray(data1) || !Array.isArray(data2)) {
+            return JSON.stringify(data1) !== JSON.stringify(data2);
+        }
+        if (data1.length !== data2.length) return true;
+        for (let i = 0; i < data1.length; i++) {
+            if (data1[i].id !== data2[i].id) return true;
+            if (data1[i].updatedAt !== data2[i].updatedAt) return true;
+        }
+        return false;
     }
 
     // ========================================
@@ -802,7 +810,10 @@ class BaseSampleManager {
      * 고유 ID 생성
      */
     generateId() {
-        return Date.now().toString(36) + Math.random().toString(36).substring(2, 11);
+        if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+            return crypto.randomUUID();
+        }
+        return (typeof SampleUtils !== 'undefined' && SampleUtils.generateUUID) ? SampleUtils.generateUUID() : crypto.randomUUID();
     }
 
     /**

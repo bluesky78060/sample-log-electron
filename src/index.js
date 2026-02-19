@@ -29,12 +29,42 @@ if (require('electron-squirrel-startup')) {
 let mainWindow = null;
 
 /**
+ * M-4: IPC 호출 Rate Limiting (DoS 방지)
+ * 채널별 호출 횟수를 추적하여 과도한 호출을 차단
+ */
+const ipcRateLimiter = (() => {
+    const callCounts = new Map();
+    const WINDOW_MS = 1000;  // 1초 윈도우
+    const MAX_CALLS = 30;    // 초당 최대 30회
+
+    return {
+        check(channel) {
+            const now = Date.now();
+            const key = channel;
+            const entry = callCounts.get(key);
+
+            if (!entry || now - entry.start > WINDOW_MS) {
+                callCounts.set(key, { start: now, count: 1 });
+                return true;
+            }
+
+            entry.count++;
+            if (entry.count > MAX_CALLS) {
+                console.warn(`[Rate Limit] ${channel}: ${entry.count}회/초 초과`);
+                return false;
+            }
+            return true;
+        }
+    };
+})();
+
+/**
  * 허용된 경로인지 검증 (Path Traversal 방지)
  * realpath를 사용하여 심볼릭 링크 해석 후 실제 경로 확인
  * @param {string} filePath - 검증할 파일 경로
  * @returns {{valid: boolean, resolvedPath?: string, error?: string}} 검증 결과
  */
-function validateFilePath(filePath) {
+async function validateFilePath(filePath) {
     if (!filePath || typeof filePath !== 'string') {
         return { valid: false, error: '유효하지 않은 파일 경로입니다.' };
     }
@@ -66,7 +96,7 @@ function validateFilePath(filePath) {
         return { valid: false, error: 'URL 인코딩된 경로는 허용되지 않습니다.' };
     }
 
-    // 3. 파일명 유효성 검사 - 위험한 문자만 차단
+    // 4. 파일명 유효성 검사 - 위험한 문자만 차단
     const basename = path.basename(filePath);
     const invalidFilenameChars = /[<>:"|?*\x00-\x1f\\]/;
     if (basename && invalidFilenameChars.test(basename)) {
@@ -79,11 +109,10 @@ function validateFilePath(filePath) {
         app.getPath('documents'),     // 문서 폴더
         app.getPath('downloads'),     // 다운로드 폴더
         app.getPath('desktop'),       // 바탕화면
-        // app.getPath('home') 제거 - 너무 광범위한 접근 권한
 
-        // 대신 특정 하위 폴더만 허용
-        path.join(app.getPath('documents'), 'SampleLog'), // 문서 폴더 내 앱 전용 폴더
-        path.join(app.getPath('downloads'), 'SampleLog')  // 다운로드 폴더 내 앱 전용 폴더
+        // 특정 하위 폴더만 허용
+        path.join(app.getPath('documents'), 'SampleLog'),
+        path.join(app.getPath('downloads'), 'SampleLog')
     ];
 
     // 사용자가 설정한 자동저장 폴더도 허용 경로에 추가
@@ -100,41 +129,46 @@ function validateFilePath(filePath) {
         // 경로를 절대 경로로 변환
         const absolutePath = path.resolve(filePath);
 
-        // 파일/디렉토리가 존재하면 realpath로 심볼릭 링크 해석
+        // PER-10: 비동기 I/O로 전환 (메인 스레드 블로킹 방지)
         let realPath;
-        if (fs.existsSync(absolutePath)) {
-            realPath = fs.realpathSync(absolutePath);
-        } else {
+        try {
+            await fs.promises.access(absolutePath);
+            realPath = await fs.promises.realpath(absolutePath);
+        } catch {
             // 파일이 없으면 부모 디렉토리 확인
             const parentDir = path.dirname(absolutePath);
-            if (fs.existsSync(parentDir)) {
-                const realParent = fs.realpathSync(parentDir);
+            try {
+                await fs.promises.access(parentDir);
+                const realParent = await fs.promises.realpath(parentDir);
                 realPath = path.join(realParent, path.basename(absolutePath));
-            } else {
+            } catch {
                 realPath = absolutePath;
             }
         }
 
         // 정규화된 실제 경로가 허용된 디렉토리 내부인지 확인
-        const isAllowedPath = allowedDirs.some(allowedDir => {
+        const allowedChecks = await Promise.all(allowedDirs.map(async (allowedDir) => {
             try {
-                // 허용된 디렉토리도 realpath로 해석
-                const realAllowedDir = fs.existsSync(allowedDir)
-                    ? fs.realpathSync(allowedDir)
-                    : allowedDir;
+                let realAllowedDir;
+                try {
+                    await fs.promises.access(allowedDir);
+                    realAllowedDir = await fs.promises.realpath(allowedDir);
+                } catch {
+                    realAllowedDir = allowedDir;
+                }
                 return realPath.startsWith(realAllowedDir + path.sep) || realPath === realAllowedDir;
             } catch {
                 return false;
             }
-        });
+        }));
 
-        if (!isAllowedPath) {
+        if (!allowedChecks.some(Boolean)) {
             return { valid: false, error: '허용되지 않은 경로입니다.' };
         }
 
         return { valid: true, resolvedPath: realPath };
     } catch (error) {
-        return { valid: false, error: '경로 검증 중 오류가 발생했습니다: ' + error.message };
+        return { valid: false, error: '경로 검증 중 오류가 발생했습니다.' };
     }
 }
 
@@ -174,8 +208,11 @@ const createMenuTemplate = () => {
         { label: '원래 크기', accelerator: 'CmdOrCtrl+0', role: 'resetZoom' },
         { type: 'separator' },
         { label: '전체 화면', accelerator: 'F11', role: 'togglefullscreen' },
-        { type: 'separator' },
-        { label: '개발자 도구', accelerator: 'CmdOrCtrl+Shift+I', role: 'toggleDevTools' }
+        // L-3: 개발 모드에서만 DevTools 메뉴 표시
+        ...(process.env.DEV_MODE === '1' || process.argv.includes('--dev') ? [
+          { type: 'separator' },
+          { label: '개발자 도구', accelerator: 'CmdOrCtrl+Shift+I', role: 'toggleDevTools' }
+        ] : [])
       ]
     },
     {
@@ -229,19 +266,64 @@ const createWindow = () => {
     },
   });
 
-  // and load the index.html of the app.
-  mainWindow.loadFile(path.join(__dirname, 'index.html'));
+  // 앱 로드 전략:
+  // 1. VITE_DEV_SERVER_URL 환경변수가 있으면 Vite dev server 사용
+  // 2. 없으면 Vite dev server(localhost:3000)에 연결 시도
+  // 3. 둘 다 안 되면 빌드된 docs/index.html 로드
+  const VITE_DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL || 'http://localhost:3000';
+  const docsPath = path.join(__dirname, '..', 'docs', 'index.html');
+
+  /** @type {string|null} 현재 로드 원본 (dev server URL 또는 null) */
+  let activeDevServerUrl = null;
+
+  async function loadApp() {
+    // Vite dev server 연결 시도
+    try {
+      const http = require('node:http');
+      await new Promise((resolve, reject) => {
+        const req = http.get(VITE_DEV_SERVER_URL, { timeout: 1000 }, (res) => {
+          res.destroy();
+          resolve();
+        });
+        req.on('error', reject);
+        req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
+      });
+      activeDevServerUrl = VITE_DEV_SERVER_URL;
+      mainWindow.loadURL(VITE_DEV_SERVER_URL);
+      console.log(`[App] Vite dev server에서 로드: ${VITE_DEV_SERVER_URL}`);
+    } catch {
+      // Vite dev server 없음 → 빌드된 파일에서 로드
+      if (fs.existsSync(docsPath)) {
+        mainWindow.loadFile(docsPath);
+        console.log(`[App] 빌드된 파일에서 로드: ${docsPath}`);
+      } else {
+        // 빌드 파일도 없으면 에러 안내
+        mainWindow.loadURL(`data:text/html;charset=utf-8,
+          <h2 style="font-family:sans-serif;padding:2rem;">앱을 시작할 수 없습니다</h2>
+          <p style="font-family:sans-serif;padding:0 2rem;">
+            <code>npm run build</code> 로 빌드하거나<br>
+            <code>npm run dev:electron</code> 으로 개발 모드를 시작해주세요.
+          </p>`);
+      }
+    }
+  }
+
+  loadApp();
 
   // 내부 링크 네비게이션 허용 (soil/, water/ 등 하위 폴더)
   mainWindow.webContents.on('will-navigate', (event, url) => {
-    // file:// 프로토콜이고 src 폴더 내의 파일이면 허용
-    if (url.startsWith('file://') && url.includes('/src/')) {
-      // 허용 - 아무것도 하지 않음
+    if (activeDevServerUrl && url.startsWith(activeDevServerUrl)) {
+      return; // 개발 모드: 같은 dev server 내 URL 허용
     }
+    // file:// 프로토콜이고 docs 폴더 내의 파일이면 허용
+    if (url.startsWith('file://') && url.includes('/docs/')) {
+      return;
+    }
+    event.preventDefault(); // 외부 URL 차단
   });
 
   // 개발 모드에서 DevTools 열기
-  if (process.argv.includes('--dev')) {
+  if (process.env.DEV_MODE === '1' || process.argv.includes('--dev')) {
     mainWindow.webContents.openDevTools();
   }
 };
@@ -258,12 +340,16 @@ app.whenReady().then(() => {
         ...details.responseHeaders,
         'Content-Security-Policy': [
           "default-src 'self' file:; " +
-          // unsafe-eval 제거 완료: eval(), Function(), setTimeout(string) 사용 차단
-          // unsafe-inline은 단계적 마이그레이션을 위해 일시적으로 유지 (추후 해시 방식으로 전환 예정)
-          "script-src 'self' 'unsafe-inline' file: https://cdn.tailwindcss.com https://www.gstatic.com https://cdn.sheetjs.com https://t1.kakaocdn.net https://t1.daumcdn.net https://cdnjs.cloudflare.com; " +
+          // Phase 4 현대화 완료:
+          // - script-src: CDN → npm 번들 전환 완료 (Tailwind, SheetJS, DOMPurify, Firebase)
+          //   unsafe-inline 제거 완료 (인라인 스크립트 → ES Modules)
+          //   Kakao Postcode CDN만 유지 (npm 패키지 없음)
+          // - style-src: Tailwind CDN → 빌드 타임 CSS 전환 완료
+          //   unsafe-inline 유지: JS에서 element.style.* 직접 조작 광범위하게 사용
+          "script-src 'self' file: https://t1.kakaocdn.net https://t1.daumcdn.net; " +
           "style-src 'self' 'unsafe-inline' file: https://fonts.googleapis.com; " +
           "font-src 'self' file: https://fonts.gstatic.com; " +
-          "connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.ipify.org https://www.gstatic.com https://cdnjs.cloudflare.com; " +
+          "connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.ipify.org; " +
           "img-src 'self' file: data:; " +
           "frame-src 'self' https://t1.kakaocdn.net https://postcode.map.kakao.com https://*.kakaocdn.net https://t1.daumcdn.net https://postcode.map.daum.net https://*.daumcdn.net; " +  // Kakao 우편번호 API iframe (전환기간 중 기존 도메인 유지)
           "object-src 'none'; " +  // Flash, Java 등 플러그인 차단
@@ -402,8 +488,11 @@ ipcMain.handle('open-file-dialog', async (event, options) => {
 // 파일 쓰기 (경로 검증 포함)
 ipcMain.handle('write-file', async (event, filePath, content) => {
     try {
+        if (!ipcRateLimiter.check('write-file')) {
+            return { success: false, error: '요청이 너무 빈번합니다. 잠시 후 다시 시도하세요.' };
+        }
         // 경로 검증
-        const validation = validateFilePath(filePath);
+        const validation = await validateFilePath(filePath);
         if (!validation.valid) {
             console.warn(`[보안] 파일 쓰기 거부: ${filePath} - ${validation.error}`);
             return { success: false, error: validation.error };
@@ -412,24 +501,36 @@ ipcMain.handle('write-file', async (event, filePath, content) => {
         fs.writeFileSync(filePath, content, 'utf8');
         return { success: true };
     } catch (error) {
-        return { success: false, error: error.message };
+        console.error('[write-file] 오류:', error.message);
+        return { success: false, error: '파일 저장 중 오류가 발생했습니다.' };
     }
 });
 
 // 파일 읽기 (경로 검증 포함)
 ipcMain.handle('read-file', async (event, filePath) => {
     try {
+        if (!ipcRateLimiter.check('read-file')) {
+            return { success: false, error: '요청이 너무 빈번합니다. 잠시 후 다시 시도하세요.' };
+        }
         // 경로 검증
-        const validation = validateFilePath(filePath);
+        const validation = await validateFilePath(filePath);
         if (!validation.valid) {
             console.warn(`[보안] 파일 읽기 거부: ${filePath} - ${validation.error}`);
             return { success: false, error: validation.error };
         }
 
-        const content = fs.readFileSync(filePath, 'utf8');
+        // L-2: 파일 크기 제한 (50MB)
+        const MAX_FILE_SIZE = 50 * 1024 * 1024;
+        const stat = fs.statSync(validation.resolvedPath);
+        if (stat.size > MAX_FILE_SIZE) {
+            return { success: false, error: `파일이 너무 큽니다 (최대 ${MAX_FILE_SIZE / 1024 / 1024}MB).` };
+        }
+
+        const content = fs.readFileSync(validation.resolvedPath, 'utf8');
         return { success: true, content };
     } catch (error) {
-        return { success: false, error: error.message };
+        console.error('[read-file] 오류:', error.message);
+        return { success: false, error: '파일 읽기 중 오류가 발생했습니다.' };
     }
 });
 
@@ -454,8 +555,33 @@ function loadSettings() {
     try {
         const settingsPath = getSettingsPath();
         if (fs.existsSync(settingsPath)) {
+            // M-6: 파일 크기 제한 (10KB)
+            const stat = fs.statSync(settingsPath);
+            if (stat.size > 10240) {
+                console.warn('[Settings] 설정 파일이 너무 큼:', stat.size);
+                return {};
+            }
             const data = fs.readFileSync(settingsPath, 'utf-8');
-            return JSON.parse(data);
+            const settings = JSON.parse(data);
+
+            // M-6: 무결성 검증 — 허용된 키만 유지
+            const ALLOWED_KEYS = ['autoSaveFolder', 'theme', 'itemsPerPage', 'firebaseConfig'];
+            const validated = {};
+            for (const key of ALLOWED_KEYS) {
+                if (key in settings) {
+                    validated[key] = settings[key];
+                }
+            }
+
+            // autoSaveFolder 경로 검증
+            if (validated.autoSaveFolder && typeof validated.autoSaveFolder === 'string') {
+                if (validated.autoSaveFolder.includes('..') || validated.autoSaveFolder.includes('\0')) {
+                    console.warn('[Settings] autoSaveFolder 경로 조작 감지:', validated.autoSaveFolder);
+                    delete validated.autoSaveFolder;
+                }
+            }
+
+            return validated;
         }
     } catch (error) {
         console.error('설정 로드 오류:', error);
@@ -481,6 +607,15 @@ function saveSettings(settings) {
 
 // 자동 저장 경로 가져오기 (타입별, 연도별로 다른 파일명 사용)
 ipcMain.handle('get-auto-save-path', async (event, type, year) => {
+    // M-3: type/year 파라미터 검증
+    const ALLOWED_TYPES = ['soil', 'water', 'compost', 'heavy-metal', 'heavyMetal', 'pesticide', '잔류농약'];
+    if (type && (typeof type !== 'string' || !ALLOWED_TYPES.includes(type))) {
+        throw new Error(`허용되지 않는 시료 타입: ${type}`);
+    }
+    if (year && (typeof year !== 'number' && typeof year !== 'string' || !/^\d{4}$/.test(String(year)))) {
+        throw new Error(`유효하지 않은 연도: ${year}`);
+    }
+
     const settings = loadSettings();
     // 연도가 있으면 연도별 파일명 생성 (예: auto-save-heavy-metal-2025.json)
     let fileName;
@@ -569,7 +704,7 @@ ipcMain.handle('read-auth-file', async () => {
         return { exists: true, content };
     } catch (error) {
         console.error('[AuthFile] 읽기 오류:', error);
-        return { exists: false, error: error.message };
+        return { exists: false, error: '인증 파일 읽기 중 오류가 발생했습니다.' };
     }
 });
 
@@ -595,7 +730,7 @@ ipcMain.handle('save-auth-file', async (event, content) => {
         const authFilePath = getAuthFilePath();
 
         // 경로 검증 추가 (defense-in-depth)
-        const validation = validateFilePath(authFilePath);
+        const validation = await validateFilePath(authFilePath);
         if (!validation.valid) {
             return { success: false, error: validation.error };
         }
@@ -605,7 +740,7 @@ ipcMain.handle('save-auth-file', async (event, content) => {
         return { success: true };
     } catch (error) {
         console.error('[AuthFile] 저장 오류:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: '인증 파일 저장 중 오류가 발생했습니다.' };
     }
 });
 
@@ -622,7 +757,7 @@ ipcMain.handle('delete-auth-file', async () => {
         return { success: true };
     } catch (error) {
         console.error('[AuthFile] 삭제 오류:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: '인증 파일 삭제 중 오류가 발생했습니다.' };
     }
 });
 
@@ -634,7 +769,7 @@ ipcMain.handle('check-auth-file', async () => {
         return { exists };
     } catch (error) {
         console.error('[AuthFile] 확인 오류:', error);
-        return { exists: false, error: error.message };
+        return { exists: false, error: '인증 파일 확인 중 오류가 발생했습니다.' };
     }
 });
 
@@ -667,7 +802,7 @@ ipcMain.handle('select-auth-file', async () => {
             return { success: false, error: '파일이 너무 큽니다 (최대 10KB). 올바른 인증 파일인지 확인하세요.' };
         }
         // 선택된 파일 경로 검증
-        const pathValidation = validateFilePath(selectedPath);
+        const pathValidation = await validateFilePath(selectedPath);
         if (!pathValidation.valid) {
             return { success: false, error: pathValidation.error };
         }
@@ -692,6 +827,6 @@ ipcMain.handle('select-auth-file', async () => {
         }
     } catch (error) {
         console.error('[AuthFile] 선택 오류:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: '인증 파일 선택 중 오류가 발생했습니다.' };
     }
 });

@@ -9,32 +9,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" media="print" onload="this.media='all'">
-    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap"></noscript>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap">
     <link rel="preload" as="style" href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" media="print" onload="this.media='all'">
-    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined"></noscript>
-    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
-    <script>
-        tailwind.config = {
-            darkMode: ['selector', '[data-theme="dark"]'],
-            theme: {
-                extend: {
-                    colors: {
-                        primary: "#3B82F6",
-                        "background-light": "#F8FAFC",
-                        "background-dark": "#18181B",
-                    },
-                    fontFamily: {
-                        display: ["Noto Sans KR", "sans-serif"],
-                    },
-                    borderRadius: {
-                        DEFAULT: "12px",
-                    },
-                },
-            },
-        };
-    </script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined">
+    <link rel="stylesheet" href="../shared/tailwind-output.css">
     <link rel="stylesheet" href="../style.css">
     <link rel="stylesheet" href="compost-style.css">
     <style>
@@ -798,41 +776,7 @@
 
     <!-- 다음 우편번호 서비스 -->
     <script src="https://t1.kakaocdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
-    <!-- XLSX 라이브러리 -->
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
-    <!-- 봉화 지역 데이터 (자동완성용) -->
-    <script src="../bonghwaData.js"></script>
-    <!-- 공통 모듈 -->
-    <!-- DOMPurify for XSS prevention -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js" integrity="sha384-cwS6YdhLI7XS60eoDiC+egV0qHp8zI+Cms46R0nbn8JrmoAzV9uFL60etMZhAnSu" crossorigin="anonymous"></script>
-    <script src="../shared/sanitize.js"></script>
-    <script src="../shared/constants.js"></script>
-    <script src="../shared/file-api.js"></script>
-    <script src="../shared/utils.js"></script>
-    <script src="../shared/toast.js"></script>
-    <script src="../shared/pagination.js"></script>
-    <script src="../shared/address.js"></script>
-    <script src="../shared/address-parser.js"></script>
-    <script src="../shared/search-filter.js"></script>
-    <script src="../shared/form-validator.js"></script>
-    <script src="../shared/theme.js"></script>
-    <script src="../shared/tooltip.js"></script>
-    <!-- Firebase SDK (compat 버전 - Electron 호환) -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-    <!-- 네트워크 접근 제어 (Firebase 초기화 전에 로드) -->
-    <script src="../shared/logger.js"></script>
-    <script src="../shared/network-config.js"></script>
-    <script src="../shared/network-access.js"></script>
-    <!-- Firebase 스크립트 -->
-    <script src="../shared/firebase-config.js"></script>
-    <script src="../shared/firestore-db.js"></script>
-    <script src="../shared/sync-utils.js"></script>
-    <script src="../shared/BaseSampleManager.js"></script>
-    <script src="../shared/excel-import-manager.js"></script>
-    <!-- 메인 스크립트 -->
-    <script src="compost-script.js"></script>
+    <script type="module" src="compost-entry.js"></script>
 </body>
 
 </html>
