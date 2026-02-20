@@ -2,14 +2,36 @@
 
 - **프로젝트:** sample-log-electron (시료 접수 대장)
 - **분석 일자:** 2026-02-18
+- **최종 검증일:** 2026-02-20
 - **분석 범위:** src/ 내 46개 JavaScript 파일, ~30,300줄
 - **분석 방법:** 4개 전문 에이전트 병렬 분석 (아키텍처, 코드 품질, 보안, 성능)
 
 ---
 
+## 2026-02-20 검증 결과 요약
+
+> **BaseSampleManager 리팩토링 + Vite 빌드 전환 이후 재검증 결과**
+>
+> | 구분 | 원본 (65건) | 해결 | 유효 | 오탐/해당없음 |
+> |------|-------------|------|------|---------------|
+> | CRITICAL (5건) | C-1~C-5 | C-3,C-4,C-5 해결 | - | C-1,C-2 오탐 |
+> | HIGH 보안 (6건) | H-1~H-6 | H-1,H-2,H-3,H-5 해결 | H-4 수용가능 | H-6 해당없음 |
+> | 성능 (13건) | PER-1~PER-13 | 11건 해결 | PER-5,PER-9 수정완료(2/20) | - |
+> | 아키텍처 (12건) | A-1~A-9 등 | A-1,A-5,A-8,A-9 해결 | 나머지 유효 | - |
+>
+> **주요 변경:**
+> - BaseSampleManager 마이그레이션 완료 (5개 스크립트 ~4,700줄 중복 제거)
+> - Vite + ES Modules 번들링 전환 (30+ script 태그 → 모듈)
+> - Firebase CDN → npm 통합, Tailwind CDN → 빌드타임 CSS 전환
+> - XSS 취약점 4곳 escapeHTML 적용, CSP script-src unsafe-inline 제거
+> - validateFilePath 비동기 I/O 전환, hasChanges 최적화 완료
+> - DOM 렌더링 DocumentFragment 패턴 적용 (soil, pesticide)
+
+---
+
 ## Executive Summary
 
-이 프로젝트는 Electron + Web 듀얼 환경의 농업 시료 관리 시스템으로, **보안 기본기(contextIsolation, 경로 검증, CSP)와 에러 핸들링이 양호**합니다. 그러나 **미완성 리팩토링(BaseSampleManager)**, **5개 시료 스크립트의 대규모 중복(~5,000줄)**, **DOM 렌더링 성능 병목**, **보안 취약점 21건**이 핵심 기술 부채로 식별되었습니다.
+이 프로젝트는 Electron + Web 듀얼 환경의 농업 시료 관리 시스템으로, **보안 기본기(contextIsolation, 경로 검증, CSP)와 에러 핸들링이 양호**합니다. ~~그러나 **미완성 리팩토링(BaseSampleManager)**, **5개 시료 스크립트의 대규모 중복(~5,000줄)**, **DOM 렌더링 성능 병목**, **보안 취약점 21건**이 핵심 기술 부채로 식별되었습니다.~~ **(2026-02-20 업데이트: BaseSampleManager 마이그레이션 완료, Vite 전환, 주요 보안/성능 이슈 대부분 해결됨)**
 
 ### 발견 사항 요약
 
@@ -36,12 +58,13 @@
 
 ## 1. CRITICAL 이슈 (즉시 수정 필요) — 5건
 
-### C-1. 암호화 키가 localStorage에 평문 저장
+### C-1. ~~암호화 키가 localStorage에 평문 저장~~ [오탐 - 2026-02-20]
 
-- **심각도:** CRITICAL
+- **심각도:** ~~CRITICAL~~ → **오탐 (FALSE POSITIVE)**
 - **분류:** Sensitive Data Exposure / Broken Cryptography
 - **파일:** `src/shared/secure-storage.js:31-37`
 - **발견 방법:** 소스코드 정적 분석 + 보안 감시
+- **검증 결과 (2026-02-20):** `secure-storage.js` 파일이 존재하지 않으며, `samplelog_secure_key`도 코드베이스에 없음. 메인 프로젝트에는 암호화 코드 자체가 없음 (테스트 프로젝트에서만 개발 중). 분석 에이전트가 존재하지 않는 파일을 잘못 참조한 것으로 판단됨.
 
 `SecureStorage` 클래스가 256-bit AES 암호화 키를 localStorage에 평문 저장합니다. DevTools에서 `localStorage.getItem('samplelog_secure_key')`로 즉시 탈취 가능합니다.
 
@@ -65,14 +88,15 @@ getOrCreateKey() {
 
 ---
 
-### C-2. 내부 네트워크 IP가 git에 커밋되어 공개 노출
+### C-2. ~~내부 네트워크 IP가 git에 커밋되어 공개 노출~~ [오탐 - 2026-02-20]
 
-- **심각도:** CRITICAL
+- **심각도:** ~~CRITICAL~~ → **오탐 (FALSE POSITIVE)**
 - **분류:** Sensitive Data Exposure
 - **파일:** `src/shared/network-config.js:10`
 - **발견 방법:** 파일 내용 검사 + GitHub Pages 배포 경로 추적
+- **검증 결과 (2026-02-20):** `.gitignore`의 `**/network-config.js` 규칙이 정상 동작 중. `git ls-files`에서 해당 파일 미추적 확인. git에 커밋된 적 없으며 GitHub에 IP가 노출되어 있지 않음.
 
-`.gitignore`에 `**/network-config.js`가 설정되어 있으나, 이미 git 추적 중이므로 무시되지 않습니다. GitHub Pages로 배포되어 내부 게이트웨이 IP `111.21.101.254`가 인터넷에 공개됩니다.
+~~`.gitignore`에 `**/network-config.js`가 설정되어 있으나, 이미 git 추적 중이므로 무시되지 않습니다. GitHub Pages로 배포되어 내부 게이트웨이 IP `111.21.101.254`가 인터넷에 공개됩니다.~~
 
 ```javascript
 window.NETWORK_CONFIG = {
@@ -90,11 +114,12 @@ window.NETWORK_CONFIG = {
 
 ---
 
-### C-3. renderLogs() 전체 DOM 재생성 패턴
+### C-3. ~~renderLogs() 전체 DOM 재생성 패턴~~ [해결됨 - 2026-02-20]
 
-- **심각도:** CRITICAL (성능)
+- **심각도:** ~~CRITICAL (성능)~~ → **해결됨**
 - **파일:** `src/soil/soil-script.js:4079-4295`
 - **발견 방법:** 성능 분석 + DOM 조작 패턴 검사
+- **해결 내용 (2026-02-20):** BaseSampleManager 리팩토링으로 soil/pesticide는 자체 renderLogs()에서 DocumentFragment 패턴 적용 (soil:2620, pesticide:1234). compost/water/heavy-metal은 PaginationManager 경유. BaseSampleManager의 폴백 경로(876줄)는 실제 실행되지 않음.
 
 매 호출마다 `tableBody.innerHTML = ''`로 전체 삭제 후 개별 `appendChild` 호출. 100행 기준 ~1,700개 DOM 노드 생성 + 100번 개별 DOM 삽입이 발생합니다. 15곳 이상에서 이 함수가 호출되며(뷰 전환, 삭제, 저장 등), 매번 풀 리렌더가 트리거됩니다.
 
@@ -125,40 +150,37 @@ function renderLogs(logs) {
 
 ---
 
-### C-4. hasChanges()가 전체 데이터를 JSON.stringify로 비교
+### C-4. ~~hasChanges()가 전체 데이터를 JSON.stringify로 비교~~ [해결됨 - 2026-02-20]
 
-- **심각도:** CRITICAL (성능)
-- **파일:** `src/shared/BaseSampleManager.js:445-447`
+- **심각도:** ~~CRITICAL (성능)~~ → **해결됨**
+- **파일:** `src/shared/BaseSampleManager.js:477-487`
 - **발견 방법:** 메모리 프로파일링 + 성능 측정
-
-1,000건 기준 약 2MB 문자열 2개를 생성하여 비교. GC 압박이 심합니다.
+- **해결 내용 (2026-02-20):** `length` + `id` + `updatedAt` 비교로 최적화됨. JSON.stringify는 비배열 폴백에서만 사용.
 
 ```javascript
+// 현재 구현 (최적화 완료)
 hasChanges(data1, data2) {
-    return JSON.stringify(data1) !== JSON.stringify(data2);
-}
-```
-
-**수정 방안:**
-```javascript
-hasChanges(data1, data2) {
+    if (!Array.isArray(data1) || !Array.isArray(data2)) {
+        return JSON.stringify(data1) !== JSON.stringify(data2);
+    }
     if (data1.length !== data2.length) return true;
-    const ids1 = data1.map(d => d.id).join(',');
-    const ids2 = data2.map(d => d.id).join(',');
-    return ids1 !== ids2;
+    for (let i = 0; i < data1.length; i++) {
+        if (data1[i].id !== data2[i].id) return true;
+        if (data1[i].updatedAt !== data2[i].updatedAt) return true;
+    }
+    return false;
 }
 ```
-
-**영향도:** 자동 저장 시 매번 GC 유발, CPU 스파이크 (500ms-1s)
 
 ---
 
-### C-5. Excel Import Manager XSS 취약점
+### C-5. ~~Excel Import Manager XSS 취약점~~ [해결됨 - 코드 리뷰 시 수정]
 
-- **심각도:** CRITICAL (보안)
+- **심각도:** ~~CRITICAL (보안)~~ → **해결됨**
 - **분류:** Cross-Site Scripting (XSS)
 - **파일:** `src/shared/excel-import-manager.js:238-248`
 - **발견 방법:** 소스코드 동적 콘텐츠 분석 + XSS 패턴 검사
+- **해결 내용:** `escapeHTML()` 이미 적용됨 (238-249줄). 코드 리뷰(2026-02-17) 시 수정 완료.
 
 엑셀 파일에서 파싱한 헤더와 데이터 값이 `innerHTML`에 직접 삽입됩니다. 악성 엑셀 파일로 XSS 공격이 가능합니다.
 
@@ -185,33 +207,30 @@ row.innerHTML = `
 
 ## 2. 아키텍처 분석
 
-### 2.1 미완성 리팩토링 (가장 큰 기술 부채)
+### 2.1 ~~미완성 리팩토링~~ [해결됨 - 2026-02-20]
 
-**파일 위치:**
-- `src/shared/BaseSampleManager.js:1-939`
-- `src/soil/SoilSampleManager.js:1-175`
-- `src/water/WaterSampleManager.js:1-156`
-- `src/compost/CompostSampleManager.js:1-312`
-- `src/heavy-metal/HeavyMetalSampleManager.js:1-189`
-- `src/pesticide/PesticideSampleManager.js:1-177`
+> **2026-02-20:** BaseSampleManager 마이그레이션 완료. 5개 스크립트 모두 `extends BaseSampleManager` 클래스 기반으로 전환. 이전 별도 서브클래스 파일(SoilSampleManager.js 등)은 사문 코드로 제거 대상.
 
-`BaseSampleManager` + 5개 서브클래스가 설계되었으나, **어떤 페이지에서도 서브클래스를 로드하지 않습니다.**
-
+**현재 상태 (2026-02-20):**
 ```
-현재 상태:
-├── BaseSampleManager.js (939줄) — 모든 페이지에 로드되나 미사용 (사문 코드)
-├── SoilSampleManager.js — 로드 안 됨
-├── WaterSampleManager.js — 로드 안 됨
-├── CompostSampleManager.js — 로드 안 됨
-├── HeavyMetalSampleManager.js — 로드 안 됨
-├── PesticideSampleManager.js — 로드 안 됨
+├── BaseSampleManager.js (1,086줄) — 공통 CRUD/UI 베이스 클래스 (활성 사용)
 │
-├── soil-script.js (4,750줄) — 실제 사용 (BaseSampleManager 미상속)
-├── water-script.js (2,644줄) — 실제 사용
-├── compost-script.js (2,733줄) — 실제 사용
-├── heavy-metal-script.js (2,518줄) — 실제 사용
-└── pesticide-script.js (4,749줄) — 실제 사용
+├── soil-script.js (~3,500줄) — SoilSampleManager extends BaseSampleManager ✅
+├── water-script.js (1,887줄) — WaterSampleManager extends BaseSampleManager ✅
+├── compost-script.js (2,319줄) — CompostSampleManager extends BaseSampleManager ✅
+├── heavy-metal-script.js (1,958줄) — HeavyMetalSampleManager extends BaseSampleManager ✅
+├── pesticide-script.js (3,028줄) — PesticideSampleManager extends BaseSampleManager ✅
+│
+├── SoilSampleManager.js — 사문 코드 (제거 대상)
+├── WaterSampleManager.js — 사문 코드 (제거 대상)
+├── CompostSampleManager.js — 사문 코드 (제거 대상)
+├── HeavyMetalSampleManager.js — 사문 코드 (제거 대상)
+└── PesticideSampleManager.js — 사문 코드 (제거 대상)
 ```
+
+**이전 상태 (참고):**
+
+~~`BaseSampleManager` + 5개 서브클래스가 설계되었으나, **어떤 페이지에서도 서브클래스를 로드하지 않습니다.**~~
 
 **근거:**
 - `src/soil/index.html:855`에서 `BaseSampleManager.js`를 로드하지만 `SoilSampleManager.js`는 로드하지 않음
@@ -341,30 +360,12 @@ script 로드 순서 (src/soil/index.html):
 | H-5 | CSP unsafe-inline | HIGH | `src/index.js` | 263 | 인라인 스크립트 실행 허용 |
 | H-6 | innerHTML 미새니타이징 (SoilSampleManager) | HIGH | `src/soil/SoilSampleManager.js` | 140 | `parcel.id` 미검증 |
 
-#### H-1~H-3. innerHTML XSS 취약점 (3곳)
+#### H-1~H-3. ~~innerHTML XSS 취약점 (3곳)~~ [해결됨 - 코드 리뷰 + Vite 전환]
 
-**상세 분석:**
-
-1. **excel-import-manager.js:238-248**
-```javascript
-row.innerHTML = `
-    <span class="mapping-excel-col" title="${header}">${header}</span>
-    <span class="mapping-sample" title="${sampleValue}">예: ${sampleValue}</span>
-`;
-```
-- 엑셀 파일의 헤더명과 셀 값이 직접 HTML로 삽입
-- 악의적 엑셀 파일: 헤더명 = `<img onerror=alert('xss')>`
-
-2. **index.html:1293-1317** (showSyncProgress)
-3. **index.html:1359-1385** (showSyncResults)
-
-**수정 코드:**
-```javascript
-row.innerHTML = `
-    <span class="mapping-excel-col" title="${escapeHTML(header)}">${escapeHTML(header)}</span>
-    <span class="mapping-sample" title="${escapeHTML(sampleValue)}">예: ${escapeHTML(String(sampleValue))}</span>
-`;
-```
+> **2026-02-20 검증:** 3곳 모두 `escapeHTML()` 적용 확인.
+> - H-1: excel-import-manager.js:238-249 — `escapeHTML()` 적용됨
+> - H-2: main-init.js:197-198 (showSyncProgress) — `escapeHTML()` 적용됨
+> - H-3: main-init.js:250-251 (showSyncResults) — `escapeHTML()` 적용됨
 
 #### H-4. Firebase Config Base64 "난독화"
 
@@ -379,25 +380,13 @@ const config = JSON.parse(atob(encodedConfig));
 
 **주의:** Firebase API 키는 설계상 공개 가능하며, Security Rules가 실질적 보안 경계입니다. 단, 내부 프로젝트 ID는 비공개가 유리합니다.
 
-#### H-5. CSP `'unsafe-inline'` 허용
+#### H-5. ~~CSP `'unsafe-inline'` 허용~~ [대부분 해결 - Vite 전환]
 
-**파일:** `src/index.js:263`
+> **2026-02-20 검증:** script-src에서 `unsafe-inline` **제거 완료**. style-src에만 유지 (JS에서 `element.style.*` 직접 조작 때문). Vite 전환으로 인라인 스크립트 → ES Modules로 분리됨.
 
-```javascript
-const cspHeader = "script-src 'self' 'unsafe-inline' file: ...";
-```
+#### H-6. ~~innerHTML 미새니타이징~~ [해당없음 - 2026-02-20]
 
-**문제:** XSS 취약점이 있을 경우 인라인 스크립트 실행 가능
-
-**수정:** 모든 인라인 스크립트를 외부 파일로 분리, CSP 해시 또는 nonce 사용
-
-#### H-6. innerHTML 미새니타이징 (여러 곳)
-
-| 파일 | 라인 | 변수 |
-|------|------|------|
-| `src/soil/SoilSampleManager.js` | 140 | `parcel.id` |
-| `src/compost/CompostSampleManager.js` | 294, 299 | `log.sampleType`, `log.animalType` |
-| `src/heavy-metal/HeavyMetalSampleManager.js` | 179 | `bonghwaData` 항목 |
+> **2026-02-20 검증:** `SoilSampleManager.js`, `CompostSampleManager.js`, `HeavyMetalSampleManager.js` 파일은 이전 사문 코드 서브클래스로, 현재 어디서도 로드/사용되지 않음. 실제 사용되는 `*-script.js`에서는 해당 패턴 없음.
 
 ### 3.3 MEDIUM 보안 이슈
 
@@ -491,13 +480,13 @@ window.storageManager = {...}
 
 ### 5.1 DOM 렌더링 병목 (P0 - 즉시 해결)
 
-| 우선순위 | ID | 이슈 | 파일 | 영향 | 측정 |
-|----------|-----|------|------|------|------|
-| P0 | PER-1 | renderLogs 전체 DOM 재생성 | soil-script.js:4079 | 100행 = 1,700 노드 생성 | ~2-3초 프로즈 |
-| P0 | PER-2 | goToPage마다 flattenLogsForTable 재실행 | soil-script.js:4370-4391 | 페이지 이동 시 O(n) 재계산 | 상수 시간 소요 |
-| HIGH | PER-3 | flattenLogsForTable 내 spread 남용 | soil-script.js:3992-4001 | 메모리 사용량 증가 | 500MB+ (1000행) |
-| HIGH | PER-4 | renderPageNumbers 전체 버튼 DOM 재생성 | soil-script.js:4320-4368 | 페이지당 10-50개 버튼 재생성 | 200-500ms |
-| MEDIUM | PER-5 | switchView 불필요한 renderLogs 호출 | soil-script.js:187-191 | 데이터 변경 없이 리렌더 | 중복 작업 |
+| 우선순위 | ID | 이슈 | 상태 (2026-02-20) |
+|----------|-----|------|-------------------|
+| ~~P0~~ | PER-1 | renderLogs 전체 DOM 재생성 | **해결됨** — DocumentFragment 적용 (soil:2620, pesticide:1234) |
+| ~~P0~~ | PER-2 | goToPage마다 flattenLogsForTable 재실행 | **해결됨** — goToPage()가 renderCurrentPage()만 호출, flatten 재실행 안 함 |
+| ~~HIGH~~ | PER-3 | flattenLogsForTable 내 spread 남용 | **경미** — spread는 1행 단위로만 적용, 대규모 배열 복사 아님 |
+| ~~HIGH~~ | PER-4 | renderPageNumbers 전체 버튼 DOM 재생성 | **해결됨** — DocumentFragment 적용 (soil:2799, pesticide:1456) |
+| ~~MEDIUM~~ | PER-5 | switchView 불필요한 renderLogs 호출 | **해결됨 (2026-02-20)** — dirty flag 패턴 적용 |
 
 **근거:**
 
@@ -532,21 +521,21 @@ const flatArray = [
 
 ### 5.2 데이터 로딩 병목 (P1 - 1주 내 해결)
 
-| 우선순위 | ID | 이슈 | 파일 | 영향 |
-|----------|-----|------|------|------|
-| P1 | PER-6 | hasChanges JSON.stringify 이중 비교 | BaseSampleManager.js:445-447 | ~2MB 문자열 × 2 생성 |
-| HIGH | PER-7 | saveLogs 매 저장마다 전체 직렬화 | soil-script.js:3884+ | 15곳+ 호출, 각 ~1MB 직렬화 |
-| HIGH | PER-8 | loadYearData 이중 구현 | soil-script.js:373 + BaseSampleManager.js:264 | 동일 로직 중복 |
-| MEDIUM | PER-9 | 연도 전환 시 Firebase 전체 재조회 | soil-script.js:373-431 | 캐시 무시 |
+| 우선순위 | ID | 이슈 | 상태 (2026-02-20) |
+|----------|-----|------|-------------------|
+| ~~P1~~ | PER-6 | hasChanges JSON.stringify 이중 비교 | **해결됨** — length+id+updatedAt 비교로 최적화 (BaseSampleManager:477-487) |
+| HIGH | PER-7 | saveLogs 매 저장마다 전체 직렬화 | **수용** — localStorage 저장 시 JSON.stringify 불가피 |
+| ~~HIGH~~ | PER-8 | loadYearData 이중 구현 | **해결됨** — BaseSampleManager 통합, 5개 스크립트 모두 상속 |
+| ~~MEDIUM~~ | PER-9 | 연도 전환 시 Firebase 전체 재조회 | **해결됨 (2026-02-20)** — 연도별 Firebase 캐시 적용 |
 
 ### 5.3 Electron/번들 병목
 
-| 우선순위 | ID | 이슈 | 파일 | 영향 |
-|----------|-----|------|------|------|
-| HIGH | PER-10 | validateFilePath 동기 I/O | index.js:104-116 | 최대 8회 realpath 호출 |
-| HIGH | PER-11 | firebase npm v12 + CDN v10.7.1 이중화 | package.json:28 | 설치 파일 ~50MB 증가 |
-| HIGH | PER-12 | Tailwind CDN 런타임 JIT | index.html:14 | 매 페이지 CSS 컴파일 |
-| MEDIUM | PER-13 | Firebase SDK 3파일 순차 로드 | index.html:1095-1097 | 렌더 블로킹 |
+| 우선순위 | ID | 이슈 | 상태 (2026-02-20) |
+|----------|-----|------|-------------------|
+| ~~HIGH~~ | PER-10 | validateFilePath 동기 I/O | **해결됨** — async + fs.promises.realpath() 비동기 전환 (index.js:67,136) |
+| ~~HIGH~~ | PER-11 | firebase npm v12 + CDN v10.7.1 이중화 | **해결됨** — CDN 스크립트 제거, npm v12만 사용 |
+| ~~HIGH~~ | PER-12 | Tailwind CDN 런타임 JIT | **해결됨** — 빌드 타임 CSS 전환 (tailwind-output.css) |
+| ~~MEDIUM~~ | PER-13 | Firebase SDK 3파일 순차 로드 | **해결됨** — Vite entry 파일 번들링으로 통합 |
 
 **분석:**
 
