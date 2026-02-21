@@ -7,7 +7,7 @@
     <title>설정 - 시료 접수 대장</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap"
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Inter:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="../shared/tailwind-output.css">
     <style>
@@ -23,8 +23,8 @@
         }
 
         body {
-            font-family: 'Noto Sans KR', sans-serif;
-            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #f0fdf4 100%);
+            font-family: 'Inter', 'Noto Sans KR', sans-serif;
+            background: linear-gradient(135deg, #FAF8F5 0%, #F5F3EF 50%, #FAF8F5 100%);
             min-height: 100%;
             padding: 2rem;
             overflow-y: auto;
@@ -38,16 +38,18 @@
         .settings-card {
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
-            border-radius: 16px;
+            border-radius: 20px;
             padding: 2rem;
             margin-bottom: 1.5rem;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            box-shadow: 0 4px 20px rgba(60, 53, 48, 0.06);
+            border: 1.5px solid #E8E4DF;
         }
 
         .settings-card h2 {
             font-size: 1.25rem;
             font-weight: 600;
-            color: #1e293b;
+            font-family: 'Fraunces', 'Noto Sans KR', serif;
+            color: #3C3530;
             margin-bottom: 1rem;
             display: flex;
             align-items: center;
@@ -66,23 +68,24 @@
             display: block;
             font-size: 0.875rem;
             font-weight: 500;
-            color: #475569;
+            color: #6B6460;
             margin-bottom: 0.5rem;
         }
 
         .form-group input {
             width: 100%;
             padding: 0.75rem 1rem;
-            border: 2px solid #e2e8f0;
+            border: 1.5px solid #E8E4DF;
             border-radius: 8px;
             font-size: 0.875rem;
             transition: all 0.2s ease;
+            background: #FAFAF9;
         }
 
         .form-group input:focus {
             outline: none;
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+            border-color: #7C9082;
+            box-shadow: 0 0 0 3px rgba(124, 144, 130, 0.12);
         }
 
         .form-group input::placeholder {
@@ -104,23 +107,25 @@
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            background: #7C9082;
             color: white;
         }
 
         .btn-primary:hover {
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+            background: #6B7D72;
+            box-shadow: 0 4px 12px rgba(124, 144, 130, 0.4);
         }
 
         .btn-success {
-            background: linear-gradient(135deg, #22c55e, #16a34a);
+            background: #7C9082;
             color: white;
         }
 
         .btn-success:hover {
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
+            background: #6B7D72;
+            box-shadow: 0 4px 12px rgba(124, 144, 130, 0.4);
         }
 
         .btn-warning {
@@ -209,7 +214,7 @@
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
-            color: #64748b;
+            color: #78716C;
             text-decoration: none;
             font-size: 0.875rem;
             margin-bottom: 1.5rem;
@@ -217,7 +222,7 @@
         }
 
         .back-link:hover {
-            color: #3b82f6;
+            color: #7C9082;
         }
 
         .help-text {
@@ -253,51 +258,52 @@
 
         /* 다크 모드 */
         [data-theme="dark"] body {
-            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0c4a6e 100%);
+            background: linear-gradient(135deg, #1C1917 0%, #292524 50%, #1C1917 100%);
         }
 
         [data-theme="dark"] .settings-card {
-            background: rgba(30, 41, 59, 0.95);
+            background: rgba(41, 37, 36, 0.95);
+            border-color: #57534E;
         }
 
         [data-theme="dark"] .settings-card h2 {
-            color: #f1f5f9;
+            color: #E7E5E4;
         }
 
         [data-theme="dark"] .form-group label {
-            color: #94a3b8;
+            color: #A8A29E;
         }
 
         [data-theme="dark"] .form-group input {
-            background: #1e293b;
-            border-color: #334155;
-            color: #f1f5f9;
+            background: #1C1917;
+            border-color: #57534E;
+            color: #E7E5E4;
         }
 
         [data-theme="dark"] .form-group input:focus {
-            border-color: #60a5fa;
+            border-color: #7C9082;
         }
 
         [data-theme="dark"] .migration-item {
-            background: #1e293b;
-            border-color: #334155;
+            background: #292524;
+            border-color: #57534E;
         }
 
         [data-theme="dark"] .migration-item-name {
-            color: #f1f5f9;
+            color: #E7E5E4;
         }
 
         [data-theme="dark"] .back-link {
-            color: #94a3b8;
+            color: #A8A29E;
         }
 
         /* 다크 모드 - 확장 */
         [data-theme="dark"] h1 {
-            color: #f1f5f9 !important;
+            color: #E7E5E4 !important;
         }
 
         [data-theme="dark"] .settings-card h3 {
-            color: #cbd5e1 !important;
+            color: #D6D3D1 !important;
         }
 
         /* 알림 박스 */
@@ -358,46 +364,46 @@
         /* 상태 정보 패널 (인라인 스타일 오버라이드) */
         [data-theme="dark"] #cacheStatusInfo,
         [data-theme="dark"] #networkAccessSection div[style*="background: #f8fafc"] {
-            background: #1e293b !important;
-            border-color: #334155 !important;
+            background: #292524 !important;
+            border-color: #57534E !important;
         }
 
         /* 정보 패널 내부 텍스트 */
         [data-theme="dark"] #cacheStatusInfo div[style*="color: #64748b"],
         [data-theme="dark"] #networkAccessSection div[style*="color: #64748b"] {
-            color: #94a3b8 !important;
+            color: #A8A29E !important;
         }
 
         /* 구분선 */
         [data-theme="dark"] div[style*="border-top: 1px solid #e2e8f0"] {
-            border-color: #334155 !important;
+            border-color: #57534E !important;
         }
 
         /* 상태 배지 */
         [data-theme="dark"] .status-badge.disconnected {
-            background: #422006 !important;
-            color: #fcd34d !important;
+            background: #3D2B1F !important;
+            color: #D4A96A !important;
         }
 
         [data-theme="dark"] .status-badge.connected {
-            background: #052e16 !important;
-            color: #4ade80 !important;
+            background: #1E2B22 !important;
+            color: #A8B5A2 !important;
         }
 
         [data-theme="dark"] .status-badge.error {
-            background: #450a0a !important;
-            color: #fca5a5 !important;
+            background: #2D1515 !important;
+            color: #F4A4A4 !important;
         }
 
         /* 마이그레이션 항목 카운트 */
         [data-theme="dark"] .migration-item-count {
-            color: #94a3b8 !important;
+            color: #A8A29E !important;
         }
 
         /* 삭제 버튼 */
         [data-theme="dark"] #deleteAuthFileBtn {
-            background: #450a0a !important;
-            color: #fca5a5 !important;
+            background: #2D1515 !important;
+            color: #F4A4A4 !important;
         }
     </style>
 </head>
@@ -408,7 +414,7 @@
             ← 메인으로 돌아가기
         </a>
 
-        <h1 style="font-size: 2rem; font-weight: 700; color: #1e293b; margin-bottom: 2rem;">
+        <h1 style="font-size: 2rem; font-weight: 600; font-family: 'Fraunces', 'Noto Sans KR', serif; color: #3C3530; margin-bottom: 2rem;">
             ⚙️ 설정
         </h1>
 

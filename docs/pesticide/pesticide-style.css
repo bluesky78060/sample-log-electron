@@ -16,105 +16,105 @@
    ======================================== */
 
 .pesticide-navbar {
-    background: var(--pesticide-gradient);
-    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.15);
+    background: linear-gradient(135deg, #f8f5f0 0%, #FAF8F5 100%);
+    border-bottom: 1px solid #ddd5ca;
 }
 
-/* 잔류농약 네비바: 라이트 모드에서도 어두운 배경이므로 밝은 색 아이콘 유지 */
+/* 잔류농약 네비바 뒤로가기 버튼 */
 .pesticide-navbar .back-btn {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.1);
-    color: rgba(255, 255, 255, 0.7);
+    background: white;
+    border-color: #E8E4DF;
+    color: #2D2D2D;
 }
 
 .pesticide-navbar .back-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-    color: white;
+    background: #F5F3EF;
+    color: #7C9082;
 }
 
 .pesticide-navbar .action-btn-icon.reset {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.15);
-    color: rgba(255, 255, 255, 0.7);
+    background: rgba(124, 144, 130, 0.08);
+    border-color: #E8E4DF;
+    color: #5A5A5A;
 }
 
 .pesticide-navbar .action-btn-icon.reset:hover {
-    background: rgba(255, 255, 255, 0.15);
-    color: white;
+    background: #F5F3EF;
+    color: #7C9082;
 }
 
 .pesticide-navbar .util-btn {
-    color: rgba(255, 255, 255, 0.6);
+    color: #5A5A5A;
 }
 
 .pesticide-navbar .util-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
+    background: #F5F3EF;
+    color: #2D2D2D;
 }
 
 .pesticide-navbar .navbar-divider {
-    background: rgba(255, 255, 255, 0.15);
+    background: #E8E4DF;
 }
 
 .pesticide-navbar .autosave-folder-btn {
-    color: rgba(255, 255, 255, 0.7);
+    color: #5A5A5A;
 }
 
 .pesticide-navbar .autosave-folder-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: #F5F3EF;
 }
 
 .pesticide-navbar .brand-icon {
-    font-size: 1.3rem;
+    font-size: 1.15rem;
 }
 
 .pesticide-navbar .brand-text {
     font-weight: 600;
-    color: white;
+    color: #2D2D2D;
 }
 
 .pesticide-navbar .dropdown-arrow {
-    color: rgba(255, 255, 255, 0.9);
+    color: #5A5A5A;
 }
 
 .pesticide-navbar .nav-btn {
     background: transparent;
-    color: white;
-    border-radius: 8px;
+    color: #2D2D2D;
     transition: all 0.2s ease;
 }
 
 .pesticide-navbar .nav-btn:hover {
-    background: rgba(255, 255, 255, 0.15);
+    background: #F5F3EF;
 }
 
 .pesticide-navbar .nav-btn.active {
-    background: rgba(255, 255, 255, 0.25);
+    background: #7C9082;
+    color: white;
     font-weight: 600;
 }
 
 .pesticide-navbar .action-btn-icon {
-    background: rgba(255, 255, 255, 0.2);
-    color: white;
-    border-radius: 8px;
+    background: rgba(124, 144, 130, 0.08);
+    color: #2D2D2D;
     transition: all 0.2s ease;
 }
 
 .pesticide-navbar .action-btn-icon:hover {
-    background: rgba(255, 255, 255, 0.3);
+    background: #F5F3EF;
     transform: scale(1.05);
 }
 
 .pesticide-navbar .action-btn-icon.submit {
-    background: rgba(255, 255, 255, 0.25);
+    background: #7C9082;
+    color: white;
 }
 
 .pesticide-navbar .action-btn-icon.submit:hover {
-    background: rgba(255, 255, 255, 0.35);
+    background: #6A7D70;
 }
 
 .pesticide-navbar .navbar-divider {
-    background: rgba(255, 255, 255, 0.2);
+    background: #E8E4DF;
 }
 
 /* ========================================
@@ -133,8 +133,14 @@
 .pesticide-navbar ~ .main-content input:focus,
 .pesticide-navbar ~ .main-content select:focus,
 .pesticide-navbar ~ .main-content textarea:focus {
-    border-color: var(--pesticide-primary);
-    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+    border-color: #7C9082;
+    box-shadow: 0 0 0 3px rgba(124, 144, 130, 0.12);
+}
+
+/* 폼 카드 헤더 잔류농약 테마 */
+.pesticide-navbar ~ .main-content .form-card .card-header {
+    background: linear-gradient(135deg, #f8f5f0 0%, #FAF8F5 100%);
+    border-bottom: 1px solid #ddd5ca;
 }
 
 .pesticide-navbar ~ .main-content input[type="checkbox"]:checked {
@@ -657,32 +663,33 @@
 
 /* 다크 모드 네비게이션 바 */
 [data-theme="dark"] .pesticide-navbar {
-    background: linear-gradient(135deg, #3b0764 0%, #1e1b4b 100%);
+    background: rgba(41, 37, 36, 0.95);
+    border-bottom: 1px solid rgba(124, 144, 130, 0.2);
 }
 
 [data-theme="dark"] .pesticide-navbar .brand-text {
-    color: #e9d5ff;
+    color: #D6D3D1;
 }
 
 [data-theme="dark"] .back-btn {
-    background: rgba(139, 92, 246, 0.15);
-    color: #e9d5ff;
-    border-color: rgba(139, 92, 246, 0.3);
+    background: rgba(124, 144, 130, 0.1);
+    color: #D6D3D1;
+    border-color: rgba(124, 144, 130, 0.25);
 }
 
 [data-theme="dark"] .back-btn:hover {
-    background: var(--pesticide-primary);
-    color: white;
+    background: rgba(124, 144, 130, 0.2);
+    color: #7C9082;
 }
 
 /* 다크 모드 카드 헤더 */
 [data-theme="dark"] .pesticide-navbar ~ .main-content .form-card .card-header {
-    background: linear-gradient(135deg, rgba(59, 7, 100, 0.95) 0%, rgba(30, 27, 75, 0.95) 100%);
-    border-bottom-color: rgba(139, 92, 246, 0.2);
+    background: rgba(41, 37, 36, 0.8);
+    border-bottom-color: rgba(124, 144, 130, 0.2);
 }
 
 [data-theme="dark"] .pesticide-navbar ~ .main-content .form-card .card-header h3 {
-    color: #e9d5ff;
+    color: #D6D3D1;
 }
 
 /* 다크 모드 년도 선택 */
@@ -714,7 +721,7 @@
 
 [data-theme="dark"] .year-select option,
 [data-theme="dark"] .list-year-select option {
-    background-color: #1a1a20 !important;
+    background-color: #2a2a30 !important;
     color: #e5e7eb !important;
 }
 
@@ -798,14 +805,14 @@
     background-color: rgba(30, 20, 50, 0.95) !important;
 }
 
-/* 다크 모드 카드 헤더 */
+/* 다크 모드 카드 헤더 (강제 적용) */
 [data-theme="dark"] .pesticide-navbar ~ .main-content .form-card .card-header {
-    background: linear-gradient(135deg, rgba(59, 7, 100, 0.95) 0%, rgba(30, 20, 50, 0.95) 100%) !important;
-    border-bottom-color: rgba(168, 85, 247, 0.3) !important;
+    background: rgba(41, 37, 36, 0.8) !important;
+    border-bottom-color: rgba(124, 144, 130, 0.2) !important;
 }
 
 [data-theme="dark"] .pesticide-navbar ~ .main-content .form-card .card-header h3 {
-    color: #e9d5ff !important;
+    color: #D6D3D1 !important;
 }
 
 /* 다크 모드 라벨 */

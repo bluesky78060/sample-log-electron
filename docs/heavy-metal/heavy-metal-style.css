@@ -13,18 +13,18 @@
 
 /* 네비게이션 바 중금속 테마 */
 .heavy-metal-navbar {
-    background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
-    border-bottom: 2px solid var(--heavy-metal-primary-light);
+    background: linear-gradient(135deg, #f5f0f3 0%, #FAF8F5 100%);
+    border-bottom: 1px solid #ddd0d8;
 }
 
 .heavy-metal-navbar .brand-icon {
-    font-size: 1.5rem;
+    font-size: 1.15rem;
 }
 
 .heavy-metal-navbar .brand-text {
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     font-weight: 600;
-    color: var(--heavy-metal-primary-dark);
+    color: #2D2D2D;
     margin-left: 0.25rem;
 }
 
@@ -37,30 +37,29 @@
     height: 32px;
     border-radius: 8px;
     background: white;
-    color: var(--heavy-metal-primary-dark);
+    color: #2D2D2D;
     text-decoration: none;
     font-size: 1.25rem;
     font-weight: 600;
     margin-right: 0.5rem;
-    border: 1px solid var(--heavy-metal-primary-light);
+    border: 1px solid #E8E4DF;
     transition: all 0.2s ease;
 }
 
 .heavy-metal-navbar .back-btn:hover {
-    background: var(--heavy-metal-primary);
-    color: white;
-    border-color: var(--heavy-metal-primary);
+    background: #F5F3EF;
+    color: #7C9082;
 }
 
 /* 네비게이션 버튼 활성화 */
 .heavy-metal-navbar .nav-btn.active {
-    background: var(--heavy-metal-gradient);
+    background: #7C9082;
 }
 
 /* 폼 카드 헤더 중금속 테마 */
 .heavy-metal-navbar ~ .main-content .form-card .card-header {
-    background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
-    border-bottom: 1px solid var(--heavy-metal-primary-light);
+    background: linear-gradient(135deg, #f5f0f3 0%, #FAF8F5 100%);
+    border-bottom: 1px solid #ddd0d8;
 }
 
 .heavy-metal-navbar ~ .main-content .form-card .card-header h3 {
@@ -107,11 +106,11 @@
 
 /* 액션 버튼 중금속 테마 */
 .heavy-metal-navbar .action-btn-icon.submit {
-    background: var(--heavy-metal-gradient);
+    background: #7C9082;
 }
 
 .heavy-metal-navbar .action-btn-icon.submit:hover {
-    background: linear-gradient(135deg, #7C3AED, #6D28D9);
+    background: #6A7D70;
 }
 
 /* 검색 버튼 중금속 테마 */
@@ -169,8 +168,8 @@
 .heavy-metal-navbar ~ .main-content input:focus,
 .heavy-metal-navbar ~ .main-content select:focus,
 .heavy-metal-navbar ~ .main-content textarea:focus {
-    border-color: var(--heavy-metal-primary);
-    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+    border-color: #7C9082;
+    box-shadow: 0 0 0 3px rgba(124, 144, 130, 0.12);
 }
 
 /* 테이블 행 선택 중금속 테마 */
@@ -519,33 +518,33 @@
 
 /* 다크 모드 네비게이션 바 */
 [data-theme="dark"] .heavy-metal-navbar {
-    background: linear-gradient(135deg, #1e1b2e 0%, #0f0d1a 100%);
-    border-bottom-color: rgba(139, 92, 246, 0.3);
+    background: rgba(41, 37, 36, 0.95);
+    border-bottom: 1px solid rgba(124, 144, 130, 0.2);
 }
 
 [data-theme="dark"] .heavy-metal-navbar .brand-text {
-    color: #c4b5fd;
+    color: #D6D3D1;
 }
 
 [data-theme="dark"] .heavy-metal-navbar .back-btn {
-    background: rgba(139, 92, 246, 0.15);
-    color: #c4b5fd;
-    border-color: rgba(139, 92, 246, 0.3);
+    background: rgba(124, 144, 130, 0.1);
+    color: #D6D3D1;
+    border-color: rgba(124, 144, 130, 0.25);
 }
 
 [data-theme="dark"] .heavy-metal-navbar .back-btn:hover {
-    background: var(--heavy-metal-primary);
-    color: white;
+    background: rgba(124, 144, 130, 0.2);
+    color: #7C9082;
 }
 
 /* 다크 모드 카드 헤더 */
 [data-theme="dark"] .heavy-metal-navbar ~ .main-content .form-card .card-header {
-    background: linear-gradient(135deg, rgba(30, 27, 46, 0.95) 0%, rgba(15, 13, 26, 0.95) 100%);
-    border-bottom-color: rgba(139, 92, 246, 0.2);
+    background: rgba(41, 37, 36, 0.8);
+    border-bottom-color: rgba(124, 144, 130, 0.2);
 }
 
 [data-theme="dark"] .heavy-metal-navbar ~ .main-content .form-card .card-header h3 {
-    color: #c4b5fd;
+    color: #D6D3D1;
 }
 
 /* 다크 모드 분석항목 그리드 */

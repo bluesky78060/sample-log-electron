@@ -8,8 +8,8 @@
     <!-- 폰트 preconnect 및 preload로 성능 최적화 (bundle-defer-third-party) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap">
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Inter:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Inter:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap">
     <link rel="stylesheet" href="shared/tailwind-output.css">
     <style>
         * {
@@ -19,8 +19,8 @@
         }
 
         body {
-            font-family: 'Noto Sans KR', sans-serif;
-            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #f0fdf4 100%);
+            font-family: 'Inter', 'Noto Sans KR', sans-serif;
+            background: linear-gradient(135deg, #FAF8F5 0%, #F5F3EF 50%, #FAF8F5 100%);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
@@ -62,7 +62,7 @@
             position: absolute;
             width: 6px;
             height: 6px;
-            background: radial-gradient(circle, rgba(34, 197, 94, 0.4) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(124, 144, 130, 0.3) 0%, transparent 70%);
             border-radius: 50%;
             animation: float 15s infinite ease-in-out;
         }
@@ -135,16 +135,11 @@
 
         .header h1 {
             font-size: 3rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, #1e293b 0%, #22c55e 25%, #3b82f6 50%, #f59e0b 75%, #1e293b 100%);
-            background-size: 200% auto;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            animation: gradientFlow 4s ease-in-out infinite;
+            font-weight: 600;
+            font-family: 'Fraunces', 'Noto Sans KR', serif;
+            color: #3C3530;
             margin-bottom: 0.75rem;
             letter-spacing: -0.02em;
-            text-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
             position: relative;
         }
 
@@ -156,26 +151,15 @@
             transform: translateX(-50%);
             width: 60px;
             height: 3px;
-            background: linear-gradient(90deg, #22c55e, #3b82f6, #f59e0b);
+            background: linear-gradient(90deg, #7C9082, #A8B5A2);
             border-radius: 2px;
-            animation: lineWidth 2s ease-in-out infinite alternate;
-        }
-
-        @keyframes gradientFlow {
-            0%, 100% { background-position: 0% center; }
-            50% { background-position: 100% center; }
-        }
-
-        @keyframes lineWidth {
-            0% { width: 40px; opacity: 0.7; }
-            100% { width: 80px; opacity: 1; }
         }
 
         .header p {
             font-size: 1.1rem;
-            color: #64748b;
+            color: #78716C;
             margin-top: 1rem;
-            font-weight: 500;
+            font-weight: 400;
             letter-spacing: 0.02em;
         }
 
@@ -187,16 +171,16 @@
         }
 
         .sample-type-card {
-            background: rgba(255, 255, 255, 0.9);
+            background: rgba(255, 255, 255, 0.92);
             backdrop-filter: blur(10px);
             border-radius: 20px;
             padding: 2rem;
             text-align: center;
             text-decoration: none;
             color: inherit;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
             transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            border: 2px solid transparent;
+            border: 1.5px solid #E8E4DF;
             position: relative;
             overflow: hidden;
             /* 스태거드 페이드인 */
@@ -291,18 +275,19 @@
         .card-title {
             font-size: 1.5rem;
             font-weight: 600;
-            color: #1e293b;
+            font-family: 'Fraunces', 'Noto Sans KR', serif;
+            color: #3C3530;
             margin-bottom: 0.5rem;
             transition: color 0.3s ease;
         }
 
         .sample-type-card:hover .card-title {
-            color: #0f172a;
+            color: #1C1917;
         }
 
         .card-description {
             font-size: 0.9rem;
-            color: #64748b;
+            color: #78716C;
             line-height: 1.5;
         }
 
@@ -319,12 +304,12 @@
         }
 
         .card-status.active {
-            background: #dcfce7;
-            color: #16a34a;
+            background: #E8F0E9;
+            color: #5C7A63;
         }
 
         .sample-type-card:hover .card-status.active {
-            background: #22c55e;
+            background: #7C9082;
             color: white;
         }
 
@@ -350,7 +335,7 @@
 
         .footer {
             text-align: center;
-            color: #94a3b8;
+            color: #A8A29E;
             font-size: 0.875rem;
             animation: fadeIn 1s ease-out 0.8s both;
         }
@@ -361,7 +346,7 @@
         }
 
         .footer a {
-            color: #3B82F6;
+            color: #7C9082;
             text-decoration: none;
         }
 
@@ -386,10 +371,10 @@
             justify-content: flex-end;
             align-items: center;
             padding: 0 1.5rem;
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(250, 248, 245, 0.97);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
-            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 1px 4px rgba(60, 53, 48, 0.06);
             z-index: 1000;
             animation: fadeIn 0.6s ease-out;
         }
@@ -400,9 +385,9 @@
             gap: 0.75rem;
         }
 
-        /* 동기화 버튼 - 초록 필 */
+        /* 동기화 버튼 - sage green 필 */
         .sync-btn {
-            background: #22c55e;
+            background: #7C9082;
             color: white;
             border-radius: 100px;
             padding: 6px 16px;
@@ -413,14 +398,14 @@
             gap: 6px;
             font-size: 0.85rem;
             font-weight: 500;
-            font-family: 'Noto Sans KR', sans-serif;
+            font-family: 'Inter', 'Noto Sans KR', sans-serif;
             transition: all 0.2s ease;
-            box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
+            box-shadow: 0 2px 8px rgba(124, 144, 130, 0.3);
         }
 
         .sync-btn:hover {
-            background: #16a34a;
-            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
+            background: #6B7D72;
+            box-shadow: 0 4px 12px rgba(124, 144, 130, 0.4);
             transform: translateY(-1px);
         }
 
@@ -434,8 +419,8 @@
         }
 
         .sync-btn.syncing {
-            background: #3b82f6;
-            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+            background: #8FA89C;
+            box-shadow: 0 2px 8px rgba(124, 144, 130, 0.3);
         }
 
         @keyframes spin {
@@ -443,26 +428,27 @@
             to { transform: rotate(360deg); }
         }
 
-        /* 아이콘 버튼 - 흰색 원형 */
+        /* 아이콘 버튼 - 크림 원형 */
         .top-bar-icon-btn {
             width: 36px;
             height: 36px;
             border-radius: 50%;
-            background: white;
-            border: none;
+            background: #F5F3EF;
+            border: 1px solid #E8E4DF;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 1px 3px rgba(60, 53, 48, 0.05);
             transition: all 0.2s ease;
             font-size: 1.1rem;
             text-decoration: none;
-            color: #64748b;
+            color: #78716C;
         }
 
         .top-bar-icon-btn:hover {
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            background: #EDE8E3;
+            box-shadow: 0 3px 10px rgba(60, 53, 48, 0.1);
             transform: translateY(-1px);
         }
 
@@ -505,18 +491,45 @@
         }
 
         .theme-toggle-btn.dark {
-            background: #6366f1;
+            background: #7C9082;
         }
 
         .theme-icon {
-            color: #64748b;
+            color: #78716C;
             transition: opacity 0.3s ease;
         }
 
-        /* 동기화 버튼 tooltip (상단 바 버전) */
-        .sync-btn .tooltip,
-        .top-bar-icon-btn .tooltip {
-            display: none;
+        /* 아이콘 버튼 tooltip */
+        .top-bar-icon-btn {
+            position: relative;
+        }
+
+        .top-bar-icon-btn .btn-tooltip {
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%) translateY(8px);
+            background: #44403C;
+            color: #FAF8F5;
+            font-size: 0.7rem;
+            font-weight: 500;
+            padding: 3px 8px;
+            border-radius: 6px;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            z-index: 1001;
+        }
+
+        .top-bar-icon-btn:hover .btn-tooltip {
+            opacity: 1;
+            transform: translateX(-50%) translateY(4px);
+        }
+
+        [data-theme="dark"] .top-bar-icon-btn .btn-tooltip {
+            background: #D6D3D1;
+            color: #1C1917;
         }
 
         /* 반응형 조정 */
@@ -531,7 +544,7 @@
 
         /* 다크 모드 스타일 */
         [data-theme="dark"] body {
-            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0c4a6e 100%);
+            background: linear-gradient(135deg, #1C1917 0%, #292524 50%, #1C1917 100%);
         }
 
         [data-theme="dark"] body::before {
@@ -539,31 +552,28 @@
         }
 
         [data-theme="dark"] .particle {
-            background: radial-gradient(circle, rgba(129, 140, 248, 0.4) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(124, 144, 130, 0.35) 0%, transparent 70%);
         }
 
         [data-theme="dark"] .header h1 {
-            background: linear-gradient(135deg, #f1f5f9 0%, #4ade80 25%, #60a5fa 50%, #fbbf24 75%, #f1f5f9 100%);
-            background-size: 200% auto;
-            -webkit-background-clip: text;
-            background-clip: text;
+            color: #E7E5E4;
         }
 
         [data-theme="dark"] .header h1::after {
-            background: linear-gradient(90deg, #4ade80, #60a5fa, #fbbf24);
+            background: linear-gradient(90deg, #7C9082, #A8B5A2);
         }
 
         [data-theme="dark"] .header p {
-            color: #94a3b8;
+            color: #A8A29E;
         }
 
         [data-theme="dark"] .sample-type-card {
-            background: rgba(30, 41, 59, 0.9);
-            border-color: rgba(148, 163, 184, 0.2);
+            background: rgba(41, 37, 36, 0.92);
+            border-color: #57534E;
         }
 
         [data-theme="dark"] .sample-type-card::after {
-            background: radial-gradient(circle, rgba(99, 102, 241, 0.3) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(124, 144, 130, 0.2) 0%, transparent 70%);
         }
 
         [data-theme="dark"] .sample-type-card:hover {
@@ -571,67 +581,68 @@
         }
 
         [data-theme="dark"] .card-title {
-            color: #f1f5f9;
+            color: #E7E5E4;
         }
 
         [data-theme="dark"] .sample-type-card:hover .card-title {
-            color: white;
+            color: #FAF8F5;
         }
 
         [data-theme="dark"] .card-description {
-            color: #94a3b8;
+            color: #A8A29E;
         }
 
         [data-theme="dark"] .card-status.active {
-            background: rgba(74, 222, 128, 0.15);
-            color: #4ade80;
+            background: rgba(124, 144, 130, 0.2);
+            color: #A8B5A2;
         }
 
         [data-theme="dark"] .sample-type-card:hover .card-status.active {
-            background: #22c55e;
+            background: #7C9082;
             color: white;
         }
 
         [data-theme="dark"] .footer {
-            color: #64748b;
+            color: #78716C;
         }
 
         [data-theme="dark"] .version-info {
-            color: #475569;
+            color: #57534E;
         }
 
         [data-theme="dark"] .top-bar {
-            background: rgba(15, 23, 42, 0.95);
+            background: rgba(28, 25, 23, 0.97);
             box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
         }
 
         [data-theme="dark"] .top-bar-icon-btn {
-            background: rgba(30, 41, 59, 0.9);
-            color: #94a3b8;
+            background: rgba(41, 37, 36, 0.9);
+            color: #A8A29E;
+            border-color: #57534E;
             box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
         }
 
         [data-theme="dark"] .top-bar-icon-btn:hover {
-            background: rgba(51, 65, 85, 0.9);
+            background: rgba(68, 64, 60, 0.9);
             box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
         }
 
         [data-theme="dark"] .sync-btn {
-            background: #22c55e;
-            box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
+            background: #7C9082;
+            box-shadow: 0 2px 8px rgba(124, 144, 130, 0.3);
         }
 
         [data-theme="dark"] .sync-btn:hover {
-            background: #16a34a;
+            background: #6B7D72;
         }
 
         [data-theme="dark"] .sync-btn.syncing {
-            background: #3b82f6;
-            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+            background: #8FA89C;
+            box-shadow: 0 2px 8px rgba(124, 144, 130, 0.3);
         }
 
         [data-theme="dark"] .theme-icon {
-            color: #94a3b8;
+            color: #A8A29E;
         }
 
         /* 클라우드 동기화 상태 */
@@ -755,7 +766,7 @@
         }
 
         .sync-result-count.success {
-            color: #22c55e;
+            color: #7C9082;
         }
 
         .sync-result-count.error {
@@ -765,7 +776,7 @@
         .sync-progress {
             margin-bottom: 1rem;
             padding: 1rem;
-            background: linear-gradient(135deg, #3b82f620, #8b5cf620);
+            background: linear-gradient(135deg, rgba(124, 144, 130, 0.12), rgba(168, 181, 162, 0.12));
             border-radius: 8px;
         }
 
@@ -794,7 +805,7 @@
 
         .sync-progress-fill {
             height: 100%;
-            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            background: linear-gradient(90deg, #7C9082, #A8B5A2);
             border-radius: 4px;
             transition: width 0.3s ease;
             width: 0%;
@@ -817,7 +828,7 @@
 
         .sync-modal-btn {
             padding: 0.75rem 2rem;
-            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            background: #7C9082;
             color: white;
             border: none;
             border-radius: 8px;
@@ -829,7 +840,7 @@
 
         .sync-modal-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+            box-shadow: 0 4px 15px rgba(124, 144, 130, 0.4);
         }
     </style>
 </head>
@@ -856,14 +867,17 @@
                 <svg class="sync-btn-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>
                 <span class="sync-btn-label">동기화</span>
             </button>
-            <a href="settings/index.html" class="top-bar-icon-btn" title="설정">
+            <a href="settings/index.html" class="top-bar-icon-btn">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+                <span class="btn-tooltip">설정</span>
             </a>
-            <a href="release/index.html" class="top-bar-icon-btn" title="릴리즈 노트">
+            <a href="release/index.html" class="top-bar-icon-btn">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4M12 16h4M8 11h.01M8 16h.01"/></svg>
+                <span class="btn-tooltip">릴리즈 노트</span>
             </a>
-            <a href="manual/index.html" class="top-bar-icon-btn" title="설명서">
+            <a href="manual/index.html" class="top-bar-icon-btn">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                <span class="btn-tooltip">설명서</span>
             </a>
             <div class="theme-toggle-wrapper">
                 <svg class="theme-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
@@ -943,7 +957,7 @@
 
         <div class="footer">
             <p id="orgNameDisplay">봉화군농업기술센터 안전성분석센터</p>
-            <p class="version-info" id="appVersion">v1.7.54</p>
+            <p class="version-info" id="appVersion">v1.7.55</p>
             <!-- 클라우드 동기화 상태 -->
             <p class="sync-status" id="syncStatus" style="display: none;">
                 <span class="sync-icon">☁️</span>

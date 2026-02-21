@@ -13,18 +13,18 @@
 
 /* 네비게이션 바 가축분뇨퇴비 테마 */
 .compost-navbar {
-    background: linear-gradient(135deg, #fefce8 0%, #fef3c7 100%);
-    border-bottom: 2px solid var(--compost-primary-light);
+    background: linear-gradient(135deg, #f7f5f0 0%, #FAF8F5 100%);
+    border-bottom: 1px solid #ddd8cf;
 }
 
 .compost-navbar .brand-icon {
-    font-size: 1.5rem;
+    font-size: 1.15rem;
 }
 
 .compost-navbar .brand-text {
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     font-weight: 600;
-    color: var(--compost-primary-dark);
+    color: #2D2D2D;
     margin-left: 0.25rem;
 }
 
@@ -37,30 +37,29 @@
     height: 32px;
     border-radius: 8px;
     background: white;
-    color: var(--compost-primary-dark);
+    color: #2D2D2D;
     text-decoration: none;
     font-size: 1.25rem;
     font-weight: 600;
     margin-right: 0.5rem;
-    border: 1px solid var(--compost-primary-light);
+    border: 1px solid #E8E4DF;
     transition: all 0.2s ease;
 }
 
 .back-btn:hover {
-    background: var(--compost-primary);
-    color: white;
-    border-color: var(--compost-primary);
+    background: #F5F3EF;
+    color: #7C9082;
 }
 
 /* 네비게이션 버튼 활성화 */
 .compost-navbar .nav-btn.active {
-    background: var(--compost-gradient);
+    background: #7C9082;
 }
 
 /* 폼 카드 헤더 가축분뇨퇴비 테마 */
 .compost-navbar ~ .main-content .form-card .card-header {
-    background: linear-gradient(135deg, #fefce8 0%, #fef3c7 100%);
-    border-bottom: 1px solid var(--compost-primary-light);
+    background: linear-gradient(135deg, #f7f5f0 0%, #FAF8F5 100%);
+    border-bottom: 1px solid #ddd8cf;
 }
 
 .compost-navbar ~ .main-content .form-card .card-header h3 {
@@ -91,11 +90,11 @@
 
 /* 액션 버튼 가축분뇨퇴비 테마 */
 .compost-navbar .action-btn-icon.submit {
-    background: var(--compost-gradient);
+    background: #7C9082;
 }
 
 .compost-navbar .action-btn-icon.submit:hover {
-    background: linear-gradient(135deg, #854D0E, #713F12);
+    background: #6A7D70;
 }
 
 /* 검색 버튼 가축분뇨퇴비 테마 */
@@ -268,8 +267,8 @@
 .compost-navbar ~ .main-content input:focus,
 .compost-navbar ~ .main-content select:focus,
 .compost-navbar ~ .main-content textarea:focus {
-    border-color: var(--compost-primary);
-    box-shadow: 0 0 0 3px rgba(161, 98, 7, 0.1);
+    border-color: #7C9082;
+    box-shadow: 0 0 0 3px rgba(124, 144, 130, 0.12);
 }
 
 /* 테이블 행 선택 가축분뇨퇴비 테마 */
@@ -860,33 +859,33 @@ div.animal-type-options label.checkbox-card.small div.checkbox-content {
 
 /* 다크 모드 네비게이션 바 */
 [data-theme="dark"] .compost-navbar {
-    background: linear-gradient(135deg, #451a03 0%, #292524 100%);
-    border-bottom-color: rgba(161, 98, 7, 0.3);
+    background: rgba(41, 37, 36, 0.95);
+    border-bottom: 1px solid rgba(124, 144, 130, 0.2);
 }
 
 [data-theme="dark"] .compost-navbar .brand-text {
-    color: #fcd34d;
+    color: #D6D3D1;
 }
 
 [data-theme="dark"] .back-btn {
-    background: rgba(161, 98, 7, 0.15);
-    color: #fcd34d;
-    border-color: rgba(161, 98, 7, 0.3);
+    background: rgba(124, 144, 130, 0.1);
+    color: #D6D3D1;
+    border-color: rgba(124, 144, 130, 0.25);
 }
 
 [data-theme="dark"] .back-btn:hover {
-    background: var(--compost-primary);
-    color: white;
+    background: rgba(124, 144, 130, 0.2);
+    color: #7C9082;
 }
 
 /* 다크 모드 카드 헤더 */
 [data-theme="dark"] .compost-navbar ~ .main-content .form-card .card-header {
-    background: linear-gradient(135deg, rgba(69, 26, 3, 0.95) 0%, rgba(41, 37, 36, 0.95) 100%);
-    border-bottom-color: rgba(161, 98, 7, 0.2);
+    background: rgba(41, 37, 36, 0.8);
+    border-bottom-color: rgba(124, 144, 130, 0.2);
 }
 
 [data-theme="dark"] .compost-navbar ~ .main-content .form-card .card-header h3 {
-    color: #fcd34d;
+    color: #D6D3D1;
 }
 
 /* 다크 모드 시료종류/축종 옵션 */
@@ -939,7 +938,7 @@ div.animal-type-options label.checkbox-card.small div.checkbox-content {
 
 [data-theme="dark"] .year-select option,
 [data-theme="dark"] .list-year-select option {
-    background-color: #1a1a20 !important;
+    background-color: #2a2a30 !important;
     color: #e5e7eb !important;
 }
 

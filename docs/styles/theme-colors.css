@@ -1,6 +1,6 @@
 /* 페이지별 테마 색상 (CSS 변수) */
 :root {
-  --color-primary: #3B82F6;  /* 기본: 파랑 */
+  --color-primary: #7C9082;  /* 기본: sage green */
 }
 
 [data-sample-type="soil"] {

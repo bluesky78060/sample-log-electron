@@ -1,5 +1,5 @@
 /**
- * @fileoverview 퇴·액비 성분검사 위탁서 스크립트
+ * @fileoverview 퇴·액비 부숙도 검사 위탁서 스크립트
  * CompostSampleManager - BaseSampleManager 상속
  */
 

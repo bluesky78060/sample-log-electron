@@ -91,18 +91,18 @@ td.col-zipcode.hidden {
 
 /* 네비게이션 바 물 테마 */
 .water-navbar {
-    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-    border-bottom: 2px solid var(--water-primary-light);
+    background: linear-gradient(135deg, #f0f4f8 0%, #FAF8F5 100%);
+    border-bottom: 1px solid #cdd8e3;
 }
 
 .water-navbar .brand-icon {
-    font-size: 1.5rem;
+    font-size: 1.15rem;
 }
 
 .water-navbar .brand-text {
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     font-weight: 600;
-    color: var(--water-primary-dark);
+    color: #2D2D2D;
     margin-left: 0.25rem;
 }
 
@@ -115,30 +115,29 @@ td.col-zipcode.hidden {
     height: 32px;
     border-radius: 8px;
     background: white;
-    color: var(--water-primary-dark);
+    color: #2D2D2D;
     text-decoration: none;
     font-size: 1.25rem;
     font-weight: 600;
     margin-right: 0.5rem;
-    border: 1px solid var(--water-primary-light);
+    border: 1px solid #E8E4DF;
     transition: all 0.2s ease;
 }
 
 .back-btn:hover {
-    background: var(--water-primary);
-    color: white;
-    border-color: var(--water-primary);
+    background: #F5F3EF;
+    color: #7C9082;
 }
 
 /* 네비게이션 버튼 활성화 */
 .water-navbar .nav-btn.active {
-    background: var(--water-gradient);
+    background: #7C9082;
 }
 
 /* 폼 카드 헤더 물 테마 */
 .water-navbar ~ .main-content .form-card .card-header {
-    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-    border-bottom: 1px solid var(--water-primary-light);
+    background: linear-gradient(135deg, #f0f4f8 0%, #FAF8F5 100%);
+    border-bottom: 1px solid #cdd8e3;
 }
 
 .water-navbar ~ .main-content .form-card .card-header h3 {
@@ -171,11 +170,11 @@ td.col-zipcode.hidden {
 
 /* 액션 버튼 물 테마 */
 .water-navbar .action-btn-icon.submit {
-    background: var(--water-gradient);
+    background: #7C9082;
 }
 
 .water-navbar .action-btn-icon.submit:hover {
-    background: linear-gradient(135deg, #2563EB, #1D4ED8);
+    background: #6A7D70;
 }
 
 /* 검색 버튼 물 테마 */
@@ -375,8 +374,8 @@ td.col-zipcode.hidden {
 .water-navbar ~ .main-content input:focus,
 .water-navbar ~ .main-content select:focus,
 .water-navbar ~ .main-content textarea:focus {
-    border-color: var(--water-primary);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: #7C9082;
+    box-shadow: 0 0 0 3px rgba(124, 144, 130, 0.12);
 }
 
 /* 테이블 행 선택 물 테마 */
@@ -786,33 +785,33 @@ textarea:focus {
 
 /* 다크 모드 네비게이션 바 */
 [data-theme="dark"] .water-navbar {
-    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-    border-bottom-color: rgba(59, 130, 246, 0.3);
+    background: rgba(41, 37, 36, 0.95);
+    border-bottom: 1px solid rgba(124, 144, 130, 0.2);
 }
 
 [data-theme="dark"] .water-navbar .brand-text {
-    color: #93c5fd;
+    color: #D6D3D1;
 }
 
 [data-theme="dark"] .back-btn {
-    background: rgba(59, 130, 246, 0.15);
-    color: #93c5fd;
-    border-color: rgba(59, 130, 246, 0.3);
+    background: rgba(124, 144, 130, 0.1);
+    color: #D6D3D1;
+    border-color: rgba(124, 144, 130, 0.25);
 }
 
 [data-theme="dark"] .back-btn:hover {
-    background: var(--water-primary);
-    color: white;
+    background: rgba(124, 144, 130, 0.2);
+    color: #7C9082;
 }
 
 /* 다크 모드 카드 헤더 */
 [data-theme="dark"] .water-navbar ~ .main-content .form-card .card-header {
-    background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%);
-    border-bottom-color: rgba(59, 130, 246, 0.2);
+    background: rgba(41, 37, 36, 0.8);
+    border-bottom-color: rgba(124, 144, 130, 0.2);
 }
 
 [data-theme="dark"] .water-navbar ~ .main-content .form-card .card-header h3 {
-    color: #93c5fd;
+    color: #D6D3D1;
 }
 
 /* 다크 모드 목적(용도) 옵션 */
@@ -1011,7 +1010,7 @@ textarea:focus {
 
 [data-theme="dark"] .year-select option,
 [data-theme="dark"] .list-year-select option {
-    background-color: #1a1a20 !important;
+    background-color: #2a2a30 !important;
     color: #e5e7eb !important;
 }
 

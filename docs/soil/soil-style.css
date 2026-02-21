@@ -13,18 +13,18 @@
 
 /* 네비게이션 바 토양 테마 */
 .soil-navbar {
-    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-    border-bottom: 2px solid var(--soil-primary-light);
+    background: linear-gradient(135deg, #f0f7f1 0%, #FAF8F5 100%);
+    border-bottom: 1px solid #d5e0d8;
 }
 
 .soil-navbar .brand-icon {
-    font-size: 1.5rem;
+    font-size: 1.15rem;
 }
 
 .soil-navbar .brand-text {
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     font-weight: 600;
-    color: var(--soil-primary-dark);
+    color: #2D2D2D;
     margin-left: 0.25rem;
 }
 
@@ -33,34 +33,33 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     border-radius: 8px;
     background: white;
-    color: var(--soil-primary-dark);
+    color: #2D2D2D;
     text-decoration: none;
-    font-size: 1.25rem;
+    font-size: 1rem;
     font-weight: 600;
-    margin-right: 0.5rem;
-    border: 1px solid var(--soil-primary-light);
+    margin-right: 0.35rem;
+    border: 1px solid #E8E4DF;
     transition: all 0.2s ease;
 }
 
 .back-btn:hover {
-    background: var(--soil-primary);
-    color: white;
-    border-color: var(--soil-primary);
+    background: #F5F3EF;
+    color: #7C9082;
 }
 
 /* 네비게이션 버튼 활성화 */
 .soil-navbar .nav-btn.active {
-    background: var(--soil-gradient);
+    background: #7C9082;
 }
 
 /* 폼 카드 헤더 토양 테마 */
 .soil-navbar ~ .main-content .form-card .card-header {
-    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-    border-bottom: 1px solid var(--soil-primary-light);
+    background: linear-gradient(135deg, #f0f7f1 0%, #FAF8F5 100%);
+    border-bottom: 1px solid #d5e0d8;
 }
 
 .soil-navbar ~ .main-content .form-card .card-header h3 {
@@ -93,11 +92,11 @@
 
 /* 액션 버튼 토양 테마 */
 .soil-navbar .action-btn-icon.submit {
-    background: var(--soil-gradient);
+    background: #7C9082;
 }
 
 .soil-navbar .action-btn-icon.submit:hover {
-    background: linear-gradient(135deg, #16A34A, #15803D);
+    background: #6A7D70;
 }
 
 /* 검색 버튼 토양 테마 */
@@ -161,8 +160,8 @@
 .soil-navbar ~ .main-content input:focus,
 .soil-navbar ~ .main-content select:focus,
 .soil-navbar ~ .main-content textarea:focus {
-    border-color: var(--soil-primary);
-    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+    border-color: #7C9082;
+    box-shadow: 0 0 0 3px rgba(124, 144, 130, 0.12);
 }
 
 /* 테이블 행 구분선 */
@@ -350,33 +349,33 @@ select#listYearSelect.list-year-select option {
 
 /* 다크 모드 네비게이션 바 */
 [data-theme="dark"] .soil-navbar {
-    background: linear-gradient(135deg, #14532d 0%, #052e16 100%);
-    border-bottom-color: rgba(34, 197, 94, 0.3);
+    background: rgba(41, 37, 36, 0.95);
+    border-bottom: 1px solid rgba(124, 144, 130, 0.2);
 }
 
 [data-theme="dark"] .soil-navbar .brand-text {
-    color: #86efac;
+    color: #D6D3D1;
 }
 
 [data-theme="dark"] .back-btn {
-    background: rgba(34, 197, 94, 0.15);
-    color: #86efac;
-    border-color: rgba(34, 197, 94, 0.3);
+    background: rgba(124, 144, 130, 0.1);
+    color: #D6D3D1;
+    border-color: rgba(124, 144, 130, 0.25);
 }
 
 [data-theme="dark"] .back-btn:hover {
-    background: var(--soil-primary);
-    color: white;
+    background: rgba(124, 144, 130, 0.2);
+    color: #7C9082;
 }
 
 /* 다크 모드 카드 헤더 */
 [data-theme="dark"] .soil-navbar ~ .main-content .form-card .card-header {
-    background: linear-gradient(135deg, rgba(20, 83, 45, 0.95) 0%, rgba(5, 46, 22, 0.95) 100%);
-    border-bottom-color: rgba(34, 197, 94, 0.2);
+    background: rgba(41, 37, 36, 0.8);
+    border-bottom-color: rgba(124, 144, 130, 0.2);
 }
 
 [data-theme="dark"] .soil-navbar ~ .main-content .form-card .card-header h3 {
-    color: #86efac;
+    color: #D6D3D1;
 }
 
 /* 다크 모드 년도 선택 - ID 선택자로 최우선 적용 */
@@ -408,7 +407,7 @@ select#listYearSelect.list-year-select option {
 
 [data-theme="dark"] select#yearSelect.year-select option,
 [data-theme="dark"] select#listYearSelect.list-year-select option {
-    background-color: #1a1a20 !important;
+    background-color: #2a2a30 !important;
     color: #e5e7eb !important;
 }
 
@@ -437,12 +436,12 @@ select#listYearSelect.list-year-select option {
 }
 
 [data-theme="dark"] select#purposeFilter.purpose-filter option {
-    background-color: #1a1a20 !important;
+    background-color: #2a2a30 !important;
     color: #e5e7eb !important;
 }
 
 [data-theme="dark"] select#purposeFilter.purpose-filter.has-filter {
-    background-color: rgba(124, 144, 130, 0.25) !important;
+    background-color: rgba(124, 144, 130, 0.2) !important;
     color: #a3b8a9 !important;
     border-color: #7C9082 !important;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23a3b8a9' d='M6 8L2 4h8z'/%3E%3C/svg%3E") !important;
