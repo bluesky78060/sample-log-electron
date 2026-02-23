@@ -1335,10 +1335,12 @@ class PesticideSampleManager extends window.BaseSampleManager {
             tdPurpose.textContent = row.purpose || '-';
             tr.appendChild(tdPurpose);
 
-            // Name
+            // Name (클릭 시 같은 이름 일괄 선택)
             const tdName = document.createElement('td');
             tdName.className = 'col-name';
+            tdName.dataset.name = row.name || '';
             tdName.textContent = safeName;
+            tdName.title = `"${safeName}" 클릭하면 같은 이름 일괄 선택`;
             tr.appendChild(tdName);
 
             // Zipcode (hidden)
@@ -2361,6 +2363,33 @@ class PesticideSampleManager extends window.BaseSampleManager {
                 this.updateSelectedCount();
             }
         });
+
+        // 성명 클릭 시 같은 이름 일괄 선택
+        if (this.tableBody) {
+            this.tableBody.addEventListener('click', (e) => {
+                const nameCell = e.target.closest('.col-name');
+                if (nameCell && nameCell.dataset.name) {
+                    const targetName = nameCell.dataset.name;
+                    const rowCheckboxes = this.tableBody.querySelectorAll('.row-checkbox');
+                    const targetCheckboxes = [];
+
+                    rowCheckboxes.forEach(cb => {
+                        const tr = cb.closest('tr');
+                        const nc = tr?.querySelector('.col-name');
+                        if (nc && nc.dataset.name === targetName) {
+                            targetCheckboxes.push(cb);
+                        }
+                    });
+
+                    if (targetCheckboxes.length === 0) return;
+                    const allChecked = targetCheckboxes.every(cb => cb.checked);
+                    targetCheckboxes.forEach(cb => { cb.checked = !allChecked; });
+
+                    this.updateSelectAllState();
+                    this.updateSelectedCount();
+                }
+            });
+        }
 
         window.getSelectedIds = () => this.getSelectedIds();
 

@@ -646,6 +646,9 @@
                 <h3>수정 및 삭제</h3>
                 <p>각 행의 <strong>수정</strong> 버튼을 클릭하면 접수 폼에 해당 데이터가 채워져 수정할 수 있습니다. <strong>삭제</strong> 버튼으로 개별 삭제하거나, 체크박스로 여러 건을 선택한 뒤 <strong>"선택 삭제"</strong>로 일괄 삭제할 수 있습니다.</p>
 
+                <h3>👆 성명 클릭 일괄 선택</h3>
+                <p>목록에서 <strong>성명을 클릭</strong>하면 같은 이름의 시료가 한꺼번에 선택됩니다. 한 의뢰인이 여러 건을 접수한 경우 빠르게 일괄 선택하여 삭제, 발송일자 입력, 라벨 인쇄 등을 할 수 있습니다.</p>
+
                 <div class="warning-box">
                     <h4>⚠️ 삭제 주의</h4>
                     <p>삭제한 데이터는 복구할 수 없습니다. 삭제 전에 JSON 저장이나 엑셀 내보내기로 백업해두는 것을 권장합니다.</p>
@@ -765,14 +768,26 @@
                 <p>Firebase 클라우드 동기화를 설정하면 여러 PC에서 같은 데이터를 사용할 수 있습니다. 인터넷이 연결되면 자동으로 데이터가 동기화됩니다.</p>
 
                 <h3>Firebase 설정하기</h3>
+
+                <!-- Firebase 설정 가이드 링크 카드 -->
+                <div style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border: 2px solid #93c5fd; border-radius: 16px; padding: 28px; margin: 25px 0; text-align: center;">
+                    <div style="font-size: 2.5rem; margin-bottom: 12px;">🔥</div>
+                    <h4 style="color: #1e40af; font-size: 1.2rem; margin-bottom: 8px;">Firebase 설정이 처음이신가요?</h4>
+                    <p style="color: #475569; margin-bottom: 18px; font-size: 0.95rem;">Google 계정 만들기부터 Firebase 프로젝트 생성, 인증 파일 만들기까지<br>초보자도 쉽게 따라할 수 있는 <strong>단계별 가이드</strong>를 준비했습니다.</p>
+                    <a href="firebase-setup.html" style="display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(135deg, #1e40af, #3b82f6); color: #fff; padding: 14px 32px; border-radius: 12px; text-decoration: none; font-weight: 600; font-size: 1rem; transition: all 0.3s; box-shadow: 0 4px 15px rgba(59,130,246,0.3);">
+                        📖 Firebase 설정 가이드 보기 →
+                    </a>
+                    <p style="color: #94a3b8; font-size: 0.8rem; margin-top: 12px; margin-bottom: 0;">소요 시간: 약 20~30분 | 난이도: 쉬움</p>
+                </div>
+
                 <div class="step-list">
-                    <h4>설정 순서</h4>
+                    <h4>이미 Firebase가 설정된 경우 (인증 파일 등록)</h4>
                     <ol>
                         <li>메인 화면에서 오른쪽 상단의 <strong>설정(톱니바퀴) 아이콘</strong>을 클릭합니다</li>
                         <li>설정 페이지의 <strong>"Firebase 인증 파일"</strong> 섹션에서 인증 파일을 등록합니다
                             <ul style="list-style: disc;">
                                 <li>"파일 선택" 버튼을 클릭하거나, 파일을 드래그 앤 드롭으로 올립니다</li>
-                                <li>인증 파일은 관리자에게 문의하세요</li>
+                                <li>인증 파일은 관리자에게 문의하거나, <a href="firebase-setup.html" style="color: #3b82f6;">Firebase 설정 가이드</a>를 따라 직접 만들 수 있습니다</li>
                             </ul>
                         </li>
                         <li>상태가 <strong style="color: #22c55e;">● 연결됨</strong>으로 표시되면 설정 완료입니다</li>

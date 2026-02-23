@@ -1456,3 +1456,17 @@ textarea:focus {
     border-color: rgba(252, 211, 77, 0.3);
     color: #fcd34d;
 }
+
+/* 성명 셀 - 일괄 선택 클릭 */
+.col-name {
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.15s;
+}
+.col-name:hover {
+    background-color: rgba(59, 130, 246, 0.08);
+    text-decoration: underline;
+}
+[data-theme="dark"] .col-name:hover {
+    background-color: rgba(96, 165, 250, 0.15);
+}

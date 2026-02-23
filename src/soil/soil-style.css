@@ -1213,3 +1213,37 @@ tr.farm-separator:hover {
 [data-theme="dark"] tr.farm-separator:hover {
     background: linear-gradient(to right, transparent, rgba(139, 92, 246, 0.2), transparent);
 }
+
+/* 성명 셀 - 일괄 선택 클릭 */
+.col-name {
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.15s;
+}
+.col-name:hover {
+    background-color: rgba(107, 74, 34, 0.08);
+    text-decoration: underline;
+}
+[data-theme="dark"] .col-name:hover {
+    background-color: rgba(139, 92, 246, 0.15);
+}
+
+/* 선택 카운트 배지 */
+.selected-count-badge {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 2px 8px;
+    background: #4a90d9;
+    color: white;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    animation: fadeIn 0.2s ease;
+}
+[data-theme="dark"] .selected-count-badge {
+    background: #7c5ce7;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.8); }
+    to { opacity: 1; transform: scale(1); }
+}

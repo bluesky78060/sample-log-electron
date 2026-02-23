@@ -562,12 +562,21 @@ class BaseSampleManager {
      */
     async performAutoSave() {
         try {
+            // 자동 저장 활성화 여부 확인
+            const enabledKey = `${this.moduleKey}AutoSaveEnabled`;
+            if (localStorage.getItem(enabledKey) !== 'true') return;
+
             const currentDataHash = this.hashData(this.sampleLogs);
 
             // 데이터가 변경된 경우만 저장
             if (currentDataHash !== this.lastSavedDataHash) {
-                const content = JSON.stringify(this.sampleLogs, null, 2);
-                const result = await this.FileAPI.saveAutoSave(content);
+                const content = JSON.stringify({
+                    version: '2.0',
+                    exportDate: new Date().toISOString(),
+                    totalRecords: this.sampleLogs.length,
+                    data: this.sampleLogs
+                }, null, 2);
+                const result = await this.FileAPI.autoSave(content);
 
                 if (result) {
                     this.lastSavedDataHash = currentDataHash;

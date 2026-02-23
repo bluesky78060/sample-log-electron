@@ -2340,12 +2340,51 @@ class SoilSampleManager extends window.BaseSampleManager {
 
     updateSelectedCount() {
         const checkedBoxes = this.tableBody.querySelectorAll('.row-checkbox:checked');
-        this.log(`${checkedBoxes.length}개 항목 선택됨`);
+        const count = checkedBoxes.length;
+
+        let badge = document.getElementById('selectedCountBadge');
+        if (count > 0) {
+            if (!badge) {
+                badge = document.createElement('span');
+                badge.id = 'selectedCountBadge';
+                badge.className = 'selected-count-badge';
+                const recordCount = document.getElementById('recordCount');
+                if (recordCount) {
+                    recordCount.parentNode.insertBefore(badge, recordCount.nextSibling);
+                }
+            }
+            badge.textContent = `${count}건 선택`;
+        } else if (badge) {
+            badge.remove();
+        }
+
+        this.log(`${count}개 항목 선택됨`);
     }
 
     getSelectedIds() {
         const checkedBoxes = this.tableBody.querySelectorAll('.row-checkbox:checked');
         return Array.from(checkedBoxes).map(cb => cb.dataset.id);
+    }
+
+    selectByName(name) {
+        const rowCheckboxes = this.tableBody.querySelectorAll('.row-checkbox');
+        const targetCheckboxes = [];
+
+        rowCheckboxes.forEach(cb => {
+            const tr = cb.closest('tr');
+            const nameCell = tr?.querySelector('.col-name');
+            if (nameCell && nameCell.dataset.name === name) {
+                targetCheckboxes.push(cb);
+            }
+        });
+
+        if (targetCheckboxes.length === 0) return;
+
+        const allChecked = targetCheckboxes.every(cb => cb.checked);
+        targetCheckboxes.forEach(cb => { cb.checked = !allChecked; });
+
+        this.updateSelectAllState();
+        this.updateSelectedCount();
     }
 
     // ========================================
@@ -2689,9 +2728,12 @@ class SoilSampleManager extends window.BaseSampleManager {
             tdPurpose.textContent = row._parcelPurpose || row.purpose || '-';
             tr.appendChild(tdPurpose);
 
-            // 성명
+            // 성명 (클릭 시 같은 이름 일괄 선택)
             const tdName = document.createElement('td');
+            tdName.className = 'col-name';
+            tdName.dataset.name = row.name;
             tdName.textContent = row.name;
+            tdName.title = `"${row.name}" 클릭하면 같은 이름 일괄 선택`;
             tr.appendChild(tdName);
 
             // 우편번호
@@ -3147,6 +3189,16 @@ class SoilSampleManager extends window.BaseSampleManager {
                 const rowCheckboxes = this.tableBody.querySelectorAll('.row-checkbox');
                 rowCheckboxes.forEach(cb => { cb.checked = isChecked; });
                 this.updateSelectedCount();
+            });
+        }
+
+        // 성명 클릭 시 같은 이름 일괄 선택
+        if (this.tableBody) {
+            this.tableBody.addEventListener('click', (e) => {
+                const nameCell = e.target.closest('.col-name');
+                if (nameCell && nameCell.dataset.name) {
+                    this.selectByName(nameCell.dataset.name);
+                }
             });
         }
 

@@ -213,9 +213,12 @@ class WaterSampleManager extends window.BaseSampleManager {
         tdBirthCorp.textContent = birthOrCorp;
         row.appendChild(tdBirthCorp);
 
-        // 8. Name
+        // 8. Name (클릭 시 같은 이름 일괄 선택)
         const tdName = document.createElement('td');
+        tdName.className = 'col-name';
+        tdName.dataset.name = log.name || '';
         tdName.textContent = safeName;
+        tdName.title = `"${safeName}" 클릭하면 같은 이름 일괄 선택`;
         row.appendChild(tdName);
 
         // 9. Zipcode (hidden)
@@ -1359,6 +1362,50 @@ class WaterSampleManager extends window.BaseSampleManager {
             selectAllCheckbox.addEventListener('change', () => {
                 const checkboxes = document.querySelectorAll('.row-checkbox');
                 checkboxes.forEach(cb => cb.checked = selectAllCheckbox.checked);
+            });
+        }
+
+        // 성명 클릭 시 같은 이름 일괄 선택
+        const tableBody = document.getElementById('tableBody') || document.querySelector('tbody');
+        if (tableBody) {
+            tableBody.addEventListener('click', (e) => {
+                const nameCell = e.target.closest('.col-name');
+                if (nameCell && nameCell.dataset.name) {
+                    const targetName = nameCell.dataset.name;
+                    const rowCheckboxes = tableBody.querySelectorAll('.row-checkbox');
+                    const targetCheckboxes = [];
+
+                    rowCheckboxes.forEach(cb => {
+                        const tr = cb.closest('tr');
+                        const nc = tr?.querySelector('.col-name');
+                        if (nc && nc.dataset.name === targetName) {
+                            targetCheckboxes.push(cb);
+                        }
+                    });
+
+                    if (targetCheckboxes.length === 0) return;
+                    const allChecked = targetCheckboxes.every(cb => cb.checked);
+                    targetCheckboxes.forEach(cb => { cb.checked = !allChecked; });
+
+                    if (selectAllCheckbox) {
+                        const allBoxes = tableBody.querySelectorAll('.row-checkbox');
+                        const checkedBoxes = tableBody.querySelectorAll('.row-checkbox:checked');
+                        selectAllCheckbox.checked = allBoxes.length > 0 && checkedBoxes.length === allBoxes.length;
+                        selectAllCheckbox.indeterminate = checkedBoxes.length > 0 && checkedBoxes.length < allBoxes.length;
+                    }
+                }
+            });
+
+            // 개별 체크박스 변경 시 전체 선택 상태 갱신
+            tableBody.addEventListener('change', (e) => {
+                if (e.target.classList.contains('row-checkbox')) {
+                    const allBoxes = tableBody.querySelectorAll('.row-checkbox');
+                    const checkedBoxes = tableBody.querySelectorAll('.row-checkbox:checked');
+                    if (selectAllCheckbox) {
+                        selectAllCheckbox.checked = allBoxes.length > 0 && checkedBoxes.length === allBoxes.length;
+                        selectAllCheckbox.indeterminate = checkedBoxes.length > 0 && checkedBoxes.length < allBoxes.length;
+                    }
+                }
             });
         }
 
