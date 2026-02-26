@@ -254,10 +254,12 @@
         .sample-type-card:hover.heavy-metal { border-color: #EF4444; box-shadow: 0 20px 50px rgba(239, 68, 68, 0.2); }
 
         .card-icon {
-            font-size: 3.5rem;
+            width: 80px;
+            height: 80px;
             margin-bottom: 1rem;
             display: inline-block;
             transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            object-fit: contain;
         }
 
         /* 아이콘 바운스 애니메이션 */
@@ -915,7 +917,7 @@
         <div class="sample-types">
             <!-- 토양 -->
             <a href="soil/index.html" class="sample-type-card soil">
-                <span class="card-icon">🌱</span>
+                <img class="card-icon" src="assets/icons/soil.svg" alt="토양">
                 <div class="card-title">토양</div>
                 <div class="card-description">논, 밭, 과수, 시설 토양 분석</div>
                 <span class="card-status active">● 사용 가능</span>
@@ -923,7 +925,7 @@
 
             <!-- 물 (수질분석) -->
             <a href="water/index.html" class="sample-type-card water">
-                <span class="card-icon">💧</span>
+                <img class="card-icon" src="assets/icons/water.svg" alt="수질분석">
                 <div class="card-title">수질분석</div>
                 <div class="card-description">지하수, 지표수 수질 분석</div>
                 <span class="card-status active">● 사용 가능</span>
@@ -931,7 +933,7 @@
 
             <!-- 잔류농약 -->
             <a href="pesticide/index.html" class="sample-type-card pesticide">
-                <span class="card-icon">🧪</span>
+                <img class="card-icon" src="assets/icons/pesticide.svg" alt="잔류농약">
                 <div class="card-title">잔류농약</div>
                 <div class="card-description">농산물 잔류농약 분석</div>
                 <span class="card-status active">● 사용 가능</span>
@@ -939,7 +941,7 @@
 
             <!-- 가축분뇨퇴비 -->
             <a href="compost/index.html" class="sample-type-card compost">
-                <span class="card-icon">🐄</span>
+                <img class="card-icon" src="assets/icons/compost.svg" alt="가축분뇨퇴비">
                 <div class="card-title">가축분뇨퇴비</div>
                 <div class="card-description">퇴비, 액비 부숙도 검사</div>
                 <span class="card-status active">● 사용 가능</span>
@@ -947,7 +949,7 @@
 
             <!-- 중금속 -->
             <a href="heavy-metal/index.html" class="sample-type-card heavy-metal">
-                <span class="card-icon">⚗️</span>
+                <img class="card-icon" src="assets/icons/heavy-metal.svg" alt="토양 중금속">
                 <div class="card-title">토양 중금속</div>
                 <div class="card-description">토양 중금속 분석</div>
                 <span class="card-status active">● 사용 가능</span>
