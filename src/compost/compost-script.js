@@ -194,6 +194,9 @@ class CompostSampleManager extends window.BaseSampleManager {
 
     prepareDataForRender(logs) {
         return [...logs].sort((a, b) => {
+            const aComplete = a.isComplete === true ? 1 : 0;
+            const bComplete = b.isComplete === true ? 1 : 0;
+            if (aComplete !== bComplete) return aComplete - bComplete;
             const numA = parseInt(a.receptionNumber, 10) || 0;
             const numB = parseInt(b.receptionNumber, 10) || 0;
             return numA - numB;

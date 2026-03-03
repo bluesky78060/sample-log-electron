@@ -556,8 +556,11 @@ class SoilSampleManager extends window.BaseSampleManager {
         if (this.emptyState) this.emptyState.classList.add('hidden');
         if (this.paginationContainer) this.paginationContainer.style.display = 'flex';
 
-        // 접수번호 기준 오름차순 정렬
+        // 미완료 건 우선, 접수번호 오름차순 정렬
         const sortedLogs = [...logs].sort((a, b) => {
+            const aComplete = a.isComplete === true ? 1 : 0;
+            const bComplete = b.isComplete === true ? 1 : 0;
+            if (aComplete !== bComplete) return aComplete - bComplete;
             const numA = parseInt(a.receptionNumber, 10) || 0;
             const numB = parseInt(b.receptionNumber, 10) || 0;
             return numA - numB;
