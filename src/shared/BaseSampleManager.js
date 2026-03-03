@@ -33,8 +33,9 @@ class BaseSampleManager {
         this.totalPages = 1;
         this.isCloudSyncing = false;
         this.cloudSyncPromise = null;  // Promise-based lock
-        this._listDirty = true;  // PER-5: 목록 뷰 리렌더 필요 여부
-        this._firebaseCache = new Map();  // PER-9: 연도별 Firebase 데이터 캐시
+        this.listViewStale = true;  // PER-5: 목록 뷰 리렌더 필요 여부
+        this._firebaseCache = new Map();  // PER-9: 연도별 Firebase 데이터 캐시 { data, timestamp }
+        this._firebaseCacheTTL = 30000;   // PER-9: 캐시 유효 시간 (30초)
 
         // PaginationManager 인스턴스
         this.pagination = null;
@@ -192,7 +193,7 @@ class BaseSampleManager {
      * 데이터 저장
      */
     async saveLogs() {
-        this._listDirty = true;  // PER-5: 데이터 변경 시 목록 리렌더 필요
+        this.listViewStale = true;  // PER-5: 데이터 변경 시 목록 리렌더 필요
         this._firebaseCache.delete(this.selectedYear);  // PER-9: 캐시 무효화
         // 저장 전 hook (서브클래스에서 데이터 가공)
         const processed = this.onBeforeSave(this.sampleLogs);
@@ -246,7 +247,7 @@ class BaseSampleManager {
      * @param {string} id - 삭제할 샘플 ID
      */
     async deleteSample(id) {
-        this._listDirty = true;  // PER-5
+        this.listViewStale = true;  // PER-5
         this._firebaseCache.delete(this.selectedYear);  // PER-9: 캐시 무효화
         // Firebase가 활성화되어 있으면 Firebase에서 먼저 삭제
         if (window.firebaseConfig?.isEnabled()) {
@@ -286,7 +287,7 @@ class BaseSampleManager {
      * @param {string} year - 연도
      */
     async loadYearData(year) {
-        this._listDirty = true;  // PER-5
+        this.listViewStale = true;  // PER-5
         this.log(`📅 ${year}년 데이터 로드 시작`);
 
         try {
@@ -296,17 +297,18 @@ class BaseSampleManager {
             // Firebase가 활성화되어 있으면 Firebase에서 먼저 데이터 로드
             if (window.firebaseConfig?.isEnabled()) {
                 try {
-                    // PER-9: 세션 내 Firebase 캐시 확인
-                    const cached = this._firebaseCache.get(year);
-                    this.log(cached ? ` Firebase 캐시 사용 (${year}년)` : ` Firebase에서 데이터 로드 시작`);
-                    const firebaseLogs = cached || await this.loadFromFirebase(year);
+                    // PER-9: TTL 기반 Firebase 캐시 확인
+                    const cacheEntry = this._firebaseCache.get(year);
+                    const cacheValid = cacheEntry && (Date.now() - cacheEntry.timestamp < this._firebaseCacheTTL);
+                    this.log(cacheValid ? ` Firebase 캐시 사용 (${year}년)` : ` Firebase에서 데이터 로드 시작`);
+                    const firebaseLogs = cacheValid ? cacheEntry.data : await this.loadFromFirebase(year);
 
                     if (firebaseLogs && firebaseLogs.length > 0) {
                         this.log(` Firebase 데이터:`, firebaseLogs.length, '건');
                         this.sampleLogs = firebaseLogs;
 
-                        // PER-9: 세션 내 Firebase 캐시에 저장
-                        if (!cached) this._firebaseCache.set(year, firebaseLogs);
+                        // PER-9: TTL 포함 캐시 저장
+                        if (!cacheValid) this._firebaseCache.set(year, { data: firebaseLogs, timestamp: Date.now() });
 
                         // Firebase 데이터를 localStorage에 저장 (캐싱)
                         localStorage.setItem(yearStorageKey, JSON.stringify(firebaseLogs));
@@ -720,9 +722,9 @@ class BaseSampleManager {
         if (targetNav) targetNav.classList.add('active');
 
         // 목록 뷰로 전환 시 변경된 경우에만 테이블 새로고침 (PER-5)
-        if (viewName === 'list' && this._listDirty) {
+        if (viewName === 'list' && this.listViewStale) {
             this.filterAndRenderLogs();
-            this._listDirty = false;
+            this.listViewStale = false;
         }
     }
 

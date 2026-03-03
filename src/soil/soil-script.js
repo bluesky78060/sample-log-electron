@@ -382,91 +382,30 @@ class SoilSampleManager extends window.BaseSampleManager {
         const yearSelect = document.getElementById('yearSelect');
         const listYearSelect = document.getElementById('listYearSelect');
 
-        if (yearSelect) {
-            yearSelect.addEventListener('change', async (e) => {
-                this.syncYearSelects(e.target.value);
-                await this.loadYearData(e.target.value);
-                if (window.isElectron && this.FileAPI) {
-                    await this.FileAPI.updateAutoSavePath(e.target.value);
-                    await this.loadAutoSaveForSelectedYear();
-                }
-                this.showToast(`${e.target.value}년 데이터를 불러왔습니다.`, 'success');
-            });
-        }
-
-        if (listYearSelect) {
-            listYearSelect.addEventListener('change', async (e) => {
-                this.syncYearSelects(e.target.value);
-                await this.loadYearData(e.target.value);
-                if (window.isElectron && this.FileAPI) {
-                    await this.FileAPI.updateAutoSavePath(e.target.value);
-                    await this.loadAutoSaveForSelectedYear();
-                }
-                this.showToast(`${e.target.value}년 데이터를 불러왔습니다.`, 'success');
-            });
-        }
-    }
-
-    // ========================================
-    // Override: loadYearData (soil-specific: Firebase skipOrder, listViewStale)
-    // ========================================
-
-    async loadYearData(year) {
-        const yearStorageKey = this.getStorageKey(year);
-        this.listViewStale = true;
-
-        // 1. Firebase에서 먼저 로드 시도
-        if (window.firestoreDb?.isEnabled()) {
-            try {
-                this.log('Firebase에서 데이터 로드 중...');
-                const cloudData = await window.firestoreDb.getAll('soil', parseInt(year), { skipOrder: true });
-
-                if (cloudData && cloudData.length > 0) {
-                    this.sampleLogs = cloudData;
-                    this.sampleLogs = this.migrateCompletedField(this.sampleLogs);
-                    this.log('Firebase 데이터 로드 완료:', this.sampleLogs.length, '건');
-
-                    localStorage.setItem(yearStorageKey, JSON.stringify(this.sampleLogs));
-
-                    this.filterAndRenderLogs();
-                    if (this.receptionNumberInput) {
-                        this.receptionNumberInput.value = this.generateNextReceptionNumber();
-                    }
-                    this.updateListViewTitle();
-                    this.updateRecordCount();
-                    this.triggerAutoSave();
-
-                    if (this.FileAPI) {
-                        await this.FileAPI.updateAutoSavePath(year);
-                    }
-                    return;
-                } else {
-                    this.log('Firebase에 데이터 없음, localStorage 확인');
-                }
-            } catch (error) {
-                (window.logger?.error || console.error)('Firebase 로드 실패, 로컬 데이터 사용:', error);
+        const handleYearChange = async (e) => {
+            this.syncYearSelects(e.target.value);
+            await this.loadYearData(e.target.value);
+            // BaseSampleManager.loadYearData가 FileAPI.updateAutoSavePath 호출하므로 중복 제거
+            if (window.isElectron && this.FileAPI) {
+                await this.loadAutoSaveForSelectedYear();
             }
-        }
+            this.showToast(`${e.target.value}년 데이터를 불러왔습니다.`, 'success');
+        };
 
-        // 2. Firebase 사용 불가 또는 데이터 없음 -> 로컬에서 로드
-        this.sampleLogs = SampleUtils.safeParseJSON(yearStorageKey, []);
-        this.sampleLogs = this.migrateCompletedField(this.sampleLogs);
-        this.filterAndRenderLogs();
-
-        if (this.receptionNumberInput) {
-            this.receptionNumberInput.value = this.generateNextReceptionNumber();
-        }
-        this.updateListViewTitle();
-        this.updateRecordCount();
-        this.triggerAutoSave();
-
-        if (this.FileAPI) {
-            await this.FileAPI.updateAutoSavePath(year);
-        }
+        if (yearSelect) yearSelect.addEventListener('change', handleYearChange);
+        if (listYearSelect) listYearSelect.addEventListener('change', handleYearChange);
     }
 
     // ========================================
-    // Override: saveLogs (soil-specific: listViewStale, sessionStorage)
+    // Override: 연도 변경 hook
+    // ========================================
+
+    onYearChange(newYear) {
+        this.updateListViewTitle();
+    }
+
+    // ========================================
+    // Override: saveLogs (soil-specific: sessionStorage)
     // ========================================
 
     async saveLogs() {

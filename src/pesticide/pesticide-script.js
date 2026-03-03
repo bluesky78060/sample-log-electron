@@ -370,18 +370,10 @@ class PesticideSampleManager extends window.BaseSampleManager {
     // ========================================
 
     onYearChange(newYear) {
-        this.listViewStale = true;
         this.updateListViewTitle();
     }
 
-    // ========================================
-    // Override: 저장 전 hook
-    // ========================================
-
-    onBeforeSave(data) {
-        this.listViewStale = true;
-        return data;
-    }
+    // onBeforeSave: BaseSampleManager.saveLogs에서 listViewStale 설정하므로 별도 오버라이드 불필요
 
     // ========================================
     // Override: 저장 후 hook (자동 저장)
