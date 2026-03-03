@@ -397,8 +397,8 @@ function subscribeToChanges(sampleType, year, callback) {
 
         const collectionName = getCollectionName(sampleType, year);
 
+        // orderBy 제거: updatedAt이 없는 문서가 제외되는 문제 방지
         const unsubscribe = db.collection(collectionName)
-            .orderBy('updatedAt', 'desc')
             .onSnapshot((snapshot) => {
                 const documents = [];
                 snapshot.forEach((doc) => {

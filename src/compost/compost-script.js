@@ -1232,7 +1232,7 @@ class CompostSampleManager extends window.BaseSampleManager {
 
         const btnBulkDelete = document.getElementById('deleteSelectedBtn');
         if (btnBulkDelete) {
-            btnBulkDelete.addEventListener('click', () => {
+            btnBulkDelete.addEventListener('click', async () => {
                 const selectedIds = Array.from(document.querySelectorAll('.row-checkbox:checked')).map(cb => cb.dataset.id);
 
                 if (selectedIds.length === 0) {
@@ -1246,13 +1246,16 @@ class CompostSampleManager extends window.BaseSampleManager {
                     this.filterAndRenderLogs();
                     this.selectAllCheckbox.checked = false;
 
-                    // Firebase에서도 삭제
+                    // Firebase에서도 삭제 (await로 완료 보장)
                     if (window.firestoreDb?.isEnabled()) {
-                        Promise.all(selectedIds.map(id =>
-                            window.firestoreDb.delete('compost', parseInt(this.selectedYear), id)
-                        ))
-                            .then(() => this.log('Firebase 일괄 삭제 완료:', selectedIds.length, '건'))
-                            .catch(err => (window.logger?.error || console.error)('Firebase 일괄 삭제 실패:', err));
+                        try {
+                            await Promise.all(selectedIds.map(id =>
+                                window.firestoreDb.delete('compost', parseInt(this.selectedYear), id)
+                            ));
+                            this.log('Firebase 일괄 삭제 완료:', selectedIds.length, '건');
+                        } catch (err) {
+                            (window.logger?.error || console.error)('Firebase 일괄 삭제 실패:', err);
+                        }
                     }
 
                     this.showToast(`${selectedIds.length}건이 삭제되었습니다.`, 'success');
@@ -2229,6 +2232,13 @@ class CompostSampleManager extends window.BaseSampleManager {
     async loadAutoSaveOnInit() {
         this.log('자동 저장 로드 체크:', { isElectron: window.isElectron, autoSavePath: this.FileAPI?.autoSavePath });
         if (window.isElectron && this.FileAPI?.autoSavePath) {
+            // Firebase/localStorage에서 이미 데이터가 로드된 경우 autoSave를 무시
+            // (autoSave는 오프라인 백업용이므로 이미 최신 데이터가 있으면 불필요)
+            if (this.sampleLogs && this.sampleLogs.length > 0) {
+                this.log('이미 데이터가 로드됨 (' + this.sampleLogs.length + '건), autoSave 스킵');
+                return;
+            }
+
             const autoSaveData = await window.loadFromAutoSaveFile();
             this.log('로드된 데이터:', autoSaveData);
             if (autoSaveData && autoSaveData.length > 0) {

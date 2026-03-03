@@ -477,8 +477,8 @@ class BaseSampleManager {
      * 스마트 병합 - utils.js의 함수 사용
      */
     smartMerge(localData, firebaseData) {
-        if (window.smartMerge) {
-            return window.smartMerge(localData, firebaseData);
+        if (window.SyncUtils?.smartMerge) {
+            return window.SyncUtils.smartMerge(localData, firebaseData);
         }
         // 폴백: Firebase 데이터 우선
         return firebaseData;
