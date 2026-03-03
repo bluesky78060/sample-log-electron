@@ -159,19 +159,8 @@ async function getAllDocuments(sampleType, year, options = {}) {
         const collectionName = getCollectionName(sampleType, year);
         let queryRef = db.collection(collectionName);
 
-        // 정렬 옵션 - 오름차순으로 변경 (오래된 데이터가 위로)
-        if (!options.skipOrder) {
-            try {
-                queryRef = queryRef.orderBy('createdAt', 'asc');  // createdAt 기준 오름차순
-            } catch (indexError) {
-                try {
-                    queryRef = queryRef.orderBy('updatedAt', 'asc');  // createdAt가 없으면 updatedAt 사용
-                } catch (indexError2) {
-                    (window.logger?.warn || console.warn)('[Firestore] 인덱스 없음, 정렬 없이 조회:', indexError2.message);
-                }
-            }
-        }
-
+        // orderBy를 사용하지 않고 전체 조회 후 로컬 정렬
+        // (Firestore orderBy는 해당 필드가 없는 문서를 제외하므로 데이터 누락 방지)
         const querySnapshot = await queryRef.get();
 
         const documents = [];
@@ -179,13 +168,12 @@ async function getAllDocuments(sampleType, year, options = {}) {
             documents.push({ id: doc.id, ...doc.data() });
         });
 
-        // skipOrder인 경우 로컬에서 정렬 (오름차순)
-        if (options.skipOrder && documents.length > 0) {
+        // 로컬에서 정렬 (오름차순: createdAt → updatedAt → 0)
+        if (documents.length > 0) {
             documents.sort((a, b) => {
-                // createdAt 우선, 없으면 updatedAt 사용
                 const aTime = (a.createdAt?.seconds || a.updatedAt?.seconds || 0);
                 const bTime = (b.createdAt?.seconds || b.updatedAt?.seconds || 0);
-                return aTime - bTime;  // 오름차순
+                return aTime - bTime;
             });
         }
 
@@ -305,12 +293,17 @@ async function batchSave(sampleType, year, documents) {
                 }
 
                 const docRef = db.collection(collectionName).doc(docId);
-                batch.set(docRef, {
+                const saveData = {
                     ...docData,
                     id: docId, // 문자열 ID 저장
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
                     syncedAt: firebase.firestore.FieldValue.serverTimestamp()
-                }, { merge: true });
+                };
+                // createdAt이 없으면 추가 (orderBy 누락 방지)
+                if (!docData.createdAt) {
+                    saveData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+                }
+                batch.set(docRef, saveData, { merge: true });
             });
 
             await batch.commit();
