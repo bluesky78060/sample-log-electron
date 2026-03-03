@@ -322,17 +322,10 @@ const createWindow = () => {
     event.preventDefault(); // 외부 URL 차단
   });
 
-  // DevTools 열기 (개발 모드 또는 --dev 또는 Ctrl+Shift+I)
+  // 개발 모드에서 DevTools 열기
   if (process.env.DEV_MODE === '1' || process.argv.includes('--dev')) {
     mainWindow.webContents.openDevTools();
   }
-
-  // 프로덕션에서도 Ctrl+Shift+I / Cmd+Option+I로 DevTools 토글 가능
-  mainWindow.webContents.on('before-input-event', (event, input) => {
-    if ((input.control || input.meta) && input.shift && input.key.toLowerCase() === 'i') {
-      mainWindow.webContents.toggleDevTools();
-    }
-  });
 };
 
 // Electron 초기화 완료 후 브라우저 창 생성 준비

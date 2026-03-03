@@ -361,9 +361,6 @@ class BaseSampleManager {
             }
 
             this.log(` 최종 sampleLogs 설정:`, this.sampleLogs.length, '건');
-            // [DEBUG-TEMP] 퇴·액비 18/21건 원인 추적용 (해결 후 제거)
-            console.log(`[DEBUG-LOAD] ${this.moduleName} 최종 sampleLogs: ${this.sampleLogs.length}건 (Firebase 활성: ${!!window.firebaseConfig?.isEnabled()})`);
-
             // 공통 마이그레이션 적용
             this.sampleLogs = this.migrateCompletedField(this.sampleLogs);
 
@@ -464,11 +461,6 @@ class BaseSampleManager {
             });
 
             const data = await window.firestoreDb.getAll(this.moduleKey, parseInt(year));
-            // [DEBUG-TEMP] 퇴·액비 18/21건 원인 추적용 (해결 후 제거)
-            console.log(`[DEBUG-LOAD] ${this.moduleName} Firebase 응답: ${data ? data.length : 0}건 (moduleKey: ${this.moduleKey}, year: ${year})`);
-            if (data && data.length > 0) {
-                console.log(`[DEBUG-LOAD] ${this.moduleName} 데이터 ID 목록:`, data.map(d => d.id || d.접수번호 || 'no-id'));
-            }
             this.log(` Firebase 응답:`, data ? `${data.length}건` : 'null/undefined');
             this.log(` Firebase 데이터 샘플:`, data && data.length > 0 ? data[0] : 'No data');
             return data || [];
