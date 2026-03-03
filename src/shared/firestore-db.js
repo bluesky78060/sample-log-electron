@@ -177,6 +177,11 @@ async function getAllDocuments(sampleType, year, options = {}) {
             });
         }
 
+        // [DEBUG-TEMP] 퇴·액비 18/21건 원인 추적용 (해결 후 제거)
+        console.log(`[DEBUG-FIRESTORE] getAllDocuments: ${collectionName} → ${documents.length}건 (querySnapshot.size: ${querySnapshot.size})`);
+        if (documents.length > 0) {
+            console.log(`[DEBUG-FIRESTORE] 문서 ID 목록:`, documents.map(d => d.id || 'no-id'));
+        }
         logFirestore(`조회 완료: ${collectionName} (${documents.length}건)`);
         return normalizeDataIds(documents);
     } catch (error) {

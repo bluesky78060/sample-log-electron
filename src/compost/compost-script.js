@@ -1730,6 +1730,8 @@ class CompostSampleManager extends window.BaseSampleManager {
     }
 
     filterAndRenderLogs() {
+        // [DEBUG-TEMP] 퇴·액비 18/21건 원인 추적용 (해결 후 제거)
+        console.log(`[DEBUG-FILTER] 퇴·액비 filterAndRenderLogs: sampleLogs=${this.sampleLogs.length}건, 필터상태=`, JSON.stringify(this.currentSearchFilter));
         const filtered = this.sampleLogs.filter(log => {
             // 성명 검색
             const matchesName = !this.currentSearchFilter.name ||
@@ -1764,6 +1766,12 @@ class CompostSampleManager extends window.BaseSampleManager {
             return matchesName && matchesReception && matchesDate && matchesCompleted;
         });
 
+        // [DEBUG-TEMP] 필터링 결과 (해결 후 제거)
+        console.log(`[DEBUG-FILTER] 퇴·액비 필터링 결과: ${filtered.length}건 (원본 ${this.sampleLogs.length}건)`);
+        if (filtered.length !== this.sampleLogs.length) {
+            const excludedIds = this.sampleLogs.filter(log => !filtered.includes(log)).map(log => log.id || log.접수번호 || 'no-id');
+            console.log(`[DEBUG-FILTER] 필터에서 제외된 항목:`, excludedIds);
+        }
         this.renderLogs(filtered);
         this.updateSearchButtonState();
     }
