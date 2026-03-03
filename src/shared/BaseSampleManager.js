@@ -262,8 +262,8 @@ class BaseSampleManager {
                 const yearStorageKey = this.getStorageKey(this.selectedYear);
                 localStorage.setItem(yearStorageKey, JSON.stringify(this.sampleLogs));
 
-                // UI 업데이트
-                this.renderLogs(this.sampleLogs);
+                // UI 업데이트 (기본 필터 적용)
+                this.filterAndRenderLogs();
                 this.updateRecordCount();
 
                 this.showToast('삭제되었습니다.', 'success');
@@ -276,7 +276,7 @@ class BaseSampleManager {
             this.log(` Firebase 비활성화, 로컬에서만 삭제`);
             this.sampleLogs = this.sampleLogs.filter(l => String(l.id) !== id);
             await this.saveLogs();
-            this.renderLogs(this.sampleLogs);
+            this.filterAndRenderLogs();
             this.showToast('삭제되었습니다.', 'success');
         }
     }
@@ -376,8 +376,8 @@ class BaseSampleManager {
             const processed = this.onAfterLoad(this.sampleLogs, year);
             if (processed) this.sampleLogs = processed;
 
-            // UI 업데이트
-            this.renderLogs(this.sampleLogs);
+            // UI 업데이트 (기본 필터 적용)
+            this.filterAndRenderLogs();
             this.updateRecordCount();
 
             // 다음 접수번호 설정 (서브클래스에서 구현된 경우)
@@ -722,7 +722,7 @@ class BaseSampleManager {
 
         // 목록 뷰로 전환 시 변경된 경우에만 테이블 새로고침 (PER-5)
         if (viewName === 'list' && this._listDirty) {
-            this.renderLogs(this.sampleLogs);
+            this.filterAndRenderLogs();
             this._listDirty = false;
         }
     }
@@ -882,6 +882,14 @@ class BaseSampleManager {
     // ========================================
     // 추상 메서드 (서브클래스에서 구현 필요)
     // ========================================
+
+    /**
+     * 필터를 적용한 렌더링 (서브클래스에서 override)
+     * 기본 구현은 renderLogs를 직접 호출 (필터 없음)
+     */
+    filterAndRenderLogs() {
+        this.renderLogs(this.sampleLogs);
+    }
 
     /**
      * 로그 렌더링 (테이블 그리기)

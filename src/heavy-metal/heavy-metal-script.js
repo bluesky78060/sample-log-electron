@@ -89,7 +89,7 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
         if (targetNav) targetNav.classList.add('active');
 
         if (viewName === 'list' && this.listViewStale) {
-            this.renderLogs(this.sampleLogs);
+            this.filterAndRenderLogs();
             this.listViewStale = false;
         }
     }
@@ -339,7 +339,7 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
         this.listViewStale = true;
         this.saveLogs();
         this.resetForm();
-        this.renderLogs(this.sampleLogs);
+        this.filterAndRenderLogs();
     }
 
     // ========================================
@@ -552,7 +552,7 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
         log.updatedAt = new Date().toISOString();
         this.listViewStale = true;
         this.saveLogs();
-        this.renderLogs(this.sampleLogs);
+        this.filterAndRenderLogs();
     }
 
     // ========================================
@@ -571,7 +571,7 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
         log.updatedAt = new Date().toISOString();
         this.listViewStale = true;
         this.saveLogs();
-        this.renderLogs(this.sampleLogs);
+        this.filterAndRenderLogs();
     }
 
     // ========================================
@@ -1157,7 +1157,7 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
                     this.sampleLogs = this.sampleLogs.filter(l => !selectedIds.includes(String(l.id)));
                     this.listViewStale = true;
                     this.saveLogs();
-                    this.renderLogs(this.sampleLogs);
+                    this.filterAndRenderLogs();
                     showToast(`${checked.length}건이 삭제되었습니다.`, 'success');
 
                     // Firebase에서도 삭제
@@ -1207,7 +1207,7 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
 
                 this.listViewStale = true;
                 this.saveLogs();
-                this.renderLogs(this.sampleLogs);
+                this.filterAndRenderLogs();
 
                 if (selectAllCheckbox) {
                     selectAllCheckbox.checked = false;
@@ -1374,7 +1374,7 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
             getData: () => this.sampleLogs,
             setData: (data) => { this.sampleLogs = data; },
             saveData: () => this.saveLogs(),
-            renderData: () => this.renderLogs(this.sampleLogs),
+            renderData: () => this.filterAndRenderLogs(),
             showToast: showToast
         });
 
@@ -1901,7 +1901,7 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
                 });
                 this.listViewStale = true;
                 this.saveLogs();
-                this.renderLogs(this.sampleLogs);
+                this.filterAndRenderLogs();
             }
         });
         excelImporter.init();

@@ -822,7 +822,7 @@ class WaterSampleManager extends window.BaseSampleManager {
             log.isComplete = !log.isComplete;
             log.updatedAt = new Date().toISOString();
             this.saveLogs();
-            this.renderLogs(this.sampleLogs);
+            this.filterAndRenderLogs();
         }
     }
 
@@ -838,7 +838,7 @@ class WaterSampleManager extends window.BaseSampleManager {
             }
             log.updatedAt = new Date().toISOString();
             this.saveLogs();
-            this.renderLogs(this.sampleLogs);
+            this.filterAndRenderLogs();
         }
     }
 
@@ -1439,7 +1439,7 @@ class WaterSampleManager extends window.BaseSampleManager {
                 if (confirm(`선택한 ${selectedIds.length}건을 삭제하시겠습니까?`)) {
                     this.sampleLogs = this.sampleLogs.filter(log => !selectedIds.includes(String(log.id)));
                     this.saveLogs();
-                    this.renderLogs(this.sampleLogs);
+                    this.filterAndRenderLogs();
                     if (selectAllCheckbox) selectAllCheckbox.checked = false;
 
                     if (window.firestoreDb?.isEnabled()) {
@@ -1487,7 +1487,7 @@ class WaterSampleManager extends window.BaseSampleManager {
                 });
 
                 this.saveLogs();
-                this.renderLogs(this.sampleLogs);
+                this.filterAndRenderLogs();
                 if (selectAllCheckbox) selectAllCheckbox.checked = false;
 
                 this.closeMailDateModalFn();
@@ -1638,7 +1638,7 @@ class WaterSampleManager extends window.BaseSampleManager {
             getData: () => this.sampleLogs,
             setData: (data) => { this.sampleLogs = data; },
             saveData: () => this.saveLogs(),
-            renderData: () => this.renderLogs(this.sampleLogs),
+            renderData: () => this.filterAndRenderLogs(),
             showToast: (msg, type) => this.showToast(msg, type)
         });
 
@@ -1845,7 +1845,7 @@ class WaterSampleManager extends window.BaseSampleManager {
                     return (a.receptionNumber || '').localeCompare(b.receptionNumber || '');
                 });
                 this.saveLogs();
-                this.renderLogs(this.sampleLogs);
+                this.filterAndRenderLogs();
             }
         });
         excelImporter.init();

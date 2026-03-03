@@ -350,7 +350,7 @@ class PesticideSampleManager extends window.BaseSampleManager {
         if (targetNav) targetNav.classList.add('active');
 
         if (viewName === 'list' && this.listViewStale) {
-            this.renderLogs(this.sampleLogs);
+            this.filterAndRenderLogs();
             this.listViewStale = false;
         }
     }
@@ -831,7 +831,7 @@ class PesticideSampleManager extends window.BaseSampleManager {
 
             this.sampleLogs[logIndex] = updatedLog;
             this.saveLogs();
-            this.renderLogs(this.sampleLogs);
+            this.filterAndRenderLogs();
             this.cancelEditMode();
             this.showToast('수정이 완료되었습니다.', 'success');
             this.switchView('list');
@@ -883,7 +883,7 @@ class PesticideSampleManager extends window.BaseSampleManager {
         });
 
         this.saveLogs();
-        this.renderLogs(this.sampleLogs);
+        this.filterAndRenderLogs();
         this.form.reset();
         this.dateInput.valueAsDate = new Date();
 
@@ -2310,7 +2310,7 @@ class PesticideSampleManager extends window.BaseSampleManager {
                     }
                     log.updatedAt = new Date().toISOString();
                     this.saveLogs();
-                    this.renderLogs(this.sampleLogs);
+                    this.filterAndRenderLogs();
                 }
             }
 
@@ -2321,7 +2321,7 @@ class PesticideSampleManager extends window.BaseSampleManager {
                 if (confirm('정말 삭제하시겠습니까?')) {
                     this.sampleLogs = this.sampleLogs.filter(item => item.id !== id);
                     this.saveLogs();
-                    this.renderLogs(this.sampleLogs);
+                    this.filterAndRenderLogs();
 
                     if (window.firestoreDb?.isEnabled()) {
                         window.firestoreDb.delete('pesticide', parseInt(this.selectedYear), id)
@@ -2539,7 +2539,7 @@ class PesticideSampleManager extends window.BaseSampleManager {
 
                 this.sampleLogs = this.sampleLogs.filter(log => !selectedIds.includes(String(log.id)));
                 this.saveLogs();
-                this.renderLogs(this.sampleLogs);
+                this.filterAndRenderLogs();
 
                 if (window.firestoreDb?.isEnabled()) {
                     Promise.all(selectedIds.map(id =>
@@ -2595,7 +2595,7 @@ class PesticideSampleManager extends window.BaseSampleManager {
                 });
 
                 this.saveLogs();
-                this.renderLogs(this.sampleLogs);
+                this.filterAndRenderLogs();
 
                 if (this.selectAllCheckbox) {
                     this.selectAllCheckbox.checked = false;
@@ -2665,7 +2665,7 @@ class PesticideSampleManager extends window.BaseSampleManager {
             getData: () => this.sampleLogs,
             setData: (data) => { this.sampleLogs = data; },
             saveData: () => this.saveLogs(),
-            renderData: () => this.renderLogs(this.sampleLogs),
+            renderData: () => this.filterAndRenderLogs(),
             showToast: window.showToast,
             deduplicateById: true
         });
@@ -2953,7 +2953,7 @@ class PesticideSampleManager extends window.BaseSampleManager {
                     return (a.receptionNumber || '').localeCompare(b.receptionNumber || '');
                 });
                 this.saveLogs();
-                this.renderLogs(this.sampleLogs);
+                this.filterAndRenderLogs();
             }
         });
         excelImporter.init();

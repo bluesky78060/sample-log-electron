@@ -218,7 +218,7 @@ class CompostSampleManager extends window.BaseSampleManager {
         if (targetNav) targetNav.classList.add('active');
 
         if (viewName === 'list' && this.listViewStale) {
-            this.renderLogs(this.sampleLogs);
+            this.filterAndRenderLogs();
             this.listViewStale = false;
         }
     }
@@ -1106,7 +1106,7 @@ class CompostSampleManager extends window.BaseSampleManager {
             log.isComplete = !log.isComplete;
             log.updatedAt = new Date().toISOString();
             this.saveLogs();
-            this.renderLogs(this.sampleLogs);
+            this.filterAndRenderLogs();
         }
     }
 
@@ -1126,7 +1126,7 @@ class CompostSampleManager extends window.BaseSampleManager {
             }
             log.updatedAt = new Date().toISOString();
             this.saveLogs();
-            this.renderLogs(this.sampleLogs);
+            this.filterAndRenderLogs();
         }
     }
 
@@ -1251,7 +1251,7 @@ class CompostSampleManager extends window.BaseSampleManager {
                 if (confirm(`선택한 ${selectedIds.length}건을 삭제하시겠습니까?`)) {
                     this.sampleLogs = this.sampleLogs.filter(log => !selectedIds.includes(String(log.id)));
                     this.saveLogs();
-                    this.renderLogs(this.sampleLogs);
+                    this.filterAndRenderLogs();
                     this.selectAllCheckbox.checked = false;
 
                     // Firebase에서도 삭제
@@ -1374,7 +1374,7 @@ class CompostSampleManager extends window.BaseSampleManager {
                 });
 
                 this.saveLogs();
-                this.renderLogs(this.sampleLogs);
+                this.filterAndRenderLogs();
                 this.selectAllCheckbox.checked = false;
 
                 closeModalFn();
@@ -1889,7 +1889,7 @@ class CompostSampleManager extends window.BaseSampleManager {
             getData: () => this.sampleLogs,
             setData: (data) => { this.sampleLogs = data; },
             saveData: () => this.saveLogs(),
-            renderData: () => this.renderLogs(this.sampleLogs),
+            renderData: () => this.filterAndRenderLogs(),
             showToast: window.showToast
         };
 
@@ -2224,7 +2224,7 @@ class CompostSampleManager extends window.BaseSampleManager {
                     return (a.receptionNumber || '').localeCompare(b.receptionNumber || '');
                 });
                 this.saveLogs();
-                this.renderLogs(this.sampleLogs);
+                this.filterAndRenderLogs();
             }
         });
         excelImporter.init();
@@ -2243,7 +2243,7 @@ class CompostSampleManager extends window.BaseSampleManager {
                 this.sampleLogs = autoSaveData;
                 localStorage.setItem(this.getStorageKey(this.selectedYear), JSON.stringify(this.sampleLogs));
                 this.log('퇴액비 자동 저장 파일에서 데이터 로드됨:', autoSaveData.length, '건');
-                this.renderLogs(this.sampleLogs);
+                this.filterAndRenderLogs();
             }
         } else {
             this.log('자동 저장 로드 스킵됨:', { isElectron: window.isElectron, autoSavePath: this.FileAPI?.autoSavePath });
