@@ -42,7 +42,7 @@ class PesticideSampleManager extends window.BaseSampleManager {
             name: '',
             receptionFrom: '',
             receptionTo: '',
-            completed: ''
+            completed: 'incomplete'
         };
         this.isFullView = false;
         this.autoSaveFileHandle = null;
@@ -325,9 +325,6 @@ class PesticideSampleManager extends window.BaseSampleManager {
 
     prepareDataForRender(logs) {
         const sorted = [...logs].sort((a, b) => {
-            const aComplete = a.isComplete === true ? 1 : 0;
-            const bComplete = b.isComplete === true ? 1 : 0;
-            if (aComplete !== bComplete) return aComplete - bComplete;
             const numA = parseInt(a.receptionNumber, 10) || 0;
             const numB = parseInt(b.receptionNumber, 10) || 0;
             return numA - numB;
@@ -1560,7 +1557,7 @@ class PesticideSampleManager extends window.BaseSampleManager {
 
         const hasFilter = this.currentSearchFilter.dateFrom || this.currentSearchFilter.dateTo ||
             this.currentSearchFilter.name || this.currentSearchFilter.receptionFrom || this.currentSearchFilter.receptionTo ||
-            this.currentSearchFilter.completed;
+            (this.currentSearchFilter.completed && this.currentSearchFilter.completed !== 'incomplete');
         if (hasFilter) {
             openSearchModalBtn.classList.add('has-filter');
             openSearchModalBtn.innerHTML = sanitizeHTML('🔍 검색 중');
@@ -2479,8 +2476,8 @@ class PesticideSampleManager extends window.BaseSampleManager {
                 searchNameInput.value = '';
                 searchReceptionFromInput.value = '';
                 searchReceptionToInput.value = '';
-                if (completedFilter) completedFilter.value = '';
-                this.currentSearchFilter = { dateFrom: '', dateTo: '', name: '', receptionFrom: '', receptionTo: '', completed: '' };
+                if (completedFilter) completedFilter.value = 'incomplete';
+                this.currentSearchFilter = { dateFrom: '', dateTo: '', name: '', receptionFrom: '', receptionTo: '', completed: 'incomplete' };
                 this.filterAndRenderLogs();
                 closeSearchModal();
             });

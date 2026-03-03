@@ -44,7 +44,7 @@ class SoilSampleManager extends window.BaseSampleManager {
             receptionTo: '',
             lot: '',
             purpose: '',
-            completed: ''
+            completed: 'incomplete'
         };
         this.isFullView = false;
         this.autoSaveFileHandle = null;
@@ -556,11 +556,8 @@ class SoilSampleManager extends window.BaseSampleManager {
         if (this.emptyState) this.emptyState.classList.add('hidden');
         if (this.paginationContainer) this.paginationContainer.style.display = 'flex';
 
-        // 미완료 건 우선, 접수번호 오름차순 정렬
+        // 접수번호 기준 오름차순 정렬
         const sortedLogs = [...logs].sort((a, b) => {
-            const aComplete = a.isComplete === true ? 1 : 0;
-            const bComplete = b.isComplete === true ? 1 : 0;
-            if (aComplete !== bComplete) return aComplete - bComplete;
             const numA = parseInt(a.receptionNumber, 10) || 0;
             const numB = parseInt(b.receptionNumber, 10) || 0;
             return numA - numB;
@@ -2093,7 +2090,7 @@ class SoilSampleManager extends window.BaseSampleManager {
         const hasFilter = this.currentSearchFilter.dateFrom || this.currentSearchFilter.dateTo ||
             this.currentSearchFilter.name || this.currentSearchFilter.receptionFrom ||
             this.currentSearchFilter.receptionTo || this.currentSearchFilter.lot || this.currentSearchFilter.purpose ||
-            this.currentSearchFilter.completed;
+            (this.currentSearchFilter.completed && this.currentSearchFilter.completed !== 'incomplete');
 
         if (openSearchModalBtn) {
             if (hasFilter) {
@@ -3301,8 +3298,8 @@ class SoilSampleManager extends window.BaseSampleManager {
                 if (searchReceptionToInput) searchReceptionToInput.value = '';
                 if (searchLotInput) searchLotInput.value = '';
                 if (purposeFilter) purposeFilter.value = '';
-                if (completedFilter) completedFilter.value = '';
-                this.currentSearchFilter = { dateFrom: '', dateTo: '', name: '', receptionFrom: '', receptionTo: '', lot: '', purpose: '', completed: '' };
+                if (completedFilter) completedFilter.value = 'incomplete';
+                this.currentSearchFilter = { dateFrom: '', dateTo: '', name: '', receptionFrom: '', receptionTo: '', lot: '', purpose: '', completed: 'incomplete' };
                 this.filterAndRenderLogs();
                 closeSearchModal();
             });

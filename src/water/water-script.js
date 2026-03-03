@@ -43,7 +43,7 @@ class WaterSampleManager extends window.BaseSampleManager {
             name: '',
             receptionFrom: '',
             receptionTo: '',
-            completed: ''
+            completed: 'incomplete'
         };
 
         // DOM 참조 (init 후 설정)
@@ -122,9 +122,6 @@ class WaterSampleManager extends window.BaseSampleManager {
     // ========================================
     prepareDataForRender(logs) {
         return [...logs].sort((a, b) => {
-            const aComplete = a.isComplete === true ? 1 : 0;
-            const bComplete = b.isComplete === true ? 1 : 0;
-            if (aComplete !== bComplete) return aComplete - bComplete;
             const numA = parseInt(a.receptionNumber, 10) || 0;
             const numB = parseInt(b.receptionNumber, 10) || 0;
             return numA - numB;
@@ -1104,7 +1101,7 @@ class WaterSampleManager extends window.BaseSampleManager {
     updateSearchButtonState() {
         const hasFilter = this.currentSearchFilter.dateFrom || this.currentSearchFilter.dateTo ||
             this.currentSearchFilter.name || this.currentSearchFilter.receptionFrom ||
-            this.currentSearchFilter.receptionTo || this.currentSearchFilter.completed;
+            this.currentSearchFilter.receptionTo || (this.currentSearchFilter.completed && this.currentSearchFilter.completed !== 'incomplete');
         const openSearchModalBtn = document.getElementById('openSearchModalBtn');
         if (openSearchModalBtn) {
             if (hasFilter) {
@@ -1599,8 +1596,8 @@ class WaterSampleManager extends window.BaseSampleManager {
                 if (searchNameInput) searchNameInput.value = '';
                 if (searchReceptionFromInput) searchReceptionFromInput.value = '';
                 if (searchReceptionToInput) searchReceptionToInput.value = '';
-                if (completedFilter) completedFilter.value = '';
-                this.currentSearchFilter = { dateFrom: '', dateTo: '', name: '', receptionFrom: '', receptionTo: '', completed: '' };
+                if (completedFilter) completedFilter.value = 'incomplete';
+                this.currentSearchFilter = { dateFrom: '', dateTo: '', name: '', receptionFrom: '', receptionTo: '', completed: 'incomplete' };
                 this.filterAndRenderLogs();
                 listSearchModal.classList.add('hidden');
             });
