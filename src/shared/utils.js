@@ -395,7 +395,25 @@ async function initAutoSave(options) {
         // Electron 환경
         const hasSelectedFolder = localStorage.getItem(folderSelectedKey) === 'true';
 
-        if (!hasSelectedFolder) {
+        // 다른 시료 타입에서 이미 폴더를 선택했는지 확인 (앱 전체 공유)
+        let folderAlreadyConfigured = hasSelectedFolder;
+        if (!folderAlreadyConfigured) {
+            try {
+                const currentFolder = await window.electronAPI.getAutoSaveFolder();
+                const appPath = await window.electronAPI.getAppPath();
+                // 기본 경로가 아닌 사용자 지정 폴더가 있으면 이미 설정된 것
+                if (currentFolder && currentFolder !== appPath) {
+                    folderAlreadyConfigured = true;
+                    localStorage.setItem(folderSelectedKey, 'true');
+                    localStorage.setItem(enabledKey, 'true');
+                    log(`📁 ${moduleName} 자동 저장 폴더 이미 설정됨 (다른 시료 타입에서):`, currentFolder);
+                }
+            } catch (e) {
+                // getAutoSaveFolder/getAppPath 미지원 시 무시
+            }
+        }
+
+        if (!folderAlreadyConfigured) {
             // 잠시 후 폴더 선택 다이얼로그 표시 (UI 로드 후)
             setTimeout(async () => {
                 const confirmSelect = confirm(`${moduleName} 자동 저장 기능을 사용하시겠습니까?\n\n저장할 폴더를 선택해주세요.`);
