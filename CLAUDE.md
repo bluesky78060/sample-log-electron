@@ -6,6 +6,33 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 시료 접수 대장 (Sample Log) - 봉화군 농업기술센터에서 사용하는 농업 시료 접수/관리 시스템. Electron 데스크톱 앱 + GitHub Pages 웹 앱 듀얼 환경.
 
+## AI PM 작업 관리 (필수)
+
+이 프로젝트의 모든 작업은 **AI PM System MCP**를 통해 티켓을 발행한 후 진행해야 한다.
+
+- **프로젝트 ID**: `81150a9b-6422-46d9-a0e2-385336cfe038`
+- **MCP 서버**: `ai-pm` (Render API 모드: `https://ai-pm-system.onrender.com`)
+
+### 작업 흐름
+
+1. **작업 시작 전**: `create_task`로 티켓 발행 (제목, 설명, 우선순위 포함)
+2. **작업 진행 중**: `update_task_status`로 상태를 `in_progress`로 변경
+3. **작업 완료 시**: `update_task_status`로 상태를 `done`으로 변경
+4. **대규모 작업**: `create_epic` → `decompose_task`로 하위 태스크 분할
+
+### 사용 가능한 도구
+
+| 도구 | 용도 |
+|------|------|
+| `create_task` | 새 작업 티켓 발행 |
+| `create_epic` | 에픽(대규모 기능) 생성 |
+| `decompose_task` | 태스크를 하위 태스크로 분할 |
+| `update_task_status` | 상태 변경 (todo → in_progress → done) |
+| `set_priority` | 우선순위 설정 |
+| `add_dependency` | 태스크 간 의존성 추가 |
+| `list_tasks` | 태스크 목록 조회 |
+| `get_project_status` | 프로젝트 전체 현황 조회 |
+
 ## Commands
 
 ```bash
@@ -13,15 +40,24 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 npm start
 
 # 개발 모드 (DevTools 포함)
-npm start -- --dev
+npm run start:dev
 
-# 웹 개발 서버 (Vite, docs/ 기반)
+# 웹 개발 서버 (Vite, localhost:3000)
 npm run dev
 
-# 패키지 빌드 (현재 OS용)
+# Electron + Vite 동시 실행
+npm run dev:electron
+
+# Vite 빌드 (Tailwind CSS + 버전 동기화 + 번들링 → docs/ 출력)
+npm run build
+
+# Tailwind CSS 빌드 (단독)
+npm run build:css
+
+# 패키지 빌드 (build 포함, 현재 OS용)
 npm run package
 
-# 설치 파일 생성 (Windows: exe, macOS: zip)
+# 설치 파일 생성 (build 포함, Windows: exe, macOS: zip)
 npm run make
 
 # E2E 테스트 (Playwright, docs/ 폴더 대상)
@@ -68,17 +104,21 @@ Preload (src/preload.js)
 src/
 ├── index.js              # Main process
 ├── preload.js            # Context bridge
-├── index.html            # 메인 페이지 (시료 타입 선택, 버전 표시)
-├── shared/               # 공통 모듈 (~30개, window.* 전역 노출)
+├── index.html            # 메인 페이지 (카드 그리드 + 상단 바)
+├── main-entry.js         # Vite 진입점 (ES Module)
+├── shared/               # 공통 모듈 (~26개, window.* 전역 노출)
+├── styles/               # Tailwind input CSS, 테마 색상
 ├── soil/                 # 토양 시료
 ├── water/                # 수질분석 시료
 ├── compost/              # 퇴·액비 시료
 ├── heavy-metal/          # 토양 중금속 시료
 ├── pesticide/            # 잔류농약 시료
-├── settings/             # 설정 페이지 (Firebase, 암호화)
-└── label-print/          # 라벨 인쇄
+├── settings/             # 설정 페이지 (Firebase)
+├── label-print/          # 라벨 인쇄
+├── manual/               # 사용설명서
+└── release/              # 릴리즈 노트 페이지
 
-docs/                     # GitHub Pages 배포용 (src와 동일하게 유지)
+docs/                     # GitHub Pages 배포용 (Vite 번들 빌드 결과물)
 tests/e2e/                # Playwright E2E 테스트 (docs/ 대상)
 ```
 
@@ -107,21 +147,33 @@ const AUTO_SAVE_FILE = 'soil-autosave.json';
 
 모든 모듈은 IIFE 또는 클래스로 `window.*`에 전역 노출:
 
-| 모듈                     | 전역 객체                  | 역할                                           |
-| ------------------------ | -------------------------- | ---------------------------------------------- |
-| `BaseSampleManager.js`   | `BaseSampleManager`        | 모든 시료 타입 공통 CRUD 베이스 클래스         |
-| `firestore-db.js`        | `window.firestoreDb`       | Firestore CRUD (compat SDK)                    |
-| `storage-manager.js`     | `window.storageManager`    | 듀얼 스토리지: localStorage + Firestore 싱크   |
-| `firebase-config.js`     | `window.firebaseConfig`    | Firebase 초기화, 인증 파일 관리                |
-| `file-api.js`            | `FileAPI`                  | Electron/Web 파일 시스템 추상화                |
-| `constants.js`           | `SampleConstants`          | 전역 상수 (페이지네이션, 타이머, 검증)         |
-| `utils.js`               | `SampleUtils`              | 유틸리티 (전화번호/면적 포맷, 날짜, UUID)      |
-| `encryption-manager.js`  | `window.encryptionManager` | AES-256-GCM 암호화 라이프사이클                |
-| `crypto-utils.js`        | `window.CryptoUtils`       | PBKDF2 키 유도, 암/복호화, 비밀번호 검증 UI    |
-| `PaginationManager.js`   | `PaginationManager`        | 페이지네이션 상태 관리                         |
-| `cache-manager.js`       | `CacheManager`             | 매주 금요일 자동 캐시 정리                     |
-| `sanitize.js`            | -                          | XSS 방지, HTML/JSON 새니타이징                 |
-| `path-security.js`       | -                          | 경로 검증, traversal 공격 방지                 |
+| 모듈                       | 전역 객체                  | 역할                                           |
+| -------------------------- | -------------------------- | ---------------------------------------------- |
+| `BaseSampleManager.js`     | `BaseSampleManager`        | 모든 시료 타입 공통 CRUD 베이스 클래스         |
+| `firestore-db.js`          | `window.firestoreDb`       | Firestore CRUD (compat SDK)                    |
+| `storage-manager.js`       | `window.storageManager`    | 듀얼 스토리지: localStorage + Firestore 싱크   |
+| `firebase-config.js`       | `window.firebaseConfig`    | Firebase 초기화, 인증 파일 관리                |
+| `file-api.js`              | `FileAPI`                  | Electron/Web 파일 시스템 추상화                |
+| `constants.js`             | `SampleConstants`          | 전역 상수 (페이지네이션, 타이머, 검증, 버전)   |
+| `utils.js`                 | `SampleUtils`              | 유틸리티 (전화번호/면적 포맷, 날짜, UUID)      |
+| `pagination.js`            | `PaginationManager`        | 페이지네이션 상태 관리                         |
+| `cache-manager.js`         | `CacheManager`             | 매주 금요일 자동 캐시 정리                     |
+| `logger.js`                | `window.logger`            | 로깅 (콘솔 + 옵셔널 체이닝)                   |
+| `toast.js`                 | -                          | 토스트 알림 UI                                 |
+| `tooltip.js`               | -                          | 툴팁 UI                                        |
+| `theme.js`                 | -                          | 다크모드/테마 관리                              |
+| `excel-import-manager.js`  | `ExcelImportManager`       | 엑셀 가져오기 공통 모듈 (5개 시료 타입 공유)   |
+| `search-filter.js`         | -                          | 고급 검색/필터                                  |
+| `form-validator.js`        | -                          | 폼 유효성 검사                                  |
+| `sync-utils.js`            | -                          | Firestore 동기화 유틸리티                       |
+| `auth-file.js`             | -                          | Firebase 인증 파일 관리                         |
+| `address.js`               | -                          | 주소 데이터                                     |
+| `address-parser.js`        | -                          | 주소 파싱                                       |
+| `network-config.js`        | -                          | 네트워크(Firebase) 설정                         |
+| `network-access.js`        | -                          | 네트워크 접근 제어                              |
+| `main-init.js`             | -                          | 메인 페이지 초기화                              |
+| `sanitize.js`              | -                          | XSS 방지, HTML/JSON 새니타이징                 |
+| `path-security.js`         | -                          | 경로 검증, traversal 공격 방지                 |
 
 ### Data Storage Strategy
 
@@ -144,52 +196,50 @@ JSON File (Auto-save)
 
 ### Encryption (AES-256-GCM)
 
-민감 필드(이름, 전화번호, 주소 등)는 레코드 단위 암호화:
-
-- `crypto-utils.js`: PBKDF2 키 유도 + AES-256-GCM 암/복호화
-- `encryption-manager.js`: 키 파일 로드 → 비밀번호 입력 → 마스터키 유도 → 세션 유지
-- 암호화된 레코드는 `_enc` 필드에 IV+CT 저장, 원본 필드는 삭제
-- 비밀번호 변경 시 모든 데이터 재암호화 + 롤백 메커니즘
+> **참고**: 암호화 기능은 테스트 프로젝트(`sample-log-electron-test`)에만 구현되어 있으며, 메인 프로젝트에는 `encryption-manager.js`, `crypto-utils.js`가 존재하지 않음. 메인→테스트 동기화 시 암호화 관련 코드를 덮어쓰지 않도록 주의.
 
 ### IPC Communication
 
 Main process와 Renderer 간 통신 (`ipcRenderer.invoke` / `ipcMain.handle`):
 
-| 채널                                                | 용도                                  |
-| --------------------------------------------------- | ------------------------------------- |
-| `save-file-dialog` / `open-file-dialog`             | 파일 다이얼로그                       |
-| `write-file` / `read-file`                          | 파일 읽기/쓰기                        |
-| `get-auto-save-path`                                | 연도별 자동 저장 경로                 |
-| `read-auth-file` / `save-auth-file`                 | Firebase 인증 파일                    |
-| `read-key-file`                                     | 암호화 키 파일 로드                   |
-| `save-salt` / `load-salt`                           | PBKDF2 Salt 관리                      |
-| `store-session-password` / `get-session-password`   | 세션 비밀번호 (메인 프로세스 메모리)  |
-| `get-app-version`                                   | 앱 버전 조회                          |
+| 채널                                                  | 용도                                  |
+| ----------------------------------------------------- | ------------------------------------- |
+| `save-file-dialog` / `open-file-dialog`               | 파일 다이얼로그                       |
+| `write-file` / `read-file`                            | 파일 읽기/쓰기                        |
+| `get-auto-save-path`                                  | 연도별 자동 저장 경로                 |
+| `select-auto-save-folder` / `get-auto-save-folder`    | 자동저장 폴더 선택/조회               |
+| `get-app-path`                                        | 앱 데이터 경로 조회                   |
+| `get-app-version`                                     | 앱 버전 조회                          |
+| `read-auth-file` / `save-auth-file` / `delete-auth-file` | Firebase 인증 파일 CRUD            |
+| `check-auth-file` / `select-auth-file`                | 인증 파일 존재 확인 / 선택 다이얼로그 |
 
 ## Development Notes
 
 ### src와 docs 동기화
 
-GitHub Pages 배포를 위해 `docs/` 폴더는 `src/`와 동일하게 유지:
+GitHub Pages 배포를 위해 `docs/`는 Vite 번들 빌드 결과물로 생성:
 
 ```bash
-rsync -av --delete --exclude='*.backup' src/ docs/
+npm run build    # vite build → docs/ 출력 (Tailwind CSS + 버전 동기화 포함)
 ```
+
+빌드 파이프라인: `build:css` (Tailwind) → `sync-version` (constants.js 버전 반영) → `vite build` (번들링 → docs/)
 
 ### 버전 업데이트
 
-버전은 두 곳에서 관리 (반드시 함께 수정):
+버전은 세 곳에서 관리 (`npm run sync-version`으로 자동 동기화):
 
-1. `package.json` → `version` 필드
-2. `src/index.html` → 폴백 버전 텍스트 (Electron 외 환경용)
+1. `package.json` → `version` 필드 (소스)
+2. `src/shared/constants.js` → `APP_VERSION` (sync-version으로 자동 반영)
+3. `src/index.html` → 폴백 버전 텍스트 (Electron 외 환경용, 수동 수정)
 
 ### 릴리스 (GitHub Actions)
 
 태그 푸시 시 Windows 설치 파일 자동 빌드 (.github/workflows/build.yml):
 
 ```bash
-git tag v1.7.52
-git push origin v1.7.52
+git tag v1.7.55
+git push origin v1.7.55
 ```
 
 빌드: Windows (windows-latest), Node 20, `npm run make` → GitHub Release 생성
@@ -209,5 +259,8 @@ git push origin v1.7.52
 ### Build Configuration
 
 - **Electron Forge** + Squirrel (Windows), Zip (macOS), Deb/RPM (Linux)
+- **Vite**: 웹 빌드 번들러 (`vite build src` → `docs/` 출력)
+- **Tailwind CSS v3**: `src/styles/input.css` → `src/shared/tailwind-output.css`
 - **Security Fuses**: ASAR 무결성, nodeOptions/inspection 비활성화
-- **Firebase SDK**: Compat 모드 (modular 아님)
+- **Firebase SDK**: Compat 모드 (modular 아님, `firebase: ^12.7.0`)
+- **CI 주의**: `network-config.example.js` → `network-config.js` 복사 필요 (빌드 전)

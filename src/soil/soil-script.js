@@ -385,8 +385,8 @@ class SoilSampleManager extends window.BaseSampleManager {
         const handleYearChange = async (e) => {
             this.syncYearSelects(e.target.value);
             await this.loadYearData(e.target.value);
-            // BaseSampleManager.loadYearData가 FileAPI.updateAutoSavePath 호출하므로 중복 제거
-            if (window.isElectron && this.FileAPI) {
+            // 로컬 모드에서만 auto-save 로드 (Firebase 모드에서는 로드 안함)
+            if (window.isElectron && this.FileAPI && !window.firebaseConfig?.isEnabled()) {
                 await this.loadAutoSaveForSelectedYear();
             }
             this.showToast(`${e.target.value}년 데이터를 불러왔습니다.`, 'success');
@@ -1600,6 +1600,89 @@ class SoilSampleManager extends window.BaseSampleManager {
 
         const formData = new FormData(this.form);
 
+        // 그룹 수정 모드인 경우
+        if (this.editingGroupId) {
+            const baseReceptionNumber = formData.get('receptionNumber');
+            const isFillNumber = baseReceptionNumber.startsWith('F');
+            const baseNumber = isFillNumber
+                ? parseInt(baseReceptionNumber.replace('F', ''), 10) || 1
+                : parseInt(baseReceptionNumber, 10) || 1;
+
+            const commonData = {
+                date: formData.get('date'),
+                name: formData.get('name'),
+                phoneNumber: formData.get('phoneNumber'),
+                address: formData.get('address'),
+                subCategory: formData.get('subCategory') || '-',
+                purpose: formData.get('purpose'),
+                receptionMethod: formData.get('receptionMethod') || '-',
+                note: formData.get('note') || '',
+                updatedAt: new Date().toISOString()
+            };
+
+            const oldGroupLogs = this.editingGroupLogs;
+            const groupId = this.editingGroupId;
+
+            // 기존 그룹 레코드 모두 제거
+            this.sampleLogs = this.sampleLogs.filter(l => l.groupId !== groupId);
+
+            // 새 레코드 생성 (필지 수에 맞춰)
+            const newLogs = validParcels.map((parcel, index) => {
+                const num = baseNumber + index;
+                const receptionNumber = isFillNumber ? `F${num}` : String(num);
+                const parcelSubCategory = parcel.category || commonData.subCategory;
+                const parcelPurpose = parcel.purpose || commonData.purpose;
+
+                // 기존 레코드가 있으면 id, createdAt 보존
+                const existingLog = oldGroupLogs[index];
+
+                return {
+                    id: existingLog?.id || crypto.randomUUID(),
+                    receptionNumber,
+                    ...commonData,
+                    subCategory: parcelSubCategory,
+                    purpose: parcelPurpose,
+                    groupId,
+                    parcelIndex: index + 1,
+                    totalParcels: validParcels.length,
+                    createdAt: existingLog?.createdAt || new Date().toISOString(),
+                    isComplete: existingLog?.isComplete || false,
+                    parcels: [{
+                        id: crypto.randomUUID(),
+                        lotAddress: parcel.lotAddress,
+                        isMountain: parcel.isMountain || false,
+                        subLots: [...parcel.subLots],
+                        crops: parcel.crops.map(c => ({ ...c })),
+                        category: parcel.category || '',
+                        purpose: parcel.purpose || '',
+                        note: parcel.note || ''
+                    }],
+                    lotAddress: parcel.lotAddress,
+                    area: parcel.crops.reduce((sum, c) => sum + (parseFloat(c.area) || 0), 0).toString(),
+                    cropsDisplay: parcel.crops.map(c => c.name).join(', ') || '-'
+                };
+            });
+
+            newLogs.forEach(log => this.sampleLogs.push(log));
+
+            // 기존에 더 많았던 레코드가 있으면 Firebase에서 삭제
+            if (window.firestoreDb?.isEnabled()) {
+                const removedLogs = oldGroupLogs.slice(validParcels.length);
+                if (removedLogs.length > 0) {
+                    Promise.all(removedLogs.map(log =>
+                        window.firestoreDb.delete('soil', parseInt(this.selectedYear), log.id)
+                    )).catch(err => (window.logger?.error || console.error)('Firebase 삭제 실패:', err));
+                }
+            }
+
+            this.saveLogs();
+            this.filterAndRenderLogs();
+            this.cancelEditMode();
+            this.showToast(`${validParcels.length}건의 필지가 수정되었습니다.`, 'success');
+            this.switchView('list');
+            return;
+        }
+
         // 수정 모드인 경우
         if (this.editingLogId) {
             const logIndex = this.sampleLogs.findIndex(l => l.id === this.editingLogId);
@@ -1778,13 +1861,26 @@ class SoilSampleManager extends window.BaseSampleManager {
 
     editSample(id) {
         const logItem = this.sampleLogs.find(l => String(l.id) === id);
-        if (logItem) {
-            this.populateFormForEdit(logItem);
+        if (!logItem) return;
+
+        // groupId가 있고 같은 그룹에 2개 이상의 레코드가 있으면 그룹 수정
+        if (logItem.groupId) {
+            const groupLogs = this.sampleLogs
+                .filter(l => l.groupId === logItem.groupId)
+                .sort((a, b) => (a.parcelIndex || 0) - (b.parcelIndex || 0));
+            if (groupLogs.length > 1) {
+                this.populateFormForGroupEdit(groupLogs);
+                return;
+            }
         }
+        // 단독 레코드는 기존 방식
+        this.populateFormForEdit(logItem);
     }
 
     cancelEditMode() {
         this.editingLogId = null;
+        this.editingGroupId = null;
+        this.editingGroupLogs = null;
 
         if (this.navSubmitBtn) {
             this.navSubmitBtn.title = '접수 등록';
@@ -1921,6 +2017,113 @@ class SoilSampleManager extends window.BaseSampleManager {
             this.navSubmitBtn.classList.add('btn-edit-mode');
         }
 
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.getElementById('formView').classList.add('active');
+        document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelector('.nav-btn[data-view="form"]').classList.add('active');
+
+        setTimeout(() => {
+            this.form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+    }
+
+    populateFormForGroupEdit(groupLogs) {
+        const firstLog = groupLogs[0];
+
+        // 그룹 수정 모드 플래그
+        this.editingLogId = null;
+        this.editingGroupId = firstLog.groupId;
+        this.editingGroupLogs = groupLogs;
+
+        // 접수번호 (첫 번째 레코드)
+        this.receptionNumberInput.value = firstLog.receptionNumber || '';
+        if (this.dateInput) this.dateInput.value = firstLog.date || '';
+        document.getElementById('name').value = firstLog.name || '';
+        document.getElementById('phoneNumber').value = firstLog.phoneNumber || '';
+
+        // 주소 파싱 (기존 populateFormForEdit과 동일)
+        if (firstLog.address) {
+            const addressMatch = firstLog.address.match(/^\((\d{5})\)\s*(.+)$/);
+            if (addressMatch) {
+                if (this.addressPostcode) this.addressPostcode.value = addressMatch[1];
+                const roadAndDetail = addressMatch[2];
+                const detailMatch = roadAndDetail.match(/^(.+?\))\s*(.*)$/);
+                if (detailMatch) {
+                    if (this.addressRoad) this.addressRoad.value = detailMatch[1];
+                    if (this.addressDetail) this.addressDetail.value = detailMatch[2];
+                } else {
+                    if (this.addressRoad) this.addressRoad.value = roadAndDetail;
+                    if (this.addressDetail) this.addressDetail.value = '';
+                }
+            } else {
+                if (this.addressRoad) this.addressRoad.value = firstLog.address;
+            }
+            if (this.addressHidden) this.addressHidden.value = firstLog.address;
+        }
+
+        const subCategorySelect = document.getElementById('subCategory');
+        if (subCategorySelect) {
+            subCategorySelect.disabled = false;
+            subCategorySelect.innerHTML = sanitizeHTML(`
+                <option value="">선택하세요</option>
+                <option value="논">🌾 논</option>
+                <option value="밭">🥬 밭</option>
+                <option value="과수">🍎 과수</option>
+                <option value="시설">🏠 시설</option>
+                <option value="임야">🌲 임야</option>
+                <option value="성토">🚜 성토</option>
+            `);
+            subCategorySelect.value = firstLog.subCategory || '';
+        }
+
+        if (this.purposeSelect) this.purposeSelect.value = firstLog.purpose || '';
+
+        const receptionMethodBtns = document.querySelectorAll('.reception-method-btn');
+        receptionMethodBtns.forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.dataset.method === firstLog.receptionMethod) btn.classList.add('active');
+        });
+        if (this.receptionMethodInput) this.receptionMethodInput.value = firstLog.receptionMethod || '';
+
+        const noteInput = document.getElementById('note');
+        if (noteInput) noteInput.value = firstLog.note || '';
+
+        // 필지 카드 렌더링 - 각 레코드의 parcels[0]를 합침
+        this.parcels = [];
+        this.parcelIdCounter = 0;
+        if (this.parcelsContainer) this.parcelsContainer.innerHTML = '';
+
+        groupLogs.forEach(log => {
+            const parcel = log.parcels?.[0];
+            if (parcel) {
+                const parcelId = `parcel-${this.parcelIdCounter++}`;
+                const newParcel = {
+                    id: parcelId,
+                    lotAddress: parcel.lotAddress || '',
+                    isMountain: parcel.isMountain || false,
+                    subLots: parcel.subLots ? [...parcel.subLots] : [],
+                    crops: parcel.crops ? parcel.crops.map(c => ({ ...c })) : [],
+                    category: parcel.category || '',
+                    purpose: parcel.purpose || '',
+                    note: parcel.note || ''
+                };
+                this.parcels.push(newParcel);
+                this.renderParcelCard(newParcel, this.parcels.length);
+            }
+        });
+
+        // 필지가 하나도 없으면 빈 카드 추가
+        if (this.parcels.length === 0) this.addParcel();
+
+        this.updateParcelsData();
+
+        // 버튼 상태 변경
+        if (this.navSubmitBtn) {
+            this.navSubmitBtn.title = '수정 완료';
+            this.navSubmitBtn.classList.add('btn-edit-mode');
+        }
+
+        // 폼 뷰로 전환
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         document.getElementById('formView').classList.add('active');
         document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
@@ -3758,18 +3961,16 @@ class SoilSampleManager extends window.BaseSampleManager {
             this.receptionNumberInput.value = this.generateNextReceptionNumber();
         }
 
-        // Electron 환경: 자동 저장 파일에서 데이터 로드
-        if (window.isElectron && this.FileAPI?.autoSavePath) {
+        // 로컬 모드에서만 auto-save 로드 (Firebase 모드에서는 로드 안함)
+        if (window.isElectron && this.FileAPI?.autoSavePath && !window.firebaseConfig?.isEnabled()) {
             const autoSaveData = await window.loadFromAutoSaveFile();
-            if (autoSaveData && autoSaveData.length > 0) {
-                if (this.sampleLogs.length === 0) {
-                    this.sampleLogs = autoSaveData;
-                    localStorage.setItem(this.getStorageKey(this.selectedYear), JSON.stringify(this.sampleLogs));
-                    this.log('토양 자동 저장 파일에서 데이터 로드됨:', autoSaveData.length, '건');
-                    this.filterAndRenderLogs();
-                    if (this.receptionNumberInput) {
-                        this.receptionNumberInput.value = this.generateNextReceptionNumber();
-                    }
+            if (autoSaveData && autoSaveData.length > 0 && this.sampleLogs.length === 0) {
+                this.sampleLogs = autoSaveData;
+                localStorage.setItem(this.getStorageKey(this.selectedYear), JSON.stringify(this.sampleLogs));
+                this.log('로컬 모드: 자동 저장 파일에서 데이터 로드됨:', autoSaveData.length, '건');
+                this.filterAndRenderLogs();
+                if (this.receptionNumberInput) {
+                    this.receptionNumberInput.value = this.generateNextReceptionNumber();
                 }
             }
         }
