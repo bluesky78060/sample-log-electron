@@ -2884,10 +2884,32 @@ class SoilSampleManager extends window.BaseSampleManager {
             tdZipcode.textContent = zipcode || '-';
             tr.appendChild(tdZipcode);
 
-            // 주소
+            // 주소 (클릭 시 시도 포함 전체 주소 복사)
             const tdAddress = document.createElement('td');
             tdAddress.className = 'col-address';
             tdAddress.textContent = displayAddress;
+            if (addressOnly && addressOnly !== '-') {
+                const SIDO_EXPAND = {
+                    '경기': '경기도', '강원': '강원도',
+                    '충북': '충청북도', '충남': '충청남도',
+                    '전북': '전라북도', '전남': '전라남도',
+                    '경북': '경상북도', '경남': '경상남도',
+                    '제주': '제주특별자치도'
+                };
+                const copyAddress = addressOnly.replace(
+                    /^(경기|강원|충북|충남|전북|전남|경북|경남|제주)(\s)/,
+                    (_, sido, sp) => (SIDO_EXPAND[sido] || sido) + sp
+                );
+                tdAddress.style.cursor = 'pointer';
+                tdAddress.title = '클릭하여 주소 복사';
+                tdAddress.addEventListener('click', () => {
+                    navigator.clipboard.writeText(copyAddress).then(() => {
+                        this.showToast('주소가 복사되었습니다.', 'success');
+                    }).catch(() => {
+                        this.showToast('주소 복사에 실패했습니다.', 'error');
+                    });
+                });
+            }
             tr.appendChild(tdAddress);
 
             // 필지 주소
