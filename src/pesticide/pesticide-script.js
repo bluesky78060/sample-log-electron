@@ -1054,8 +1054,8 @@ class PesticideSampleManager extends window.BaseSampleManager {
         this.form.reset();
         const subCatSelect = document.getElementById('subCategory');
         if (subCatSelect) {
-            subCatSelect.disabled = true;
-            subCatSelect.innerHTML = sanitizeHTML('<option value="">상위 카테고리를 먼저 선택하세요</option>');
+            subCatSelect.disabled = false;
+            subCatSelect.value = '';
         }
         this.dateInput.valueAsDate = new Date();
 
