@@ -1,5 +1,5 @@
 // npm packages
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx-js-style';
 window.XLSX = XLSX;
 
 // Shared modules

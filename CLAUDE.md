@@ -11,13 +11,24 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 이 프로젝트의 모든 작업은 **AI PM System MCP**를 통해 티켓을 발행한 후 진행해야 한다.
 
 - **프로젝트 ID**: `81150a9b-6422-46d9-a0e2-385336cfe038`
-- **MCP 서버**: `ai-pm` (Render API 모드: `https://ai-pm-system.onrender.com`)
+- **MCP 서버**: `ai-pm` (배포 DB 사용: `https://ai-pm-system.onrender.com`)
+- **데이터베이스**: Render 배포 서버의 PostgreSQL DB (로컬 DB 사용 금지)
+- **MCP 설정**: `~/.claude/.mcp.json` → `API_URL=https://ai-pm-system.onrender.com`
+
+### 에픽 ID (대시보드 노출을 위해 create_task 시 반드시 epic_id 명시)
+
+| 에픽 | ID | 용도 |
+|------|----|------|
+| General | `3fc0cdd8-3f26-4223-bd0a-b63444f25f98` | 일반 버그수정/기능추가 (기본) |
+| 코드 품질 관리 | `7e1b839f-2bf2-4b22-aa50-2de74878a4e6` | 코드리뷰/보안/리팩터링 |
+
+> ⚠️ `epic_id` 없이 `project_id`만 넘기면 `epic_id: null`로 저장되어 대시보드에서 보이지 않는다.
 
 ### 작업 흐름
 
-1. **작업 시작 전**: `create_task`로 티켓 발행 (제목, 설명, 우선순위 포함)
-2. **작업 진행 중**: `update_task_status`로 상태를 `in_progress`로 변경
-3. **작업 완료 시**: `update_task_status`로 상태를 `done`으로 변경
+1. **작업 시작 전**: `create_task`로 티켓 발행 (제목, 설명, 우선순위, **epic_id** 포함)
+2. **작업 진행 중**: `smart_workflow(task_id, 'start_work')`로 in_progress 전환
+3. **작업 완료 시**: `smart_workflow(task_id, 'submit_test')` → `smart_workflow(task_id, 'approve_review')`
 4. **대규모 작업**: `create_epic` → `decompose_task`로 하위 태스크 분할
 
 ### 사용 가능한 도구

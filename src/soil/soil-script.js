@@ -3671,6 +3671,16 @@ class SoilSampleManager extends window.BaseSampleManager {
             log: (...args) => this.log(...args)
         });
 
+        // 흙토람 내보내기 버튼
+        const heuktoramBtn = document.getElementById('heuktoramBtn');
+        if (heuktoramBtn) heuktoramBtn.addEventListener('click', () => {
+            const selectedIds = this.getSelectedIds();
+            sessionStorage.setItem('heuktoram_year', this.selectedYear);
+            sessionStorage.setItem('heuktoram_selected_ids', JSON.stringify(selectedIds));
+            sessionStorage.setItem('heuktoram_from', '../soil/index.html');
+            window.location.href = '../heuktoram/index.html';
+        });
+
         // 엑셀 가져오기
         this.initExcelImporter();
 
