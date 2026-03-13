@@ -717,6 +717,19 @@
 
   // 이벤트 바인딩
   document.addEventListener('DOMContentLoaded', () => {
+    // 뒤로가기 버튼
+    const btnBack = document.getElementById('btnBack');
+    if (btnBack) {
+      btnBack.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (window.history.length > 1) {
+          window.history.back();
+        } else {
+          window.location.href = '../index.html';
+        }
+      });
+    }
+
     // 라벨 파일 드롭 영역
     const labelDropArea = document.getElementById('labelFileDropArea');
     if (labelDropArea) {
