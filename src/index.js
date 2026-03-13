@@ -448,6 +448,74 @@ app.on('window-all-closed', () => {
 });
 
 // ========================================
+// 흙토람 팝업 윈도우
+// ========================================
+
+/** @type {Electron.BrowserWindow | null} */
+let heuktoramWindow = null;
+
+ipcMain.handle('open-heuktoram', async () => {
+    // H-1: 기존 윈도우가 있으면 포커스만 (다중 생성 방지)
+    if (heuktoramWindow && !heuktoramWindow.isDestroyed()) {
+        heuktoramWindow.focus();
+        return true;
+    }
+
+    heuktoramWindow = new BrowserWindow({
+        width: 1400,
+        height: 850,
+        minWidth: 1000,
+        minHeight: 600,
+        title: '흙토람 내보내기',
+        webPreferences: {
+            preload: path.join(__dirname, 'preload.js'),
+            contextIsolation: true,
+            nodeIntegration: false
+        },
+    });
+
+    // H-1: 창 닫힘 시 참조 정리
+    heuktoramWindow.on('closed', () => { heuktoramWindow = null; });
+
+    // M-1: 외부 URL 네비게이션 차단 (메인 윈도우와 동일)
+    heuktoramWindow.webContents.on('will-navigate', (event, url) => {
+        if (url.startsWith('file://') && url.includes('/docs/')) return;
+        if (url.startsWith('http://localhost:')) return;
+        event.preventDefault();
+    });
+
+    // 메인 윈도우와 동일한 로드 전략
+    const VITE_DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL || 'http://localhost:3000';
+
+    try {
+        const http = require('node:http');
+        await new Promise((resolve, reject) => {
+            const req = http.get(VITE_DEV_SERVER_URL, { timeout: 1000 }, (res) => {
+                res.destroy();
+                resolve();
+            });
+            req.on('error', reject);
+            req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
+        });
+        heuktoramWindow.loadURL(`${VITE_DEV_SERVER_URL}/heuktoram/`);
+    } catch {
+        // H-3: 파일 없을 때 에러 안내 표시
+        const heuktoramPath = path.join(__dirname, '..', 'docs', 'heuktoram', 'index.html');
+        if (fs.existsSync(heuktoramPath)) {
+            heuktoramWindow.loadFile(heuktoramPath);
+        } else {
+            heuktoramWindow.loadURL(`data:text/html;charset=utf-8,
+                <h2 style="font-family:sans-serif;padding:2rem;">흙토람 페이지를 찾을 수 없습니다</h2>
+                <p style="font-family:sans-serif;padding:0 2rem;">
+                    <code>npm run build</code>로 빌드해주세요.
+                </p>`);
+        }
+    }
+
+    return true;
+});
+
+// ========================================
 // 파일 시스템 IPC 핸들러
 // ========================================
 

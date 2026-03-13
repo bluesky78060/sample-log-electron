@@ -939,24 +939,21 @@ class PesticideSampleManager extends window.BaseSampleManager {
             }
         }
 
-        // 주소 필드 처리
-        if (log.address) {
+        // 주소 필드 처리: 개별 저장 필드 우선 사용
+        this.addressPostcode.value = log.addressPostcode || '';
+        this.addressRoad.value = log.addressRoad || '';
+        this.addressDetail.value = log.addressDetail || '';
+        this.addressHidden.value = log.address || '';
+
+        // addressRoad가 없으면 address에서 파싱 (레거시 데이터 호환)
+        if (!log.addressRoad && log.address) {
             const addressMatch = log.address.match(/^\((\d{5})\)\s*(.+)$/);
             if (addressMatch) {
-                this.addressPostcode.value = addressMatch[1];
-                const roadAndDetail = addressMatch[2];
-                const detailMatch = roadAndDetail.match(/^(.+?\))\s*(.*)$/);
-                if (detailMatch) {
-                    this.addressRoad.value = detailMatch[1];
-                    this.addressDetail.value = detailMatch[2];
-                } else {
-                    this.addressRoad.value = roadAndDetail;
-                    this.addressDetail.value = '';
-                }
+                this.addressPostcode.value = this.addressPostcode.value || addressMatch[1];
+                this.addressRoad.value = addressMatch[2];
             } else {
                 this.addressRoad.value = log.address;
             }
-            this.addressHidden.value = log.address;
         }
 
         // 구분 선택
@@ -1230,7 +1227,7 @@ class PesticideSampleManager extends window.BaseSampleManager {
             tr.className = isComplete ? 'row-completed' : '';
             const methodText = row.receptionMethod || '-';
 
-            const addressFull = row.addressRoad || row.address || '';
+            const addressFull = [row.addressRoad || row.address, row.addressDetail].filter(Boolean).join(' ') || '';
             const zipMatch = addressFull.match(/^\((\d{5})\)\s*/);
             const zipcode = row.addressPostcode || (zipMatch ? zipMatch[1] : '');
             const addressOnly = zipMatch ? addressFull.replace(zipMatch[0], '') : addressFull;
@@ -1607,7 +1604,7 @@ class PesticideSampleManager extends window.BaseSampleManager {
             { label: '접수일자', value: logData.date },
             { label: '성명', value: logData.name },
             { label: '전화번호', value: logData.phoneNumber },
-            { label: '주소', value: logData.address || '-' },
+            { label: '주소', value: [logData.addressRoad || logData.address, logData.addressDetail].filter(Boolean).join(' ') || '-' },
             { label: '구분', value: logData.subCategory || '-' },
             { label: '목적 (용도)', value: logData.purpose || '-' },
             { label: '수령 방법', value: logData.receptionMethod || '-' },

@@ -137,7 +137,7 @@ class WaterSampleManager extends window.BaseSampleManager {
         row.dataset.id = log.id;
 
         // 주소에서 우편번호 분리
-        const addressFull = log.address || '';
+        const addressFull = [log.addressRoad || log.address, log.addressDetail].filter(Boolean).join(' ') || '';
         const zipMatch = addressFull.match(/^\((\d{5})\)\s*/);
         const zipcode = zipMatch ? zipMatch[1] : (log.addressPostcode || '');
         const addressOnly = zipMatch ? addressFull.replace(zipMatch[0], '') : addressFull;
@@ -414,6 +414,16 @@ class WaterSampleManager extends window.BaseSampleManager {
             if (this.addressRoad) this.addressRoad.value = log.addressRoad || '';
             if (this.addressDetail) this.addressDetail.value = log.addressDetail || '';
             if (this.addressHidden) this.addressHidden.value = log.address || '';
+            // 레거시 데이터 호환: addressRoad 필드가 없고 address만 있는 경우
+            if (!log.addressRoad && log.address) {
+                const addressMatch = log.address.match(/^\((\d{5})\)\s*(.+)$/);
+                if (addressMatch) {
+                    if (this.addressPostcode) this.addressPostcode.value = this.addressPostcode.value || addressMatch[1];
+                    if (this.addressRoad) this.addressRoad.value = addressMatch[2];
+                } else {
+                    if (this.addressRoad) this.addressRoad.value = log.address;
+                }
+            }
             if (sampleNameEl) sampleNameEl.value = log.sampleName || '';
             if (sampleCountEl) sampleCountEl.value = log.sampleCount || 1;
             if (noteEl) noteEl.value = log.note || '';

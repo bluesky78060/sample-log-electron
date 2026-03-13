@@ -87,6 +87,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // 인증 파일 선택 다이얼로그 (Electron 네이티브)
     selectAuthFile: () => ipcRenderer.invoke('select-auth-file'),
 
+    // 흙토람 팝업 윈도우 열기
+    openHeuktoram: () => ipcRenderer.invoke('open-heuktoram'),
+
     // Electron 환경 여부
     isElectron: true
 });

@@ -1613,6 +1613,9 @@ class SoilSampleManager extends window.BaseSampleManager {
                 name: formData.get('name'),
                 phoneNumber: formData.get('phoneNumber'),
                 address: formData.get('address'),
+                addressPostcode: this.addressPostcode?.value || '',
+                addressRoad: this.addressRoad?.value || '',
+                addressDetail: this.addressDetail?.value || '',
                 subCategory: formData.get('subCategory') || '-',
                 purpose: formData.get('purpose'),
                 receptionMethod: formData.get('receptionMethod') || '-',
@@ -1705,6 +1708,9 @@ class SoilSampleManager extends window.BaseSampleManager {
                 name: formData.get('name'),
                 phoneNumber: formData.get('phoneNumber'),
                 address: formData.get('address'),
+                addressPostcode: this.addressPostcode?.value || '',
+                addressRoad: this.addressRoad?.value || '',
+                addressDetail: this.addressDetail?.value || '',
                 subCategory: effectiveSubCategory,
                 purpose: effectivePurpose,
                 receptionMethod: formData.get('receptionMethod') || '-',
@@ -1776,6 +1782,9 @@ class SoilSampleManager extends window.BaseSampleManager {
             name: formData.get('name'),
             phoneNumber: formData.get('phoneNumber'),
             address: formData.get('address'),
+            addressPostcode: this.addressPostcode?.value || '',
+            addressRoad: this.addressRoad?.value || '',
+            addressDetail: this.addressDetail?.value || '',
             subCategory: formData.get('subCategory') || '-',
             purpose: formData.get('purpose'),
             receptionMethod: formData.get('receptionMethod') || '-',
@@ -1929,23 +1938,21 @@ class SoilSampleManager extends window.BaseSampleManager {
         document.getElementById('name').value = log.name || '';
         document.getElementById('phoneNumber').value = log.phoneNumber || '';
 
-        if (log.address) {
+        // 주소 필드 처리: 개별 저장 필드 우선 사용
+        if (this.addressPostcode) this.addressPostcode.value = log.addressPostcode || '';
+        if (this.addressRoad) this.addressRoad.value = log.addressRoad || '';
+        if (this.addressDetail) this.addressDetail.value = log.addressDetail || '';
+        if (this.addressHidden) this.addressHidden.value = log.address || '';
+
+        // addressRoad가 없으면 address에서 파싱 (레거시 데이터 호환)
+        if (!log.addressRoad && log.address) {
             const addressMatch = log.address.match(/^\((\d{5})\)\s*(.+)$/);
             if (addressMatch) {
-                if (this.addressPostcode) this.addressPostcode.value = addressMatch[1];
-                const roadAndDetail = addressMatch[2];
-                const detailMatch = roadAndDetail.match(/^(.+?\))\s*(.*)$/);
-                if (detailMatch) {
-                    if (this.addressRoad) this.addressRoad.value = detailMatch[1];
-                    if (this.addressDetail) this.addressDetail.value = detailMatch[2];
-                } else {
-                    if (this.addressRoad) this.addressRoad.value = roadAndDetail;
-                    if (this.addressDetail) this.addressDetail.value = '';
-                }
+                if (this.addressPostcode) this.addressPostcode.value = this.addressPostcode.value || addressMatch[1];
+                if (this.addressRoad) this.addressRoad.value = addressMatch[2];
             } else {
                 if (this.addressRoad) this.addressRoad.value = log.address;
             }
-            if (this.addressHidden) this.addressHidden.value = log.address;
         }
 
         const subCategorySelect = document.getElementById('subCategory');
@@ -2041,24 +2048,20 @@ class SoilSampleManager extends window.BaseSampleManager {
         document.getElementById('name').value = firstLog.name || '';
         document.getElementById('phoneNumber').value = firstLog.phoneNumber || '';
 
-        // 주소 파싱 (기존 populateFormForEdit과 동일)
-        if (firstLog.address) {
+        // 주소 필드 처리: 개별 저장 필드 우선 사용
+        if (this.addressPostcode) this.addressPostcode.value = firstLog.addressPostcode || '';
+        if (this.addressRoad) this.addressRoad.value = firstLog.addressRoad || '';
+        if (this.addressDetail) this.addressDetail.value = firstLog.addressDetail || '';
+        if (this.addressHidden) this.addressHidden.value = firstLog.address || '';
+
+        if (!firstLog.addressRoad && firstLog.address) {
             const addressMatch = firstLog.address.match(/^\((\d{5})\)\s*(.+)$/);
             if (addressMatch) {
-                if (this.addressPostcode) this.addressPostcode.value = addressMatch[1];
-                const roadAndDetail = addressMatch[2];
-                const detailMatch = roadAndDetail.match(/^(.+?\))\s*(.*)$/);
-                if (detailMatch) {
-                    if (this.addressRoad) this.addressRoad.value = detailMatch[1];
-                    if (this.addressDetail) this.addressDetail.value = detailMatch[2];
-                } else {
-                    if (this.addressRoad) this.addressRoad.value = roadAndDetail;
-                    if (this.addressDetail) this.addressDetail.value = '';
-                }
+                if (this.addressPostcode) this.addressPostcode.value = this.addressPostcode.value || addressMatch[1];
+                if (this.addressRoad) this.addressRoad.value = addressMatch[2];
             } else {
                 if (this.addressRoad) this.addressRoad.value = firstLog.address;
             }
-            if (this.addressHidden) this.addressHidden.value = firstLog.address;
         }
 
         const subCategorySelect = document.getElementById('subCategory');
@@ -2571,7 +2574,7 @@ class SoilSampleManager extends window.BaseSampleManager {
             { label: '접수일자', value: logData.date },
             { label: '성명', value: logData.name },
             { label: '전화번호', value: logData.phoneNumber },
-            { label: '주소', value: logData.address || '-' },
+            { label: '주소', value: [logData.addressRoad || logData.address, logData.addressDetail].filter(Boolean).join(' ') || '-' },
             { label: '구분', value: logData.subCategory || '-' },
             { label: '목적 (용도)', value: logData.purpose || '-' },
             { label: '수령 방법', value: logData.receptionMethod || '-' },
@@ -2817,7 +2820,7 @@ class SoilSampleManager extends window.BaseSampleManager {
             tr.className = isComplete ? 'row-completed' : '';
             const methodText = row.receptionMethod || '-';
 
-            const addressFull = row.address || '';
+            const addressFull = [row.addressRoad || row.address, row.addressDetail].filter(Boolean).join(' ') || '';
             const zipMatch = addressFull.match(/^\((\d{5})\)\s*/);
             const zipcode = zipMatch ? zipMatch[1] : '';
             const addressOnly = zipMatch ? addressFull.replace(zipMatch[0], '') : addressFull;
@@ -3671,14 +3674,28 @@ class SoilSampleManager extends window.BaseSampleManager {
             log: (...args) => this.log(...args)
         });
 
-        // 흙토람 내보내기 버튼
+        // 흙토람 내보내기 버튼 (별도 창으로 열기)
         const heuktoramBtn = document.getElementById('heuktoramBtn');
         if (heuktoramBtn) heuktoramBtn.addEventListener('click', () => {
             const selectedIds = this.getSelectedIds();
-            sessionStorage.setItem('heuktoram_year', this.selectedYear);
-            sessionStorage.setItem('heuktoram_selected_ids', JSON.stringify(selectedIds));
-            sessionStorage.setItem('heuktoram_from', '../soil/index.html');
-            window.location.href = '../heuktoram/index.html';
+            localStorage.setItem('heuktoram_year', this.selectedYear);
+            localStorage.setItem('heuktoram_selected_ids', JSON.stringify(selectedIds));
+
+            const isElectron = window.electronAPI?.isElectron === true;
+            if (isElectron) {
+                window.electronAPI.openHeuktoram();
+            } else {
+                const popup = window.open('../heuktoram/index.html', '_blank');
+                if (!popup) {
+                    window.location.href = '../heuktoram/index.html';
+                }
+            }
+
+            // H-2: 흙토람 로드 실패 시 잔류 데이터 정리 (5초 후)
+            setTimeout(() => {
+                localStorage.removeItem('heuktoram_year');
+                localStorage.removeItem('heuktoram_selected_ids');
+            }, 5000);
         });
 
         // 엑셀 가져오기

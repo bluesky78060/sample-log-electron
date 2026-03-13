@@ -117,15 +117,15 @@ class HeuktoramManager {
      * 토양 접수 대장에서 넘어온 경우 sessionStorage에서 연도/선택 ID 복원
      */
     restoreFromSoilPage() {
-        const year = sessionStorage.getItem('heuktoram_year');
-        const selectedIdsJson = sessionStorage.getItem('heuktoram_selected_ids');
-        const from = sessionStorage.getItem('heuktoram_from');
+        // localStorage 임시 키에서 데이터 복원 (팝업 방식 호환)
+        const year = localStorage.getItem('heuktoram_year');
+        const selectedIdsJson = localStorage.getItem('heuktoram_selected_ids');
 
         if (year) {
             this.selectedYear = year;
             if (this.yearSelect) this.yearSelect.value = year;
             if (this.collectYearInput) this.collectYearInput.value = year;
-            sessionStorage.removeItem('heuktoram_year');
+            localStorage.removeItem('heuktoram_year');
         }
 
         if (selectedIdsJson) {
@@ -135,16 +135,14 @@ class HeuktoramManager {
             } catch (e) {
                 this.preSelectedLogIds = null;
             }
-            sessionStorage.removeItem('heuktoram_selected_ids');
+            localStorage.removeItem('heuktoram_selected_ids');
         }
 
-        // 뒤로가기 버튼 설정
+        // 뒤로가기/닫기 버튼 설정
         const backBtn = document.getElementById('backBtn');
         if (backBtn) {
-            const target = from || '../index.html';
-            sessionStorage.removeItem('heuktoram_from');
             backBtn.addEventListener('click', () => {
-                window.location.href = target;
+                window.close();
             });
         }
     }
@@ -507,6 +505,7 @@ class HeuktoramManager {
             });
             td.addEventListener('blur', () => {
                 td.classList.remove('focused');
+                this.focusedCell = null;  // M-3: 포커스 해제 시 초기화
                 this.handleCellEdit(row.key, field, td.textContent.trim());
             });
 
@@ -563,8 +562,9 @@ class HeuktoramManager {
         if (!this.testResults[key]) {
             this.testResults[key] = {};
         }
-        this.testResults[key][field] = value;
-        this.syncToSiblings(key, field, value);
+        const sanitized = value.slice(0, 200);  // M-2: 일관된 길이 제한
+        this.testResults[key][field] = sanitized;
+        this.syncToSiblings(key, field, sanitized);
         this.saveTestResults();
     }
 

@@ -110,7 +110,7 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
         const methodText = item.receptionMethod || '-';
 
         // 뷰용 주소: 시도 패턴이 있을 때만 제거
-        const addressRoadVal = item.addressRoad || '-';
+        const addressRoadVal = [item.addressRoad, item.addressDetail].filter(Boolean).join(' ') || '-';
         const displayAddress = addressRoadVal !== '-' && SIDO_PATTERN.test(addressRoadVal)
             ? addressRoadVal.replace(SIDO_PATTERN, '')
             : addressRoadVal;
@@ -365,6 +365,16 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
         if (addressRoad) addressRoad.value = log.addressRoad || '';
         if (addressDetail) addressDetail.value = log.addressDetail || '';
         if (addressHidden) addressHidden.value = log.address || '';
+        // 레거시 데이터 호환: addressRoad 필드가 없고 address만 있는 경우
+        if (!log.addressRoad && log.address) {
+            const addressMatch = log.address.match(/^\((\d{5})\)\s*(.+)$/);
+            if (addressMatch) {
+                if (addressPostcode) addressPostcode.value = addressPostcode.value || addressMatch[1];
+                if (addressRoad) addressRoad.value = addressMatch[2];
+            } else {
+                if (addressRoad) addressRoad.value = log.address;
+            }
+        }
 
         document.getElementById('samplingLocation').value = log.samplingLocation || '';
         document.getElementById('cropName').value = log.cropName || '';
@@ -638,7 +648,7 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
             { label: '접수일자', value: logData.date },
             { label: '성명', value: logData.name },
             { label: '전화번호', value: logData.phoneNumber },
-            { label: '주소', value: logData.address || '-' },
+            { label: '주소', value: [logData.addressRoad || logData.address, logData.addressDetail].filter(Boolean).join(' ') || '-' },
             { label: '채취장소', value: logData.samplingLocation || '-' },
             { label: '재배작물', value: logData.cropName || '-' },
             { label: '수령', value: logData.treeAge ? `${logData.treeAge}년` : '-' },
