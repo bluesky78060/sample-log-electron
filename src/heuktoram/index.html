@@ -42,7 +42,10 @@
             </div>
             <div class="toolbar-field">
                 <label for="bulkTestDate">토양검정일</label>
-                <input type="date" id="bulkTestDate" class="toolbar-input">
+                <div style="display: flex; gap: 4px; align-items: center;">
+                    <input type="date" id="bulkTestDate" class="toolbar-input">
+                    <button type="button" id="clearTestDateBtn" class="toolbar-btn-small" title="검정일 일괄 삭제" aria-label="검정일 일괄 삭제">✕</button>
+                </div>
             </div>
             <div class="toolbar-field">
                 <label for="bulkUsageCode">용도구분</label>

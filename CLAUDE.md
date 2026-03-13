@@ -28,8 +28,30 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 1. **작업 시작 전**: `create_task`로 티켓 발행 (제목, 설명, 우선순위, **epic_id** 포함)
 2. **작업 진행 중**: `smart_workflow(task_id, 'start_work')`로 in_progress 전환
-3. **작업 완료 시**: `smart_workflow(task_id, 'submit_test')` → `smart_workflow(task_id, 'approve_review')`
-4. **대규모 작업**: `create_epic` → `decompose_task`로 하위 태스크 분할
+3. **빌드/테스트**: 실행 후 `smart_workflow(task_id, 'submit_test', test_results=[...])` (build 타입 필수, output 10자+)
+4. **코드 리뷰**: code-reviewer로 리뷰 후 `smart_workflow(task_id, 'approve_review', notes='...')` (20자+)
+5. 자동 done 전환
+6. **대규모 작업**: `create_epic` → `decompose_task`로 하위 태스크 분할
+
+### 코드 리뷰 심각도 분류
+
+리뷰 notes 형식:
+```
+🔴 CRITICAL: N건 - [내용]
+🟠 MAJOR: N건 - [내용]
+🟡 MINOR: N건 - [내용]
+🔵 SUGGESTION: N건 - [내용]
+→ 판정: APPROVED / CHANGES_REQUESTED
+```
+- CRITICAL/MAJOR 0건 → `approve_review` 진행
+- CRITICAL/MAJOR 1건 이상 → `request_changes` → 수정 → 리뷰 (최대 3회 반복)
+
+### 금지 사항
+
+- **epic_id: null로 티켓 발행 절대 금지** (대시보드 미노출)
+- 티켓 없이 코드 변경 금지
+- `update_task_status`로 testing→review, review→done 직접 전환 금지 (서버 차단됨)
+- 빌드 미실행 submit_test / 리뷰 미수행 approve_review 금지
 
 ### 사용 가능한 도구
 
@@ -38,7 +60,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `create_task` | 새 작업 티켓 발행 |
 | `create_epic` | 에픽(대규모 기능) 생성 |
 | `decompose_task` | 태스크를 하위 태스크로 분할 |
-| `update_task_status` | 상태 변경 (todo → in_progress → done) |
+| `smart_workflow` | 워크플로우 전환 (start_work, submit_test, approve_review) |
 | `set_priority` | 우선순위 설정 |
 | `add_dependency` | 태스크 간 의존성 추가 |
 | `list_tasks` | 태스크 목록 조회 |

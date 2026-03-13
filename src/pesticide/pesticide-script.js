@@ -1949,7 +1949,11 @@ class PesticideSampleManager extends window.BaseSampleManager {
             this.showToast(`선택한 ${logsToExport.length}건을 내보냅니다.`, 'info');
         }
 
-        const reversedLogs = [...logsToExport].reverse();
+        const reversedLogs = [...logsToExport].sort((a, b) => {
+            const numA = parseInt(String(a.receptionNumber).replace(/\D/g, ''), 10) || 0;
+            const numB = parseInt(String(b.receptionNumber).replace(/\D/g, ''), 10) || 0;
+            return numA - numB;
+        });
         const excelData = [];
 
         reversedLogs.forEach(log => {

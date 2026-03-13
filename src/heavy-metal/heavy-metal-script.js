@@ -1730,7 +1730,12 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
             showToast(`선택한 ${logsToExport.length}건을 내보냅니다.`, 'info');
         }
 
-        const exportData = logsToExport.map(log => {
+        const sortedLogs = [...logsToExport].sort((a, b) => {
+            const numA = parseInt(String(a.receptionNumber).replace(/\D/g, ''), 10) || 0;
+            const numB = parseInt(String(b.receptionNumber).replace(/\D/g, ''), 10) || 0;
+            return numA - numB;
+        });
+        const exportData = sortedLogs.map(log => {
             const isAllItems = log.analysisItems && log.analysisItems.length === this.ANALYSIS_ITEMS.length;
             const analysisDisplay = !log.analysisItems || log.analysisItems.length === 0
                 ? '-'

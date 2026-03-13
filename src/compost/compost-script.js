@@ -1813,7 +1813,12 @@ class CompostSampleManager extends window.BaseSampleManager {
                 this.showToast(`선택한 ${logsToExport.length}건을 내보냅니다.`, 'info');
             }
 
-            const excelData = logsToExport.map(log => {
+            const sortedLogs = [...logsToExport].sort((a, b) => {
+                const numA = parseInt(String(a.receptionNumber).replace(/\D/g, ''), 10) || 0;
+                const numB = parseInt(String(b.receptionNumber).replace(/\D/g, ''), 10) || 0;
+                return numA - numB;
+            });
+            const excelData = sortedLogs.map(log => {
                 let areaDisplay = '-';
                 if (log.farmArea) {
                     const unit = log.farmAreaUnit === 'pyeong' ? '평' : 'm\u00B2';

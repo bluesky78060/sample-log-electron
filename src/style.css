@@ -2293,6 +2293,7 @@ input[type="number"] {
     width: 140px;
     white-space: nowrap;
     border-right: 1px solid var(--gray-200);
+    text-align: center;
 }
 
 .result-table td:last-child {
@@ -3409,7 +3410,11 @@ input[type="number"] {
 }
 
 /* 비고 열 */
-.data-table th.col-note,
+.data-table th.col-note {
+    text-align: center;
+    padding: 0.5rem;
+}
+
 .data-table td.col-note {
     text-align: left;
     padding: 0.5rem;

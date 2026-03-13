@@ -98,6 +98,28 @@
     width: 130px;
 }
 
+.toolbar-btn-small {
+    width: 24px;
+    height: 24px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    background: white;
+    color: #6b7280;
+    cursor: pointer;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.toolbar-btn-small:hover {
+    background: #fee2e2;
+    border-color: #fca5a5;
+    color: #dc2626;
+}
+
 /* 내보내기 버튼 강조 */
 .export-btn {
     background: var(--heuktoram-gradient) !important;
@@ -430,6 +452,18 @@
 
 [data-theme="dark"] .toolbar-field label {
     color: #A8A29E;
+}
+
+[data-theme="dark"] .toolbar-btn-small {
+    background: #292524;
+    border-color: #57534e;
+    color: #a8a29e;
+}
+
+[data-theme="dark"] .toolbar-btn-small:hover {
+    background: #451a03;
+    border-color: #dc2626;
+    color: #fca5a5;
 }
 
 [data-theme="dark"] .toolbar-select,

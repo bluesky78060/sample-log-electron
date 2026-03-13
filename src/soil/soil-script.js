@@ -824,12 +824,12 @@ class SoilSampleManager extends window.BaseSampleManager {
                 </div>
                 <div class="parcel-note-row">
                     <div class="parcel-form-group parcel-note-group">
-                        <label for="parcel-note-${parcel.id}">비고</label>
+                        <label for="parcel-note-${parcel.id}">기타주소</label>
                         <input type="text" class="parcel-note-input"
                                id="parcel-note-${parcel.id}"
                                name="parcel-note-${parcel.id}"
                                data-id="${parcel.id}"
-                               placeholder="필지 관련 메모"
+                               placeholder="예: 1동, 2동"
                                value="${escapeHTML(parcel.note || '')}">
                     </div>
                 </div>
@@ -2603,6 +2603,11 @@ class SoilSampleManager extends window.BaseSampleManager {
                 addressDiv.textContent = parcel.lotAddress;
                 parcelDiv.appendChild(addressDiv);
 
+                const noteDiv = document.createElement('div');
+                noteDiv.className = 'text-sm text-gray';
+                noteDiv.textContent = '기타주소: ' + (parcel.note || '-');
+                parcelDiv.appendChild(noteDiv);
+
                 if (parcel.subLots && parcel.subLots.length > 0) {
                     const subLotsDiv = document.createElement('div');
                     subLotsDiv.className = 'text-sm text-gray';
@@ -2809,7 +2814,7 @@ class SoilSampleManager extends window.BaseSampleManager {
                 const separatorTr = document.createElement('tr');
                 separatorTr.className = 'farm-separator';
                 const separatorTd = document.createElement('td');
-                separatorTd.colSpan = 17;
+                separatorTd.colSpan = 18;
                 separatorTr.appendChild(separatorTd);
                 fragment.appendChild(separatorTr);
             }
@@ -2919,6 +2924,12 @@ class SoilSampleManager extends window.BaseSampleManager {
             const tdLotAddress = document.createElement('td');
             tdLotAddress.textContent = row._lotAddress;
             tr.appendChild(tdLotAddress);
+
+            // 기타주소
+            const tdParcelNote = document.createElement('td');
+            const parcelNoteText = row.parcels && row.parcels[0] ? (row.parcels[0].note || '-') : '-';
+            tdParcelNote.textContent = parcelNoteText;
+            tr.appendChild(tdParcelNote);
 
             // 작물
             const tdCrops = document.createElement('td');
@@ -3773,12 +3784,16 @@ class SoilSampleManager extends window.BaseSampleManager {
             ? this.sampleLogs.filter(log => selectedIds.includes(log.id)) : this.sampleLogs;
         if (selectedIds.length > 0) this.showToast(`선택한 ${logsToExport.length}건을 내보냅니다.`, 'info');
 
-        const reversedLogs = [...logsToExport].reverse();
+        const reversedLogs = [...logsToExport].sort((a, b) => {
+            const numA = parseInt(String(a.receptionNumber).replace(/\D/g, ''), 10) || 0;
+            const numB = parseInt(String(b.receptionNumber).replace(/\D/g, ''), 10) || 0;
+            return numA - numB;
+        });
         const excelData = [];
 
         reversedLogs.forEach(log => {
-            const addressParts = parseAddressParts(log.address || '');
-            const fullAddress = log.address || '-';
+            const addressParts = parseAddressParts(log.addressRoad || log.address || '');
+            const fullAddress = [log.addressRoad, log.addressDetail].filter(Boolean).join(' ') || '-';
             if (log.parcels && log.parcels.length > 0) {
                 log.parcels.forEach((parcel) => {
                     const cropsDisplay = parcel.crops && parcel.crops.length > 0

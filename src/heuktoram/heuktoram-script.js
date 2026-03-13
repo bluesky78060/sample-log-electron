@@ -207,6 +207,20 @@ class HeuktoramManager {
             if (window.showToast) window.showToast(`검정일이 전체 ${this.flatRows.length}건에 적용되었습니다.`, 'info');
         });
 
+        // 검정일 일괄 삭제
+        document.getElementById('clearTestDateBtn')?.addEventListener('click', () => {
+            if (!confirm('모든 행의 검정일을 삭제하시겠습니까?')) return;
+            for (const row of this.flatRows) {
+                if (this.testResults[row.key]) {
+                    this.testResults[row.key].testDate = '';
+                }
+            }
+            if (this.bulkTestDateInput) this.bulkTestDateInput.value = '';
+            this.saveTestResults();
+            this.render();
+            if (window.showToast) window.showToast(`검정일이 전체 ${this.flatRows.length}건에서 삭제되었습니다.`, 'info');
+        });
+
         // 일괄 적용
         this.applyBulkBtn?.addEventListener('click', () => this.applyBulkValues());
 
@@ -850,7 +864,7 @@ class HeuktoramManager {
      * 경작자 주소 파싱 (도로명주소 또는 지번주소)
      * 시도/시군구/읍면동/도로명/본번/부번 분리
      */
-    parsePersonAddress(address) {
+    parsePersonAddress(address, addressDetail) {
         const result = {
             sido: '', sigungu: '', eupmyeondong: '',
             roadName: '', mainNum: '', subNum: '',
@@ -873,6 +887,20 @@ class HeuktoramManager {
                 result.roadName = roadMatch[1];
                 result.mainNum = roadMatch[2];
                 result.subNum = roadMatch[3] || '';
+            }
+        }
+
+        // addressDetail에서 동/층/호와 (법정동, 공동주택명) 파싱
+        if (addressDetail) {
+            const detail = addressDetail.trim();
+            const bracketMatch = detail.match(/(\([^)]+\))/);
+            if (bracketMatch) {
+                result.note = bracketMatch[1];
+                // 괄호를 제거한 나머지가 동/층/호
+                const rest = detail.replace(bracketMatch[1], '').trim();
+                if (rest) result.dongFloorHo = rest;
+            } else {
+                result.dongFloorHo = detail;
             }
         }
 
@@ -1098,7 +1126,7 @@ class HeuktoramManager {
             // parcel-level isMountain이 있으면 사용
             if (isMountain) lotParsed.isMountain = true;
 
-            const personAddr = this.parsePersonAddress(row.log.address || '');
+            const personAddr = this.parsePersonAddress(row.log.addressRoad || row.log.address || '', row.log.addressDetail || '');
             const category = row.parcel?.category || row.log.subCategory || '';
             const purpose = row.parcel?.purpose || row.log.purpose || '';
             const usageCode = this.getUsageCode(purpose, result.usageCode, this.bulkUsageCodeSelect?.value);
@@ -1183,7 +1211,7 @@ class HeuktoramManager {
             { wch: 20 }, // [6]  용도구분 코드 (일반적인토양검정-0 등)
             { wch: 16 }, // [7]  시행(재배)전후
             { wch: 10 }, // [8]  시료번호
-            { wch: 8 },  // [9]  시도
+            { wch: 12 }, // [9]  시도
             { wch: 10 }, // [10] 시군구
             { wch: 10 }, // [11] 읍면동
             { wch: 8 },  // [12] 리
@@ -1195,10 +1223,10 @@ class HeuktoramManager {
             { wch: 10 }, // [18] 면적(㎡)
             { wch: 14 }, // [19] 토양검정일
             { wch: 10 }, // [20] 경작자
-            { wch: 8 },  // [21] 경작자주소 시도
+            { wch: 12 }, // [21] 경작자주소 시도
             { wch: 10 }, // [22] 경작자주소 시군구
             { wch: 10 }, // [23] 경작자주소 읍면동
-            { wch: 10 }, // [24] 도로명
+            { wch: 12 }, // [24] 도로명
             { wch: 6 },  // [25] 본번
             { wch: 6 },  // [26] 부번
             { wch: 10 }, // [27] 동/층/호
