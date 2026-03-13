@@ -1156,7 +1156,7 @@ class HeuktoramManager {
             dataRow[14] = lotParsed.jibun1;
             dataRow[15] = lotParsed.jibun2;
             dataRow[16] = ''; // 주소매핑여부
-            dataRow[17] = ''; // 기타주소
+            dataRow[17] = row.parcel?.note || ''; // 기타주소
             // 면적: 평 단위면 ㎡로 변환
             let areaM2 = row.crop?.area || '';
             if (areaM2 && row.crop?.unit === 'pyeong') {
