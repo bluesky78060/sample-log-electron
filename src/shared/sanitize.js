@@ -96,6 +96,42 @@ function safeTemplate(template, data) {
     return result;
 }
 
+/**
+ * CSV Injection 방지: 엑셀 셀 값에서 수식 실행을 차단
+ * =, +, -, @, \t, \r로 시작하는 값 앞에 작은따옴표(') 추가
+ * @param {*} value - 셀 값
+ * @returns {*} 새니타이즈된 값 (문자열이 아니면 그대로 반환)
+ */
+function sanitizeExcelCell(value) {
+    if (typeof value !== 'string') return value;
+    if (value.length > 1 && /^[=+\-@\t\r;|]/.test(value)) return "'" + value;
+    return value;
+}
+
+/**
+ * 엑셀 내보내기용 객체 배열의 모든 문자열 값을 새니타이즈 (json_to_sheet용)
+ * @param {Array<Object>} data - json_to_sheet에 전달할 데이터 배열
+ * @returns {Array<Object>} 새니타이즈된 데이터 배열
+ */
+function sanitizeExcelData(data) {
+    return data.map(row => {
+        const sanitized = {};
+        for (const [key, val] of Object.entries(row)) {
+            sanitized[key] = sanitizeExcelCell(val);
+        }
+        return sanitized;
+    });
+}
+
+/**
+ * 엑셀 내보내기용 2차원 배열의 모든 문자열 값을 새니타이즈 (aoa_to_sheet용)
+ * @param {Array<Array>} aoa - aoa_to_sheet에 전달할 2차원 배열
+ * @returns {Array<Array>} 새니타이즈된 2차원 배열
+ */
+function sanitizeExcelAoa(aoa) {
+    return aoa.map(row => Array.isArray(row) ? row.map(cell => sanitizeExcelCell(cell)) : row);
+}
+
 // 전역으로 내보내기
 window.sanitizeHTML = sanitizeHTML;
 window.escapeHTML = escapeHTML;
@@ -103,3 +139,6 @@ window.setInnerHTML = setInnerHTML;
 window.clearElement = clearElement;
 window.safeText = safeText;
 window.safeTemplate = safeTemplate;
+window.sanitizeExcelCell = sanitizeExcelCell;
+window.sanitizeExcelData = sanitizeExcelData;
+window.sanitizeExcelAoa = sanitizeExcelAoa;

@@ -126,7 +126,7 @@ class ExcelImportManager {
         const tc = this.config.templateConfig;
         const wb = XLSX.utils.book_new();
         const wsData = [tc.headers, tc.sampleRow];
-        const ws = XLSX.utils.aoa_to_sheet(wsData);
+        const ws = XLSX.utils.aoa_to_sheet(sanitizeExcelAoa(wsData));
         ws['!cols'] = tc.colWidths;
         XLSX.utils.book_append_sheet(wb, ws, tc.sheetName);
         XLSX.writeFile(wb, tc.fileName + '.xlsx');

@@ -1860,7 +1860,7 @@ class CompostSampleManager extends window.BaseSampleManager {
             });
 
             const wb = XLSX.utils.book_new();
-            const ws = XLSX.utils.json_to_sheet(excelData);
+            const ws = XLSX.utils.json_to_sheet(sanitizeExcelData(excelData));
 
             ws['!cols'] = [
                 { wch: 10 }, { wch: 12 }, { wch: 8 }, { wch: 15 },

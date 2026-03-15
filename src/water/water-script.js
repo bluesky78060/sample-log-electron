@@ -1708,7 +1708,7 @@ class WaterSampleManager extends window.BaseSampleManager {
                 });
 
                 const wb = XLSX.utils.book_new();
-                const ws = XLSX.utils.json_to_sheet(exportData);
+                const ws = XLSX.utils.json_to_sheet(sanitizeExcelData(exportData));
                 ws['!cols'] = [
                     { wch: 10 }, { wch: 12 }, { wch: 8 }, { wch: 15 },
                     { wch: 10 }, { wch: 15 }, { wch: 12 }, { wch: 12 },

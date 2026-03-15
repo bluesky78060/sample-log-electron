@@ -1349,7 +1349,7 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
                     '비고': d.note || '-'
                 }];
 
-                const ws = XLSX.utils.json_to_sheet(excelData);
+                const ws = XLSX.utils.json_to_sheet(sanitizeExcelData(excelData));
                 const wb = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(wb, ws, '등록결과');
 
@@ -1774,7 +1774,7 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
             };
         });
 
-        const ws = XLSX.utils.json_to_sheet(exportData);
+        const ws = XLSX.utils.json_to_sheet(sanitizeExcelData(exportData));
         const wb = XLSX.utils.book_new();
 
         ws['!cols'] = [

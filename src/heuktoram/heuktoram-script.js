@@ -998,7 +998,7 @@ class HeuktoramManager {
         try {
             const wb = XLSX.utils.book_new();
             const wsData = this.buildWorksheetData(targetRows);
-            const ws = XLSX.utils.aoa_to_sheet(wsData);
+            const ws = XLSX.utils.aoa_to_sheet(sanitizeExcelAoa(wsData));
 
             // 열 너비 설정
             ws['!cols'] = this.getColumnWidths();

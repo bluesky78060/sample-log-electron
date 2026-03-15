@@ -3930,7 +3930,7 @@ class SoilSampleManager extends window.BaseSampleManager {
         });
 
         const wb = XLSX.utils.book_new();
-        const ws = XLSX.utils.json_to_sheet(excelData);
+        const ws = XLSX.utils.json_to_sheet(sanitizeExcelData(excelData));
         ws['!cols'] = [
             { wch: 14 }, { wch: 12 }, { wch: 8 }, { wch: 12 }, { wch: 10 }, { wch: 15 },
             { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 25 }, { wch: 30 }, { wch: 15 },
@@ -3976,7 +3976,7 @@ class SoilSampleManager extends window.BaseSampleManager {
         }
 
         const wb = XLSX.utils.book_new();
-        const ws = XLSX.utils.json_to_sheet(excelData);
+        const ws = XLSX.utils.json_to_sheet(sanitizeExcelData(excelData));
         ws['!cols'] = [{ wch: 20 }, { wch: 50 }];
         XLSX.utils.book_append_sheet(wb, ws, '등록결과');
         XLSX.writeFile(wb, `등록결과_${this.currentRegistrationData.receptionNumber}_${this.currentRegistrationData.name}.xlsx`);
