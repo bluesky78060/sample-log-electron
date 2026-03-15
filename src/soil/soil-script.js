@@ -495,11 +495,16 @@ class SoilSampleManager extends window.BaseSampleManager {
         if (this.emptyState) this.emptyState.classList.add('hidden');
         if (this.paginationContainer) this.paginationContainer.style.display = 'flex';
 
-        // 접수번호 기준 오름차순 정렬
+        // 접수번호 기준 오름차순 정렬 (1, 1-1, 1-2, 2, 3-1 등 지원)
         const sortedLogs = [...logs].sort((a, b) => {
-            const numA = parseInt(a.receptionNumber, 10) || 0;
-            const numB = parseInt(b.receptionNumber, 10) || 0;
-            return numA - numB;
+            const partsA = (a.receptionNumber || '').replace(/^F/, '').split('-').map(Number);
+            const partsB = (b.receptionNumber || '').replace(/^F/, '').split('-').map(Number);
+            for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
+                const va = partsA[i] || 0;
+                const vb = partsB[i] || 0;
+                if (va !== vb) return va - vb;
+            }
+            return 0;
         });
 
         // 데이터 평탄화
@@ -1629,41 +1634,78 @@ class SoilSampleManager extends window.BaseSampleManager {
             // 기존 그룹 레코드 모두 제거
             this.sampleLogs = this.sampleLogs.filter(l => l.groupId !== groupId);
 
-            // 새 레코드 생성 (필지 수에 맞춰)
-            const newLogs = validParcels.map((parcel, index) => {
+            // 새 레코드 생성 (필지 수 × 작물 수에 맞춰)
+            const newLogs = [];
+            let existingLogIdx = 0;
+            validParcels.forEach((parcel, index) => {
                 const num = baseNumber + index;
-                const receptionNumber = isFillNumber ? `F${num}` : String(num);
                 const parcelSubCategory = parcel.category || commonData.subCategory;
                 const parcelPurpose = parcel.purpose || commonData.purpose;
+                const validCrops = parcel.crops.filter(c => c.name.trim());
+                const useSubNumbers = validCrops.length > 1;
 
-                // 기존 레코드가 있으면 id, createdAt 보존
-                const existingLog = oldGroupLogs[index];
-
-                return {
-                    id: existingLog?.id || crypto.randomUUID(),
-                    receptionNumber,
-                    ...commonData,
-                    subCategory: parcelSubCategory,
-                    purpose: parcelPurpose,
-                    groupId,
-                    parcelIndex: index + 1,
-                    totalParcels: validParcels.length,
-                    createdAt: existingLog?.createdAt || new Date().toISOString(),
-                    isComplete: existingLog?.isComplete || false,
-                    parcels: [{
-                        id: crypto.randomUUID(),
+                if (useSubNumbers) {
+                    // 하위필지(subLots)는 작물별로 복제하지 않음
+                    validCrops.forEach((crop, cropIndex) => {
+                        const baseNum = isFillNumber ? `F${num}` : String(num);
+                        const receptionNumber = `${baseNum}-${cropIndex + 1}`;
+                        const existingLog = oldGroupLogs[existingLogIdx++];
+                        newLogs.push({
+                            id: existingLog?.id || crypto.randomUUID(),
+                            receptionNumber,
+                            ...commonData,
+                            subCategory: parcelSubCategory,
+                            purpose: parcelPurpose,
+                            groupId,
+                            parcelIndex: index + 1,
+                            cropIndex: cropIndex + 1,
+                            totalParcels: validParcels.length,
+                            createdAt: existingLog?.createdAt || new Date().toISOString(),
+                            isComplete: existingLog?.isComplete || false,
+                            parcels: [{
+                                id: crypto.randomUUID(),
+                                lotAddress: parcel.lotAddress,
+                                isMountain: parcel.isMountain || false,
+                                subLots: [],
+                                crops: [{ ...crop }],
+                                category: parcel.category || '',
+                                purpose: parcel.purpose || '',
+                                note: parcel.note || ''
+                            }],
+                            lotAddress: parcel.lotAddress,
+                            area: (parseFloat(crop.area) || 0).toString(),
+                            cropsDisplay: crop.name || '-'
+                        });
+                    });
+                } else {
+                    const receptionNumber = isFillNumber ? `F${num}` : String(num);
+                    const existingLog = oldGroupLogs[existingLogIdx++];
+                    newLogs.push({
+                        id: existingLog?.id || crypto.randomUUID(),
+                        receptionNumber,
+                        ...commonData,
+                        subCategory: parcelSubCategory,
+                        purpose: parcelPurpose,
+                        groupId,
+                        parcelIndex: index + 1,
+                        totalParcels: validParcels.length,
+                        createdAt: existingLog?.createdAt || new Date().toISOString(),
+                        isComplete: existingLog?.isComplete || false,
+                        parcels: [{
+                            id: crypto.randomUUID(),
+                            lotAddress: parcel.lotAddress,
+                            isMountain: parcel.isMountain || false,
+                            subLots: [...parcel.subLots],
+                            crops: parcel.crops.map(c => ({ ...c })),
+                            category: parcel.category || '',
+                            purpose: parcel.purpose || '',
+                            note: parcel.note || ''
+                        }],
                         lotAddress: parcel.lotAddress,
-                        isMountain: parcel.isMountain || false,
-                        subLots: [...parcel.subLots],
-                        crops: parcel.crops.map(c => ({ ...c })),
-                        category: parcel.category || '',
-                        purpose: parcel.purpose || '',
-                        note: parcel.note || ''
-                    }],
-                    lotAddress: parcel.lotAddress,
-                    area: parcel.crops.reduce((sum, c) => sum + (parseFloat(c.area) || 0), 0).toString(),
-                    cropsDisplay: parcel.crops.map(c => c.name).join(', ') || '-'
-                };
+                        area: parcel.crops.reduce((sum, c) => sum + (parseFloat(c.area) || 0), 0).toString(),
+                        cropsDisplay: parcel.crops.map(c => c.name).join(', ') || '-'
+                    });
+                }
             });
 
             newLogs.forEach(log => this.sampleLogs.push(log));
@@ -1795,35 +1837,72 @@ class SoilSampleManager extends window.BaseSampleManager {
 
         const groupId = crypto.randomUUID();
 
-        const newLogs = validParcels.map((parcel, index) => {
+        const newLogs = [];
+        validParcels.forEach((parcel, index) => {
             const num = baseNumber + index;
-            const receptionNumber = isFillNumber ? `F${num}` : String(num);
             const parcelSubCategory = parcel.category || commonData.subCategory;
             const parcelPurpose = parcel.purpose || commonData.purpose;
+            const validCrops = parcel.crops.filter(c => c.name.trim());
+            const useSubNumbers = validCrops.length > 1;
 
-            return {
-                id: crypto.randomUUID(),
-                receptionNumber,
-                ...commonData,
-                subCategory: parcelSubCategory,
-                purpose: parcelPurpose,
-                groupId,
-                parcelIndex: index + 1,
-                totalParcels: validParcels.length,
-                parcels: [{
+            if (useSubNumbers) {
+                // 한 필지에 작물이 여러 개: 1-1, 1-2, 1-3 형태
+                // 하위필지(subLots)는 작물별로 복제하지 않음 (필지 단위이므로)
+                validCrops.forEach((crop, cropIndex) => {
+                    const baseNum = isFillNumber ? `F${num}` : String(num);
+                    const receptionNumber = `${baseNum}-${cropIndex + 1}`;
+                    newLogs.push({
+                        id: crypto.randomUUID(),
+                        receptionNumber,
+                        ...commonData,
+                        subCategory: parcelSubCategory,
+                        purpose: parcelPurpose,
+                        groupId,
+                        parcelIndex: index + 1,
+                        cropIndex: cropIndex + 1,
+                        totalParcels: validParcels.length,
+                        parcels: [{
+                            id: crypto.randomUUID(),
+                            lotAddress: parcel.lotAddress,
+                            isMountain: parcel.isMountain || false,
+                            subLots: [],
+                            crops: [{ ...crop }],
+                            category: parcel.category || '',
+                            purpose: parcel.purpose || '',
+                            note: parcel.note || ''
+                        }],
+                        lotAddress: parcel.lotAddress,
+                        area: (parseFloat(crop.area) || 0).toString(),
+                        cropsDisplay: crop.name || '-'
+                    });
+                });
+            } else {
+                // 작물 1개: 기존처럼 단순 번호
+                const receptionNumber = isFillNumber ? `F${num}` : String(num);
+                newLogs.push({
                     id: crypto.randomUUID(),
+                    receptionNumber,
+                    ...commonData,
+                    subCategory: parcelSubCategory,
+                    purpose: parcelPurpose,
+                    groupId,
+                    parcelIndex: index + 1,
+                    totalParcels: validParcels.length,
+                    parcels: [{
+                        id: crypto.randomUUID(),
+                        lotAddress: parcel.lotAddress,
+                        isMountain: parcel.isMountain || false,
+                        subLots: [...parcel.subLots],
+                        crops: parcel.crops.map(c => ({ ...c })),
+                        category: parcel.category || '',
+                        purpose: parcel.purpose || '',
+                        note: parcel.note || ''
+                    }],
                     lotAddress: parcel.lotAddress,
-                    isMountain: parcel.isMountain || false,
-                    subLots: [...parcel.subLots],
-                    crops: parcel.crops.map(c => ({ ...c })),
-                    category: parcel.category || '',
-                    purpose: parcel.purpose || '',
-                    note: parcel.note || ''
-                }],
-                lotAddress: parcel.lotAddress,
-                area: parcel.crops.reduce((sum, c) => sum + (parseFloat(c.area) || 0), 0).toString(),
-                cropsDisplay: parcel.crops.map(c => c.name).join(', ') || '-'
-            };
+                    area: parcel.crops.reduce((sum, c) => sum + (parseFloat(c.area) || 0), 0).toString(),
+                    cropsDisplay: parcel.crops.map(c => c.name).join(', ') || '-'
+                });
+            }
         });
 
         newLogs.forEach(log => this.sampleLogs.push(log));
@@ -2832,8 +2911,7 @@ class SoilSampleManager extends window.BaseSampleManager {
             const displayAddress = addressOnly && addressOnly !== '-' && typeof SIDO_PATTERN !== 'undefined' && SIDO_PATTERN.test(addressOnly)
                 ? addressOnly.replace(SIDO_PATTERN, '') : (addressOnly || '-');
 
-            const parcelNote = row.parcels && row.parcels[0] && row.parcels[0].note ? row.parcels[0].note : '';
-            const combinedNote = [row.note, parcelNote].filter(n => n && n.trim()).join(' / ') || '-';
+            const combinedNote = row.note?.trim() || '-';
 
             tr.dataset.id = row.id;
 
@@ -3785,9 +3863,14 @@ class SoilSampleManager extends window.BaseSampleManager {
         if (selectedIds.length > 0) this.showToast(`선택한 ${logsToExport.length}건을 내보냅니다.`, 'info');
 
         const reversedLogs = [...logsToExport].sort((a, b) => {
-            const numA = parseInt(String(a.receptionNumber).replace(/\D/g, ''), 10) || 0;
-            const numB = parseInt(String(b.receptionNumber).replace(/\D/g, ''), 10) || 0;
-            return numA - numB;
+            const partsA = (a.receptionNumber || '').replace(/^F/, '').split('-').map(Number);
+            const partsB = (b.receptionNumber || '').replace(/^F/, '').split('-').map(Number);
+            for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
+                const va = partsA[i] || 0;
+                const vb = partsB[i] || 0;
+                if (va !== vb) return va - vb;
+            }
+            return 0;
         });
         const excelData = [];
 
@@ -4002,10 +4085,14 @@ class SoilSampleManager extends window.BaseSampleManager {
             onImportComplete: (records) => {
                 records.forEach(logEntry => this.sampleLogs.push(logEntry));
                 this.sampleLogs.sort((a, b) => {
-                    const numA = parseInt(a.receptionNumber) || 0;
-                    const numB = parseInt(b.receptionNumber) || 0;
-                    if (numA !== numB) return numA - numB;
-                    return (a.receptionNumber || '').localeCompare(b.receptionNumber || '');
+                    const partsA = (a.receptionNumber || '').replace(/^F/, '').split('-').map(Number);
+                    const partsB = (b.receptionNumber || '').replace(/^F/, '').split('-').map(Number);
+                    for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
+                        const va = partsA[i] || 0;
+                        const vb = partsB[i] || 0;
+                        if (va !== vb) return va - vb;
+                    }
+                    return 0;
                 });
                 this.saveLogs();
                 this.filterAndRenderLogs();
