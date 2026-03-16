@@ -1176,10 +1176,6 @@ class SoilSampleManager extends window.BaseSampleManager {
                     autocompleteList.innerHTML = sanitizeHTML(matches.map(crop => `
                         <li data-code="${crop.code}" data-name="${crop.name}">${crop.name} (${crop.category})</li>
                     `).join(''));
-                    const rect = cropInput.getBoundingClientRect();
-                    autocompleteList.style.left = `${rect.left}px`;
-                    autocompleteList.style.top = `${rect.bottom + 2}px`;
-                    autocompleteList.style.width = `${rect.width}px`;
                     autocompleteList.classList.add('show');
                 } else {
                     autocompleteList.classList.remove('show');
@@ -1515,10 +1511,6 @@ class SoilSampleManager extends window.BaseSampleManager {
                         autocompleteList.innerHTML = sanitizeHTML(matches.map(crop => `
                             <li data-code="${crop.code}" data-name="${crop.name}">${crop.name} (${crop.category})</li>
                         `).join(''));
-                        const rect = e.target.getBoundingClientRect();
-                        autocompleteList.style.top = `${rect.bottom + 2}px`;
-                        autocompleteList.style.left = `${rect.left}px`;
-                        autocompleteList.style.width = `${rect.width}px`;
                         autocompleteList.classList.add('show');
                     } else {
                         autocompleteList.classList.remove('show');
@@ -3319,11 +3311,6 @@ class SoilSampleManager extends window.BaseSampleManager {
         // 초기 필지 1개 추가
         this.addParcel();
 
-        // 폼 영역 스크롤 시 자동완성 닫기 (fixed 위치 리스트가 남아있는 것 방지)
-        const formView = document.getElementById('formView');
-        if (formView) {
-            formView.addEventListener('scroll', () => this.closeAllAutocomplete(), true);
-        }
 
         // 접수번호 변경 시 모든 필지 번호 업데이트
         if (this.receptionNumberInput) {
