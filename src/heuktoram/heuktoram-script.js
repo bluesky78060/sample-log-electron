@@ -70,6 +70,18 @@ class HeuktoramManager {
             'exK', 'exCa', 'exMg', 'silica', 'ec', 'limeReq', 'NO3N', 'cec', 'NH4N', 'usageCode'
         ];
 
+        // 검정 결과 유효 범위 (흙토람 기준)
+        this.fieldRanges = {
+            pH: { min: 3.5, max: 9.5, label: 'pH', unit: '' },
+            organicMatter: { min: 1, max: 300, label: '유기물', unit: 'g/kg' },
+            availableP: { min: 1, max: 9999, label: '유효인산', unit: 'mg/kg' },
+            exK: { min: 0.01, max: 15, label: '교환성 칼륨', unit: 'cmol+/kg' },
+            exCa: { min: 0.1, max: 35, label: '교환성 칼슘', unit: 'cmol+/kg' },
+            exMg: { min: 0.1, max: 25, label: '교환성 마그네슘', unit: 'cmol+/kg' },
+            silica: { min: 5, max: 2000, label: '유효규산', unit: 'mg/kg' },
+            ec: { min: 0.01, max: 30, label: '전기전도도', unit: 'dS/m' }
+        };
+
         // 기본 숨김 필드
         this.hiddenFields = new Set(['soiling', 'clay', 'NO3N', 'NH4N']);
         this.showAllColumns = false;
@@ -106,6 +118,7 @@ class HeuktoramManager {
         this.selectAllCheckbox = document.getElementById('selectAll');
         this.selectAllBtn = document.getElementById('selectAllBtn');
         this.applyBulkBtn = document.getElementById('applyBulkBtn');
+        this.bulkCompleteBtn = document.getElementById('bulkCompleteBtn');
         this.exportBtn = document.getElementById('exportBtn');
         this.toggleColumnsBtn = document.getElementById('toggleColumnsBtn');
         this.tableBody = document.getElementById('tableBody');
@@ -224,6 +237,9 @@ class HeuktoramManager {
         // 일괄 적용
         this.applyBulkBtn?.addEventListener('click', () => this.applyBulkValues());
 
+        // 일괄 완료
+        this.bulkCompleteBtn?.addEventListener('click', () => this.bulkComplete());
+
         // 내보내기
         this.exportBtn?.addEventListener('click', () => this.exportToHeuktoram());
 
@@ -295,6 +311,67 @@ class HeuktoramManager {
         } catch (e) {
             (window.logger?.error || console.error)('검정 결과 저장 실패:', e);
         }
+    }
+
+    /**
+     * 선택된 시료들을 일괄 완료(isComplete=true) 처리하고 localStorage에 저장
+     */
+    bulkComplete() {
+        if (this.flatRows.length === 0) {
+            if (window.showToast) window.showToast('처리할 데이터가 없습니다.', 'warning');
+            return;
+        }
+
+        // 선택 없으면 전체 처리 여부 확인
+        let targetKeys;
+        if (this.selectedKeys.size > 0) {
+            targetKeys = this.selectedKeys;
+        } else {
+            if (!confirm(`선택된 항목이 없습니다. 전체 ${this.flatRows.length}건을 완료 처리하시겠습니까?`)) return;
+            targetKeys = new Set(this.flatRows.map(r => r.key));
+        }
+
+        // 선택된 flatRows에서 고유 log.id 추출
+        const selectedLogIds = new Set(
+            this.flatRows
+                .filter(r => targetKeys.has(r.key))
+                .map(r => r.log.id)
+        );
+
+        const now = new Date().toISOString();
+
+        // localStorage에서 전체 연도 데이터를 읽어 업데이트 후 저장
+        const storageKey = `soilSampleLogs_${this.selectedYear}`;
+        let count = 0;
+        try {
+            const raw = localStorage.getItem(storageKey);
+            const allLogs = raw ? JSON.parse(raw) : [];
+            if (!Array.isArray(allLogs)) throw new Error('데이터 형식 오류');
+            allLogs.forEach(log => {
+                if (selectedLogIds.has(log.id)) {
+                    log.isComplete = true;
+                    log.updatedAt = now;
+                    count++;
+                }
+            });
+            localStorage.setItem(storageKey, JSON.stringify(allLogs));
+
+            // 메모리 데이터도 동기화
+            this.sampleLogs.forEach(log => {
+                if (selectedLogIds.has(log.id)) {
+                    log.isComplete = true;
+                    log.updatedAt = now;
+                }
+            });
+        } catch (e) {
+            (window.logger?.error || console.error)('완료 저장 실패:', e);
+            if (window.showToast) window.showToast('저장 중 오류가 발생했습니다.', 'error');
+            return;
+        }
+
+        // 렌더링 재호출로 row-completed 클래스 일관 적용
+        this.render();
+        if (window.showToast) window.showToast(`${count}건이 완료 처리되었습니다.`, 'success');
     }
 
     /**
@@ -408,13 +485,18 @@ class HeuktoramManager {
 
         this.tableBody.innerHTML = '';
         this.tableBody.appendChild(fragment);
+
+        // 기존 검정결과 범위 검증
+        this.validateAllRanges();
     }
 
     createTableRow(row, rowIdx) {
         const tr = document.createElement('tr');
         const result = this.testResults[row.key] || {};
 
+        tr.setAttribute('data-log-id', row.log.id);
         if (row.isSubLot) tr.classList.add('sublot-row');
+        if (row.log.isComplete) tr.classList.add('row-completed');
 
         const isChecked = this.selectedKeys.has(row.key);
 
@@ -528,14 +610,14 @@ class HeuktoramManager {
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     td.blur();
-                    this.moveFocus(rowIdx + 1, ci);
+                    this.moveFocus(rowIdx + 1, ci, 1);
                 } else if (e.key === 'Tab') {
                     e.preventDefault();
                     td.blur();
                     if (e.shiftKey) {
-                        this.moveFocus(rowIdx, ci - 1);
+                        this.moveFocusResult(rowIdx, ci - 1, -1);
                     } else {
-                        this.moveFocus(rowIdx, ci + 1);
+                        this.moveFocusResult(rowIdx, ci + 1, 1);
                     }
                 }
             });
@@ -546,7 +628,7 @@ class HeuktoramManager {
         return tr;
     }
 
-    moveFocus(rowIdx, colIdx) {
+    moveFocus(rowIdx, colIdx, direction = 1) {
         // 다음 행/열로 포커스 이동
         if (colIdx >= this.resultFields.length) {
             colIdx = 0;
@@ -558,12 +640,72 @@ class HeuktoramManager {
         }
         if (rowIdx < 0 || rowIdx >= this.flatRows.length) return;
 
+        // 숨김 컬럼 건너뛰기 (전체보기 모드가 아닐 때)
+        if (!this.showAllColumns && this.hiddenFields.has(this.resultFields[colIdx])) {
+            this.moveFocus(rowIdx, colIdx + direction, direction);
+            return;
+        }
+
         const cell = this.tableBody?.querySelector(
             `td[data-row="${rowIdx}"][data-col="${colIdx}"]`
         );
         if (cell) {
             cell.focus();
             // 텍스트 선택
+            const range = document.createRange();
+            range.selectNodeContents(cell);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+        }
+    }
+
+    /**
+     * Tab 키 전용 포커스 이동
+     * - 이동 범위: pH(index 3) ~ cec(index 13)
+     * - cec에서 Tab → 다음 행의 pH
+     * - isSubLot=true 행은 건너뜀 (syncToSiblings가 값 복사 담당)
+     */
+    moveFocusResult(rowIdx, colIdx, direction = 1) {
+        const START_COL = this.resultFields.indexOf('pH');   // 3
+        const END_COL   = this.resultFields.indexOf('cec');  // 13
+
+        // 열 범위 벗어나면 행 이동
+        if (direction >= 0 && colIdx > END_COL) {
+            colIdx = START_COL;
+            rowIdx++;
+        } else if (direction < 0 && colIdx < START_COL) {
+            colIdx = END_COL;
+            rowIdx--;
+        }
+
+        if (rowIdx < 0 || rowIdx >= this.flatRows.length) return;
+
+        // isSubLot 행 건너뛰기 (while 루프로 무한재귀 방지)
+        while (rowIdx >= 0 && rowIdx < this.flatRows.length && this.flatRows[rowIdx]?.isSubLot) {
+            rowIdx += direction;
+            colIdx = direction >= 0 ? START_COL : END_COL;
+        }
+        if (rowIdx < 0 || rowIdx >= this.flatRows.length) return;
+
+        // 숨김 컬럼 건너뛰기 (while 루프)
+        while (
+            colIdx >= START_COL && colIdx <= END_COL &&
+            !this.showAllColumns && this.hiddenFields.has(this.resultFields[colIdx])
+        ) {
+            colIdx += direction;
+        }
+        // 숨김 건너뛰다 범위 벗어나면 재호출
+        if (colIdx > END_COL || colIdx < START_COL) {
+            this.moveFocusResult(rowIdx, colIdx, direction);
+            return;
+        }
+
+        const cell = this.tableBody?.querySelector(
+            `td[data-row="${rowIdx}"][data-col="${colIdx}"]`
+        );
+        if (cell) {
+            cell.focus();
             const range = document.createRange();
             range.selectNodeContents(cell);
             const sel = window.getSelection();
@@ -580,6 +722,52 @@ class HeuktoramManager {
         this.testResults[key][field] = sanitized;
         this.syncToSiblings(key, field, sanitized);
         this.saveTestResults();
+
+        // 범위 검증
+        this.validateFieldRange(key, field, sanitized);
+    }
+
+    validateFieldRange(key, field, value) {
+        const range = this.fieldRanges[field];
+        if (!range) return; // 범위가 정의되지 않은 필드는 스킵
+
+        // 해당 셀 찾기
+        const rowIdx = this.flatRows.findIndex(r => r.key === key);
+        const colIdx = this.resultFields.indexOf(field);
+        const cell = this.tableBody?.querySelector(`td[data-row="${rowIdx}"][data-col="${colIdx}"]`);
+
+        if (!value || value.trim() === '') {
+            // 빈 값이면 경고 제거
+            if (cell) cell.classList.remove('out-of-range');
+            return;
+        }
+
+        const num = parseFloat(value);
+        if (isNaN(num)) {
+            if (cell) cell.classList.remove('out-of-range');
+            return;
+        }
+
+        const unitText = range.unit ? ` ${range.unit}` : '';
+
+        if (num < range.min || num > range.max) {
+            // 범위 초과
+            if (cell) cell.classList.add('out-of-range');
+            if (window.showToast) window.showToast(`⚠️ ${range.label}: ${num}${unitText} → 입력 범위 ${range.min} ~ ${range.max}${unitText}`, 'warning');
+        } else {
+            // 범위 내
+            if (cell) cell.classList.remove('out-of-range');
+        }
+    }
+
+    validateAllRanges() {
+        for (const [key, result] of Object.entries(this.testResults)) {
+            for (const field of Object.keys(this.fieldRanges)) {
+                if (result[field]) {
+                    this.validateFieldRange(key, field, result[field]);
+                }
+            }
+        }
     }
 
     /**

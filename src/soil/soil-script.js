@@ -808,9 +808,9 @@ class SoilSampleManager extends window.BaseSampleManager {
                                        data-id="${parcel.id}"
                                        placeholder="면적"
                                        value="${firstCrop.area}">
-                                <div class="area-unit-toggle" id="area-unit-${parcel.id}" data-id="${parcel.id}" data-unit="m2">
-                                    <button type="button" class="unit-btn active" data-value="m2">㎡</button>
-                                    <button type="button" class="unit-btn" data-value="pyeong">평</button>
+                                <div class="area-unit-toggle" id="area-unit-${parcel.id}" data-id="${parcel.id}" data-unit="${firstCrop.unit || 'm2'}">
+                                    <button type="button" class="unit-btn ${(!firstCrop.unit || firstCrop.unit === 'm2') ? 'active' : ''}" data-value="m2">㎡</button>
+                                    <button type="button" class="unit-btn ${firstCrop.unit === 'pyeong' ? 'active' : ''}" data-value="pyeong">평</button>
                                 </div>
                             </div>
                         </div>
@@ -824,7 +824,7 @@ class SoilSampleManager extends window.BaseSampleManager {
                             return `
                                 <div class="crop-area-item" data-index="${idx + 1}">
                                     <span class="crop-name">${safeCropNameCard}</span>
-                                    <span class="crop-area">${formatArea(crop.area)} m²</span>
+                                    <span class="crop-area">${formatAreaWithUnit(crop.area, crop.unit || 'm2')}</span>
                                     <button type="button" class="remove-crop-area">&times;</button>
                                 </div>
                             `;
@@ -3708,6 +3708,37 @@ class SoilSampleManager extends window.BaseSampleManager {
                     const selectedLogs = this.sampleLogs.filter(log => selectedIds.includes(String(log.id)));
                     this.openLabelPrintWithData(selectedLogs);
                 }
+            });
+        }
+
+        // 일괄 완료
+        const btnBulkComplete = document.getElementById('btnBulkComplete');
+        if (btnBulkComplete) {
+            btnBulkComplete.addEventListener('click', () => {
+                const selectedIds = this.getSelectedIds();
+                if (selectedIds.length === 0) { alert('완료 처리할 항목을 선택해주세요.'); return; }
+                if (!confirm(`선택한 ${selectedIds.length}건을 완료 처리하시겠습니까?`)) return;
+
+                const now = new Date().toISOString();
+                // 선택된 ID 및 연관 접수번호(같은 base 번호) 모두 완료 처리
+                const baseNumbers = new Set(
+                    selectedIds.map(id => {
+                        const log = this.sampleLogs.find(l => String(l.id) === id);
+                        return (log?.receptionNumber || '').split('-').slice(0, 2).join('-');
+                    }).filter(Boolean)
+                );
+                let count = 0;
+                this.sampleLogs.forEach(log => {
+                    const base = (log.receptionNumber || '').split('-').slice(0, 2).join('-');
+                    if (selectedIds.includes(String(log.id)) || (base && baseNumbers.has(base))) {
+                        log.isComplete = true;
+                        log.updatedAt = now;
+                        count++;
+                    }
+                });
+                this.saveLogs();
+                this.filterAndRenderLogs();
+                this.showToast(`${count}건이 완료 처리되었습니다.`, 'success');
             });
         }
 

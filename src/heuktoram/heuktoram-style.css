@@ -133,6 +133,29 @@
     transform: translateY(-1px);
 }
 
+/* 일괄 완료 버튼 */
+.complete-btn {
+    background: #dcfce7 !important;
+    color: #16a34a !important;
+    border: 1px solid #bbf7d0 !important;
+    border-radius: 6px !important;
+}
+
+.complete-btn:hover {
+    background: #bbf7d0 !important;
+    transform: translateY(-1px);
+}
+
+/* 완료된 행 */
+.heuktoram-table tr.row-completed td {
+    background: #f0fdf4 !important;
+    color: #6b7280;
+}
+
+.heuktoram-table tr.row-completed td.sticky-col {
+    background: #e8faf0 !important;
+}
+
 /* ========================================
    안내 바
    ======================================== */
@@ -343,6 +366,19 @@
     display: none;
 }
 
+/* 검정결과 범위 초과 경고 */
+.out-of-range {
+    background-color: #fef2f2 !important;
+    border: 2px solid #ef4444 !important;
+    color: #dc2626 !important;
+}
+
+[data-theme="dark"] .out-of-range {
+    background-color: rgba(239, 68, 68, 0.15) !important;
+    border-color: #ef4444 !important;
+    color: #fca5a5 !important;
+}
+
 /* 붙여넣기 하이라이트 */
 .paste-highlight {
     animation: pasteFlash 1.5s ease;
@@ -519,6 +555,25 @@
 
 [data-theme="dark"] .sublot-row td.sticky-col {
     background: #231f2e !important;
+}
+
+[data-theme="dark"] .complete-btn {
+    background: #14532d !important;
+    color: #86efac !important;
+    border-color: #166534 !important;
+}
+
+[data-theme="dark"] .complete-btn:hover {
+    background: #166534 !important;
+}
+
+[data-theme="dark"] .heuktoram-table tr.row-completed td {
+    background: #052e16 !important;
+    color: #9ca3af;
+}
+
+[data-theme="dark"] .heuktoram-table tr.row-completed td.sticky-col {
+    background: #071f10 !important;
 }
 
 [data-theme="dark"] .heuktoram-table tbody tr:hover td {
