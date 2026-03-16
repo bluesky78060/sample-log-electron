@@ -4247,7 +4247,7 @@ input[type="number"] {
     border-radius: var(--radius-md);
     max-height: 200px;
     overflow-y: auto;
-    z-index: 100000;
+    z-index: 200000;
     display: none;
     box-shadow: var(--shadow-lg);
     min-width: 200px;
