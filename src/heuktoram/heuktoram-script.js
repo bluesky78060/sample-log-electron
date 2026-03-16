@@ -1027,17 +1027,17 @@ class HeuktoramManager {
         const collector = this.collectorInput?.value || '';
 
         // 1행: 제목
-        const row1 = new Array(48).fill('');
+        const row1 = new Array(50).fill('');
         row1[0] = '토양검정 일괄입력 양식';
         data.push(row1);
 
         // 2행: 안내
-        const row2 = new Array(48).fill('');
+        const row2 = new Array(50).fill('');
         row2[0] = '※ 300건 이하로 입력해주세요. 주소매핑여부와 기타주소 컬럼은 빈값으로 두세요.';
         data.push(row2);
 
         // 3행: 대분류 헤더 (실제 흙토람 서식 56열 기준)
-        const row3 = new Array(48).fill('');
+        const row3 = new Array(50).fill('');
         row3[0] = '필지구분';
         row3[1] = '채취년도';
         row3[2] = '시료채취자';
@@ -1078,10 +1078,12 @@ class HeuktoramManager {
         row3[45] = '양이온\n치환용량';
         row3[46] = '암모니아태\n질소';
         row3[47] = '신청인 전화번호';
+        row3[48] = '개인정보\n수집·이용 동의';
+        row3[49] = '개인정보\n제3자 제공동의';
         data.push(row3);
 
         // 4행: 소분류 헤더
-        const row4 = new Array(48).fill('');
+        const row4 = new Array(50).fill('');
         row4[0] = '필지/하위필지';
         row4[4] = '1차';
         row4[5] = '2차';
@@ -1132,7 +1134,7 @@ class HeuktoramManager {
             const usageCode = this.getUsageCode(purpose, result.usageCode, this.bulkUsageCodeSelect?.value);
             const soiling = (result.soiling === '해당' || category === '성토') ? '해당' : '미해당';
 
-            const dataRow = new Array(48).fill('');
+            const dataRow = new Array(50).fill('');
             dataRow[0] = row.isSubLot ? '하위필지' : '필지';
             dataRow[1] = collectYear;
             dataRow[2] = collector || row.log.name || '';
@@ -1193,6 +1195,8 @@ class HeuktoramManager {
             dataRow[45] = result.cec || '';
             dataRow[46] = result.NH4N || '';
             dataRow[47] = (row.log.phoneNumber || '').replace(/-/g, '');
+            dataRow[48] = 'Y'; // 개인정보 수집·이용 동의
+            dataRow[49] = 'Y'; // 개인정보 제3자 제공동의
 
             data.push(dataRow);
         }
@@ -1250,6 +1254,8 @@ class HeuktoramManager {
             { wch: 12 }, // [45] 양이온 치환용량
             { wch: 12 }, // [46] 암모니아태 질소
             { wch: 16 }, // [47] 신청인 전화번호
+            { wch: 16 }, // [48] 개인정보 수집·이용 동의
+            { wch: 16 }, // [49] 개인정보 제3자 제공동의
         ];
     }
 
@@ -1358,6 +1364,8 @@ class HeuktoramManager {
             { s: { r: 2, c: 45 }, e: { r: 3, c: 45 } },  // AT3:AT4 양이온치환용량
             { s: { r: 2, c: 46 }, e: { r: 3, c: 46 } },  // AU3:AU4 암모니아태질소
             { s: { r: 2, c: 47 }, e: { r: 3, c: 47 } },  // AV3:AV4 전화번호
+            { s: { r: 2, c: 48 }, e: { r: 3, c: 48 } },  // AW3:AW4 개인정보 수집·이용 동의
+            { s: { r: 2, c: 49 }, e: { r: 3, c: 49 } },  // AX3:AX4 개인정보 제3자 제공동의
 
             // 3행 가로 병합 (그룹 헤더)
             { s: { r: 2, c: 4 }, e: { r: 2, c: 5 } },    // E3:F3 경지구분

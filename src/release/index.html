@@ -596,9 +596,42 @@
                 </div>
             </div>
 
-            <!-- v1.7.66 -->
+            <!-- v1.7.72 -->
             <div class="version-entry">
                 <div class="version-dot latest"></div>
+                <div class="version-card">
+                    <div class="version-card-header">
+                        <div>
+                            <div class="version-meta">
+                                <span class="version-number">v1.7.72</span>
+                                <span class="version-date">2026-03-16</span>
+                            </div>
+                            <div class="version-title">기타주소·서브넘버·보안 강화</div>
+                        </div>
+                        <div class="badge-row">
+                            <span class="badge badge-latest">★ 최신</span>
+                            <span class="badge badge-feature">기능</span>
+                            <span class="badge badge-security">보안</span>
+                            <span class="badge badge-fix">수정</span>
+                        </div>
+                    </div>
+                    <ul class="change-list">
+                        <li><strong>토양 기타주소 컬럼</strong> — 필지 '비고'를 '기타주소'로 변경, 목록 테이블·뷰 모달에 별도 컬럼 추가</li>
+                        <li><strong>한 필지 다작물 서브넘버</strong> — 한 필지에 작물 여러 개 시 1-1, 1-2, 1-3 형태로 접수번호 자동 부여</li>
+                        <li><strong>흙토람 기타주소 R열 반영</strong> — 토양 접수 기타주소가 흙토람 엑셀 R열에 자동 반영</li>
+                        <li><strong>흙토람 개인정보 동의 컬럼</strong> — 엑셀 마지막에 수집·이용 동의, 제3자 제공동의 컬럼 추가 (Y 자동)</li>
+                        <li><strong>흙토람 검정일 일괄 삭제</strong> — 입력된 검정일을 한번에 초기화하는 버튼 추가</li>
+                        <li><strong>엑셀 접수번호 오름차순 정렬</strong> — 5개 시료 타입 모두 접수번호 1번부터 오름차순 정렬</li>
+                        <li><strong>주소 파싱 소스 통일</strong> — 토양·흙토람 포함 전체 addressRoad 우선 사용으로 통일</li>
+                        <li><strong>CSV Injection 방지</strong> — sanitizeExcelCell로 =, +, -, @ 등 수식 실행 차단 (전체 시료 적용)</li>
+                        <li><strong>비고 헤더 가운데 정렬</strong> — 목록 테이블 비고 제목 중앙 정렬</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- v1.7.66 -->
+            <div class="version-entry">
+                <div class="version-dot"></div>
                 <div class="version-card">
                     <div class="version-card-header">
                         <div>
@@ -609,7 +642,6 @@
                             <div class="version-title">흙토람 내보내기 개선</div>
                         </div>
                         <div class="badge-row">
-                            <span class="badge badge-latest">★ 최신</span>
                             <span class="badge badge-feature">기능</span>
                             <span class="badge badge-fix">수정</span>
                         </div>
