@@ -3318,7 +3318,6 @@ class SoilSampleManager extends window.BaseSampleManager {
         // 초기 필지 1개 추가
         this.addParcel();
 
-
         // 접수번호 변경 시 모든 필지 번호 업데이트
         if (this.receptionNumberInput) {
             this.receptionNumberInput.addEventListener('input', () => this.updateAllParcelNumbers());

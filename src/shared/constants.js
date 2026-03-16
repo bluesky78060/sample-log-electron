@@ -87,7 +87,8 @@ const VALIDATION = {
     MIN_NAME_LENGTH: 1,
     MAX_NAME_LENGTH: 50,
     MAX_ADDRESS_LENGTH: 200,
-    MAX_NOTE_LENGTH: 500
+    MAX_NOTE_LENGTH: 500,
+    MAX_CELL_INPUT_LENGTH: 200  // 흙토람 검정결과 셀 입력 최대 길이
 };
 
 /**

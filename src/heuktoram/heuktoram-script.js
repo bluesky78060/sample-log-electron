@@ -720,7 +720,7 @@ class HeuktoramManager {
         if (!this.testResults[key]) {
             this.testResults[key] = {};
         }
-        const sanitized = value.slice(0, 200);  // M-2: 일관된 길이 제한
+        const sanitized = value.slice(0, window.SampleConstants?.VALIDATION?.MAX_CELL_INPUT_LENGTH ?? 200);
         this.testResults[key][field] = sanitized;
         this.syncToSiblings(key, field, sanitized);
         this.saveTestResults();
@@ -839,7 +839,7 @@ class HeuktoramManager {
                 if (targetCol >= this.resultFields.length) break;
 
                 const field = this.resultFields[targetCol];
-                const value = cols[ci].trim().slice(0, 200);
+                const value = cols[ci].trim().slice(0, window.SampleConstants?.VALIDATION?.MAX_CELL_INPUT_LENGTH ?? 200);
                 const rowKey = this.flatRows[targetRow].key;
 
                 if (!this.testResults[rowKey]) {
