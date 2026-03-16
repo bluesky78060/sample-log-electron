@@ -272,6 +272,9 @@ class SoilSampleManager extends window.BaseSampleManager {
     // ========================================
 
     switchView(viewName) {
+        // 뷰 전환 시 열려있는 자동완성 리스트 모두 닫기
+        this.closeAllAutocomplete();
+
         const views = document.querySelectorAll('.view');
         const navItems = document.querySelectorAll('.nav-btn');
 
@@ -289,6 +292,14 @@ class SoilSampleManager extends window.BaseSampleManager {
             this.filterAndRenderLogs();
             this.listViewStale = false;
         }
+    }
+
+    /**
+     * 열려있는 모든 자동완성 리스트 닫기
+     */
+    closeAllAutocomplete() {
+        document.querySelectorAll('.crop-autocomplete-list.show, .lot-address-autocomplete-list.show')
+            .forEach(el => el.classList.remove('show'));
     }
 
     // ========================================
@@ -456,7 +467,7 @@ class SoilSampleManager extends window.BaseSampleManager {
     // Override: deleteSample (soil-specific: inline Firebase delete)
     // ========================================
 
-    async deleteSample(id) {
+    async deleteSample(id, receptionNumber) {
         this.sampleLogs = this.sampleLogs.filter(log => log.id !== id);
         await this.saveLogs();
         this.filterAndRenderLogs();
@@ -472,6 +483,51 @@ class SoilSampleManager extends window.BaseSampleManager {
         if (this.editingLogId === id) {
             this.cancelEditMode();
         }
+
+        // 삭제된 접수번호의 기본번호를 입력란에 세팅 (재입력 편의)
+        if (receptionNumber && this.receptionNumberInput) {
+            const baseNumber = receptionNumber.split('-')[0];
+            // 해당 기본번호가 더 이상 존재하지 않으면 입력란에 세팅
+            const stillExists = this.sampleLogs.some(log =>
+                (log.receptionNumber || '').split('-')[0] === baseNumber
+            );
+            if (!stillExists) {
+                this.receptionNumberInput.value = baseNumber;
+            }
+        }
+    }
+
+    /**
+     * 그룹 삭제: 같은 groupId를 가진 모든 시료를 삭제하고 접수번호를 재사용 가능하도록 세팅
+     * @param {string} groupId - 삭제할 그룹 ID
+     * @param {string} baseReceptionNumber - 삭제 후 세팅할 접수번호
+     */
+    async deleteGroup(groupId, baseReceptionNumber) {
+        const groupLogs = this.sampleLogs.filter(log => log.groupId === groupId);
+        const deleteIds = groupLogs.map(log => log.id);
+
+        this.sampleLogs = this.sampleLogs.filter(log => log.groupId !== groupId);
+        await this.saveLogs();
+        this.filterAndRenderLogs();
+
+        // Firebase에서도 삭제
+        if (window.firestoreDb?.isEnabled()) {
+            Promise.all(deleteIds.map(delId => window.firestoreDb.delete('soil', parseInt(this.selectedYear), delId)))
+                .then(() => this.log('Firebase 그룹 삭제 완료:', deleteIds.length, '건'))
+                .catch(err => (window.logger?.error || console.error)('Firebase 그룹 삭제 실패:', err));
+        }
+
+        // 수정 중이던 항목이 삭제 그룹에 포함되면 수정 모드 취소
+        if (deleteIds.includes(this.editingLogId)) {
+            this.cancelEditMode();
+        }
+
+        // 삭제된 접수번호를 입력란에 세팅하여 재입력 편의 제공
+        if (baseReceptionNumber && this.receptionNumberInput) {
+            this.receptionNumberInput.value = baseReceptionNumber;
+        }
+
+        this.showToast(`${groupLogs.length}건이 삭제되었습니다. 접수번호 ${baseReceptionNumber}번으로 재입력할 수 있습니다.`, 'success');
     }
 
     // ========================================
@@ -1645,10 +1701,11 @@ class SoilSampleManager extends window.BaseSampleManager {
                 const useSubNumbers = validCrops.length > 1;
 
                 if (useSubNumbers) {
+                    // 첫 작물은 기본번호, 두 번째부터 -1, -2
                     // 하위필지(subLots)는 작물별로 복제하지 않음
                     validCrops.forEach((crop, cropIndex) => {
                         const baseNum = isFillNumber ? `F${num}` : String(num);
-                        const receptionNumber = `${baseNum}-${cropIndex + 1}`;
+                        const receptionNumber = cropIndex === 0 ? baseNum : `${baseNum}-${cropIndex}`;
                         const existingLog = oldGroupLogs[existingLogIdx++];
                         newLogs.push({
                             id: existingLog?.id || crypto.randomUUID(),
@@ -1710,9 +1767,10 @@ class SoilSampleManager extends window.BaseSampleManager {
 
             newLogs.forEach(log => this.sampleLogs.push(log));
 
-            // 기존에 더 많았던 레코드가 있으면 Firebase에서 삭제
+            // 기존 레코드 중 새 레코드에 ID가 재사용되지 않은 것들을 Firebase에서 삭제
             if (window.firestoreDb?.isEnabled()) {
-                const removedLogs = oldGroupLogs.slice(validParcels.length);
+                const newIds = new Set(newLogs.map(l => l.id));
+                const removedLogs = oldGroupLogs.filter(l => !newIds.has(l.id));
                 if (removedLogs.length > 0) {
                     Promise.all(removedLogs.map(log =>
                         window.firestoreDb.delete('soil', parseInt(this.selectedYear), log.id)
@@ -1723,7 +1781,7 @@ class SoilSampleManager extends window.BaseSampleManager {
             this.saveLogs();
             this.filterAndRenderLogs();
             this.cancelEditMode();
-            this.showToast(`${validParcels.length}건의 필지가 수정되었습니다.`, 'success');
+            this.showToast(`${newLogs.length}건의 시료가 수정되었습니다.`, 'success');
             this.switchView('list');
             return;
         }
@@ -1846,11 +1904,12 @@ class SoilSampleManager extends window.BaseSampleManager {
             const useSubNumbers = validCrops.length > 1;
 
             if (useSubNumbers) {
-                // 한 필지에 작물이 여러 개: 1-1, 1-2, 1-3 형태
+                // 한 필지에 작물이 여러 개: 321, 321-1, 321-2 형태
+                // 첫 작물은 기본번호, 두 번째부터 -1, -2
                 // 하위필지(subLots)는 작물별로 복제하지 않음 (필지 단위이므로)
                 validCrops.forEach((crop, cropIndex) => {
                     const baseNum = isFillNumber ? `F${num}` : String(num);
-                    const receptionNumber = `${baseNum}-${cropIndex + 1}`;
+                    const receptionNumber = cropIndex === 0 ? baseNum : `${baseNum}-${cropIndex}`;
                     newLogs.push({
                         id: crypto.randomUUID(),
                         receptionNumber,
@@ -2121,8 +2180,9 @@ class SoilSampleManager extends window.BaseSampleManager {
         this.editingGroupId = firstLog.groupId;
         this.editingGroupLogs = groupLogs;
 
-        // 접수번호 (첫 번째 레코드)
-        this.receptionNumberInput.value = firstLog.receptionNumber || '';
+        // 접수번호 (기본번호만, 서브넘버 -1,-2 제외)
+        const baseRecNum = (firstLog.receptionNumber || '').split('-')[0];
+        this.receptionNumberInput.value = baseRecNum;
         if (this.dateInput) this.dateInput.value = firstLog.date || '';
         document.getElementById('name').value = firstLog.name || '';
         document.getElementById('phoneNumber').value = firstLog.phoneNumber || '';
@@ -2170,28 +2230,51 @@ class SoilSampleManager extends window.BaseSampleManager {
         const noteInput = document.getElementById('note');
         if (noteInput) noteInput.value = firstLog.note || '';
 
-        // 필지 카드 렌더링 - 각 레코드의 parcels[0]를 합침
+        // 필지 카드 렌더링 - 같은 parcelIndex의 서브넘버 레코드는 하나의 필지로 합침
         this.parcels = [];
         this.parcelIdCounter = 0;
         if (this.parcelsContainer) this.parcelsContainer.innerHTML = '';
 
+        // parcelIndex 기준으로 그룹화 (서브넘버 = 같은 필지의 다른 작물)
+        const parcelMap = new Map();
         groupLogs.forEach(log => {
-            const parcel = log.parcels?.[0];
-            if (parcel) {
-                const parcelId = `parcel-${this.parcelIdCounter++}`;
-                const newParcel = {
-                    id: parcelId,
-                    lotAddress: parcel.lotAddress || '',
-                    isMountain: parcel.isMountain || false,
-                    subLots: parcel.subLots ? [...parcel.subLots] : [],
-                    crops: parcel.crops ? parcel.crops.map(c => ({ ...c })) : [],
-                    category: parcel.category || '',
-                    purpose: parcel.purpose || '',
-                    note: parcel.note || ''
-                };
-                this.parcels.push(newParcel);
-                this.renderParcelCard(newParcel, this.parcels.length);
+            const pIdx = log.parcelIndex || 1;
+            if (!parcelMap.has(pIdx)) {
+                parcelMap.set(pIdx, []);
             }
+            parcelMap.get(pIdx).push(log);
+        });
+
+        // parcelIndex 순서대로 필지 카드 생성
+        const sortedParcelIndices = [...parcelMap.keys()].sort((a, b) => a - b);
+        sortedParcelIndices.forEach(pIdx => {
+            const logsForParcel = parcelMap.get(pIdx);
+            const firstLog = logsForParcel[0];
+            const parcel = firstLog.parcels?.[0];
+            if (!parcel) return;
+
+            // 같은 필지의 여러 작물을 합침
+            const mergedCrops = [];
+            logsForParcel.forEach(log => {
+                const logParcel = log.parcels?.[0];
+                if (logParcel?.crops) {
+                    logParcel.crops.forEach(c => mergedCrops.push({ ...c }));
+                }
+            });
+
+            const parcelId = `parcel-${this.parcelIdCounter++}`;
+            const newParcel = {
+                id: parcelId,
+                lotAddress: parcel.lotAddress || '',
+                isMountain: parcel.isMountain || false,
+                subLots: parcel.subLots ? [...parcel.subLots] : [],
+                crops: mergedCrops.length > 0 ? mergedCrops : [{ name: '', area: '' }],
+                category: parcel.category || '',
+                purpose: parcel.purpose || '',
+                note: parcel.note || ''
+            };
+            this.parcels.push(newParcel);
+            this.renderParcelCard(newParcel, this.parcels.length);
         });
 
         // 필지가 하나도 없으면 빈 카드 추가
@@ -3236,6 +3319,12 @@ class SoilSampleManager extends window.BaseSampleManager {
         // 초기 필지 1개 추가
         this.addParcel();
 
+        // 폼 영역 스크롤 시 자동완성 닫기 (fixed 위치 리스트가 남아있는 것 방지)
+        const formView = document.getElementById('formView');
+        if (formView) {
+            formView.addEventListener('scroll', () => this.closeAllAutocomplete(), true);
+        }
+
         // 접수번호 변경 시 모든 필지 번호 업데이트
         if (this.receptionNumberInput) {
             this.receptionNumberInput.addEventListener('input', () => this.updateAllParcelNumbers());
@@ -3418,8 +3507,31 @@ class SoilSampleManager extends window.BaseSampleManager {
                 const deleteBtn = e.target.closest('.btn-delete');
                 if (deleteBtn) {
                     const id = deleteBtn.dataset.id;
+                    const targetLog = this.sampleLogs.find(log => String(log.id) === String(id));
+
+                    if (targetLog?.groupId) {
+                        const groupLogs = this.sampleLogs.filter(log => log.groupId === targetLog.groupId);
+
+                        if (groupLogs.length > 1) {
+                            const baseNumber = (targetLog.receptionNumber || '').split('-')[0];
+                            const numbers = groupLogs.map(l => l.receptionNumber).join(', ');
+                            const choice = confirm(
+                                `같은 접수 그룹(${numbers})이 ${groupLogs.length}건 있습니다.\n` +
+                                `[확인] 그룹 전체 삭제 (삭제 후 ${baseNumber}번으로 재입력 가능)\n` +
+                                `[취소] 이 항목만 삭제`
+                            );
+
+                            if (choice) {
+                                this.deleteGroup(targetLog.groupId, baseNumber);
+                            } else {
+                                this.deleteSample(id, targetLog.receptionNumber);
+                            }
+                            return;
+                        }
+                    }
+
                     if (confirm('정말 삭제하시겠습니까?')) {
-                        this.deleteSample(id);
+                        this.deleteSample(id, targetLog?.receptionNumber);
                     }
                 }
 
