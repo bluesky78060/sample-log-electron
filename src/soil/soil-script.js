@@ -1511,6 +1511,13 @@ class SoilSampleManager extends window.BaseSampleManager {
                         autocompleteList.innerHTML = sanitizeHTML(matches.map(crop => `
                             <li data-code="${crop.code}" data-name="${crop.name}">${crop.name} (${crop.category})</li>
                         `).join(''));
+                        // 모달 내부 → overflow:hidden 회피를 위해 fixed 포지션으로 좌표 계산
+                        const rect = e.target.getBoundingClientRect();
+                        autocompleteList.style.position = 'fixed';
+                        autocompleteList.style.top = `${rect.bottom + 2}px`;
+                        autocompleteList.style.left = `${rect.left}px`;
+                        autocompleteList.style.width = `${rect.width}px`;
+                        autocompleteList.style.right = 'auto';
                         autocompleteList.classList.add('show');
                     } else {
                         autocompleteList.classList.remove('show');
