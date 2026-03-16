@@ -133,19 +133,6 @@
     transform: translateY(-1px);
 }
 
-/* 일괄 완료 버튼 */
-.complete-btn {
-    background: #dcfce7 !important;
-    color: #16a34a !important;
-    border: 1px solid #bbf7d0 !important;
-    border-radius: 6px !important;
-}
-
-.complete-btn:hover {
-    background: #bbf7d0 !important;
-    transform: translateY(-1px);
-}
-
 /* 완료된 행 */
 .heuktoram-table tr.row-completed td {
     background: #f0fdf4 !important;
@@ -555,16 +542,6 @@
 
 [data-theme="dark"] .sublot-row td.sticky-col {
     background: #231f2e !important;
-}
-
-[data-theme="dark"] .complete-btn {
-    background: #14532d !important;
-    color: #86efac !important;
-    border-color: #166534 !important;
-}
-
-[data-theme="dark"] .complete-btn:hover {
-    background: #166534 !important;
 }
 
 [data-theme="dark"] .heuktoram-table tr.row-completed td {

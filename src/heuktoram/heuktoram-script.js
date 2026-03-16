@@ -118,7 +118,6 @@ class HeuktoramManager {
         this.selectAllCheckbox = document.getElementById('selectAll');
         this.selectAllBtn = document.getElementById('selectAllBtn');
         this.applyBulkBtn = document.getElementById('applyBulkBtn');
-        this.bulkCompleteBtn = document.getElementById('bulkCompleteBtn');
         this.exportBtn = document.getElementById('exportBtn');
         this.toggleColumnsBtn = document.getElementById('toggleColumnsBtn');
         this.tableBody = document.getElementById('tableBody');
@@ -237,9 +236,6 @@ class HeuktoramManager {
         // 일괄 적용
         this.applyBulkBtn?.addEventListener('click', () => this.applyBulkValues());
 
-        // 일괄 완료
-        this.bulkCompleteBtn?.addEventListener('click', () => this.bulkComplete());
-
         // 내보내기
         this.exportBtn?.addEventListener('click', () => this.exportToHeuktoram());
 
@@ -311,67 +307,6 @@ class HeuktoramManager {
         } catch (e) {
             (window.logger?.error || console.error)('검정 결과 저장 실패:', e);
         }
-    }
-
-    /**
-     * 선택된 시료들을 일괄 완료(isComplete=true) 처리하고 localStorage에 저장
-     */
-    bulkComplete() {
-        if (this.flatRows.length === 0) {
-            if (window.showToast) window.showToast('처리할 데이터가 없습니다.', 'warning');
-            return;
-        }
-
-        // 선택 없으면 전체 처리 여부 확인
-        let targetKeys;
-        if (this.selectedKeys.size > 0) {
-            targetKeys = this.selectedKeys;
-        } else {
-            if (!confirm(`선택된 항목이 없습니다. 전체 ${this.flatRows.length}건을 완료 처리하시겠습니까?`)) return;
-            targetKeys = new Set(this.flatRows.map(r => r.key));
-        }
-
-        // 선택된 flatRows에서 고유 log.id 추출
-        const selectedLogIds = new Set(
-            this.flatRows
-                .filter(r => targetKeys.has(r.key))
-                .map(r => r.log.id)
-        );
-
-        const now = new Date().toISOString();
-
-        // localStorage에서 전체 연도 데이터를 읽어 업데이트 후 저장
-        const storageKey = `soilSampleLogs_${this.selectedYear}`;
-        let count = 0;
-        try {
-            const raw = localStorage.getItem(storageKey);
-            const allLogs = raw ? JSON.parse(raw) : [];
-            if (!Array.isArray(allLogs)) throw new Error('데이터 형식 오류');
-            allLogs.forEach(log => {
-                if (selectedLogIds.has(log.id)) {
-                    log.isComplete = true;
-                    log.updatedAt = now;
-                    count++;
-                }
-            });
-            localStorage.setItem(storageKey, JSON.stringify(allLogs));
-
-            // 메모리 데이터도 동기화
-            this.sampleLogs.forEach(log => {
-                if (selectedLogIds.has(log.id)) {
-                    log.isComplete = true;
-                    log.updatedAt = now;
-                }
-            });
-        } catch (e) {
-            (window.logger?.error || console.error)('완료 저장 실패:', e);
-            if (window.showToast) window.showToast('저장 중 오류가 발생했습니다.', 'error');
-            return;
-        }
-
-        // 렌더링 재호출로 row-completed 클래스 일관 적용
-        this.render();
-        if (window.showToast) window.showToast(`${count}건이 완료 처리되었습니다.`, 'success');
     }
 
     /**
