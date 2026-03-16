@@ -640,10 +640,12 @@ class HeuktoramManager {
         }
         if (rowIdx < 0 || rowIdx >= this.flatRows.length) return;
 
-        // 숨김 컬럼 건너뛰기 (전체보기 모드가 아닐 때)
-        if (!this.showAllColumns && this.hiddenFields.has(this.resultFields[colIdx])) {
-            this.moveFocus(rowIdx, colIdx + direction, direction);
-            return;
+        // 숨김 컬럼 건너뛰기 — while 루프로 스택 오버플로우 방지
+        while (!this.showAllColumns && this.hiddenFields.has(this.resultFields[colIdx])) {
+            colIdx += direction;
+            if (colIdx >= this.resultFields.length) { colIdx = 0; rowIdx++; }
+            if (colIdx < 0) { colIdx = this.resultFields.length - 1; rowIdx--; }
+            if (rowIdx < 0 || rowIdx >= this.flatRows.length) return;
         }
 
         const cell = this.tableBody?.querySelector(
@@ -669,48 +671,48 @@ class HeuktoramManager {
     moveFocusResult(rowIdx, colIdx, direction = 1) {
         const START_COL = this.resultFields.indexOf('pH');   // 3
         const END_COL   = this.resultFields.indexOf('cec');  // 13
+        // 최대 반복 횟수: 전체 행 × 범위 열 수 (무한루프 방지)
+        const maxIter = (this.flatRows.length + 1) * (END_COL - START_COL + 2);
+        let iter = 0;
 
-        // 열 범위 벗어나면 행 이동
-        if (direction >= 0 && colIdx > END_COL) {
-            colIdx = START_COL;
-            rowIdx++;
-        } else if (direction < 0 && colIdx < START_COL) {
-            colIdx = END_COL;
-            rowIdx--;
-        }
+        while (iter++ < maxIter) {
+            // 열 범위 벗어나면 행 이동
+            if (direction >= 0 && colIdx > END_COL) {
+                colIdx = START_COL;
+                rowIdx++;
+            } else if (direction < 0 && colIdx < START_COL) {
+                colIdx = END_COL;
+                rowIdx--;
+            }
 
-        if (rowIdx < 0 || rowIdx >= this.flatRows.length) return;
+            if (rowIdx < 0 || rowIdx >= this.flatRows.length) return;
 
-        // isSubLot 행 건너뛰기 (while 루프로 무한재귀 방지)
-        while (rowIdx >= 0 && rowIdx < this.flatRows.length && this.flatRows[rowIdx]?.isSubLot) {
-            rowIdx += direction;
-            colIdx = direction >= 0 ? START_COL : END_COL;
-        }
-        if (rowIdx < 0 || rowIdx >= this.flatRows.length) return;
+            // isSubLot 행 건너뛰기
+            if (this.flatRows[rowIdx]?.isSubLot) {
+                rowIdx += direction;
+                colIdx = direction >= 0 ? START_COL : END_COL;
+                continue;
+            }
 
-        // 숨김 컬럼 건너뛰기 (while 루프)
-        while (
-            colIdx >= START_COL && colIdx <= END_COL &&
-            !this.showAllColumns && this.hiddenFields.has(this.resultFields[colIdx])
-        ) {
-            colIdx += direction;
-        }
-        // 숨김 건너뛰다 범위 벗어나면 재호출
-        if (colIdx > END_COL || colIdx < START_COL) {
-            this.moveFocusResult(rowIdx, colIdx, direction);
+            // 숨김 컬럼 건너뛰기
+            if (!this.showAllColumns && this.hiddenFields.has(this.resultFields[colIdx])) {
+                colIdx += direction;
+                continue;
+            }
+
+            // 유효한 셀 발견 → 포커스 이동
+            const cell = this.tableBody?.querySelector(
+                `td[data-row="${rowIdx}"][data-col="${colIdx}"]`
+            );
+            if (cell) {
+                cell.focus();
+                const range = document.createRange();
+                range.selectNodeContents(cell);
+                const sel = window.getSelection();
+                sel.removeAllRanges();
+                sel.addRange(range);
+            }
             return;
-        }
-
-        const cell = this.tableBody?.querySelector(
-            `td[data-row="${rowIdx}"][data-col="${colIdx}"]`
-        );
-        if (cell) {
-            cell.focus();
-            const range = document.createRange();
-            range.selectNodeContents(cell);
-            const sel = window.getSelection();
-            sel.removeAllRanges();
-            sel.addRange(range);
         }
     }
 

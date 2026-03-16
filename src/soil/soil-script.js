@@ -3711,20 +3711,32 @@ class SoilSampleManager extends window.BaseSampleManager {
             btnBulkComplete.addEventListener('click', () => {
                 const selectedIds = this.getSelectedIds();
                 if (selectedIds.length === 0) { alert('완료 처리할 항목을 선택해주세요.'); return; }
-                if (!confirm(`선택한 ${selectedIds.length}건을 완료 처리하시겠습니까?`)) return;
 
-                const now = new Date().toISOString();
-                // 선택된 ID 및 연관 접수번호(같은 base 번호) 모두 완료 처리
+                // 연관 접수번호(같은 base 번호) 포함한 실제 처리 대상 사전 계산
                 const baseNumbers = new Set(
                     selectedIds.map(id => {
                         const log = this.sampleLogs.find(l => String(l.id) === id);
                         return (log?.receptionNumber || '').split('-').slice(0, 2).join('-');
                     }).filter(Boolean)
                 );
+                const targetIds = new Set(
+                    this.sampleLogs
+                        .filter(log => {
+                            const base = (log.receptionNumber || '').split('-').slice(0, 2).join('-');
+                            return selectedIds.includes(String(log.id)) || (base && baseNumbers.has(base));
+                        })
+                        .map(log => String(log.id))
+                );
+                const extraCount = targetIds.size - selectedIds.length;
+                const confirmMsg = extraCount > 0
+                    ? `선택한 ${selectedIds.length}건 + 연관 접수번호 ${extraCount}건 포함\n총 ${targetIds.size}건을 완료 처리하시겠습니까?`
+                    : `선택한 ${selectedIds.length}건을 완료 처리하시겠습니까?`;
+                if (!confirm(confirmMsg)) return;
+
+                const now = new Date().toISOString();
                 let count = 0;
                 this.sampleLogs.forEach(log => {
-                    const base = (log.receptionNumber || '').split('-').slice(0, 2).join('-');
-                    if (selectedIds.includes(String(log.id)) || (base && baseNumbers.has(base))) {
+                    if (targetIds.has(String(log.id))) {
                         log.isComplete = true;
                         log.updatedAt = now;
                         count++;
