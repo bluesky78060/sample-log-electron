@@ -596,9 +596,37 @@
                 </div>
             </div>
 
-            <!-- v1.7.77 -->
+            <!-- v1.7.80 -->
             <div class="version-entry">
                 <div class="version-dot latest"></div>
+                <div class="version-card">
+                    <div class="version-card-header">
+                        <div>
+                            <div class="version-meta">
+                                <span class="version-number">v1.7.80</span>
+                                <span class="version-date">2026-03-17</span>
+                            </div>
+                            <div class="version-title">등록 모달 주소 검증 + 하위필지 검증 + CI 키 주입</div>
+                        </div>
+                        <div class="badge-row">
+                            <span class="badge badge-latest">★ 최신</span>
+                            <span class="badge badge-feature">기능</span>
+                            <span class="badge badge-fix">수정</span>
+                        </div>
+                    </div>
+                    <ul class="change-list">
+                        <li><strong>등록 완료 모달 주소 검증</strong> — 접수 등록 시 모달에서 검증 결과를 바로 확인, 불일치 시 수정 버튼으로 즉시 편집 가능</li>
+                        <li><strong>하위필지(subLots) 검증 추가</strong> — 필지뿐 아니라 하위 지번도 VWORLD API로 검증</li>
+                        <li><strong>CI 빌드 API 키 주입</strong> — GitHub Secrets에서 VWORLD_API_KEY를 빌드 시 주입 (다른 PC 검증 미작동 수정)</li>
+                        <li><strong>검증 중 모달 닫기 차단</strong> — 검증 진행 중 오버레이 클릭/닫기 버튼 비활성화</li>
+                        <li><strong>다크모드 검증 UI 스타일</strong> — 검증 결과 표시 다크모드 대응</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- v1.7.77 -->
+            <div class="version-entry">
+                <div class="version-dot"></div>
                 <div class="version-card">
                     <div class="version-card-header">
                         <div>
@@ -609,7 +637,6 @@
                             <div class="version-title">Firebase Quota 절감 + VWORLD 필지 주소 검증</div>
                         </div>
                         <div class="badge-row">
-                            <span class="badge badge-latest">★ 최신</span>
                             <span class="badge badge-feature">기능</span>
                             <span class="badge badge-fix">수정</span>
                         </div>
