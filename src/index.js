@@ -898,3 +898,28 @@ ipcMain.handle('select-auth-file', async () => {
         return { success: false, error: '인증 파일 선택 중 오류가 발생했습니다.' };
     }
 });
+
+// VWORLD 지번 지오코딩 (main process → Origin 헤더 없음, 도메인 제한 우회)
+ipcMain.handle('vworld-geocode', async (event, { address, apiKey }) => {
+    const https = require('node:https');
+    const url = `https://api.vworld.kr/req/address?service=address&request=getCoord&version=2.0&crs=epsg:4326&address=${encodeURIComponent(address)}&refine=true&simple=false&format=json&type=parcel&key=${apiKey}`;
+    return new Promise((resolve) => {
+        const timeout = setTimeout(() => { req.destroy(); resolve(null); }, 8000);
+        const req = https.get(url, (res) => {
+            let data = '';
+            res.on('data', chunk => { data += chunk; });
+            res.on('end', () => {
+                clearTimeout(timeout);
+                try {
+                    const json = JSON.parse(data);
+                    const ok = json?.response?.status === 'OK' &&
+                        parseInt(json?.response?.result?.totalCount ?? '0', 10) > 0;
+                    resolve(ok);
+                } catch {
+                    resolve(null);
+                }
+            });
+        });
+        req.on('error', () => { clearTimeout(timeout); resolve(null); });
+    });
+});

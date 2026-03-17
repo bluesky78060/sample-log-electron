@@ -4298,6 +4298,17 @@ class SoilSampleManager extends window.BaseSampleManager {
         if (!navigator.onLine) return null;
         const apiKey = window.NETWORK_CONFIG?.VWORLD_API_KEY;
         if (!apiKey) return null;
+
+        // Electron: main process IPC 경유 (Origin 헤더 없음 → 도메인 제한 우회)
+        if (window.electronAPI?.vworldGeocode) {
+            try {
+                return await window.electronAPI.vworldGeocode(lotAddress, apiKey);
+            } catch {
+                return null;
+            }
+        }
+
+        // 웹 환경: 직접 fetch (등록된 도메인에서만 작동)
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 8000);
         try {

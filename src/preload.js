@@ -90,6 +90,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // 흙토람 팝업 윈도우 열기
     openHeuktoram: () => ipcRenderer.invoke('open-heuktoram'),
 
+    // VWORLD 지번 지오코딩 (main process 경유, Origin 제한 없음)
+    vworldGeocode: (address, apiKey) => ipcRenderer.invoke('vworld-geocode', { address, apiKey }),
+
     // Electron 환경 여부
     isElectron: true
 });
