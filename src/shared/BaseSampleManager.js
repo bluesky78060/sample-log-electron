@@ -207,9 +207,16 @@ class BaseSampleManager {
             id: item.id || this.generateId()
         }));
 
-        // 로컬 저장 (Firebase는 호출자에서 개별 변경분만 저장 — Quota 절감)
+        // 로컬 저장 먼저 (UI 블로킹 방지)
         localStorage.setItem(yearStorageKey, JSON.stringify(this.sampleLogs));
         this.log('💾 로컬 저장 완료:', this.sampleLogs.length, '건');
+
+        // Firebase 백그라운드 동기화 (fire-and-forget — Quota 초과 시에도 UI 블로킹 없음)
+        if (window.firestoreDb?.isEnabled()) {
+            window.firestoreDb.batchSave(this.moduleKey, parseInt(this.selectedYear), this.sampleLogs)
+                .then(() => this.log('Firebase 동기화 완료:', this.sampleLogs.length, '건'))
+                .catch(err => (window.logger?.error || console.error)('Firebase 동기화 실패:', err));
+        }
 
         // 자동 저장 트리거
         this.triggerAutoSave();
