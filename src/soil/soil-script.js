@@ -1834,9 +1834,11 @@ class SoilSampleManager extends window.BaseSampleManager {
                 updatedLog.cropsDisplay = firstParcel.crops.map(c => c.name).join(', ') || '-';
             }
 
+            delete updatedLog.addressVerified; // 주소 편집 시 검증 초기화
             this.sampleLogs[logIndex] = updatedLog;
             this.saveLogs();
             this.filterAndRenderLogs();
+            this.validateAndMarkLogs([updatedLog]); // 편집 후 재검증 (백그라운드)
             this.cancelEditMode();
             this.showToast('수정이 완료되었습니다.', 'success');
             this.switchView('list');
@@ -1965,6 +1967,9 @@ class SoilSampleManager extends window.BaseSampleManager {
 
         newLogs.forEach(log => this.sampleLogs.push(log));
         this.saveLogs();
+        this.validateAndMarkLogs(newLogs).catch(err => // VWORLD 지번 검증 (백그라운드)
+            (window.logger?.error || console.error)('VWORLD 검증 오류:', err)
+        );
         this.filterAndRenderLogs();
         this.form.reset();
         if (this.dateInput) this.dateInput.valueAsDate = new Date();
@@ -3082,7 +3087,12 @@ class SoilSampleManager extends window.BaseSampleManager {
 
             // 필지 주소
             const tdLotAddress = document.createElement('td');
+            tdLotAddress.className = 'col-lot-address';
             tdLotAddress.textContent = row._lotAddress;
+            if (row.addressVerified === false) {
+                tdLotAddress.classList.add('address-invalid');
+                tdLotAddress.title = '지번 주소가 VWORLD에서 확인되지 않았습니다';
+            }
             tr.appendChild(tdLotAddress);
 
             // 기타주소
@@ -4275,6 +4285,80 @@ class SoilSampleManager extends window.BaseSampleManager {
         }
 
         this.log('토양 시료 접수 페이지 초기화 완료');
+    }
+
+    // ========================================
+    // VWORLD 지번 주소 검증
+    // ========================================
+
+    async validateParcelAddress(lotAddress) {
+        if (!lotAddress || lotAddress === '-') return null;
+        // 경상북도 주소만 검증 (봉화군 농업기술센터 업무 범위)
+        if (!lotAddress.includes('경상북도') && !lotAddress.includes('경북')) return null;
+        if (!navigator.onLine) return null;
+        const apiKey = window.NETWORK_CONFIG?.VWORLD_API_KEY;
+        if (!apiKey) return null;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        try {
+            const url = `https://api.vworld.kr/req/address?service=address&request=getCoord&version=2.0&crs=epsg:4326&address=${encodeURIComponent(lotAddress)}&refine=true&simple=false&format=json&type=parcel&key=${apiKey}`;
+            const res = await fetch(url, { signal: controller.signal });
+            if (!res.ok) return null;
+            const data = await res.json();
+            return data?.response?.status === 'OK' && parseInt(data?.response?.result?.totalCount ?? '0', 10) > 0;
+        } catch {
+            return null;
+        } finally {
+            clearTimeout(timeoutId);
+        }
+    }
+
+    async validateAndMarkLogs(logs) {
+        const BATCH_SIZE = 5;
+        let changed = false;
+
+        for (let i = 0; i < logs.length; i += BATCH_SIZE) {
+            const batch = logs.slice(i, i + BATCH_SIZE);
+            const results = await Promise.allSettled(
+                batch.map(async (log) => {
+                    // 모든 필지의 주소를 검증하여 하나라도 실패하면 false
+                    const addresses = log.parcels && log.parcels.length > 0
+                        ? log.parcels.map(p => p.lotAddress).filter(Boolean)
+                        : [log.lotAddress].filter(Boolean);
+                    if (addresses.length === 0) return null;
+                    const verifications = await Promise.allSettled(
+                        addresses.map(addr => this.validateParcelAddress(addr))
+                    );
+                    const values = verifications
+                        .filter(r => r.status === 'fulfilled' && r.value !== null)
+                        .map(r => r.value);
+                    if (values.length === 0) return null;
+                    return values.every(v => v === true);
+                })
+            );
+            results.forEach((r, idx) => {
+                if (r.status === 'fulfilled' && r.value !== null) {
+                    batch[idx].addressVerified = r.value;
+                    changed = true;
+                }
+            });
+        }
+
+        if (changed) {
+            this.saveLogs();
+            // 전체 재렌더링 대신 검증 결과 셀만 DOM에서 직접 업데이트
+            logs.forEach(log => {
+                const invalidClass = log.addressVerified === false;
+                this.tableBody?.querySelectorAll(`tr[data-id="${log.id}"] td.col-lot-address`).forEach(td => {
+                    td.classList.toggle('address-invalid', invalidClass);
+                    td.title = invalidClass ? '지번 주소가 VWORLD에서 확인되지 않았습니다' : '';
+                });
+            });
+            const invalidCount = logs.filter(l => l.addressVerified === false).length;
+            if (invalidCount > 0) {
+                this.showToast(`${invalidCount}건의 필지 주소를 확인하세요 (지번 불일치)`, 'warning');
+            }
+        }
     }
 }
 

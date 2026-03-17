@@ -3409,6 +3409,12 @@ input[type="number"] {
     background: #dcedc8;
 }
 
+/* 지번 주소 검증 불일치 표시 (VWORLD) */
+.data-table td.address-invalid {
+    color: #dc2626;
+    font-weight: 500;
+}
+
 .data-table td {
     padding: 0.35rem 0.75rem;
     font-size: 0.875rem;
@@ -5837,6 +5843,10 @@ select {
 
 [data-theme="dark"] .data-table tbody tr.row-completed:hover {
     background: rgba(74, 222, 128, 0.2);
+}
+
+[data-theme="dark"] .data-table td.address-invalid {
+    color: #f87171;
 }
 
 [data-theme="dark"] .data-table td {
