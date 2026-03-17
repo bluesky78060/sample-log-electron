@@ -596,9 +596,37 @@
                 </div>
             </div>
 
-            <!-- v1.7.76 -->
+            <!-- v1.7.77 -->
             <div class="version-entry">
                 <div class="version-dot latest"></div>
+                <div class="version-card">
+                    <div class="version-card-header">
+                        <div>
+                            <div class="version-meta">
+                                <span class="version-number">v1.7.77</span>
+                                <span class="version-date">2026-03-17</span>
+                            </div>
+                            <div class="version-title">Firebase Quota 절감 + VWORLD 필지 주소 검증</div>
+                        </div>
+                        <div class="badge-row">
+                            <span class="badge badge-latest">★ 최신</span>
+                            <span class="badge badge-feature">기능</span>
+                            <span class="badge badge-fix">수정</span>
+                        </div>
+                    </div>
+                    <ul class="change-list">
+                        <li><strong>VWORLD 필지 주소 검증</strong> — 토양 시료 접수 시 필지 주소를 VWORLD API로 자동 검증, 불일치 주소 빨간색 표시</li>
+                        <li><strong>Firebase Quota 99% 절감</strong> — saveLogs()에서 전체 batchSave 제거, 변경분만 개별 저장 (전체 5개 시료 타입 적용)</li>
+                        <li><strong>삭제 버튼 미작동 수정</strong> — Quota 초과 시 saveLogs await 블로킹으로 UI 갱신 안 되던 문제 해결</li>
+                        <li><strong>잔류농약 삭제 타입 비교 수정</strong> — strict 비교(===)로 삭제 실패하던 문제 해결 (String 변환 적용)</li>
+                        <li><strong>Electron IPC 지오코딩</strong> — VWORLD API 도메인 제한 우회를 위해 main process에서 직접 HTTPS 요청</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- v1.7.76 -->
+            <div class="version-entry">
+                <div class="version-dot"></div>
                 <div class="version-card">
                     <div class="version-card-header">
                         <div>
@@ -609,7 +637,6 @@
                             <div class="version-title">작물 자동완성 UI 버그 수정</div>
                         </div>
                         <div class="badge-row">
-                            <span class="badge badge-latest">★ 최신</span>
                             <span class="badge badge-fix">수정</span>
                         </div>
                     </div>

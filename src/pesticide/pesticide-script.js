@@ -2312,12 +2312,13 @@ class PesticideSampleManager extends window.BaseSampleManager {
             if (deleteBtn) {
                 const id = deleteBtn.dataset.id;
                 if (confirm('정말 삭제하시겠습니까?')) {
-                    this.sampleLogs = this.sampleLogs.filter(item => item.id !== id);
+                    this.sampleLogs = this.sampleLogs.filter(item => String(item.id) !== String(id));
                     this.saveLogs();
                     this.filterAndRenderLogs();
+                    this.showToast('삭제되었습니다.', 'success');
 
                     if (window.firestoreDb?.isEnabled()) {
-                        window.firestoreDb.delete('pesticide', parseInt(this.selectedYear), id)
+                        window.firestoreDb.delete('pesticide', parseInt(this.selectedYear), String(id))
                             .catch(err => (window.logger?.error || console.error)('Firebase 삭제 실패:', err));
                     }
 

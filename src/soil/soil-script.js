@@ -431,26 +431,9 @@ class SoilSampleManager extends window.BaseSampleManager {
 
         const serialized = JSON.stringify(this.sampleLogs);
 
-        // Firebase가 활성화되어 있으면 Firebase에 먼저 저장
-        if (window.firestoreDb?.isEnabled()) {
-            try {
-                this.log('Firebase에 데이터 저장 중...');
-                await window.firestoreDb.batchSave('soil', parseInt(this.selectedYear), this.sampleLogs);
-                this.log('Firebase 저장 완료:', this.sampleLogs.length, '건');
-
-                localStorage.setItem(yearStorageKey, serialized);
-                this.log('로컬 캐싱 완료');
-            } catch (err) {
-                (window.logger?.error || console.error)('Firebase 저장 실패:', err);
-                this.showToast('클라우드 저장 실패', 'error');
-
-                localStorage.setItem(yearStorageKey, serialized);
-                this.log('로컬 저장으로 폴백');
-            }
-        } else {
-            localStorage.setItem(yearStorageKey, serialized);
-            this.log('로컬 저장 완료:', this.sampleLogs.length, '건');
-        }
+        // 로컬 저장 (Firebase는 개별 변경 시 호출자에서 직접 처리)
+        localStorage.setItem(yearStorageKey, serialized);
+        this.log('로컬 저장 완료:', this.sampleLogs.length, '건');
 
         // 자동 저장 실행
         const autoSaveEnabled = localStorage.getItem('soilAutoSaveEnabled') === 'true';
@@ -464,23 +447,79 @@ class SoilSampleManager extends window.BaseSampleManager {
     }
 
     // ========================================
+    // Firebase 개별 저장 (Quota 절감: 변경분만 write)
+    // ========================================
+
+    /**
+     * 레코드를 Firestore에 개별 저장 (백그라운드, fire-and-forget)
+     * @param {Array|Object} logs - 저장할 레코드 (배열 또는 단일 객체)
+     */
+    firebaseSaveRecords(logs) {
+        if (!window.firestoreDb?.isEnabled()) return;
+        const arr = Array.isArray(logs) ? logs : [logs];
+        const year = parseInt(this.selectedYear);
+        const promises = arr
+            .filter(log => log.id)
+            .map(log => window.firestoreDb.save('soil', year, String(log.id), log));
+        Promise.allSettled(promises).then(results => {
+            const failed = results.filter(r => r.status === 'rejected');
+            if (failed.length > 0) {
+                (window.logger?.error || console.error)('Firebase 저장 실패:', failed.length, '건');
+                this.showToast(`클라우드 동기화 ${failed.length}건 실패`, 'warning');
+            }
+        });
+    }
+
+    /**
+     * 레코드를 Firestore에서 개별 삭제 (백그라운드, fire-and-forget)
+     * @param {Array|string} ids - 삭제할 ID (배열 또는 단일 문자열)
+     */
+    firebaseDeleteRecords(ids) {
+        if (!window.firestoreDb?.isEnabled()) return;
+        const arr = Array.isArray(ids) ? ids : [ids];
+        const year = parseInt(this.selectedYear);
+        const promises = arr.map(id => window.firestoreDb.delete('soil', year, String(id)));
+        Promise.allSettled(promises).then(results => {
+            const failed = results.filter(r => r.status === 'rejected');
+            if (failed.length > 0) {
+                (window.logger?.error || console.error)('Firebase 삭제 실패:', failed.length, '건');
+            }
+        });
+    }
+
+    /**
+     * 전체 데이터를 Firestore에 동기화 (대량 import 전용)
+     */
+    firebaseBatchSync() {
+        if (!window.firestoreDb?.isEnabled()) return;
+        const snapshot = [...this.sampleLogs]; // 레이스 컨디션 방지: 현재 시점 스냅샷
+        window.firestoreDb.batchSave('soil', parseInt(this.selectedYear), snapshot)
+            .then(() => this.log('Firebase 전체 동기화 완료:', snapshot.length, '건'))
+            .catch(err => {
+                (window.logger?.error || console.error)('Firebase 전체 동기화 실패:', err);
+                this.showToast('클라우드 전체 동기화 실패', 'warning');
+            });
+    }
+
+    // ========================================
     // Override: deleteSample (soil-specific: inline Firebase delete)
     // ========================================
 
     async deleteSample(id, receptionNumber) {
-        this.sampleLogs = this.sampleLogs.filter(log => log.id !== id);
+        const beforeCount = this.sampleLogs.length;
+        this.sampleLogs = this.sampleLogs.filter(log => String(log.id) !== String(id));
+        const deleted = beforeCount - this.sampleLogs.length;
         await this.saveLogs();
         this.filterAndRenderLogs();
-
-        // Firebase에서도 삭제
-        if (window.firestoreDb?.isEnabled()) {
-            window.firestoreDb.delete('soil', parseInt(this.selectedYear), id)
-                .then(() => this.log('Firebase 삭제 완료:', id))
-                .catch(err => (window.logger?.error || console.error)('Firebase 삭제 실패:', err));
+        if (deleted > 0) {
+            this.showToast('삭제되었습니다.', 'success');
         }
 
+        // Firebase에서도 삭제
+        this.firebaseDeleteRecords(id);
+
         // 삭제한 항목이 수정 중이던 항목이면 수정 모드 취소
-        if (this.editingLogId === id) {
+        if (String(this.editingLogId) === String(id)) {
             this.cancelEditMode();
         }
 
@@ -511,14 +550,10 @@ class SoilSampleManager extends window.BaseSampleManager {
         this.filterAndRenderLogs();
 
         // Firebase에서도 삭제
-        if (window.firestoreDb?.isEnabled()) {
-            Promise.all(deleteIds.map(delId => window.firestoreDb.delete('soil', parseInt(this.selectedYear), delId)))
-                .then(() => this.log('Firebase 그룹 삭제 완료:', deleteIds.length, '건'))
-                .catch(err => (window.logger?.error || console.error)('Firebase 그룹 삭제 실패:', err));
-        }
+        this.firebaseDeleteRecords(deleteIds);
 
         // 수정 중이던 항목이 삭제 그룹에 포함되면 수정 모드 취소
-        if (deleteIds.includes(this.editingLogId)) {
+        if (deleteIds.map(String).includes(String(this.editingLogId))) {
             this.cancelEditMode();
         }
 
@@ -1765,19 +1800,13 @@ class SoilSampleManager extends window.BaseSampleManager {
             });
 
             newLogs.forEach(log => this.sampleLogs.push(log));
+            this.saveLogs(); // localStorage 먼저 (ID 할당 보장)
 
-            // 기존 레코드 중 새 레코드에 ID가 재사용되지 않은 것들을 Firebase에서 삭제
-            if (window.firestoreDb?.isEnabled()) {
-                const newIds = new Set(newLogs.map(l => l.id));
-                const removedLogs = oldGroupLogs.filter(l => !newIds.has(l.id));
-                if (removedLogs.length > 0) {
-                    Promise.all(removedLogs.map(log =>
-                        window.firestoreDb.delete('soil', parseInt(this.selectedYear), log.id)
-                    )).catch(err => (window.logger?.error || console.error)('Firebase 삭제 실패:', err));
-                }
-            }
-
-            this.saveLogs();
+            // Firebase: 삭제된 레코드 제거 + 새 레코드 저장
+            const newIds = new Set(newLogs.map(l => l.id));
+            const removedIds = oldGroupLogs.filter(l => !newIds.has(l.id)).map(l => l.id);
+            if (removedIds.length > 0) this.firebaseDeleteRecords(removedIds);
+            this.firebaseSaveRecords(newLogs);
             this.filterAndRenderLogs();
             this.cancelEditMode();
             this.showToast(`${newLogs.length}건의 시료가 수정되었습니다.`, 'success');
@@ -1837,6 +1866,7 @@ class SoilSampleManager extends window.BaseSampleManager {
             delete updatedLog.addressVerified; // 주소 편집 시 검증 초기화
             this.sampleLogs[logIndex] = updatedLog;
             this.saveLogs();
+            this.firebaseSaveRecords(updatedLog); // Firebase 개별 저장
             this.filterAndRenderLogs();
             this.validateAndMarkLogs([updatedLog]).catch(err => // 편집 후 재검증 (백그라운드)
                 (window.logger?.error || console.error)('VWORLD 재검증 오류:', err)
@@ -1969,6 +1999,7 @@ class SoilSampleManager extends window.BaseSampleManager {
 
         newLogs.forEach(log => this.sampleLogs.push(log));
         this.saveLogs();
+        this.firebaseSaveRecords(newLogs); // Firebase 개별 저장
         this.validateAndMarkLogs(newLogs).catch(err => // VWORLD 지번 검증 (백그라운드)
             (window.logger?.error || console.error)('VWORLD 검증 오류:', err)
         );
@@ -3500,6 +3531,7 @@ class SoilSampleManager extends window.BaseSampleManager {
                             });
                         });
                         this.saveLogs();
+                        this.firebaseSaveRecords(relatedLogs); // 완료 상태 변경분만 저장
                         const count = relatedLogs.length;
                         if (newCompletedStatus) {
                             this.showToast(count > 1 ? `${count}개 시료가 완료 처리되었습니다` : '완료 처리되었습니다', 'success');
@@ -3746,14 +3778,17 @@ class SoilSampleManager extends window.BaseSampleManager {
 
                 const now = new Date().toISOString();
                 let count = 0;
+                const changedLogs = [];
                 this.sampleLogs.forEach(log => {
                     if (targetIds.has(String(log.id))) {
                         log.isComplete = true;
                         log.updatedAt = now;
                         count++;
+                        changedLogs.push(log);
                     }
                 });
                 this.saveLogs();
+                this.firebaseSaveRecords(changedLogs);
                 this.filterAndRenderLogs();
                 this.showToast(`${count}건이 완료 처리되었습니다.`, 'success');
             });
@@ -3768,14 +3803,10 @@ class SoilSampleManager extends window.BaseSampleManager {
                 if (!confirm(`선택한 ${selectedIds.length}건을 삭제하시겠습니까?\n삭제 후 복구할 수 없습니다.`)) return;
                 this.sampleLogs = this.sampleLogs.filter(log => !selectedIds.includes(String(log.id)));
                 this.saveLogs();
+                this.firebaseDeleteRecords(selectedIds);
                 this.filterAndRenderLogs();
-                if (window.firestoreDb?.isEnabled()) {
-                    Promise.all(selectedIds.map(id => window.firestoreDb.delete('soil', parseInt(this.selectedYear), id)))
-                        .then(() => this.log('Firebase 일괄 삭제 완료:', selectedIds.length, '건'))
-                        .catch(err => (window.logger?.error || console.error)('Firebase 일괄 삭제 실패:', err));
-                }
                 if (this.selectAllCheckbox) { this.selectAllCheckbox.checked = false; this.selectAllCheckbox.indeterminate = false; }
-                if (selectedIds.includes(this.editingLogId)) this.cancelEditMode();
+                if (selectedIds.map(String).includes(String(this.editingLogId))) this.cancelEditMode();
                 this.showToast(`${selectedIds.length}건이 삭제되었습니다.`, 'success');
             });
         }
@@ -3805,14 +3836,18 @@ class SoilSampleManager extends window.BaseSampleManager {
                 const inputDate = mailDateInput?.value;
                 if (!inputDate) { this.showToast('날짜를 선택해주세요.', 'warning'); return; }
                 let updatedCount = 0;
+                const changedLogs = [];
                 this.sampleLogs = this.sampleLogs.map(log => {
                     if (this.pendingMailDateIds.includes(String(log.id))) {
                         updatedCount++;
-                        return { ...log, mailDate: inputDate, updatedAt: new Date().toISOString() };
+                        const updated = { ...log, mailDate: inputDate, updatedAt: new Date().toISOString() };
+                        changedLogs.push(updated);
+                        return updated;
                     }
                     return log;
                 });
                 this.saveLogs();
+                this.firebaseSaveRecords(changedLogs);
                 this.filterAndRenderLogs();
                 if (this.selectAllCheckbox) { this.selectAllCheckbox.checked = false; this.selectAllCheckbox.indeterminate = false; }
                 closeMailDateModalFn();
@@ -3896,7 +3931,7 @@ class SoilSampleManager extends window.BaseSampleManager {
             inputElement: loadJsonInput,
             getData: () => this.sampleLogs,
             setData: (data) => { this.sampleLogs = data; },
-            saveData: () => this.saveLogs(),
+            saveData: () => { this.saveLogs(); this.firebaseBatchSync(); },
             renderData: () => this.filterAndRenderLogs(),
             showToast: (msg, type) => this.showToast(msg, type),
             deduplicateById: true
@@ -4255,6 +4290,7 @@ class SoilSampleManager extends window.BaseSampleManager {
                     return 0;
                 });
                 this.saveLogs();
+                this.firebaseBatchSync(); // 대량 import는 전체 동기화
                 this.filterAndRenderLogs();
                 this.log('엑셀 가져오기 완료:', records.length, '건');
             }
@@ -4360,10 +4396,12 @@ class SoilSampleManager extends window.BaseSampleManager {
         }
 
         if (changed) {
-            // addressVerified는 UI 표시용 로컬 주석 → localStorage만 업데이트 (Firestore 쓰기 절감)
+            // localStorage + Firebase 개별 저장 (addressVerified 영속화)
             try {
                 localStorage.setItem(this.getStorageKey(this.selectedYear), JSON.stringify(this.sampleLogs));
-            } catch { /* 저장 실패 시 무시 (다음 정식 save에서 반영됨) */ }
+            } catch { /* 저장 실패 시 무시 */ }
+            const verifiedLogs = logs.filter(l => l.addressVerified !== undefined);
+            if (verifiedLogs.length > 0) this.firebaseSaveRecords(verifiedLogs);
             // 전체 재렌더링 대신 검증 결과 셀만 DOM에서 직접 업데이트
             logs.forEach(log => {
                 const invalidClass = log.addressVerified === false;
