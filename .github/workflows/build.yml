@@ -23,9 +23,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Create network-config from example
-        run: copy src\shared\network-config.example.js src\shared\network-config.js
-        shell: cmd
+      - name: Create network-config with secrets
+        run: |
+          @"
+          window.NETWORK_CONFIG = {
+              ALLOWED_GATEWAY: '${{ secrets.ALLOWED_GATEWAY }}',
+              VWORLD_API_KEY: '${{ secrets.VWORLD_API_KEY }}'
+          };
+          "@ | Out-File -FilePath "src/shared/network-config.js" -Encoding utf8
+        shell: pwsh
 
       - name: Build Windows package
         run: npm run make
