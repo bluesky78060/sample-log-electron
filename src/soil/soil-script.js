@@ -1838,7 +1838,9 @@ class SoilSampleManager extends window.BaseSampleManager {
             this.sampleLogs[logIndex] = updatedLog;
             this.saveLogs();
             this.filterAndRenderLogs();
-            this.validateAndMarkLogs([updatedLog]); // 편집 후 재검증 (백그라운드)
+            this.validateAndMarkLogs([updatedLog]).catch(err => // 편집 후 재검증 (백그라운드)
+                (window.logger?.error || console.error)('VWORLD 재검증 오류:', err)
+            );
             this.cancelEditMode();
             this.showToast('수정이 완료되었습니다.', 'success');
             this.switchView('list');
@@ -4358,7 +4360,10 @@ class SoilSampleManager extends window.BaseSampleManager {
         }
 
         if (changed) {
-            this.saveLogs();
+            // addressVerified는 UI 표시용 로컬 주석 → localStorage만 업데이트 (Firestore 쓰기 절감)
+            try {
+                localStorage.setItem(this.getStorageKey(this.selectedYear), JSON.stringify(this.sampleLogs));
+            } catch { /* 저장 실패 시 무시 (다음 정식 save에서 반영됨) */ }
             // 전체 재렌더링 대신 검증 결과 셀만 DOM에서 직접 업데이트
             logs.forEach(log => {
                 const invalidClass = log.addressVerified === false;
