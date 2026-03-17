@@ -4293,16 +4293,18 @@ class SoilSampleManager extends window.BaseSampleManager {
 
     async validateParcelAddress(lotAddress) {
         if (!lotAddress || lotAddress === '-') return null;
-        // 경상북도 주소만 검증 (봉화군 농업기술센터 업무 범위)
-        if (!lotAddress.includes('경상북도') && !lotAddress.includes('경북')) return null;
         if (!navigator.onLine) return null;
         const apiKey = window.NETWORK_CONFIG?.VWORLD_API_KEY;
         if (!apiKey) return null;
 
+        // 경상북도 prefix 보정: bonghwaData 주소는 "봉화군 ..." 형식으로 저장됨
+        const SIDO_RE = /^(서울|부산|대구|인천|광주|대전|울산|세종|경기|강원|충북|충남|전북|전남|경북|경남|제주|경기도|강원도|충청북도|충청남도|전라북도|전라남도|경상북도|경상남도)/;
+        const fullAddress = SIDO_RE.test(lotAddress) ? lotAddress : `경상북도 ${lotAddress}`;
+
         // Electron: main process IPC 경유 (Origin 헤더 없음 → 도메인 제한 우회)
         if (window.electronAPI?.vworldGeocode) {
             try {
-                return await window.electronAPI.vworldGeocode(lotAddress, apiKey);
+                return await window.electronAPI.vworldGeocode(fullAddress, apiKey);
             } catch {
                 return null;
             }
@@ -4312,7 +4314,7 @@ class SoilSampleManager extends window.BaseSampleManager {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 8000);
         try {
-            const url = `https://api.vworld.kr/req/address?service=address&request=getCoord&version=2.0&crs=epsg:4326&address=${encodeURIComponent(lotAddress)}&refine=true&simple=false&format=json&type=parcel&key=${apiKey}`;
+            const url = `https://api.vworld.kr/req/address?service=address&request=getCoord&version=2.0&crs=epsg:4326&address=${encodeURIComponent(fullAddress)}&refine=true&simple=false&format=json&type=parcel&key=${apiKey}`;
             const res = await fetch(url, { signal: controller.signal });
             if (!res.ok) return null;
             const data = await res.json();
