@@ -4365,6 +4365,10 @@ class SoilSampleManager extends window.BaseSampleManager {
     }
 
     async validateAndMarkLogs(logs) {
+        const apiKey = window.NETWORK_CONFIG?.VWORLD_API_KEY;
+        const hasIPC = !!window.electronAPI?.vworldGeocode;
+        const online = navigator.onLine;
+        this.showToast(`주소검증 시작: ${logs.length}건 (IPC:${hasIPC}, KEY:${!!apiKey}, Online:${online})`, 'info');
         const BATCH_SIZE = 5;
         let changed = false;
 
@@ -4410,10 +4414,12 @@ class SoilSampleManager extends window.BaseSampleManager {
                     td.title = invalidClass ? '지번 주소가 VWORLD에서 확인되지 않았습니다' : '';
                 });
             });
+            const validCount = logs.filter(l => l.addressVerified === true).length;
             const invalidCount = logs.filter(l => l.addressVerified === false).length;
-            if (invalidCount > 0) {
-                this.showToast(`${invalidCount}건의 필지 주소를 확인하세요 (지번 불일치)`, 'warning');
-            }
+            const skipCount = logs.filter(l => l.addressVerified === undefined).length;
+            this.showToast(`검증완료: 정상${validCount} 불일치${invalidCount} 스킵${skipCount}`, invalidCount > 0 ? 'warning' : 'success');
+        } else {
+            this.showToast(`검증결과: 변경 없음 (모두 null 반환)`, 'warning');
         }
     }
 }
