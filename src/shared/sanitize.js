@@ -16,7 +16,7 @@ function sanitizeHTML(html) {
                 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
                 'ul', 'ol', 'li', 'dl', 'dt', 'dd',
                 'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td',
-                'a', 'img', 'option', 'label',
+                'a', 'img', 'input', 'select', 'option', 'textarea', 'button', 'label',
                 'fieldset', 'legend',
                 'strong', 'em', 'b', 'i', 'u', 's', 'small', 'mark', 'sub', 'sup',
                 'pre', 'code', 'blockquote', 'cite', 'abbr',
