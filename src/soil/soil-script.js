@@ -1799,7 +1799,10 @@ class SoilSampleManager extends window.BaseSampleManager {
                 }
             });
 
-            newLogs.forEach(log => this.sampleLogs.push(log));
+            newLogs.forEach(log => {
+                delete log.addressVerified; // 주소 편집 시 검증 초기화
+                this.sampleLogs.push(log);
+            });
             this.saveLogs(); // localStorage 먼저 (ID 할당 보장)
 
             // Firebase: 삭제된 레코드 제거 + 새 레코드 저장
@@ -1808,6 +1811,9 @@ class SoilSampleManager extends window.BaseSampleManager {
             if (removedIds.length > 0) this.firebaseDeleteRecords(removedIds);
             this.firebaseSaveRecords(newLogs);
             this.filterAndRenderLogs();
+            this.validateAndMarkLogs(newLogs).catch(err => // 그룹 수정 후 재검증 (백그라운드)
+                (window.logger?.error || console.error)('VWORLD 재검증 오류:', err)
+            );
             this.cancelEditMode();
             this.showToast(`${newLogs.length}건의 시료가 수정되었습니다.`, 'success');
             this.switchView('list');
