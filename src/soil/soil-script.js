@@ -2896,16 +2896,12 @@ class SoilSampleManager extends window.BaseSampleManager {
         if (verifyResult) {
             verifyResult.style.display = 'block';
             if (invalidLogs.length > 0) {
-                // 불일치 주소 목록 (필지 + 하위필지)
+                // 불일치 주소 목록 (필지만)
                 const invalidAddresses = [];
                 invalidLogs.forEach(log => {
                     if (log.parcels) {
                         log.parcels.forEach(p => {
                             if (p.lotAddress) invalidAddresses.push(p.lotAddress);
-                            if (p.subLots) p.subLots.forEach(s => {
-                                const addr = typeof s === 'string' ? s : s.lotAddress;
-                                if (addr) invalidAddresses.push(addr);
-                            });
                         });
                     }
                 });
@@ -4468,17 +4464,11 @@ class SoilSampleManager extends window.BaseSampleManager {
             const batch = logs.slice(i, i + BATCH_SIZE);
             const results = await Promise.allSettled(
                 batch.map(async (log) => {
-                    // 모든 필지 + 하위필지 주소를 검증하여 하나라도 실패하면 false
+                    // 필지 주소만 검증 (하위필지는 지번만 저장되므로 제외)
                     const addresses = [];
                     if (log.parcels && log.parcels.length > 0) {
                         log.parcels.forEach(p => {
                             if (p.lotAddress) addresses.push(p.lotAddress);
-                            if (p.subLots && p.subLots.length > 0) {
-                                p.subLots.forEach(s => {
-                                    const addr = typeof s === 'string' ? s : s.lotAddress;
-                                    if (addr) addresses.push(addr);
-                                });
-                            }
                         });
                     } else if (log.lotAddress) {
                         addresses.push(log.lotAddress);
