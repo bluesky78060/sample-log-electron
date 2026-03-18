@@ -4438,7 +4438,7 @@ class SoilSampleManager extends window.BaseSampleManager {
             const res = await fetch(url, { signal: controller.signal });
             if (!res.ok) return null;
             const data = await res.json();
-            return data?.response?.status === 'OK' && parseInt(data?.response?.result?.totalCount ?? '0', 10) > 0;
+            return data?.response?.status === 'OK';
         } catch {
             return null;
         } finally {

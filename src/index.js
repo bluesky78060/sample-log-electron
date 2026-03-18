@@ -912,8 +912,7 @@ ipcMain.handle('vworld-geocode', async (event, { address, apiKey }) => {
                 clearTimeout(timeout);
                 try {
                     const json = JSON.parse(data);
-                    const ok = json?.response?.status === 'OK' &&
-                        parseInt(json?.response?.result?.totalCount ?? '0', 10) > 0;
+                    const ok = json?.response?.status === 'OK';
                     resolve(ok);
                 } catch {
                     resolve(null);
