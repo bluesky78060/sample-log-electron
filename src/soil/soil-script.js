@@ -4408,12 +4408,28 @@ class SoilSampleManager extends window.BaseSampleManager {
 
         this.log('토양 시료 접수 페이지 초기화 완료');
 
-        // 기존 addressVerified: false 데이터 백그라운드 재검증
+        // 기존 addressVerified: false 데이터 처리
         const invalidLogs = this.sampleLogs.filter(l => l.addressVerified === false);
         if (invalidLogs.length > 0) {
-            this.validateAndMarkLogs(invalidLogs).catch(err =>
-                (window.logger?.error || console.error)('기존 필지 재검증 오류:', err)
-            );
+            // Electron: IPC로 재검증 가능
+            if (window.electronAPI?.vworldGeocode) {
+                this.validateAndMarkLogs(invalidLogs).catch(err =>
+                    (window.logger?.error || console.error)('기존 필지 재검증 오류:', err)
+                );
+            } else {
+                // 웹: CORS로 VWORLD 접근 불가 → 잘못된 검증 결과 초기화
+                let cleared = false;
+                invalidLogs.forEach(log => {
+                    delete log.addressVerified;
+                    cleared = true;
+                });
+                if (cleared) {
+                    try {
+                        localStorage.setItem(this.getStorageKey(this.selectedYear), JSON.stringify(this.sampleLogs));
+                    } catch { /* ignore */ }
+                    this.filterAndRenderLogs();
+                }
+            }
         }
     }
 
