@@ -22,7 +22,7 @@
             this.renderRow = options.renderRow;
 
             this.currentPage = 1;
-            this.itemsPerPage = parseInt(localStorage.getItem(this.storageKey, 10)) || this.defaultItemsPerPage;
+            this.itemsPerPage = parseInt(localStorage.getItem(this.storageKey), 10) || this.defaultItemsPerPage;
             this.totalPages = 1;
             this.data = [];
 

@@ -721,7 +721,7 @@ function parseRegionAddress(input, region = 'bonghwa') {
         district,
         lotNumber,
         region: REGION_NAMES[region],
-        alternatives: regionData.duplicates[villageName] || null
+        alternatives: regionData.duplicates?.[villageName] || null
     };
 }
 
@@ -901,7 +901,7 @@ function parseParcelAddress(input) {
         // villages에서 먼저 찾고, 없으면 duplicates에서 찾기
         let district = regionData.villages[villageName];
         if (!district && regionData.duplicates?.[villageName]) {
-            const dups = regionData.duplicates[villageName];
+            const dups = regionData.duplicates?.[villageName];
             district = Array.isArray(dups) ? dups[0] : dups;
         }
         if (district) {

@@ -115,7 +115,13 @@ async function saveData(sampleType, year, localStorageKey, data) {
 async function saveItem(sampleType, year, localStorageKey, item) {
     try {
         // localStorage에서 기존 데이터 로드
-        const existingData = JSON.parse(localStorage.getItem(localStorageKey) || '[]');
+        let existingData;
+        try {
+            existingData = JSON.parse(localStorage.getItem(localStorageKey) || '[]');
+        } catch (parseError) {
+            window.logger?.warn('[storage-manager] JSON.parse 실패 (saveItem), 빈 배열로 폴백:', parseError);
+            existingData = [];
+        }
 
         // ID 확인/생성
         const itemWithId = {
@@ -190,7 +196,13 @@ async function loadData(sampleType, year, localStorageKey) {
 async function deleteItem(sampleType, year, localStorageKey, itemId) {
     try {
         // localStorage에서 삭제
-        const existingData = JSON.parse(localStorage.getItem(localStorageKey) || '[]');
+        let existingData;
+        try {
+            existingData = JSON.parse(localStorage.getItem(localStorageKey) || '[]');
+        } catch (parseError) {
+            window.logger?.warn('[storage-manager] JSON.parse 실패 (deleteItem), 빈 배열로 폴백:', parseError);
+            existingData = [];
+        }
         const filteredData = existingData.filter(item => item.id !== itemId);
         localStorage.setItem(localStorageKey, JSON.stringify(filteredData));
 

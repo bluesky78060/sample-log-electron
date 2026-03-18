@@ -662,12 +662,12 @@ class SoilSampleManager extends window.BaseSampleManager {
 
     getReceptionNumber() {
         if (!this.receptionNumberInput) {
-            console.warn('접수번호 입력란을 찾을 수 없습니다');
+            (window.logger?.warn || console.warn)('접수번호 입력란을 찾을 수 없습니다');
             return '';
         }
         const value = this.receptionNumberInput.value.trim();
         if (!value) {
-            console.warn('접수번호가 비어있습니다');
+            (window.logger?.warn || console.warn)('접수번호가 비어있습니다');
             return '';
         }
         const parts = value.split('-');
@@ -2911,7 +2911,7 @@ class SoilSampleManager extends window.BaseSampleManager {
                 });
                 verifyResult.className = 'verify-result verify-fail';
                 verifyResult.innerHTML = `<span>&#10060; 필지 주소 ${invalidLogs.length}건 불일치</span>` +
-                    (invalidAddresses.length > 0 ? `<div class="verify-addresses">${invalidAddresses.join(', ')}</div>` : '');
+                    (invalidAddresses.length > 0 ? `<div class="verify-addresses">${escapeHTML(invalidAddresses.join(', '))}</div>` : '');
             } else if (skipLogs.length === newLogs.length) {
                 verifyResult.className = 'verify-result verify-skip';
                 verifyResult.innerHTML = '<span>&#9888; 주소 검증을 수행할 수 없습니다 (API 키 또는 네트워크 확인)</span>';

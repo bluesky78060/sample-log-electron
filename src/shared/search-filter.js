@@ -225,11 +225,14 @@ function setupSearchReset(resetBtn, inputs, callback) {
  * @returns {string} 하이라이트된 HTML
  */
 function highlightSearchTerm(text, searchTerm) {
-    if (!searchTerm || !text) return text || '';
+    if (!searchTerm || !text) return window.escapeHTML ? window.escapeHTML(String(text || '')) : (text || '');
 
-    const escapedTerm = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const regex = new RegExp(`(${escapedTerm})`, 'gi');
-    return String(text).replace(regex, '<mark class="search-highlight">$1</mark>');
+    const safeText = window.escapeHTML ? window.escapeHTML(String(text)) : String(text);
+    const safeTermForRegex = window.escapeHTML
+        ? window.escapeHTML(searchTerm).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        : searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(${safeTermForRegex})`, 'gi');
+    return safeText.replace(regex, '<mark class="search-highlight">$1</mark>');
 }
 
 // 전역으로 내보내기

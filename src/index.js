@@ -29,6 +29,19 @@ if (require('electron-squirrel-startup')) {
 let mainWindow = null;
 
 /**
+ * M-3: 앱의 실제 docs 디렉토리 절대 경로 (will-navigate 검증용)
+ * realpath로 심볼릭 링크 해석 (존재하지 않으면 resolve 경로 사용)
+ */
+const DOCS_DIR = (() => {
+    const resolved = path.resolve(__dirname, '..', 'docs');
+    try {
+        return fs.realpathSync(resolved);
+    } catch {
+        return resolved;
+    }
+})();
+
+/**
  * M-4: IPC 호출 Rate Limiting (DoS 방지)
  * 채널별 호출 횟수를 추적하여 과도한 호출을 차단
  */
@@ -315,9 +328,22 @@ const createWindow = () => {
     if (activeDevServerUrl && url.startsWith(activeDevServerUrl)) {
       return; // 개발 모드: 같은 dev server 내 URL 허용
     }
-    // file:// 프로토콜이고 docs 폴더 내의 파일이면 허용
-    if (url.startsWith('file://') && url.includes('/docs/')) {
-      return;
+    // M-3: file:// 프로토콜이고 실제 docs 디렉토리 내의 파일이면 허용
+    if (url.startsWith('file://')) {
+      try {
+        const filePath = decodeURIComponent(url.replace(/^file:\/\//, ''));
+        let realFilePath;
+        try {
+          realFilePath = fs.realpathSync(filePath);
+        } catch {
+          realFilePath = path.resolve(filePath);
+        }
+        if (realFilePath.startsWith(DOCS_DIR + path.sep) || realFilePath === DOCS_DIR) {
+          return;
+        }
+      } catch {
+        // 경로 파싱 실패 시 차단
+      }
     }
     event.preventDefault(); // 외부 URL 차단
   });
@@ -477,9 +503,27 @@ ipcMain.handle('open-heuktoram', async () => {
     // H-1: 창 닫힘 시 참조 정리
     heuktoramWindow.on('closed', () => { heuktoramWindow = null; });
 
-    // M-1: 외부 URL 네비게이션 차단 (메인 윈도우와 동일)
+    // M-3: 외부 URL 네비게이션 차단 (메인 윈도우와 동일)
     heuktoramWindow.webContents.on('will-navigate', (event, url) => {
-        if (url.startsWith('file://') && url.includes('/docs/')) return;
+        // M-3: file:// 프로토콜이고 실제 docs 디렉토리 내의 파일이면 허용
+        if (url.startsWith('file://')) {
+            try {
+                const filePath = decodeURIComponent(url.replace(/^file:\/\//, ''));
+                let realFilePath;
+                try {
+                    realFilePath = fs.realpathSync(filePath);
+                } catch {
+                    realFilePath = path.resolve(filePath);
+                }
+                if (realFilePath.startsWith(DOCS_DIR + path.sep) || realFilePath === DOCS_DIR) {
+                    return;
+                }
+            } catch {
+                // 경로 파싱 실패 시 차단
+            }
+            event.preventDefault();
+            return;
+        }
         if (url.startsWith('http://localhost:')) return;
         event.preventDefault();
     });
@@ -566,7 +610,7 @@ ipcMain.handle('write-file', async (event, filePath, content) => {
             return { success: false, error: validation.error };
         }
 
-        fs.writeFileSync(filePath, content, 'utf8');
+        await fs.promises.writeFile(validation.resolvedPath, content, 'utf8');
         return { success: true };
     } catch (error) {
         console.error('[write-file] 오류:', error.message);
@@ -589,12 +633,12 @@ ipcMain.handle('read-file', async (event, filePath) => {
 
         // L-2: 파일 크기 제한 (50MB)
         const MAX_FILE_SIZE = 50 * 1024 * 1024;
-        const stat = fs.statSync(validation.resolvedPath);
+        const stat = await fs.promises.stat(validation.resolvedPath);
         if (stat.size > MAX_FILE_SIZE) {
             return { success: false, error: `파일이 너무 큽니다 (최대 ${MAX_FILE_SIZE / 1024 / 1024}MB).` };
         }
 
-        const content = fs.readFileSync(validation.resolvedPath, 'utf8');
+        const content = await fs.promises.readFile(validation.resolvedPath, 'utf8');
         return { success: true, content };
     } catch (error) {
         console.error('[read-file] 오류:', error.message);
@@ -901,13 +945,28 @@ ipcMain.handle('select-auth-file', async () => {
 
 // VWORLD 지번 지오코딩 (main process → Origin 헤더 없음, 도메인 제한 우회)
 ipcMain.handle('vworld-geocode', async (event, { address, apiKey }) => {
+    // M-1: 입력 검증
+    if (typeof address !== 'string' || address.length === 0 || address.length > 200) {
+        return null;
+    }
+    if (typeof apiKey !== 'string' || apiKey.length === 0 || apiKey.length > 100) {
+        return null;
+    }
+
     const https = require('node:https');
     const url = `https://api.vworld.kr/req/address?service=address&request=getCoord&version=2.0&crs=epsg:4326&address=${encodeURIComponent(address)}&refine=true&simple=false&format=json&type=parcel&key=${apiKey}`;
+    const MAX_RESPONSE_SIZE = 100 * 1024; // 100KB
     return new Promise((resolve) => {
-        const timeout = setTimeout(() => { req.destroy(); resolve(null); }, 8000);
         const req = https.get(url, (res) => {
             let data = '';
-            res.on('data', chunk => { data += chunk; });
+            res.on('data', chunk => {
+                data += chunk;
+                // M-1: 응답 크기 제한
+                if (data.length > MAX_RESPONSE_SIZE) {
+                    req.destroy();
+                    resolve(null);
+                }
+            });
             res.on('end', () => {
                 clearTimeout(timeout);
                 try {
@@ -919,6 +978,7 @@ ipcMain.handle('vworld-geocode', async (event, { address, apiKey }) => {
                 }
             });
         });
+        const timeout = setTimeout(() => { req.destroy(); resolve(null); }, 8000);
         req.on('error', () => { clearTimeout(timeout); resolve(null); });
     });
 });

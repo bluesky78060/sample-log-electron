@@ -1857,7 +1857,7 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
             renderPreviewCell: (record, key) => {
                 if (key === 'analysisItems') {
                     const items = record.analysisItems;
-                    return escapeHTML(items.length === ANALYSIS_ITEMS.length ? '전항목' : items.join(', '));
+                    return items.length === ANALYSIS_ITEMS.length ? '전항목' : items.join(', ');
                 }
                 return undefined;
             },

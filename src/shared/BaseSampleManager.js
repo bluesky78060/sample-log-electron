@@ -276,7 +276,7 @@ class BaseSampleManager {
                         this.sampleLogs = firebaseLogs;
 
                         // PER-9: TTL 포함 캐시 저장
-                        if (!cacheValid) this._firebaseCache.set(year, { data: firebaseLogs, timestamp: Date.now() });
+                        if (!cacheValid) this._firebaseCache.set(year, { data: JSON.parse(JSON.stringify(firebaseLogs)), timestamp: Date.now() });
 
                         // Firebase 데이터를 localStorage에 저장 (캐싱)
                         localStorage.setItem(yearStorageKey, JSON.stringify(firebaseLogs));

@@ -865,7 +865,7 @@ class PesticideSampleManager extends window.BaseSampleManager {
                 producerName: formData.get('producerName') || '',
                 producerAddress: item.producerAddress,
                 requestContent: item.cropName,
-                completed: false,
+                isComplete: false,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString()
             };
@@ -1624,13 +1624,14 @@ class PesticideSampleManager extends window.BaseSampleManager {
 
         if (!modal || !tableBody) return;
 
+        const esc = window.escapeHTML || escapeHTML;
         const rows = logs.map(log => {
             const addrWithoutSido = (log.producerAddress || '-').replace(/^경상북도\s*/, '');
             return `
             <tr>
-                <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${log.receptionNumber}</td>
-                <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${addrWithoutSido}</td>
-                <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${log.requestContent || '-'}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${esc(log.receptionNumber)}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${esc(addrWithoutSido)}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${esc(log.requestContent || '-')}</td>
             </tr>
         `;
         }).join('');
@@ -1653,7 +1654,7 @@ class PesticideSampleManager extends window.BaseSampleManager {
                 </tbody>
             </table>
             <div style="margin-top: 12px; padding: 8px; background: #F0FDF4; border-radius: 6px; font-size: 0.85rem; color: #15803D;">
-                <strong>접수일:</strong> ${logs[0].date} | <strong>의뢰인:</strong> ${logs[0].name} | <strong>생산자:</strong> ${logs[0].producerName || '-'}
+                <strong>접수일:</strong> ${esc(logs[0].date)} | <strong>의뢰인:</strong> ${esc(logs[0].name)} | <strong>생산자:</strong> ${esc(logs[0].producerName || '-')}
             </div>
         `);
 
@@ -2926,7 +2927,7 @@ class PesticideSampleManager extends window.BaseSampleManager {
                     producerName,
                     producerAddress,
                     requestContent,
-                    completed: false,
+                    isComplete: false,
                     createdAt: common.now,
                     updatedAt: common.now
                 };

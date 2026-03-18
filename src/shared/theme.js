@@ -17,16 +17,16 @@ const ThemeManager = {
         if (savedTheme) {
             this.setTheme(savedTheme);
         } else {
-            // 시스템 다크 모드 설정 확인
+            // 시스템 다크 모드 설정 확인 (localStorage에 저장하지 않음)
             const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            this.setTheme(prefersDark ? 'dark' : 'light');
+            this.setTheme(prefersDark ? 'dark' : 'light', false);
         }
 
         // 시스템 테마 변경 감지
         window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-            // 수동 설정이 없을 때만 시스템 설정 따름
+            // 수동 설정이 없을 때만 시스템 설정 따름 (localStorage에 저장하지 않음)
             if (!localStorage.getItem(this.STORAGE_KEY)) {
-                this.setTheme(e.matches ? 'dark' : 'light');
+                this.setTheme(e.matches ? 'dark' : 'light', false);
                 this.updateToggleButton();
             }
         });
@@ -35,10 +35,13 @@ const ThemeManager = {
     /**
      * 테마 설정
      * @param {string} theme - 'light' 또는 'dark'
+     * @param {boolean} [save=true] - localStorage에 저장 여부 (시스템 테마 따를 때는 false)
      */
-    setTheme(theme) {
+    setTheme(theme, save = true) {
         document.documentElement.setAttribute('data-theme', theme);
-        localStorage.setItem(this.STORAGE_KEY, theme);
+        if (save) {
+            localStorage.setItem(this.STORAGE_KEY, theme);
+        }
         // select 요소에 다크모드 스타일 강제 적용
         this.applySelectStyles(theme);
     },
@@ -89,51 +92,11 @@ const ThemeManager = {
      * 현재 페이지에 맞는 테마 색상 반환
      */
     getPageColors() {
-        const body = document.body;
-
-        if (body.classList.contains('soil-page')) {
-            return {
-                bg: '#292524',
-                text: '#D6D3D1',
-                border: '#57534E',
-                arrow: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23D6D3D1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")"
-            };
-        } else if (body.classList.contains('compost-page')) {
-            return {
-                bg: '#292524',
-                text: '#D6D3D1',
-                border: '#57534E',
-                arrow: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23D6D3D1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")"
-            };
-        } else if (body.classList.contains('pesticide-page')) {
-            return {
-                bg: '#292524',
-                text: '#D6D3D1',
-                border: '#57534E',
-                arrow: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23D6D3D1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")"
-            };
-        } else if (body.classList.contains('water-page')) {
-            return {
-                bg: '#292524',
-                text: '#D6D3D1',
-                border: '#57534E',
-                arrow: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23D6D3D1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")"
-            };
-        } else if (body.classList.contains('heavy-metal-page')) {
-            return {
-                bg: '#292524',
-                text: '#D6D3D1',
-                border: '#57534E',
-                arrow: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23D6D3D1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")"
-            };
-        }
-
-        // 기본값 (warm dark)
         return {
             bg: '#292524',
             text: '#D6D3D1',
             border: '#57534E',
-            arrow: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23A8A29E' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")"
+            arrow: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23D6D3D1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")"
         };
     },
 
