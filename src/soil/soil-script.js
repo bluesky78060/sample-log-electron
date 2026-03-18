@@ -4411,6 +4411,14 @@ class SoilSampleManager extends window.BaseSampleManager {
         }
 
         this.log('토양 시료 접수 페이지 초기화 완료');
+
+        // 기존 addressVerified: false 데이터 백그라운드 재검증
+        const invalidLogs = this.sampleLogs.filter(l => l.addressVerified === false);
+        if (invalidLogs.length > 0) {
+            this.validateAndMarkLogs(invalidLogs).catch(err =>
+                (window.logger?.error || console.error)('기존 필지 재검증 오류:', err)
+            );
+        }
     }
 
     // ========================================
