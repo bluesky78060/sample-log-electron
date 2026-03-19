@@ -153,7 +153,8 @@ class WaterSampleManager extends window.BaseSampleManager {
         const safeSampleName = escapeHTML(log.sampleName || '-');
         const safeMainCrop = escapeHTML(log.mainCrop || '-');
         const safePhone = escapeHTML(log.phoneNumber || '-');
-        const safeNote = escapeHTML(log.note || '-');
+        const noteDisplay = [log.sampleNote, log.note].filter(Boolean).join(' / ') || '-';
+        const safeNote = escapeHTML(noteDisplay);
         const safeDisplayAddress = escapeHTML(displayAddress);
 
         const applicantType = log.applicantType || '개인';
@@ -327,6 +328,7 @@ class WaterSampleManager extends window.BaseSampleManager {
         const samplingLocations = this.getAllSamplingLocations();
         const samplingCrops = this.getAllSamplingCrops();
         const sampleNames = this.getAllSampleNames();
+        const samplingNotes = this.getAllSamplingNotes();
 
         // 접수번호 파싱 (예: "1, 2, 3" -> [1, 2, 3])
         const receptionNumberStr = formData.get('receptionNumber') || this.generateNextReceptionNumber();
@@ -366,7 +368,8 @@ class WaterSampleManager extends window.BaseSampleManager {
                 sampleName: sampleNames[i] || formData.get('sampleName') || '지하수',
                 sampleCount: '1',
                 samplingLocation: samplingLocations[i] || '',
-                mainCrop: samplingCrops[i] || ''
+                mainCrop: samplingCrops[i] || '',
+                sampleNote: samplingNotes[i] || ''
             };
             newLogs.push(data);
             this.sampleLogs.push(data);
@@ -383,7 +386,8 @@ class WaterSampleManager extends window.BaseSampleManager {
             receptionNumber: receptionNumbers.join(', '),
             sampleCount: String(totalCount),
             samplingLocation: samplingLocations.join(', '),
-            mainCrop: samplingCrops.filter(c => c).join(', ')
+            mainCrop: samplingCrops.filter(c => c).join(', '),
+            sampleNote: samplingNotes.filter(n => n).join(', ')
         };
         this.showRegistrationResult(resultData);
 
@@ -449,6 +453,7 @@ class WaterSampleManager extends window.BaseSampleManager {
 
             // 채취장소 및 주작목 설정
             const crops = log.samplingCrops || [];
+            const notesForRows = log.samplingNotes || [log.sampleNote || ''];
             // 기존 데이터 호환: 개별 시료명 배열이 없으면 공통 sampleName으로 채움
             const sampleNamesForRows = log.sampleNamesPerRow && Array.isArray(log.sampleNamesPerRow)
                 ? log.sampleNamesPerRow
@@ -456,11 +461,11 @@ class WaterSampleManager extends window.BaseSampleManager {
             if (log.samplingLocations && Array.isArray(log.samplingLocations)) {
                 // 개별 시료명이 없으면 공통 sampleName을 각 위치에 반복 적용
                 const names = log.samplingLocations.map((_, i) => sampleNamesForRows[i] || log.sampleName || '지하수');
-                this.setSamplingLocations(log.samplingLocations, crops, names);
+                this.setSamplingLocations(log.samplingLocations, crops, names, notesForRows);
             } else if (log.samplingLocation) {
                 const locations = log.samplingLocation.split(',').map(s => s.trim());
                 const names = locations.map((_, i) => sampleNamesForRows[i] || log.sampleName || '지하수');
-                this.setSamplingLocations(locations, crops, names);
+                this.setSamplingLocations(locations, crops, names, notesForRows);
             }
 
             // 통보방법 선택
@@ -539,12 +544,14 @@ class WaterSampleManager extends window.BaseSampleManager {
             this.agriculturalWaterItems.classList.remove('active');
         }
 
-        // 채취장소 및 주작목 초기화
+        // 채취장소 및 주작목 및 비고 초기화
         this.updateSamplingLocations(1);
         const firstLocationInput = this.samplingLocationsList.querySelector('.sampling-location-input');
         const firstCropInput = this.samplingLocationsList.querySelector('.sampling-crop-input');
+        const firstNoteInput = this.samplingLocationsList.querySelector('.sampling-note-input');
         if (firstLocationInput) firstLocationInput.value = '';
         if (firstCropInput) firstCropInput.value = '';
+        if (firstNoteInput) firstNoteInput.value = '';
 
         // 접수번호 갱신
         const nextNumber = this.generateNextReceptionNumber();
@@ -615,6 +622,7 @@ class WaterSampleManager extends window.BaseSampleManager {
                 <ul class="location-autocomplete-list"></ul>
             </div>
             <input type="text" class="sampling-crop-input" name="samplingCrops[]" placeholder="주작목">
+            <input type="text" class="sampling-note-input" name="samplingNotes[]" placeholder="비고">
         `);
         return item;
     }
@@ -671,15 +679,21 @@ class WaterSampleManager extends window.BaseSampleManager {
         return Array.from(inputs).map(input => input.value.trim());
     }
 
+    getAllSamplingNotes() {
+        const inputs = this.samplingLocationsList?.querySelectorAll('.sampling-note-input') || [];
+        return Array.from(inputs).map(input => input.value.trim());
+    }
+
     getAllSampleNames() {
         const selects = this.samplingLocationsList?.querySelectorAll('.sampling-samplename-select') || [];
         return Array.from(selects).map(s => s.value || '지하수');
     }
 
-    setSamplingLocations(locations, crops = [], sampleNames = []) {
+    setSamplingLocations(locations, crops = [], sampleNames = [], notes = []) {
         if (!Array.isArray(locations)) locations = [locations];
         if (!Array.isArray(crops)) crops = [crops];
         if (!Array.isArray(sampleNames)) sampleNames = [sampleNames];
+        if (!Array.isArray(notes)) notes = [notes];
         locations = locations.filter(l => l);
 
         const count = Math.max(1, locations.length);
@@ -688,11 +702,13 @@ class WaterSampleManager extends window.BaseSampleManager {
         const locationInputs = this.samplingLocationsList.querySelectorAll('.sampling-location-input');
         const cropInputs = this.samplingLocationsList.querySelectorAll('.sampling-crop-input');
         const sampleNameSelects = this.samplingLocationsList.querySelectorAll('.sampling-samplename-select');
+        const noteInputs = this.samplingLocationsList.querySelectorAll('.sampling-note-input');
 
         locations.forEach((loc, i) => {
             if (locationInputs[i]) locationInputs[i].value = loc;
             if (cropInputs[i] && crops[i]) cropInputs[i].value = crops[i];
             if (sampleNameSelects[i] && sampleNames[i]) sampleNameSelects[i].value = sampleNames[i];
+            if (noteInputs[i] && notes[i]) noteInputs[i].value = notes[i];
         });
     }
 
@@ -805,6 +821,7 @@ class WaterSampleManager extends window.BaseSampleManager {
         const samplingLocations = this.getAllSamplingLocations();
         const samplingCrops = this.getAllSamplingCrops();
         const sampleNames = this.getAllSampleNames();
+        const samplingNotes = this.getAllSamplingNotes();
 
         if (log) {
             log.receptionNumber = formData.get('receptionNumber');
@@ -826,6 +843,8 @@ class WaterSampleManager extends window.BaseSampleManager {
             log.samplingLocation = samplingLocations.join(', ');
             log.samplingCrops = samplingCrops;
             log.mainCrop = samplingCrops.filter(c => c).join(', ');
+            log.samplingNotes = samplingNotes;
+            log.sampleNote = samplingNotes.filter(n => n).join(', ');
             log.purpose = formData.get('purpose');
             log.testItems = formData.get('testItems');
             log.note = formData.get('note');
@@ -896,6 +915,7 @@ class WaterSampleManager extends window.BaseSampleManager {
             { label: '목적', value: data.purpose },
             { label: '검사항목', value: data.testItems },
             { label: '통보방법', value: data.receptionMethod },
+            { label: '시료비고', value: data.sampleNote },
             { label: '비고', value: data.note }
         ];
 
@@ -1735,6 +1755,7 @@ class WaterSampleManager extends window.BaseSampleManager {
                         '목적': log.purpose || '-',
                         '검사항목': log.testItems || '-',
                         '통보방법': log.receptionMethod || '-',
+                        '시료비고': log.sampleNote || '-',
                         '비고': log.note || '-',
                         '완료여부': log.isComplete ? '완료' : '미완료',
                         '등록일시': log.createdAt ? new Date(log.createdAt).toLocaleString('ko-KR') : '-'
@@ -1748,7 +1769,8 @@ class WaterSampleManager extends window.BaseSampleManager {
                     { wch: 10 }, { wch: 15 }, { wch: 12 }, { wch: 12 },
                     { wch: 10 }, { wch: 30 }, { wch: 8 }, { wch: 25 },
                     { wch: 15 }, { wch: 8 }, { wch: 15 }, { wch: 15 },
-                    { wch: 25 }, { wch: 10 }, { wch: 20 }, { wch: 8 }, { wch: 20 }
+                    { wch: 25 }, { wch: 10 }, { wch: 15 }, { wch: 15 },
+                    { wch: 20 }, { wch: 8 }, { wch: 20 }
                 ];
                 XLSX.utils.book_append_sheet(wb, ws, '수질분석 접수');
                 XLSX.writeFile(wb, `수질분석_접수대장_${new Date().toISOString().split('T')[0]}.xlsx`);
@@ -1805,6 +1827,7 @@ class WaterSampleManager extends window.BaseSampleManager {
                 { key: 'purpose', label: '목적' },
                 { key: 'testItems', label: '검사항목' },
                 { key: 'receptionMethod', label: '통보방법' },
+                { key: 'sampleNote', label: '시료비고' },
                 { key: 'note', label: '비고' }
             ],
             autoMapRules: {
@@ -1819,6 +1842,7 @@ class WaterSampleManager extends window.BaseSampleManager {
                 '목적': 'purpose', '용도': 'purpose',
                 '검사항목': 'testItems', '분석항목': 'testItems',
                 '통보방법': 'receptionMethod', '수령방법': 'receptionMethod', '수령 방법': 'receptionMethod',
+                '시료비고': 'sampleNote',
                 '비고': 'note', '메모': 'note', '참고': 'note'
             },
             templateConfig: {
