@@ -326,6 +326,7 @@ class WaterSampleManager extends window.BaseSampleManager {
         const formData = new FormData(this.form);
         const samplingLocations = this.getAllSamplingLocations();
         const samplingCrops = this.getAllSamplingCrops();
+        const sampleNames = this.getAllSampleNames();
 
         // 접수번호 파싱 (예: "1, 2, 3" -> [1, 2, 3])
         const receptionNumberStr = formData.get('receptionNumber') || this.generateNextReceptionNumber();
@@ -362,6 +363,7 @@ class WaterSampleManager extends window.BaseSampleManager {
                 ...commonData,
                 id: SampleUtils.generateUUID(),
                 receptionNumber: receptionNumbers[i] || String(parseInt(receptionNumbers[0], 10) + i),
+                sampleName: sampleNames[i] || formData.get('sampleName') || '지하수',
                 sampleCount: '1',
                 samplingLocation: samplingLocations[i] || '',
                 mainCrop: samplingCrops[i] || ''
@@ -447,11 +449,18 @@ class WaterSampleManager extends window.BaseSampleManager {
 
             // 채취장소 및 주작목 설정
             const crops = log.samplingCrops || [];
+            // 기존 데이터 호환: 개별 시료명 배열이 없으면 공통 sampleName으로 채움
+            const sampleNamesForRows = log.sampleNamesPerRow && Array.isArray(log.sampleNamesPerRow)
+                ? log.sampleNamesPerRow
+                : [];
             if (log.samplingLocations && Array.isArray(log.samplingLocations)) {
-                this.setSamplingLocations(log.samplingLocations, crops);
+                // 개별 시료명이 없으면 공통 sampleName을 각 위치에 반복 적용
+                const names = log.samplingLocations.map((_, i) => sampleNamesForRows[i] || log.sampleName || '지하수');
+                this.setSamplingLocations(log.samplingLocations, crops, names);
             } else if (log.samplingLocation) {
                 const locations = log.samplingLocation.split(',').map(s => s.trim());
-                this.setSamplingLocations(locations, crops);
+                const names = locations.map((_, i) => sampleNamesForRows[i] || log.sampleName || '지하수');
+                this.setSamplingLocations(locations, crops, names);
             }
 
             // 통보방법 선택
@@ -596,6 +605,11 @@ class WaterSampleManager extends window.BaseSampleManager {
         item.dataset.index = index;
         item.innerHTML = sanitizeHTML(`
             <span class="location-number">${index + 1}</span>
+            <select class="sampling-samplename-select" name="sampleNames[]">
+                <option value="지하수">지하수</option>
+                <option value="지표수">지표수</option>
+                <option value="기타">기타</option>
+            </select>
             <div class="location-autocomplete-wrapper">
                 <input type="text" class="sampling-location-input" name="samplingLocations[]" required placeholder="리+지번 입력 (예: 내성리 123, 내성리 산 45)">
                 <ul class="location-autocomplete-list"></ul>
@@ -657,9 +671,15 @@ class WaterSampleManager extends window.BaseSampleManager {
         return Array.from(inputs).map(input => input.value.trim());
     }
 
-    setSamplingLocations(locations, crops = []) {
+    getAllSampleNames() {
+        const selects = this.samplingLocationsList?.querySelectorAll('.sampling-samplename-select') || [];
+        return Array.from(selects).map(s => s.value || '지하수');
+    }
+
+    setSamplingLocations(locations, crops = [], sampleNames = []) {
         if (!Array.isArray(locations)) locations = [locations];
         if (!Array.isArray(crops)) crops = [crops];
+        if (!Array.isArray(sampleNames)) sampleNames = [sampleNames];
         locations = locations.filter(l => l);
 
         const count = Math.max(1, locations.length);
@@ -667,10 +687,12 @@ class WaterSampleManager extends window.BaseSampleManager {
 
         const locationInputs = this.samplingLocationsList.querySelectorAll('.sampling-location-input');
         const cropInputs = this.samplingLocationsList.querySelectorAll('.sampling-crop-input');
+        const sampleNameSelects = this.samplingLocationsList.querySelectorAll('.sampling-samplename-select');
 
         locations.forEach((loc, i) => {
             if (locationInputs[i]) locationInputs[i].value = loc;
             if (cropInputs[i] && crops[i]) cropInputs[i].value = crops[i];
+            if (sampleNameSelects[i] && sampleNames[i]) sampleNameSelects[i].value = sampleNames[i];
         });
     }
 
@@ -782,6 +804,7 @@ class WaterSampleManager extends window.BaseSampleManager {
         const log = this.sampleLogs.find(l => l.id === this.editingId);
         const samplingLocations = this.getAllSamplingLocations();
         const samplingCrops = this.getAllSamplingCrops();
+        const sampleNames = this.getAllSampleNames();
 
         if (log) {
             log.receptionNumber = formData.get('receptionNumber');
@@ -797,7 +820,7 @@ class WaterSampleManager extends window.BaseSampleManager {
             log.addressRoad = formData.get('addressRoad');
             log.addressDetail = formData.get('addressDetail');
             log.receptionMethod = formData.get('receptionMethod');
-            log.sampleName = formData.get('sampleName');
+            log.sampleName = sampleNames[0] || formData.get('sampleName') || '지하수';
             log.sampleCount = formData.get('sampleCount');
             log.samplingLocations = samplingLocations;
             log.samplingLocation = samplingLocations.join(', ');
@@ -1259,6 +1282,17 @@ class WaterSampleManager extends window.BaseSampleManager {
                 if (toggleText) {
                     toggleText.textContent = this.isFullView ? '기본 보기' : '전체 보기';
                 }
+            });
+        }
+
+        // 상단 시료명 변경 시 모든 채취장소 행 일괄 변경
+        const sampleNameSelect = document.getElementById('sampleName');
+        if (sampleNameSelect) {
+            sampleNameSelect.addEventListener('change', () => {
+                const value = sampleNameSelect.value;
+                this.samplingLocationsList?.querySelectorAll('.sampling-samplename-select').forEach(s => {
+                    s.value = value;
+                });
             });
         }
 

@@ -40,6 +40,23 @@
             background-color: #1e293b !important;
             color: #93c5fd !important;
         }
+        /* 채취장소 행 개별 시료명 select */
+        .sampling-samplename-select {
+            width: 72px;
+            min-width: 72px;
+            padding: 6px 4px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 13px;
+            flex-shrink: 0;
+            background-color: #fff;
+            color: #374151;
+        }
+        [data-theme="dark"] .sampling-samplename-select {
+            background-color: #44403c;
+            color: #d6d3d1;
+            border-color: #57534e;
+        }
     </style>
 </head>
 
@@ -391,6 +408,11 @@
                                         <!-- 동적으로 추가되는 채취장소 필드들 -->
                                         <div class="sampling-location-item" data-index="0">
                                             <span class="location-number">1</span>
+                                            <select class="sampling-samplename-select" name="sampleNames[]">
+                                                <option value="지하수">지하수</option>
+                                                <option value="지표수">지표수</option>
+                                                <option value="기타">기타</option>
+                                            </select>
                                             <div class="location-autocomplete-wrapper">
                                                 <input type="text" class="sampling-location-input" name="samplingLocations[]" required placeholder="리+지번 입력 (예: 내성리 123, 내성리 산 45)">
                                                 <ul class="location-autocomplete-list"></ul>
