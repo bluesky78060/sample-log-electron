@@ -611,18 +611,22 @@ class WaterSampleManager extends window.BaseSampleManager {
         item.className = 'sampling-location-item';
         item.dataset.index = index;
         item.innerHTML = sanitizeHTML(`
-            <span class="location-number">${index + 1}</span>
-            <select class="sampling-samplename-select" name="sampleNames[]">
-                <option value="지하수">지하수</option>
-                <option value="지표수">지표수</option>
-                <option value="기타">기타</option>
-            </select>
-            <div class="location-autocomplete-wrapper">
-                <input type="text" class="sampling-location-input" name="samplingLocations[]" required placeholder="리+지번 입력 (예: 내성리 123, 내성리 산 45)">
-                <ul class="location-autocomplete-list"></ul>
+            <div class="location-row-main">
+                <span class="location-number">${index + 1}</span>
+                <select class="sampling-samplename-select" name="sampleNames[]">
+                    <option value="지하수">지하수</option>
+                    <option value="지표수">지표수</option>
+                    <option value="기타">기타</option>
+                </select>
+                <div class="location-autocomplete-wrapper">
+                    <input type="text" class="sampling-location-input" name="samplingLocations[]" required placeholder="리+지번 입력 (예: 내성리 123, 내성리 산 45)">
+                    <ul class="location-autocomplete-list"></ul>
+                </div>
+                <input type="text" class="sampling-crop-input" name="samplingCrops[]" placeholder="주작목">
             </div>
-            <input type="text" class="sampling-crop-input" name="samplingCrops[]" placeholder="주작목">
-            <input type="text" class="sampling-note-input" name="samplingNotes[]" placeholder="비고">
+            <div class="location-row-note">
+                <input type="text" class="sampling-note-input" name="samplingNotes[]" placeholder="비고">
+            </div>
         `);
         return item;
     }

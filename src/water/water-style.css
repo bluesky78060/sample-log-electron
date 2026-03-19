@@ -580,8 +580,25 @@ textarea:focus {
 
 .sampling-location-item {
     display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px dashed #e2e8f0;
+}
+
+.sampling-location-item:last-child {
+    border-bottom: none;
+}
+
+.location-row-main {
+    display: flex;
     align-items: center;
     gap: 0.5rem;
+}
+
+.location-row-note {
+    display: flex;
+    padding-left: 32px;
 }
 
 .sampling-crop-input {
@@ -605,8 +622,7 @@ textarea:focus {
 }
 
 .sampling-note-input {
-    width: 100px;
-    flex-shrink: 0;
+    flex: 1;
     padding: 0.6rem 0.75rem;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
@@ -928,6 +944,10 @@ textarea:focus {
 [data-theme="dark"] .location-number {
     background: rgba(59, 130, 246, 0.2);
     color: #93c5fd;
+}
+
+[data-theme="dark"] .sampling-location-item {
+    border-bottom-color: #57534e;
 }
 
 [data-theme="dark"] .sampling-location-item .sampling-location-input,
