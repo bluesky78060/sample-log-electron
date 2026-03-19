@@ -331,12 +331,15 @@ const createWindow = () => {
     // M-3: file:// 프로토콜이고 실제 docs 디렉토리 내의 파일이면 허용
     if (url.startsWith('file://')) {
       try {
-        const filePath = decodeURIComponent(url.replace(/^file:\/\//, ''));
+        const fileUrl = new URL(url);
+        const filePath = decodeURIComponent(fileUrl.pathname);
+        // Windows: pathname이 /C:/... 형식 → 선행 슬래시 제거
+        const normalizedPath = process.platform === 'win32' ? filePath.replace(/^\//, '') : filePath;
         let realFilePath;
         try {
-          realFilePath = fs.realpathSync(filePath);
+          realFilePath = fs.realpathSync(normalizedPath);
         } catch {
-          realFilePath = path.resolve(filePath);
+          realFilePath = path.resolve(normalizedPath);
         }
         if (realFilePath.startsWith(DOCS_DIR + path.sep) || realFilePath === DOCS_DIR) {
           return;
@@ -508,12 +511,14 @@ ipcMain.handle('open-heuktoram', async () => {
         // M-3: file:// 프로토콜이고 실제 docs 디렉토리 내의 파일이면 허용
         if (url.startsWith('file://')) {
             try {
-                const filePath = decodeURIComponent(url.replace(/^file:\/\//, ''));
+                const fileUrl = new URL(url);
+                const filePath = decodeURIComponent(fileUrl.pathname);
+                const normalizedPath = process.platform === 'win32' ? filePath.replace(/^\//, '') : filePath;
                 let realFilePath;
                 try {
-                    realFilePath = fs.realpathSync(filePath);
+                    realFilePath = fs.realpathSync(normalizedPath);
                 } catch {
-                    realFilePath = path.resolve(filePath);
+                    realFilePath = path.resolve(normalizedPath);
                 }
                 if (realFilePath.startsWith(DOCS_DIR + path.sep) || realFilePath === DOCS_DIR) {
                     return;
