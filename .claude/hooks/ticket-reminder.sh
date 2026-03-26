@@ -1,0 +1,5 @@
+#!/bin/bash
+# AI PM 티켓 발행 리마인더 hook
+# UserPromptSubmit 이벤트에서 실행되어, 작업 시작 전 티켓 발행을 상기시킴
+
+echo "[AI PM] 작업 시작 전 반드시 ai-pm MCP의 create_task로 티켓을 발행하세요. (프로젝트 ID: 81150a9b-6422-46d9-a0e2-385336cfe038)"
