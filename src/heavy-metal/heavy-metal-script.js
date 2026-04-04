@@ -1442,11 +1442,19 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
             if (typeof suggestRegionVillages === 'function') {
                 const suggestions = suggestRegionVillages(value, null, true);
                 if (suggestions.length > 0) {
-                    samplingLocationAutocomplete.innerHTML = sanitizeHTML(suggestions.slice(0, 20).map(suggestion => `
-                        <li data-village="${suggestion.village}" data-district="${suggestion.district}" data-region-key="${suggestion.regionKey}" data-region="${suggestion.region || ''}" data-is-mountain="${suggestion.isMountain}">
-                            ${suggestion.displayText}
-                        </li>
-                    `).join(''));
+                    samplingLocationAutocomplete.innerHTML = '';
+                    const fragment1 = document.createDocumentFragment();
+                    suggestions.slice(0, 20).forEach(suggestion => {
+                        const li = document.createElement('li');
+                        li.dataset.village = suggestion.village || '';
+                        li.dataset.district = suggestion.district || '';
+                        li.dataset.regionKey = suggestion.regionKey || '';
+                        li.dataset.region = suggestion.region || '';
+                        li.dataset.isMountain = suggestion.isMountain || false;
+                        li.textContent = suggestion.displayText || '';
+                        fragment1.appendChild(li);
+                    });
+                    samplingLocationAutocomplete.appendChild(fragment1);
                     samplingLocationAutocomplete.classList.add('show');
                 }
             }
@@ -1467,18 +1475,32 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
                     const result = parseParcelAddress(value);
                     if (result) {
                         if (result.isDuplicate && result.locations) {
-                            samplingLocationAutocomplete.innerHTML = sanitizeHTML(result.locations.map(loc => `
-                                <li data-village="${result.villageName}" data-district="${loc.district}" data-region-key="${loc.regionKey}" data-lot="${result.lotNumber || ''}">
-                                    ${loc.fullAddress} ${result.lotNumber || ''}
-                                </li>
-                            `).join(''));
+                            samplingLocationAutocomplete.innerHTML = '';
+                            const fragment2 = document.createDocumentFragment();
+                            result.locations.forEach(loc => {
+                                const li = document.createElement('li');
+                                li.dataset.village = result.villageName || '';
+                                li.dataset.district = loc.district || '';
+                                li.dataset.regionKey = loc.regionKey || '';
+                                li.dataset.lot = result.lotNumber || '';
+                                li.textContent = `${loc.fullAddress} ${result.lotNumber || ''}`.trim();
+                                fragment2.appendChild(li);
+                            });
+                            samplingLocationAutocomplete.appendChild(fragment2);
                             samplingLocationAutocomplete.classList.add('show');
                         } else if (result.alternatives && result.alternatives.length > 1) {
-                            samplingLocationAutocomplete.innerHTML = sanitizeHTML(result.alternatives.map(district => `
-                                <li data-village="${result.village}" data-district="${district}" data-lot="${result.lotNumber || ''}" data-region-key="${result.regionKey}">
-                                    ${result.region} ${district} ${result.village} ${result.lotNumber || ''}
-                                </li>
-                            `).join(''));
+                            samplingLocationAutocomplete.innerHTML = '';
+                            const fragment3 = document.createDocumentFragment();
+                            result.alternatives.forEach(district => {
+                                const li = document.createElement('li');
+                                li.dataset.village = result.village || '';
+                                li.dataset.district = district || '';
+                                li.dataset.lot = result.lotNumber || '';
+                                li.dataset.regionKey = result.regionKey || '';
+                                li.textContent = `${result.region} ${district} ${result.village} ${result.lotNumber || ''}`.trim();
+                                fragment3.appendChild(li);
+                            });
+                            samplingLocationAutocomplete.appendChild(fragment3);
                             samplingLocationAutocomplete.classList.add('show');
                         } else if (result.fullAddress) {
                             samplingLocationAutocomplete.innerHTML = '';

@@ -1030,11 +1030,17 @@ class SoilSampleManager extends window.BaseSampleManager {
             if (value.length > 0 && typeof suggestRegionVillages === 'function') {
                 const suggestions = suggestRegionVillages(value, ['bonghwa', 'yeongju', 'uljin'], true);
                 if (suggestions.length > 0) {
-                    autocompleteList.innerHTML = sanitizeHTML(suggestions.map(item => `
-                        <li data-village="${item.village}" data-district="${item.district}" data-region-key="${item.regionKey}" data-region="${item.region || ''}" data-is-mountain="${item.isMountain}">
-                            ${item.displayText}
-                        </li>
-                    `).join(''));
+                    autocompleteList.innerHTML = '';
+                    suggestions.forEach(item => {
+                        const li = document.createElement('li');
+                        li.dataset.village = item.village || '';
+                        li.dataset.district = item.district || '';
+                        li.dataset.regionKey = item.regionKey || '';
+                        li.dataset.region = item.region || '';
+                        li.dataset.isMountain = item.isMountain || false;
+                        li.textContent = item.displayText || '';
+                        autocompleteList.appendChild(li);
+                    });
                     autocompleteList.classList.add('show');
                 } else {
                     autocompleteList.classList.remove('show');
@@ -1059,11 +1065,16 @@ class SoilSampleManager extends window.BaseSampleManager {
                         if (result.isDuplicate) {
                             this.showRegionSelectionModal(result, parcelId, lotInput);
                         } else if (result.alternatives && result.alternatives.length > 1) {
-                            autocompleteList.innerHTML = sanitizeHTML(result.alternatives.map(district => `
-                                <li data-village="${result.village}" data-district="${district}" data-lot="${result.lotNumber}" data-region-key="${result.regionKey}">
-                                    ${result.region} ${district} ${result.village} ${result.lotNumber || ''}
-                                </li>
-                            `).join(''));
+                            autocompleteList.innerHTML = '';
+                            result.alternatives.forEach(district => {
+                                const li = document.createElement('li');
+                                li.dataset.village = result.village || '';
+                                li.dataset.district = district || '';
+                                li.dataset.lot = result.lotNumber || '';
+                                li.dataset.regionKey = result.regionKey || '';
+                                li.textContent = `${result.region} ${district} ${result.village} ${result.lotNumber || ''}`;
+                                autocompleteList.appendChild(li);
+                            });
                             autocompleteList.classList.add('show');
                         } else {
                             lotInput.value = result.fullAddress;
@@ -1121,11 +1132,17 @@ class SoilSampleManager extends window.BaseSampleManager {
             if (value.length > 0 && typeof suggestRegionVillages === 'function') {
                 const suggestions = suggestRegionVillages(value, ['bonghwa', 'yeongju', 'uljin'], true);
                 if (suggestions.length > 0) {
-                    autocompleteList.innerHTML = sanitizeHTML(suggestions.map(item => `
-                        <li data-village="${item.village}" data-district="${item.district}" data-region-key="${item.regionKey}" data-region="${item.region || ''}" data-is-mountain="${item.isMountain}">
-                            ${item.displayText}
-                        </li>
-                    `).join(''));
+                    autocompleteList.innerHTML = '';
+                    suggestions.forEach(item => {
+                        const li = document.createElement('li');
+                        li.dataset.village = item.village || '';
+                        li.dataset.district = item.district || '';
+                        li.dataset.regionKey = item.regionKey || '';
+                        li.dataset.region = item.region || '';
+                        li.dataset.isMountain = item.isMountain || false;
+                        li.textContent = item.displayText || '';
+                        autocompleteList.appendChild(li);
+                    });
                     autocompleteList.classList.add('show');
                 } else {
                     autocompleteList.classList.remove('show');
@@ -1149,11 +1166,16 @@ class SoilSampleManager extends window.BaseSampleManager {
                         if (result.isDuplicate) {
                             this.showRegionSelectionModal(result, parcelId, subLotInput);
                         } else if (result.alternatives && result.alternatives.length > 1) {
-                            autocompleteList.innerHTML = sanitizeHTML(result.alternatives.map(district => `
-                                <li data-village="${result.village}" data-district="${district}" data-lot="${result.lotNumber}" data-region-key="${result.regionKey}">
-                                    ${result.region} ${district} ${result.village} ${result.lotNumber || ''}
-                                </li>
-                            `).join(''));
+                            autocompleteList.innerHTML = '';
+                            result.alternatives.forEach(district => {
+                                const li = document.createElement('li');
+                                li.dataset.village = result.village || '';
+                                li.dataset.district = district || '';
+                                li.dataset.lot = result.lotNumber || '';
+                                li.dataset.regionKey = result.regionKey || '';
+                                li.textContent = `${result.region} ${district} ${result.village} ${result.lotNumber || ''}`;
+                                autocompleteList.appendChild(li);
+                            });
                             autocompleteList.classList.add('show');
                         } else {
                             subLotInput.value = result.fullAddress;
@@ -1208,9 +1230,14 @@ class SoilSampleManager extends window.BaseSampleManager {
                 ).slice(0, 8);
 
                 if (matches.length > 0) {
-                    autocompleteList.innerHTML = sanitizeHTML(matches.map(crop => `
-                        <li data-code="${crop.code}" data-name="${crop.name}">${crop.name} (${crop.category})</li>
-                    `).join(''));
+                    autocompleteList.innerHTML = '';
+                    matches.forEach(crop => {
+                        const li = document.createElement('li');
+                        li.dataset.code = crop.code || '';
+                        li.dataset.name = crop.name || '';
+                        li.textContent = `${crop.name} (${crop.category})`;
+                        autocompleteList.appendChild(li);
+                    });
                     autocompleteList.classList.add('show');
                 } else {
                     autocompleteList.classList.remove('show');
@@ -1543,9 +1570,14 @@ class SoilSampleManager extends window.BaseSampleManager {
                     ).slice(0, 10);
 
                     if (matches.length > 0) {
-                        autocompleteList.innerHTML = sanitizeHTML(matches.map(crop => `
-                            <li data-code="${crop.code}" data-name="${crop.name}">${crop.name} (${crop.category})</li>
-                        `).join(''));
+                        autocompleteList.innerHTML = '';
+                        matches.forEach(crop => {
+                            const li = document.createElement('li');
+                            li.dataset.code = crop.code || '';
+                            li.dataset.name = crop.name || '';
+                            li.textContent = `${crop.name} (${crop.category})`;
+                            autocompleteList.appendChild(li);
+                        });
                         // 모달 내부 → overflow:hidden 회피를 위해 fixed 포지션으로 좌표 계산
                         const rect = e.target.getBoundingClientRect();
                         autocompleteList.style.position = 'fixed';

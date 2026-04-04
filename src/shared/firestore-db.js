@@ -40,7 +40,9 @@ const COLLECTION_MAP = {
     'compost': 'compostSamples',
     'heavyMetal': 'heavyMetalSamples',
     'heavy-metal': 'heavyMetalSamples',
-    'pesticide': 'pesticideSamples'
+    'pesticide': 'pesticideSamples',
+    'waterTestResults': 'waterTestResults',
+    'pesticideTestResults': 'pesticideTestResults'
 };
 
 /**

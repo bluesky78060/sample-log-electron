@@ -30,6 +30,7 @@ import '../shared/excel-import-manager.js';
 // Data
 import '../cropData.js';
 import '../bonghwaData.js';
+import '../shared/pesticide-data.js';
 
 // Main script
 import './pesticide-script.js';

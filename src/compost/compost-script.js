@@ -2016,11 +2016,17 @@ class CompostSampleManager extends window.BaseSampleManager {
                 const suggestions = suggestRegionVillages(value, ['bonghwa', 'yeongju', 'uljin'], true);
 
                 if (suggestions.length > 0) {
-                    autocompleteList.innerHTML = sanitizeHTML(suggestions.map(item => `
-                        <li data-village="${item.village}" data-district="${item.district}" data-region-key="${item.regionKey}" data-region="${item.region || ''}" data-is-mountain="${item.isMountain}">
-                            ${item.displayText}
-                        </li>
-                    `).join(''));
+                    autocompleteList.innerHTML = '';
+                    suggestions.forEach(item => {
+                        const li = document.createElement('li');
+                        li.dataset.village = item.village || '';
+                        li.dataset.district = item.district || '';
+                        li.dataset.regionKey = item.regionKey || '';
+                        li.dataset.region = item.region || '';
+                        li.dataset.isMountain = item.isMountain || false;
+                        li.textContent = item.displayText || '';
+                        autocompleteList.appendChild(li);
+                    });
                     autocompleteList.classList.add('show');
                 } else {
                     autocompleteList.classList.remove('show');
@@ -2047,18 +2053,28 @@ class CompostSampleManager extends window.BaseSampleManager {
 
                     if (result) {
                         if (result.isDuplicate) {
-                            autocompleteList.innerHTML = sanitizeHTML(result.locations.map(loc => `
-                                <li data-village="${result.villageName}" data-district="${loc.district}" data-region-key="${loc.regionKey}" data-lot="${result.lotNumber}">
-                                    ${loc.fullAddress} ${result.lotNumber || ''}
-                                </li>
-                            `).join(''));
+                            autocompleteList.innerHTML = '';
+                            result.locations.forEach(loc => {
+                                const li = document.createElement('li');
+                                li.dataset.village = result.villageName || '';
+                                li.dataset.district = loc.district || '';
+                                li.dataset.regionKey = loc.regionKey || '';
+                                li.dataset.lot = result.lotNumber || '';
+                                li.textContent = `${loc.fullAddress || ''} ${result.lotNumber || ''}`.trim();
+                                autocompleteList.appendChild(li);
+                            });
                             autocompleteList.classList.add('show');
                         } else if (result.alternatives && result.alternatives.length > 1) {
-                            autocompleteList.innerHTML = sanitizeHTML(result.alternatives.map(district => `
-                                <li data-village="${result.village}" data-district="${district}" data-lot="${result.lotNumber}" data-region-key="${result.regionKey}">
-                                    ${result.region} ${district} ${result.village} ${result.lotNumber || ''}
-                                </li>
-                            `).join(''));
+                            autocompleteList.innerHTML = '';
+                            result.alternatives.forEach(district => {
+                                const li = document.createElement('li');
+                                li.dataset.village = result.village || '';
+                                li.dataset.district = district || '';
+                                li.dataset.lot = result.lotNumber || '';
+                                li.dataset.regionKey = result.regionKey || '';
+                                li.textContent = `${result.region || ''} ${district || ''} ${result.village || ''} ${result.lotNumber || ''}`.trim();
+                                autocompleteList.appendChild(li);
+                            });
                             autocompleteList.classList.add('show');
                         } else {
                             const fullAddress = `${result.region} ${result.district} ${result.village}${result.lotNumber ? ' ' + result.lotNumber : ''}`;
