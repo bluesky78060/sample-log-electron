@@ -3175,6 +3175,31 @@ class PesticideSampleManager extends window.BaseSampleManager {
         valInput.autocomplete = 'off';
         if (data?.value) valInput.value = data.value;
         tdValue.appendChild(valInput);
+
+        // 기기분석값 (검출량 앞에 배치)
+        const tdRaw = document.createElement('td');
+        tdRaw.className = 'pa-col-raw';
+        const rawInput = document.createElement('input');
+        rawInput.type = 'text';
+        rawInput.className = 'pa-raw-input';
+        rawInput.placeholder = '-';
+        rawInput.autocomplete = 'off';
+        if (data?.rawValue) rawInput.value = data.rawValue;
+
+        // 기기분석값 입력 시 검출량 자동 계산 (ppb ÷ 1000 = ppm)
+        rawInput.addEventListener('input', () => {
+            const ppb = parseFloat(rawInput.value);
+            if (!isNaN(ppb)) {
+                valInput.value = (ppb / 1000).toFixed(3).replace(/\.?0+$/, '');
+            } else {
+                valInput.value = '';
+            }
+        });
+
+        tdRaw.appendChild(rawInput);
+
+        // 순서: 기기분석값 → 검출량
+        tr.appendChild(tdRaw);
         tr.appendChild(tdValue);
 
         // 삭제
@@ -3223,10 +3248,16 @@ class PesticideSampleManager extends window.BaseSampleManager {
     setAllNd(isNd) {
         this._paAllNd = isNd;
         if (isNd) {
-            // 전체 불검출 시 기존 검출 행 모두 제거
+            // 전체 불검출 시 기존 검출 행 모두 제거 + 판정 자동 선택
             const tbody = document.getElementById('paDetectionsBody');
             if (tbody) tbody.innerHTML = '';
             this.updateDetectionCount();
+            const radio = document.querySelector('input[name="paJudgment"][value="pass"]');
+            if (radio) radio.checked = true;
+        } else {
+            // 해제 시 판정 초기화
+            const radio = document.querySelector('input[name="paJudgment"][value=""]');
+            if (radio) radio.checked = true;
         }
         this.updateNdStatusUI();
         this.toggleEmptyMsg();
@@ -3269,10 +3300,11 @@ class PesticideSampleManager extends window.BaseSampleManager {
             const method = tr.querySelector('.pa-method-select')?.value || 'GC';
             const name = tr.querySelector('.pa-name-input')?.value?.trim() || '';
             const engName = tr.querySelector('.pa-name-input')?.dataset?.engName || '';
+            const rawValue = tr.querySelector('.pa-raw-input')?.value?.trim() || '';
             const value = tr.querySelector('.pa-value-input')?.value?.trim() || '';
 
             if (name) {
-                detections.push({ method, name, engName, value });
+                detections.push({ method, name, engName, rawValue, value });
             }
         });
 
@@ -3285,14 +3317,23 @@ class PesticideSampleManager extends window.BaseSampleManager {
             updatedAt: new Date().toISOString()
         };
 
+        // 판정 자동 결정: 전체 불검출이면 pass, 검출 농약 있으면 fail
+        if (this._paAllNd && detections.length === 0) {
+            allResults[logId].judgment = 'pass';
+        } else if (detections.length > 0) {
+            allResults[logId].judgment = 'fail';
+        }
+        // 수동 선택한 판정이 있으면 우선
+        const manualJudgment = document.querySelector('input[name="paJudgment"]:checked')?.value;
+        if (manualJudgment) {
+            allResults[logId].judgment = manualJudgment;
+        }
+
         this.saveAllPesticideTestResults(allResults);
 
-        // 접수 데이터 판정 동기화
-        const judgment = allResults[logId].judgment;
-        if (judgment) {
-            log.testResult = judgment;
-            this.saveLogs();
-        }
+        // 접수 데이터 판정 동기화 (항상 반영)
+        log.testResult = allResults[logId].judgment || '';
+        this.saveLogs();
 
         document.getElementById('pesticideAnalysisModal')?.classList.add('hidden');
         this._paLogId = null;

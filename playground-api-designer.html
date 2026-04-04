@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API 엔드포인트 디자이너 플레이그라운드</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:#1a1a2e;color:#e0e0e0;height:100vh;overflow:hidden}
+.layout{display:grid;grid-template-columns:380px 1fr;height:100vh}
+.controls{background:#16213e;border-right:1px solid #2a2a4a;overflow-y:auto;padding:16px}
+.right{display:flex;flex-direction:column;height:100vh}
+.preview{flex:1;padding:16px;overflow-y:auto;background:#0f0f23}
+.prompt-area{background:#16213e;border-top:1px solid #2a2a4a;padding:16px;min-height:140px}
+h1{font-size:16px;color:#7dd3fc;margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid #2a2a4a}
+h2{font-size:13px;color:#94a3b8;margin:14px 0 8px;text-transform:uppercase;letter-spacing:1px}
+.section{margin-bottom:12px;padding:12px;background:#1a1a3e;border-radius:8px;border:1px solid #2a2a4a}
+select,input[type=text]{background:#0f0f23;border:1px solid #3a3a5a;color:#e0e0e0;padding:6px 8px;border-radius:4px;font-size:12px;width:100%}
+.btn{padding:6px 12px;border-radius:6px;border:none;cursor:pointer;font-size:12px;transition:all .2s}
+.btn-add{background:#1e40af;color:#fff}.btn-add:hover{background:#2563eb}
+.btn-del{background:#7f1d1d;color:#fff;font-size:14px}.btn-del:hover{background:#991b1b}
+.btn-sm{padding:4px 8px;font-size:11px}
+.btn-preset{background:#2a2a4a;color:#94a3b8;border:1px solid #3a3a5a;width:100%;text-align:left;margin:2px 0;padding:8px 12px;cursor:pointer}
+.btn-preset:hover{background:#3a3a5a;color:#fff}
+.method{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:bold;font-family:monospace;min-width:52px;text-align:center}
+.method-GET{background:#065f46;color:#34d399}
+.method-POST{background:#1e3a5f;color:#60a5fa}
+.method-PUT{background:#78350f;color:#fbbf24}
+.method-PATCH{background:#713f12;color:#facc15}
+.method-DELETE{background:#7f1d1d;color:#f87171}
+.endpoint-card{background:#1a1a3e;border:1px solid #2a2a4a;border-radius:8px;padding:10px;margin:8px 0;cursor:pointer;transition:all .2s}
+.endpoint-card:hover{border-color:#3b82f6}
+.endpoint-card.active{border-color:#3b82f6;background:#1e2a4a}
+.ep-header{display:flex;align-items:center;gap:8px}
+.ep-path{font-family:monospace;font-size:13px;color:#7dd3fc}
+.ep-row{display:grid;grid-template-columns:90px 1fr 28px;gap:4px;margin:4px 0;align-items:center}
+.field-row{display:grid;grid-template-columns:1fr 80px 50px 28px;gap:4px;margin:4px 0;align-items:center}
+.toggle{position:relative;width:36px;height:20px;display:inline-block}
+.toggle input{opacity:0;width:0;height:0}
+.toggle .slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#3a3a5a;border-radius:10px;transition:.3s}
+.toggle input:checked+.slider{background:#2563eb}
+.toggle .slider:before{content:'';position:absolute;height:16px;width:16px;left:2px;bottom:2px;background:#fff;border-radius:50%;transition:.3s}
+.toggle input:checked+.slider:before{transform:translateX(16px)}
+.tabs{display:flex;gap:2px;margin:8px 0}
+.tab{padding:4px 10px;font-size:11px;border-radius:4px 4px 0 0;background:#2a2a4a;color:#94a3b8;cursor:pointer;border:none}
+.tab.active{background:#1e40af;color:#fff}
+.api-spec{font-family:'SF Mono',Consolas,monospace;font-size:13px;line-height:1.6}
+.api-spec .ep-block{margin:12px 0;padding:12px;background:#16213e;border-radius:8px;border-left:3px solid #3a3a5a}
+.api-spec .ep-block.GET{border-left-color:#34d399}
+.api-spec .ep-block.POST{border-left-color:#60a5fa}
+.api-spec .ep-block.PUT{border-left-color:#fbbf24}
+.api-spec .ep-block.PATCH{border-left-color:#facc15}
+.api-spec .ep-block.DELETE{border-left-color:#f87171}
+.param-tag{display:inline-block;padding:1px 6px;background:#2a2a4a;border-radius:3px;font-size:11px;margin:1px}
+.param-tag.required{border:1px solid #f59e0b;color:#fbbf24}
+.prompt-text{font-size:13px;line-height:1.6;color:#cbd5e1;margin-bottom:10px;min-height:40px}
+.copy-btn{background:#1e40af;color:#fff;padding:8px 20px;border:none;border-radius:6px;cursor:pointer;font-size:13px;transition:all .2s}
+.copy-btn:hover{background:#2563eb}
+.copy-btn.copied{background:#059669}
+.auth-select{margin-top:6px}
+.base-url{margin-bottom:8px}
+.sub-section{margin:8px 0;padding:8px;background:#0f0f23;border-radius:6px}
+.sub-section h3{font-size:11px;color:#64748b;margin-bottom:6px}
+</style>
+</head>
+<body>
+<div class="layout">
+<div class="controls">
+<h1>API 엔드포인트 디자이너</h1>
+
+<div class="section">
+<h2>프리셋</h2>
+<button class="btn btn-preset" onclick="loadPreset('crud')">CRUD Users - 사용자 CRUD</button>
+<button class="btn btn-preset" onclick="loadPreset('auth')">Auth Flow - 인증 흐름</button>
+<button class="btn btn-preset" onclick="loadPreset('blog')">Blog API - 블로그</button>
+<button class="btn btn-preset" onclick="loadPreset('ecommerce')">E-commerce - 상거래</button>
+<button class="btn btn-preset" onclick="loadPreset('file')">File Upload - 파일 관리</button>
+</div>
+
+<div class="section">
+<h2>기본 설정</h2>
+<div class="base-url">
+<label style="font-size:11px;color:#64748b">Base URL</label>
+<input type="text" value="/api/v1" oninput="state.baseUrl=this.value;updateAll()">
+</div>
+<div class="auth-select">
+<label style="font-size:11px;color:#64748b">인증 방식</label>
+<select onchange="state.auth=this.value;updateAll()">
+<option value="none">없음</option>
+<option value="apikey">API Key</option>
+<option value="bearer" selected>Bearer Token</option>
+<option value="oauth2">OAuth2</option>
+</select>
+</div>
+</div>
+
+<div class="section">
+<h2>엔드포인트 <button class="btn btn-add btn-sm" style="float:right" onclick="addEndpoint()">+ 추가</button></h2>
+<div id="endpointList"></div>
+</div>
+
+<div id="endpointDetail"></div>
+</div>
+
+<div class="right">
+<div class="preview">
+<div class="api-spec" id="apiPreview"></div>
+</div>
+<div class="prompt-area">
+<div class="prompt-text" id="promptText"></div>
+<button class="copy-btn" id="copyBtn" onclick="copyPrompt()">프롬프트 복사</button>
+</div>
+</div>
+</div>
+
+<script>
+const state={
+  baseUrl:'/api/v1',
+  auth:'bearer',
+  endpoints:[],
+  selectedIdx:0,
+  activeTab:'params'
+};
+
+function ep(method,path,desc,params,body,responses){
+  return{method,path,desc,
+    params:params||[],
+    bodyFields:body||[],
+    responses:responses||[{code:'200',desc:'성공'}],
+    headers:[],
+    pagination:false
+  };
+}
+
+function addEndpoint(){
+  state.endpoints.push(ep('GET','/resource','새 엔드포인트'));
+  state.selectedIdx=state.endpoints.length-1;
+  renderAll();updateAll();
+}
+
+function selectEndpoint(i){
+  state.selectedIdx=i;
+  renderAll();updateAll();
+}
+
+function removeEndpoint(i){
+  state.endpoints.splice(i,1);
+  if(state.selectedIdx>=state.endpoints.length) state.selectedIdx=Math.max(0,state.endpoints.length-1);
+  renderAll();updateAll();
+}
+
+function renderEndpoints(){
+  const el=document.getElementById('endpointList');
+  el.innerHTML=state.endpoints.map((e,i)=>`
+    <div class="endpoint-card${i===state.selectedIdx?' active':''}" onclick="selectEndpoint(${i})">
+      <div class="ep-header">
+        <span class="method method-${e.method}">${e.method}</span>
+        <span class="ep-path">${e.path}</span>
+        <button class="btn btn-del btn-sm" style="margin-left:auto" onclick="event.stopPropagation();removeEndpoint(${i})">×</button>
+      </div>
+      <div style="font-size:11px;color:#64748b;margin-top:4px">${e.desc}</div>
+    </div>
+  `).join('');
+}
+
+function renderDetail(){
+  const el=document.getElementById('endpointDetail');
+  if(state.endpoints.length===0){el.innerHTML='';return;}
+  const e=state.endpoints[state.selectedIdx];
+  if(!e){el.innerHTML='';return;}
+  const pathParams=(e.path.match(/:(\w+)/g)||[]).map(p=>p.slice(1));
+
+  el.innerHTML=`
+    <div class="section">
+      <h2>엔드포인트 설정</h2>
+      <div class="ep-row">
+        <select onchange="state.endpoints[${state.selectedIdx}].method=this.value;renderEndpoints();updateAll()">
+          ${['GET','POST','PUT','PATCH','DELETE'].map(m=>`<option${e.method===m?' selected':''}>${m}</option>`).join('')}
+        </select>
+        <input type="text" value="${e.path}" oninput="state.endpoints[${state.selectedIdx}].path=this.value;renderEndpoints();updateAll()">
+        <span></span>
+      </div>
+      <input type="text" value="${e.desc}" placeholder="설명" style="margin-top:4px" oninput="state.endpoints[${state.selectedIdx}].desc=this.value;renderEndpoints();updateAll()">
+    </div>
+
+    <div class="section">
+      <div class="tabs">
+        <button class="tab${state.activeTab==='params'?' active':''}" onclick="state.activeTab='params';renderDetail()">Query Params</button>
+        <button class="tab${state.activeTab==='body'?' active':''}" onclick="state.activeTab='body';renderDetail()">Body</button>
+        <button class="tab${state.activeTab==='response'?' active':''}" onclick="state.activeTab='response';renderDetail()">Response</button>
+      </div>
+
+      ${state.activeTab==='params'?`
+        <div class="sub-section">
+          <h3>Query Parameters <button class="btn btn-add btn-sm" style="float:right" onclick="state.endpoints[${state.selectedIdx}].params.push({name:'',type:'string',required:false});renderDetail();updateAll()">+</button></h3>
+          ${e.params.map((p,pi)=>`
+            <div class="field-row">
+              <input type="text" value="${p.name}" placeholder="이름" oninput="state.endpoints[${state.selectedIdx}].params[${pi}].name=this.value;updateAll()">
+              <select onchange="state.endpoints[${state.selectedIdx}].params[${pi}].type=this.value;updateAll()">
+                ${['string','number','boolean','array'].map(t=>`<option${p.type===t?' selected':''}>${t}</option>`).join('')}
+              </select>
+              <label style="font-size:10px"><input type="checkbox" ${p.required?'checked':''} onchange="state.endpoints[${state.selectedIdx}].params[${pi}].required=this.checked;updateAll()">필수</label>
+              <button class="btn btn-del btn-sm" onclick="state.endpoints[${state.selectedIdx}].params.splice(${pi},1);renderDetail();updateAll()">×</button>
+            </div>
+          `).join('')}
+          ${pathParams.length?`<div style="margin-top:6px;font-size:11px;color:#64748b">Path params: ${pathParams.map(p=>`<span class="param-tag required">:${p}</span>`).join(' ')}</div>`:''}
+        </div>
+        <div class="sub-section" style="margin-top:8px">
+          <h3>페이지네이션</h3>
+          <label class="toggle">
+            <input type="checkbox" ${e.pagination?'checked':''} onchange="state.endpoints[${state.selectedIdx}].pagination=this.checked;updateAll()">
+            <span class="slider"></span>
+          </label>
+          <span style="font-size:11px;margin-left:8px">page, limit, total 파라미터 자동 추가</span>
+        </div>
+      `:''}
+
+      ${state.activeTab==='body'?`
+        <div class="sub-section">
+          <h3>Request Body <button class="btn btn-add btn-sm" style="float:right" onclick="state.endpoints[${state.selectedIdx}].bodyFields.push({name:'',type:'string',required:false});renderDetail();updateAll()">+</button></h3>
+          ${e.bodyFields.map((f,fi)=>`
+            <div class="field-row">
+              <input type="text" value="${f.name}" placeholder="필드명" oninput="state.endpoints[${state.selectedIdx}].bodyFields[${fi}].name=this.value;updateAll()">
+              <select onchange="state.endpoints[${state.selectedIdx}].bodyFields[${fi}].type=this.value;updateAll()">
+                ${['string','number','boolean','object','array'].map(t=>`<option${f.type===t?' selected':''}>${t}</option>`).join('')}
+              </select>
+              <label style="font-size:10px"><input type="checkbox" ${f.required?'checked':''} onchange="state.endpoints[${state.selectedIdx}].bodyFields[${fi}].required=this.checked;updateAll()">필수</label>
+              <button class="btn btn-del btn-sm" onclick="state.endpoints[${state.selectedIdx}].bodyFields.splice(${fi},1);renderDetail();updateAll()">×</button>
+            </div>
+          `).join('')}
+        </div>
+      `:''}
+
+      ${state.activeTab==='response'?`
+        <div class="sub-section">
+          <h3>Status Codes <button class="btn btn-add btn-sm" style="float:right" onclick="state.endpoints[${state.selectedIdx}].responses.push({code:'200',desc:''});renderDetail();updateAll()">+</button></h3>
+          ${e.responses.map((r,ri)=>`
+            <div class="ep-row">
+              <input type="text" value="${r.code}" style="width:80px" oninput="state.endpoints[${state.selectedIdx}].responses[${ri}].code=this.value;updateAll()">
+              <input type="text" value="${r.desc}" placeholder="설명" oninput="state.endpoints[${state.selectedIdx}].responses[${ri}].desc=this.value;updateAll()">
+              <button class="btn btn-del btn-sm" onclick="state.endpoints[${state.selectedIdx}].responses.splice(${ri},1);renderDetail();updateAll()">×</button>
+            </div>
+          `).join('')}
+        </div>
+      `:''}
+    </div>
+  `;
+}
+
+function renderPreview(){
+  const el=document.getElementById('apiPreview');
+  let html=`<div style="margin-bottom:16px">
+    <span style="color:#64748b">Base URL:</span> <span style="color:#7dd3fc;font-family:monospace">${state.baseUrl}</span>
+    <span style="margin-left:16px;color:#64748b">Auth:</span> <span style="color:#fbbf24">${state.auth==='none'?'없음':state.auth==='apikey'?'API Key':state.auth==='bearer'?'Bearer Token':'OAuth2'}</span>
+  </div>`;
+
+  state.endpoints.forEach(e=>{
+    const pathParams=(e.path.match(/:(\w+)/g)||[]).map(p=>p.slice(1));
+    html+=`<div class="ep-block ${e.method}">
+      <div style="margin-bottom:8px">
+        <span class="method method-${e.method}">${e.method}</span>
+        <span style="color:#7dd3fc;margin-left:8px;font-size:14px">${state.baseUrl}${e.path}</span>
+      </div>
+      <div style="color:#94a3b8;font-size:12px;margin-bottom:8px">${e.desc}</div>`;
+
+    if(pathParams.length){
+      html+=`<div style="font-size:11px;margin:4px 0"><span style="color:#64748b">Path:</span> ${pathParams.map(p=>`<span class="param-tag required">:${p}</span>`).join(' ')}</div>`;
+    }
+    if(e.params.length||e.pagination){
+      const allParams=[...e.params];
+      if(e.pagination){
+        allParams.push({name:'page',type:'number',required:false},{name:'limit',type:'number',required:false});
+      }
+      html+=`<div style="font-size:11px;margin:4px 0"><span style="color:#64748b">Query:</span> ${allParams.map(p=>
+        `<span class="param-tag${p.required?' required':''}">${p.name}: ${p.type}</span>`
+      ).join(' ')}</div>`;
+    }
+    if(e.bodyFields.length){
+      html+=`<div style="font-size:11px;margin:4px 0"><span style="color:#64748b">Body:</span> ${e.bodyFields.map(f=>
+        `<span class="param-tag${f.required?' required':''}">${f.name}: ${f.type}</span>`
+      ).join(' ')}</div>`;
+    }
+    if(e.responses.length){
+      html+=`<div style="font-size:11px;margin:4px 0"><span style="color:#64748b">Response:</span> ${e.responses.map(r=>
+        `<span class="param-tag">${r.code} ${r.desc}</span>`
+      ).join(' ')}</div>`;
+    }
+    html+=`</div>`;
+  });
+
+  el.innerHTML=html;
+}
+
+function buildPrompt(){
+  if(state.endpoints.length===0) return 'API 엔드포인트를 추가해주세요.';
+  const parts=[`다음과 같은 REST API를 설계해주세요. Base URL: ${state.baseUrl}.`];
+  if(state.auth!=='none') parts.push(`인증 방식: ${state.auth==='apikey'?'API Key':state.auth==='bearer'?'Bearer Token':'OAuth2'}.`);
+
+  state.endpoints.forEach(e=>{
+    let desc=`${e.method} ${state.baseUrl}${e.path} - ${e.desc}.`;
+    if(e.params.length){
+      desc+=` Query 파라미터: ${e.params.map(p=>`${p.name}(${p.type}${p.required?', 필수':''})`).join(', ')}.`;
+    }
+    if(e.pagination) desc+=` 페이지네이션 지원 (page, limit).`;
+    if(e.bodyFields.length){
+      desc+=` Body: ${e.bodyFields.map(f=>`${f.name}(${f.type}${f.required?', 필수':''})`).join(', ')}.`;
+    }
+    parts.push(desc);
+  });
+  return parts.join(' ');
+}
+
+function updateAll(){
+  renderPreview();
+  document.getElementById('promptText').textContent=buildPrompt();
+}
+
+function renderAll(){
+  renderEndpoints();renderDetail();updateAll();
+}
+
+function copyPrompt(){
+  navigator.clipboard.writeText(document.getElementById('promptText').textContent).then(()=>{
+    const btn=document.getElementById('copyBtn');
+    btn.textContent='복사됨!';btn.classList.add('copied');
+    setTimeout(()=>{btn.textContent='프롬프트 복사';btn.classList.remove('copied');},1500);
+  });
+}
+
+const PRESETS={
+  crud:{baseUrl:'/api/v1',auth:'bearer',endpoints:[
+    ep('GET','/users','사용자 목록 조회',[{name:'search',type:'string',required:false}],[],[{code:'200',desc:'성공'}]),
+    ep('GET','/users/:id','사용자 상세 조회',[],[],[{code:'200',desc:'성공'},{code:'404',desc:'사용자 없음'}]),
+    ep('POST','/users','사용자 생성',[],[{name:'name',type:'string',required:true},{name:'email',type:'string',required:true},{name:'age',type:'number',required:false}],[{code:'201',desc:'생성됨'},{code:'400',desc:'유효성 오류'}]),
+    ep('PUT','/users/:id','사용자 수정',[],[{name:'name',type:'string',required:false},{name:'email',type:'string',required:false}],[{code:'200',desc:'수정됨'}]),
+    ep('DELETE','/users/:id','사용자 삭제',[],[],[{code:'204',desc:'삭제됨'}])
+  ]},
+  auth:{baseUrl:'/api/auth',auth:'bearer',endpoints:[
+    ep('POST','/register','회원가입',[],[{name:'email',type:'string',required:true},{name:'password',type:'string',required:true},{name:'name',type:'string',required:true}],[{code:'201',desc:'가입 성공'},{code:'409',desc:'이메일 중복'}]),
+    ep('POST','/login','로그인',[],[{name:'email',type:'string',required:true},{name:'password',type:'string',required:true}],[{code:'200',desc:'토큰 반환'},{code:'401',desc:'인증 실패'}]),
+    ep('POST','/refresh','토큰 갱신',[],[{name:'refreshToken',type:'string',required:true}],[{code:'200',desc:'새 토큰'}]),
+    ep('POST','/logout','로그아웃',[],[],[{code:'200',desc:'로그아웃 성공'}])
+  ]},
+  blog:{baseUrl:'/api/v1',auth:'bearer',endpoints:[
+    ep('GET','/posts','게시글 목록',[{name:'tag',type:'string',required:false},{name:'author',type:'string',required:false}],[],[{code:'200',desc:'목록 반환'}]),
+    ep('POST','/posts','게시글 작성',[],[{name:'title',type:'string',required:true},{name:'content',type:'string',required:true},{name:'tags',type:'array',required:false}],[{code:'201',desc:'생성됨'}]),
+    ep('GET','/posts/:id/comments','댓글 목록',[],[],[{code:'200',desc:'댓글 목록'}]),
+    ep('POST','/posts/:id/comments','댓글 작성',[],[{name:'content',type:'string',required:true}],[{code:'201',desc:'댓글 생성'}])
+  ]},
+  ecommerce:{baseUrl:'/api/v1',auth:'bearer',endpoints:[
+    ep('GET','/products','상품 목록',[{name:'category',type:'string',required:false},{name:'minPrice',type:'number',required:false},{name:'maxPrice',type:'number',required:false}],[],[{code:'200',desc:'상품 목록'}]),
+    ep('POST','/cart/items','장바구니 추가',[],[{name:'productId',type:'string',required:true},{name:'quantity',type:'number',required:true}],[{code:'201',desc:'추가됨'}]),
+    ep('GET','/cart','장바구니 조회',[],[],[{code:'200',desc:'장바구니 내역'}]),
+    ep('POST','/orders','주문 생성',[],[{name:'addressId',type:'string',required:true},{name:'paymentMethod',type:'string',required:true}],[{code:'201',desc:'주문 생성'},{code:'400',desc:'재고 부족'}]),
+    ep('GET','/orders/:id','주문 상세',[],[],[{code:'200',desc:'주문 상세'}])
+  ]},
+  file:{baseUrl:'/api/v1',auth:'apikey',endpoints:[
+    ep('POST','/files/upload','파일 업로드',[],[{name:'file',type:'object',required:true},{name:'folder',type:'string',required:false}],[{code:'201',desc:'업로드 성공'},{code:'413',desc:'파일 크기 초과'}]),
+    ep('GET','/files/:id','파일 다운로드',[],[],[{code:'200',desc:'파일 반환'},{code:'404',desc:'파일 없음'}]),
+    ep('GET','/files','파일 목록',[{name:'folder',type:'string',required:false},{name:'type',type:'string',required:false}],[],[{code:'200',desc:'파일 목록'}]),
+    ep('DELETE','/files/:id','파일 삭제',[],[],[{code:'204',desc:'삭제됨'}])
+  ]}
+};
+
+function loadPreset(name){
+  const p=PRESETS[name];
+  state.baseUrl=p.baseUrl;state.auth=p.auth;
+  state.endpoints=JSON.parse(JSON.stringify(p.endpoints));
+  state.selectedIdx=0;state.activeTab='params';
+  document.querySelector('.base-url input').value=state.baseUrl;
+  document.querySelector('.auth-select select').value=state.auth;
+  renderAll();
+}
+
+// Init with CRUD preset
+loadPreset('crud');
+</script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="arm64">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/out/make/zip/darwin/arm64/sample-log-darwin-arm64-1.7.27.zip!/" />
+      <root url="jar://$PROJECT_DIR$/out/make/zip/darwin/arm64/sample-log-darwin-arm64-1.6.9.zip!/" />
+      <root url="jar://$PROJECT_DIR$/out/make/zip/darwin/arm64/sample-log-darwin-arm64-1.6.8.zip!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

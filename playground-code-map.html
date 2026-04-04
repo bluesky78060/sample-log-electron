@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Code Map - Sample Log Electron</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#0d1117;--bg-secondary:#161b22;--bg-tertiary:#21262d;
+    --border:#30363d;--border-hover:#484f58;
+    --text:#e6edf3;--text-secondary:#8b949e;--text-muted:#6e7681;
+    --accent:#58a6ff;--accent-hover:#79c0ff;
+    --amber:#fef3c7;--amber-border:#f59e0b;--amber-text:#92400e;
+    --blue:#dbeafe;--blue-border:#3b82f6;--blue-text:#1e40af;
+    --purple:#f3e8ff;--purple-border:#a855f7;--purple-text:#6b21a8;
+    --green:#dcfce7;--green-border:#22c55e;--green-text:#166534;
+    --pink:#fce7f3;--pink-border:#ec4899;--pink-text:#9d174d;
+    --gray:#e5e7eb;--gray-border:#6b7280;--gray-text:#374151;
+    --panel-w:320px;--prompt-h:200px;
+    --transition:0.25s cubic-bezier(0.4,0,0.2,1);
+  }
+  html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text)}
+
+  /* Layout */
+  .app{display:flex;height:100vh;width:100vw}
+  .left-panel{
+    width:var(--panel-w);min-width:var(--panel-w);height:100vh;
+    background:var(--bg-secondary);border-right:1px solid var(--border);
+    display:flex;flex-direction:column;overflow:hidden;z-index:10;
+  }
+  .left-panel-scroll{flex:1;overflow-y:auto;padding:16px}
+  .left-panel-scroll::-webkit-scrollbar{width:6px}
+  .left-panel-scroll::-webkit-scrollbar-track{background:transparent}
+  .left-panel-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+  .left-panel-scroll::-webkit-scrollbar-thumb:hover{background:var(--border-hover)}
+  .canvas-area{flex:1;display:flex;flex-direction:column;position:relative;overflow:hidden}
+  .svg-wrap{flex:1;position:relative;overflow:hidden;cursor:grab}
+  .svg-wrap.dragging{cursor:grabbing}
+  .svg-wrap svg{display:block;width:100%;height:100%}
+
+  /* Panel Sections */
+  .panel-header{
+    padding:16px;border-bottom:1px solid var(--border);
+    display:flex;align-items:center;gap:10px;
+  }
+  .panel-header h1{font-size:15px;font-weight:700;letter-spacing:-0.3px}
+  .panel-header .logo{
+    width:28px;height:28px;border-radius:6px;
+    background:linear-gradient(135deg,#58a6ff,#a855f7);
+    display:flex;align-items:center;justify-content:center;
+    font-size:14px;font-weight:700;color:#fff;flex-shrink:0;
+  }
+  .section{margin-bottom:20px}
+  .section-title{
+    font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;
+    color:var(--text-muted);margin-bottom:10px;
+    display:flex;align-items:center;gap:6px;
+  }
+  .section-title::before{content:'';width:3px;height:12px;border-radius:2px;background:var(--accent)}
+
+  /* Preset Buttons */
+  .preset-grid{display:flex;flex-direction:column;gap:6px}
+  .preset-btn{
+    padding:8px 12px;border:1px solid var(--border);border-radius:8px;
+    background:var(--bg);color:var(--text-secondary);font-size:12px;
+    cursor:pointer;text-align:left;transition:all var(--transition);
+    display:flex;align-items:center;gap:8px;
+  }
+  .preset-btn:hover{border-color:var(--accent);color:var(--text);background:var(--bg-tertiary)}
+  .preset-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(88,166,255,0.08)}
+  .preset-btn .icon{font-size:14px;flex-shrink:0;width:20px;text-align:center}
+
+  /* Layer Toggles */
+  .toggle-list{display:flex;flex-direction:column;gap:4px}
+  .toggle-item{
+    display:flex;align-items:center;gap:8px;padding:6px 10px;
+    border-radius:6px;cursor:pointer;transition:background var(--transition);
+    font-size:12px;
+  }
+  .toggle-item:hover{background:var(--bg-tertiary)}
+  .toggle-item .dot{
+    width:10px;height:10px;border-radius:3px;flex-shrink:0;
+    border:1.5px solid transparent;transition:all var(--transition);
+  }
+  .toggle-item.off .dot{opacity:0.3}
+  .toggle-item.off{opacity:0.45}
+  .toggle-item input{display:none}
+  .toggle-item label{cursor:pointer;flex:1;user-select:none}
+
+  /* Connection Filter */
+  .conn-filter{display:flex;flex-direction:column;gap:4px}
+  .conn-item{
+    display:flex;align-items:center;gap:8px;padding:5px 10px;
+    border-radius:6px;cursor:pointer;font-size:12px;
+    transition:background var(--transition);
+  }
+  .conn-item:hover{background:var(--bg-tertiary)}
+  .conn-item.off{opacity:0.35}
+  .conn-item .line-sample{width:24px;height:2px;border-radius:1px;flex-shrink:0}
+  .conn-item input{display:none}
+
+  /* Comments List */
+  .comments-list{display:flex;flex-direction:column;gap:6px}
+  .comment-card{
+    padding:8px 10px;border:1px solid var(--border);border-radius:6px;
+    background:var(--bg);font-size:11px;cursor:pointer;
+    transition:all var(--transition);
+  }
+  .comment-card:hover{border-color:var(--accent);background:var(--bg-tertiary)}
+  .comment-card .node-name{font-weight:600;color:var(--accent);margin-bottom:2px}
+  .comment-card .comment-text{color:var(--text-secondary);line-height:1.4}
+  .no-comments{font-size:11px;color:var(--text-muted);font-style:italic;padding:4px 0}
+
+  /* Zoom Controls */
+  .zoom-controls{
+    position:absolute;top:12px;right:12px;display:flex;flex-direction:column;gap:4px;z-index:5;
+  }
+  .zoom-btn{
+    width:32px;height:32px;border:1px solid var(--border);border-radius:6px;
+    background:var(--bg-secondary);color:var(--text);font-size:16px;
+    cursor:pointer;display:flex;align-items:center;justify-content:center;
+    transition:all var(--transition);
+  }
+  .zoom-btn:hover{border-color:var(--accent);background:var(--bg-tertiary)}
+  .zoom-label{
+    text-align:center;font-size:10px;color:var(--text-muted);
+    padding:2px 0;user-select:none;
+  }
+
+  /* Prompt Output */
+  .prompt-panel{
+    height:var(--prompt-h);border-top:1px solid var(--border);
+    background:var(--bg-secondary);display:flex;flex-direction:column;
+  }
+  .prompt-header{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:8px 14px;border-bottom:1px solid var(--border);flex-shrink:0;
+  }
+  .prompt-header span{font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px}
+  .copy-btn{
+    padding:4px 10px;border:1px solid var(--border);border-radius:5px;
+    background:var(--bg);color:var(--text-secondary);font-size:11px;
+    cursor:pointer;transition:all var(--transition);
+  }
+  .copy-btn:hover{border-color:var(--accent);color:var(--accent)}
+  .copy-btn.copied{border-color:var(--green-border);color:var(--green-border)}
+  .prompt-body{
+    flex:1;padding:12px 14px;overflow-y:auto;
+    font-size:12px;line-height:1.7;color:var(--text-secondary);
+    white-space:pre-wrap;font-family:'SF Mono',Menlo,Consolas,monospace;
+  }
+  .prompt-body::-webkit-scrollbar{width:5px}
+  .prompt-body::-webkit-scrollbar-track{background:transparent}
+  .prompt-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+  /* Modal */
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);
+    z-index:100;display:none;align-items:center;justify-content:center;
+  }
+  .modal-overlay.show{display:flex}
+  .modal{
+    background:var(--bg-secondary);border:1px solid var(--border);border-radius:12px;
+    width:420px;max-width:90vw;box-shadow:0 16px 48px rgba(0,0,0,0.4);
+    overflow:hidden;animation:modalIn 0.2s ease-out;
+  }
+  @keyframes modalIn{from{opacity:0;transform:scale(0.95) translateY(8px)}to{opacity:1;transform:none}}
+  .modal-head{
+    padding:16px 20px;border-bottom:1px solid var(--border);
+    display:flex;align-items:center;justify-content:space-between;
+  }
+  .modal-head h3{font-size:14px;font-weight:600}
+  .modal-close{
+    width:28px;height:28px;border:none;border-radius:6px;
+    background:transparent;color:var(--text-muted);font-size:18px;
+    cursor:pointer;display:flex;align-items:center;justify-content:center;
+  }
+  .modal-close:hover{background:var(--bg-tertiary);color:var(--text)}
+  .modal-body{padding:16px 20px}
+  .modal-body .node-info{
+    display:flex;align-items:center;gap:10px;margin-bottom:14px;
+    padding:10px;border-radius:8px;background:var(--bg);border:1px solid var(--border);
+  }
+  .modal-body .node-badge{
+    padding:3px 8px;border-radius:5px;font-size:11px;font-weight:600;
+  }
+  .modal-body .node-path{font-size:11px;color:var(--text-muted);font-family:monospace}
+  .modal-body textarea{
+    width:100%;height:80px;padding:10px 12px;border:1px solid var(--border);
+    border-radius:8px;background:var(--bg);color:var(--text);font-size:13px;
+    resize:vertical;font-family:inherit;line-height:1.5;
+    transition:border-color var(--transition);
+  }
+  .modal-body textarea:focus{outline:none;border-color:var(--accent)}
+  .modal-body textarea::placeholder{color:var(--text-muted)}
+  .modal-foot{
+    padding:12px 20px;border-top:1px solid var(--border);
+    display:flex;justify-content:flex-end;gap:8px;
+  }
+  .btn{
+    padding:6px 16px;border-radius:6px;font-size:12px;font-weight:500;
+    cursor:pointer;transition:all var(--transition);border:1px solid transparent;
+  }
+  .btn-ghost{background:transparent;border-color:var(--border);color:var(--text-secondary)}
+  .btn-ghost:hover{border-color:var(--border-hover);color:var(--text)}
+  .btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn-primary:hover{background:var(--accent-hover);border-color:var(--accent-hover)}
+  .btn-danger{background:transparent;border-color:#f85149;color:#f85149;margin-right:auto}
+  .btn-danger:hover{background:rgba(248,81,73,0.1)}
+
+  /* SVG Styles */
+  .layer-bg{rx:12;ry:12;stroke-width:1;transition:opacity var(--transition)}
+  .layer-label{font-size:12px;font-weight:700;letter-spacing:0.5px}
+  .node-group{cursor:pointer;transition:filter 0.15s}
+  .node-group:hover{filter:drop-shadow(0 0 8px rgba(88,166,255,0.35))}
+  .node-group.highlighted .node-rect{stroke:var(--accent)!important;stroke-width:2.5}
+  .node-rect{rx:8;ry:8;stroke-width:1.5;transition:all 0.15s}
+  .node-title{font-size:11px;font-weight:700;text-anchor:middle;dominant-baseline:central}
+  .node-sub{font-size:8.5px;text-anchor:middle;dominant-baseline:central;opacity:0.65;font-family:monospace}
+  .conn-path{fill:none;transition:opacity var(--transition),stroke-width 0.15s}
+  .conn-path:hover{stroke-width:3!important}
+  .conn-path.highlight{stroke-width:3!important;opacity:1!important}
+  .comment-dot{fill:var(--accent);transition:r 0.15s}
+  .comment-dot:hover{r:5}
+
+  /* Tooltip */
+  .svg-tooltip{
+    position:absolute;padding:6px 10px;border-radius:6px;
+    background:var(--bg-tertiary);border:1px solid var(--border);
+    font-size:11px;color:var(--text);pointer-events:none;
+    z-index:20;opacity:0;transition:opacity 0.12s;
+    max-width:220px;white-space:nowrap;
+  }
+  .svg-tooltip.visible{opacity:1}
+
+  /* Minimap */
+  .minimap{
+    position:absolute;bottom:12px;left:12px;
+    width:160px;height:100px;border:1px solid var(--border);
+    border-radius:8px;background:rgba(13,17,23,0.85);
+    backdrop-filter:blur(6px);z-index:5;overflow:hidden;
+  }
+  .minimap svg{width:100%;height:100%}
+  .minimap-viewport{fill:rgba(88,166,255,0.12);stroke:var(--accent);stroke-width:1.5;rx:2;ry:2;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Left Panel -->
+  <div class="left-panel">
+    <div class="panel-header">
+      <div class="logo">M</div>
+      <div>
+        <h1>Code Map</h1>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:1px">sample-log-electron</div>
+      </div>
+    </div>
+    <div class="left-panel-scroll">
+      <!-- Presets -->
+      <div class="section">
+        <div class="section-title">프리셋</div>
+        <div class="preset-grid">
+          <button class="preset-btn active" data-preset="all" onclick="applyPreset('all')">
+            <span class="icon">&#9673;</span>전체 시스템
+          </button>
+          <button class="preset-btn" data-preset="sample-flow" onclick="applyPreset('sample-flow')">
+            <span class="icon">&#8644;</span>시료 관리 흐름
+          </button>
+          <button class="preset-btn" data-preset="data-flow" onclick="applyPreset('data-flow')">
+            <span class="icon">&#9699;</span>데이터 흐름
+          </button>
+          <button class="preset-btn" data-preset="security" onclick="applyPreset('security')">
+            <span class="icon">&#9888;</span>보안 체계
+          </button>
+          <button class="preset-btn" data-preset="electron-ipc" onclick="applyPreset('electron-ipc')">
+            <span class="icon">&#9889;</span>Electron IPC
+          </button>
+        </div>
+      </div>
+
+      <!-- Layer Toggles -->
+      <div class="section">
+        <div class="section-title">레이어 표시</div>
+        <div class="toggle-list" id="layerToggles"></div>
+      </div>
+
+      <!-- Connection Filters -->
+      <div class="section">
+        <div class="section-title">연결 필터</div>
+        <div class="conn-filter" id="connFilters"></div>
+      </div>
+
+      <!-- Comments -->
+      <div class="section">
+        <div class="section-title">코멘트</div>
+        <div class="comments-list" id="commentsList">
+          <div class="no-comments">노드를 클릭하여 코멘트를 추가하세요</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Canvas Area -->
+  <div class="canvas-area">
+    <div class="svg-wrap" id="svgWrap">
+      <svg id="mainSvg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 820">
+        <defs>
+          <marker id="arrow-blue" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+            <path d="M0,0 L8,3 L0,6" fill="#58a6ff"/>
+          </marker>
+          <marker id="arrow-gray" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+            <path d="M0,0 L8,3 L0,6" fill="#6e7681"/>
+          </marker>
+          <marker id="arrow-green" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+            <path d="M0,0 L8,3 L0,6" fill="#3fb950"/>
+          </marker>
+          <marker id="arrow-red" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+            <path d="M0,0 L8,3 L0,6" fill="#f85149"/>
+          </marker>
+        </defs>
+        <g id="svgContent"></g>
+      </svg>
+      <!-- Zoom -->
+      <div class="zoom-controls">
+        <button class="zoom-btn" onclick="zoomIn()" title="확대">+</button>
+        <div class="zoom-label" id="zoomLabel">100%</div>
+        <button class="zoom-btn" onclick="zoomOut()" title="축소">&minus;</button>
+        <button class="zoom-btn" onclick="zoomReset()" title="초기화" style="font-size:12px;margin-top:4px">&#8634;</button>
+      </div>
+      <!-- Tooltip -->
+      <div class="svg-tooltip" id="tooltip"></div>
+      <!-- Minimap -->
+      <div class="minimap" id="minimap">
+        <svg viewBox="0 0 1400 820" preserveAspectRatio="xMidYMid meet">
+          <g id="minimapContent"></g>
+          <rect class="minimap-viewport" id="minimapViewport"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Prompt Panel -->
+    <div class="prompt-panel">
+      <div class="prompt-header">
+        <span>Prompt Output</span>
+        <button class="copy-btn" onclick="copyPrompt()">복사</button>
+      </div>
+      <div class="prompt-body" id="promptOutput">프리셋을 선택하거나 노드에 코멘트를 추가하면 프롬프트가 생성됩니다.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Comment Modal -->
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="modalTitle">코멘트 추가</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="node-info">
+        <span class="node-badge" id="modalBadge"></span>
+        <div>
+          <div id="modalNodeName" style="font-size:13px;font-weight:600"></div>
+          <div class="node-path" id="modalNodePath"></div>
+        </div>
+      </div>
+      <textarea id="commentInput" placeholder="이 모듈에 대한 코멘트를 입력하세요..."></textarea>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-danger" id="deleteCommentBtn" onclick="deleteComment()" style="display:none">삭제</button>
+      <button class="btn btn-ghost" onclick="closeModal()">취소</button>
+      <button class="btn btn-primary" onclick="saveComment()">저장</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Data ──
+const LAYERS = [
+  {id:'electron', label:'Electron Main Process', color:'#fef3c7', border:'#f59e0b', textColor:'#92400e', y:20, h:100},
+  {id:'pages',    label:'Pages / UI',            color:'#dbeafe', border:'#3b82f6', textColor:'#1e40af', y:145, h:120},
+  {id:'core',     label:'Shared Core Modules',   color:'#f3e8ff', border:'#a855f7', textColor:'#6b21a8', y:290, h:100},
+  {id:'data',     label:'Firebase / Data',        color:'#dcfce7', border:'#22c55e', textColor:'#166534', y:415, h:100},
+  {id:'security', label:'Security / UI Utils',    color:'#fce7f3', border:'#ec4899', textColor:'#9d174d', y:540, h:100},
+  {id:'external', label:'External',               color:'#e5e7eb', border:'#6b7280', textColor:'#374151', y:670, h:85},
+];
+
+const NODES = [
+  // Electron
+  {id:'main-proc', layer:'electron', label:'Main Process',    sub:'src/index.js',    x:440, y:55, w:140, h:44, desc:'IPC handlers, auto-updater, CSP'},
+  {id:'preload',   layer:'electron', label:'Preload',         sub:'src/preload.js',  x:820, y:55, w:140, h:44, desc:'contextBridge -> window.electronAPI'},
+
+  // Pages
+  {id:'home',      layer:'pages', label:'메인 홈',          sub:'src/index.html',              x:60,  y:180, w:120, h:44},
+  {id:'soil',      layer:'pages', label:'토양',             sub:'src/soil/soil-script.js',     x:210, y:180, w:120, h:44},
+  {id:'water',     layer:'pages', label:'수질분석',         sub:'src/water/water-script.js',   x:360, y:180, w:120, h:44},
+  {id:'compost',   layer:'pages', label:'퇴·액비',         sub:'src/compost/compost-script.js',x:510, y:180, w:120, h:44},
+  {id:'heavy',     layer:'pages', label:'토양 중금속',      sub:'src/heavy-metal/heavy-metal-script.js', x:660, y:180, w:120, h:44},
+  {id:'pesticide', layer:'pages', label:'잔류농약',         sub:'src/pesticide/pesticide-script.js',     x:810, y:180, w:120, h:44},
+  {id:'settings',  layer:'pages', label:'설정',             sub:'src/settings/settings-script.js',       x:960, y:180, w:120, h:44},
+  {id:'label',     layer:'pages', label:'라벨인쇄',         sub:'src/label-print/label-app.js',          x:1110,y:180, w:120, h:44},
+
+  // Core
+  {id:'base-mgr',  layer:'core', label:'BaseSampleManager', sub:'shared/BaseSampleManager.js',     x:80,  y:325, w:160, h:44},
+  {id:'excel-mgr', layer:'core', label:'ExcelImportManager', sub:'shared/excel-import-manager.js', x:280, y:325, w:160, h:44},
+  {id:'storage',   layer:'core', label:'StorageManager',     sub:'shared/storage-manager.js',      x:500, y:325, w:150, h:44},
+  {id:'pagination',layer:'core', label:'PaginationManager',  sub:'shared/pagination.js',           x:700, y:325, w:150, h:44},
+  {id:'utils',     layer:'core', label:'SampleUtils',        sub:'shared/utils.js',                x:900, y:325, w:130, h:44},
+  {id:'constants', layer:'core', label:'SampleConstants',    sub:'shared/constants.js',            x:1080,y:325, w:140, h:44},
+
+  // Data
+  {id:'fb-config', layer:'data', label:'FirebaseConfig',  sub:'shared/firebase-config.js', x:140, y:450, w:150, h:44},
+  {id:'firestore', layer:'data', label:'FirestoreDB',     sub:'shared/firestore-db.js',    x:380, y:450, w:140, h:44},
+  {id:'file-api',  layer:'data', label:'FileAPI',         sub:'shared/file-api.js',        x:600, y:450, w:130, h:44},
+  {id:'cache',     layer:'data', label:'CacheManager',    sub:'shared/cache-manager.js',   x:810, y:450, w:140, h:44},
+
+  // Security
+  {id:'sanitize',  layer:'security', label:'Sanitize',       sub:'shared/sanitize.js',        x:80,  y:575, w:120, h:44},
+  {id:'path-sec',  layer:'security', label:'PathSecurity',   sub:'shared/path-security.js',   x:240, y:575, w:130, h:44},
+  {id:'net-access',layer:'security', label:'NetworkAccess',  sub:'shared/network-access.js',  x:420, y:575, w:140, h:44},
+  {id:'theme',     layer:'security', label:'ThemeManager',   sub:'shared/theme.js',           x:610, y:575, w:130, h:44},
+  {id:'logger-mod',layer:'security', label:'Logger',         sub:'shared/logger.js',          x:790, y:575, w:110, h:44},
+  {id:'toast-mod', layer:'security', label:'Toast',          sub:'shared/toast.js',           x:950, y:575, w:110, h:44},
+
+  // External
+  {id:'ext-firebase', layer:'external', label:'Firebase/Firestore', sub:'클라우드 DB',         x:230, y:700, w:160, h:40},
+  {id:'ext-local',    layer:'external', label:'localStorage',       sub:'로컬 스토리지',       x:550, y:700, w:150, h:40},
+  {id:'ext-fs',       layer:'external', label:'File System',        sub:'파일 시스템 (Electron)', x:870, y:700, w:160, h:40},
+];
+
+const CONN_TYPES = [
+  {id:'ipc',         label:'IPC',           color:'#58a6ff', dash:'',       marker:'arrow-blue'},
+  {id:'dependency',  label:'상속/의존성',   color:'#6e7681', dash:'6,4',    marker:'arrow-gray'},
+  {id:'data-flow',   label:'데이터 흐름',   color:'#58a6ff', dash:'',       marker:'arrow-blue'},
+  {id:'uses',        label:'사용',          color:'#3fb950', dash:'4,4',    marker:'arrow-green'},
+  {id:'event',       label:'보안/이벤트',   color:'#f85149', dash:'',       marker:'arrow-red'},
+];
+
+const CONNECTIONS = [
+  // IPC
+  {from:'main-proc',to:'preload',  type:'ipc'},
+  {from:'preload',  to:'home',     type:'ipc'},
+  {from:'preload',  to:'file-api', type:'ipc'},
+
+  // Inheritance
+  {from:'base-mgr', to:'soil',     type:'dependency'},
+  {from:'base-mgr', to:'water',    type:'dependency'},
+  {from:'base-mgr', to:'compost',  type:'dependency'},
+  {from:'base-mgr', to:'heavy',    type:'dependency'},
+  {from:'base-mgr', to:'pesticide',type:'dependency'},
+  {from:'excel-mgr',to:'soil',     type:'dependency'},
+  {from:'excel-mgr',to:'water',    type:'dependency'},
+  {from:'excel-mgr',to:'compost',  type:'dependency'},
+  {from:'excel-mgr',to:'heavy',    type:'dependency'},
+  {from:'excel-mgr',to:'pesticide',type:'dependency'},
+
+  // Data Flow
+  {from:'storage',   to:'firestore',    type:'data-flow'},
+  {from:'storage',   to:'ext-local',    type:'data-flow'},
+  {from:'fb-config', to:'firestore',    type:'data-flow'},
+  {from:'firestore', to:'ext-firebase', type:'data-flow'},
+  {from:'file-api',  to:'ext-fs',       type:'data-flow'},
+  {from:'soil',      to:'storage',      type:'data-flow'},
+  {from:'water',     to:'storage',      type:'data-flow'},
+  {from:'compost',   to:'storage',      type:'data-flow'},
+  {from:'heavy',     to:'storage',      type:'data-flow'},
+  {from:'pesticide', to:'storage',      type:'data-flow'},
+
+  // Uses
+  {from:'soil',      to:'theme',      type:'uses'},
+  {from:'soil',      to:'toast-mod',  type:'uses'},
+  {from:'soil',      to:'logger-mod', type:'uses'},
+  {from:'soil',      to:'utils',      type:'uses'},
+  {from:'soil',      to:'constants',  type:'uses'},
+  {from:'soil',      to:'sanitize',   type:'uses'},
+  {from:'soil',      to:'pagination', type:'uses'},
+  {from:'settings',  to:'fb-config',  type:'uses'},
+  {from:'settings',  to:'net-access', type:'uses'},
+  {from:'fb-config', to:'net-access', type:'uses'},
+  {from:'water',     to:'pagination', type:'uses'},
+  {from:'compost',   to:'pagination', type:'uses'},
+  {from:'heavy',     to:'pagination', type:'uses'},
+  {from:'pesticide', to:'pagination', type:'uses'},
+  {from:'home',      to:'theme',      type:'uses'},
+  {from:'label',     to:'utils',      type:'uses'},
+
+  // Security/Event
+  {from:'main-proc', to:'path-sec',   type:'event'},
+  {from:'net-access',to:'fb-config',  type:'event'},
+];
+
+// ── State ──
+let state = {
+  layers: Object.fromEntries(LAYERS.map(l=>[l.id,true])),
+  connTypes: Object.fromEntries(CONN_TYPES.map(c=>[c.id,true])),
+  comments: {},
+  zoom: 1,
+  panX: 0, panY: 0,
+  activePreset: 'all',
+  selectedNode: null,
+};
+
+// Try load saved state
+try {
+  const saved = localStorage.getItem('codemap-state');
+  if (saved) {
+    const s = JSON.parse(saved);
+    if (s.comments) state.comments = s.comments;
+  }
+} catch(e) {}
+
+function saveState() {
+  try { localStorage.setItem('codemap-state', JSON.stringify({comments:state.comments})); } catch(e) {}
+}
+
+// ── Rendering ──
+function getNodeById(id) { return NODES.find(n=>n.id===id); }
+function getLayerById(id) { return LAYERS.find(l=>l.id===id); }
+
+function renderSvg() {
+  const g = document.getElementById('svgContent');
+  const mg = document.getElementById('minimapContent');
+  let html = '';
+
+  // Layers
+  LAYERS.forEach(layer => {
+    const vis = state.layers[layer.id];
+    html += `<g class="layer-group" data-layer="${layer.id}" style="opacity:${vis?1:0};pointer-events:${vis?'all':'none'};transition:opacity 0.3s">`;
+    html += `<rect class="layer-bg" x="30" y="${layer.y}" width="1340" height="${layer.h}" fill="${layer.color}" fill-opacity="0.06" stroke="${layer.border}" stroke-opacity="0.2"/>`;
+    html += `<text class="layer-label" x="46" y="${layer.y+18}" fill="${layer.border}" fill-opacity="0.5">${layer.label}</text>`;
+    html += '</g>';
+  });
+
+  // Connections
+  CONNECTIONS.forEach((conn, idx) => {
+    const from = getNodeById(conn.from);
+    const to = getNodeById(conn.to);
+    if (!from || !to) return;
+    const fromLayer = getLayerById(from.layer);
+    const toLayer = getLayerById(to.layer);
+    const ct = CONN_TYPES.find(c=>c.id===conn.type);
+    const layerVis = state.layers[from.layer] && state.layers[to.layer];
+    const typeVis = state.connTypes[conn.type];
+    const vis = layerVis && typeVis;
+
+    const fx = from.x + from.w/2;
+    const fy = from.y + from.h/2;
+    const tx = to.x + to.w/2;
+    const ty = to.y + to.h/2;
+
+    // Compute bezier
+    const dx = tx - fx;
+    const dy = ty - fy;
+    let path;
+    if (Math.abs(dy) > Math.abs(dx) * 0.3) {
+      // mostly vertical
+      const cy1 = fy + dy*0.35;
+      const cy2 = fy + dy*0.65;
+      path = `M${fx},${fy} C${fx},${cy1} ${tx},${cy2} ${tx},${ty}`;
+    } else {
+      // mostly horizontal
+      const cx1 = fx + dx*0.4;
+      const cx2 = fx + dx*0.6;
+      path = `M${fx},${fy} C${cx1},${fy} ${cx2},${ty} ${tx},${ty}`;
+    }
+
+    html += `<path class="conn-path" d="${path}" stroke="${ct.color}" stroke-width="1.5" `
+      + `stroke-dasharray="${ct.dash}" marker-end="url(#${ct.marker})" `
+      + `data-type="${conn.type}" data-from="${conn.from}" data-to="${conn.to}" `
+      + `style="opacity:${vis?0.45:0};pointer-events:${vis?'auto':'none'}" `
+      + `onmouseenter="highlightConn(this,true)" onmouseleave="highlightConn(this,false)"/>`;
+  });
+
+  // Nodes
+  NODES.forEach(node => {
+    const layer = getLayerById(node.layer);
+    const vis = state.layers[node.layer];
+    const hasComment = !!state.comments[node.id];
+    html += `<g class="node-group${state.selectedNode===node.id?' highlighted':''}" data-node="${node.id}" data-layer="${node.layer}" `
+      + `style="opacity:${vis?1:0};pointer-events:${vis?'all':'none'};transition:opacity 0.3s" `
+      + `onclick="openModal('${node.id}')" `
+      + `onmouseenter="showTooltip(event,'${node.id}')" onmouseleave="hideTooltip()">`;
+    html += `<rect class="node-rect" x="${node.x}" y="${node.y}" width="${node.w}" height="${node.h}" `
+      + `fill="${layer.color}" fill-opacity="0.9" stroke="${layer.border}" />`;
+    html += `<text class="node-title" x="${node.x+node.w/2}" y="${node.y+node.h/2-7}" fill="${layer.textColor}">${node.label}</text>`;
+    html += `<text class="node-sub" x="${node.x+node.w/2}" y="${node.y+node.h/2+9}" fill="${layer.textColor}">${node.sub}</text>`;
+    if (hasComment) {
+      html += `<circle class="comment-dot" cx="${node.x+node.w-6}" cy="${node.y+6}" r="4"/>`;
+    }
+    html += '</g>';
+  });
+
+  // Legend
+  html += '<g transform="translate(40,770)">';
+  html += '<text font-size="10" font-weight="600" fill="#6e7681" letter-spacing="0.5">LEGEND</text>';
+  CONN_TYPES.forEach((ct, i) => {
+    const lx = i * 140;
+    html += `<line x1="${lx}" y1="20" x2="${lx+30}" y2="20" stroke="${ct.color}" stroke-width="2" stroke-dasharray="${ct.dash}"/>`;
+    html += `<text x="${lx+36}" y="24" font-size="10" fill="#8b949e">${ct.label}</text>`;
+  });
+  html += '</g>';
+
+  g.innerHTML = html;
+  mg.innerHTML = html.replace(/onclick="[^"]*"/g,'').replace(/onmouseenter="[^"]*"/g,'').replace(/onmouseleave="[^"]*"/g,'');
+  updateTransform();
+  updateMinimap();
+}
+
+// ── Pan & Zoom ──
+function updateTransform() {
+  const g = document.getElementById('svgContent');
+  g.setAttribute('transform', `translate(${state.panX},${state.panY}) scale(${state.zoom})`);
+  document.getElementById('zoomLabel').textContent = Math.round(state.zoom*100)+'%';
+}
+
+function zoomIn()  { state.zoom = Math.min(3, state.zoom * 1.2); updateTransform(); updateMinimap(); }
+function zoomOut() { state.zoom = Math.max(0.3, state.zoom / 1.2); updateTransform(); updateMinimap(); }
+function zoomReset(){ state.zoom=1; state.panX=0; state.panY=0; updateTransform(); updateMinimap(); }
+
+// Mouse drag
+{
+  const wrap = document.getElementById('svgWrap');
+  let dragging = false, lastX, lastY;
+  wrap.addEventListener('mousedown', e => {
+    if (e.target.closest('.node-group,.zoom-controls,.minimap,.conn-path')) return;
+    dragging = true; lastX = e.clientX; lastY = e.clientY;
+    wrap.classList.add('dragging');
+  });
+  window.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    state.panX += e.clientX - lastX;
+    state.panY += e.clientY - lastY;
+    lastX = e.clientX; lastY = e.clientY;
+    updateTransform(); updateMinimap();
+  });
+  window.addEventListener('mouseup', () => { dragging = false; wrap.classList.remove('dragging'); });
+
+  // Wheel zoom
+  wrap.addEventListener('wheel', e => {
+    e.preventDefault();
+    const factor = e.deltaY > 0 ? 0.92 : 1.08;
+    const newZoom = Math.max(0.3, Math.min(3, state.zoom * factor));
+    // Zoom toward cursor
+    const rect = wrap.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    state.panX = mx - (mx - state.panX) * (newZoom / state.zoom);
+    state.panY = my - (my - state.panY) * (newZoom / state.zoom);
+    state.zoom = newZoom;
+    updateTransform(); updateMinimap();
+  }, {passive:false});
+}
+
+// Minimap
+function updateMinimap() {
+  const svg = document.getElementById('mainSvg');
+  const wrap = document.getElementById('svgWrap');
+  const vp = document.getElementById('minimapViewport');
+  const rect = wrap.getBoundingClientRect();
+  const vbW = 1400, vbH = 820;
+  // Visible area in SVG coords
+  const visX = -state.panX / state.zoom;
+  const visY = -state.panY / state.zoom;
+  const visW = rect.width / state.zoom;
+  const visH = rect.height / state.zoom;
+  // Map to minimap coords (minimap uses same viewBox)
+  vp.setAttribute('x', Math.max(0,visX));
+  vp.setAttribute('y', Math.max(0,visY));
+  vp.setAttribute('width', Math.min(vbW, visW));
+  vp.setAttribute('height', Math.min(vbH, visH));
+}
+
+// ── Tooltip ──
+function showTooltip(e, nodeId) {
+  const node = getNodeById(nodeId);
+  if (!node) return;
+  const tip = document.getElementById('tooltip');
+  const wrap = document.getElementById('svgWrap');
+  const wr = wrap.getBoundingClientRect();
+  tip.textContent = node.desc || node.sub;
+  tip.classList.add('visible');
+  const tx = e.clientX - wr.left + 12;
+  const ty = e.clientY - wr.top - 30;
+  tip.style.left = tx + 'px';
+  tip.style.top = ty + 'px';
+}
+function hideTooltip() {
+  document.getElementById('tooltip').classList.remove('visible');
+}
+
+// Connection highlight
+function highlightConn(el, on) {
+  if (on) {
+    el.classList.add('highlight');
+    const from = el.dataset.from;
+    const to = el.dataset.to;
+    document.querySelectorAll('.node-group').forEach(g => {
+      if (g.dataset.node === from || g.dataset.node === to) {
+        g.classList.add('highlighted');
+      }
+    });
+  } else {
+    el.classList.remove('highlight');
+    if (!state.selectedNode) {
+      document.querySelectorAll('.node-group.highlighted').forEach(g => g.classList.remove('highlighted'));
+    }
+  }
+}
+
+// ── Controls ──
+function buildControls() {
+  // Layer toggles
+  const lt = document.getElementById('layerToggles');
+  lt.innerHTML = LAYERS.map(l => {
+    const on = state.layers[l.id];
+    return `<div class="toggle-item${on?'':' off'}" onclick="toggleLayer('${l.id}')">
+      <div class="dot" style="background:${l.color};border-color:${l.border}"></div>
+      <label>${l.label}</label>
+    </div>`;
+  }).join('');
+
+  // Connection filters
+  const cf = document.getElementById('connFilters');
+  cf.innerHTML = CONN_TYPES.map(ct => {
+    const on = state.connTypes[ct.id];
+    return `<div class="conn-item${on?'':' off'}" onclick="toggleConnType('${ct.id}')">
+      <div class="line-sample" style="background:${ct.color};${ct.dash?'background:repeating-linear-gradient(90deg,'+ct.color+' 0,'+ct.color+' 4px,transparent 4px,transparent 8px)':''}"></div>
+      <label>${ct.label}</label>
+    </div>`;
+  }).join('');
+
+  updateCommentsList();
+}
+
+function toggleLayer(id) {
+  state.layers[id] = !state.layers[id];
+  // Clear preset
+  state.activePreset = null;
+  document.querySelectorAll('.preset-btn').forEach(b=>b.classList.remove('active'));
+  buildControls();
+  renderSvg();
+  generatePrompt();
+}
+
+function toggleConnType(id) {
+  state.connTypes[id] = !state.connTypes[id];
+  state.activePreset = null;
+  document.querySelectorAll('.preset-btn').forEach(b=>b.classList.remove('active'));
+  buildControls();
+  renderSvg();
+  generatePrompt();
+}
+
+// ── Presets ──
+const PRESETS = {
+  'all': {
+    layers: {electron:true,pages:true,core:true,data:true,security:true,external:true},
+    conns: {ipc:true,dependency:true,'data-flow':true,uses:true,event:true},
+    desc: '전체 시스템 아키텍처'
+  },
+  'sample-flow': {
+    layers: {electron:false,pages:true,core:true,data:true,security:false,external:false},
+    conns: {ipc:false,dependency:true,'data-flow':true,uses:true,event:false},
+    desc: '시료 관리 흐름 (Pages + Shared Core + Data)'
+  },
+  'data-flow': {
+    layers: {electron:false,pages:false,core:true,data:true,security:false,external:true},
+    conns: {ipc:false,dependency:false,'data-flow':true,uses:false,event:false},
+    desc: '데이터 흐름 (Storage, Firebase, File 계층)'
+  },
+  'security': {
+    layers: {electron:true,pages:false,core:false,data:true,security:true,external:false},
+    conns: {ipc:false,dependency:false,'data-flow':false,uses:true,event:true},
+    desc: '보안 체계 (Security 레이어 + 연결)'
+  },
+  'electron-ipc': {
+    layers: {electron:true,pages:true,core:false,data:true,security:false,external:false},
+    conns: {ipc:true,dependency:false,'data-flow':false,uses:false,event:false},
+    desc: 'Electron IPC (Main Process + Preload + Pages)'
+  },
+};
+
+function applyPreset(id) {
+  const p = PRESETS[id];
+  if (!p) return;
+  state.layers = {...p.layers};
+  state.connTypes = {...p.conns};
+  state.activePreset = id;
+  document.querySelectorAll('.preset-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.preset === id);
+  });
+  buildControls();
+  renderSvg();
+  generatePrompt();
+}
+
+// ── Modal / Comments ──
+function openModal(nodeId) {
+  state.selectedNode = nodeId;
+  const node = getNodeById(nodeId);
+  const layer = getLayerById(node.layer);
+  document.getElementById('modalTitle').textContent = state.comments[nodeId] ? '코멘트 수정' : '코멘트 추가';
+  document.getElementById('modalNodeName').textContent = node.label;
+  document.getElementById('modalNodePath').textContent = node.sub;
+  const badge = document.getElementById('modalBadge');
+  badge.textContent = layer.label;
+  badge.style.background = layer.color;
+  badge.style.color = layer.textColor;
+  document.getElementById('commentInput').value = state.comments[nodeId] || '';
+  document.getElementById('deleteCommentBtn').style.display = state.comments[nodeId] ? '' : 'none';
+  document.getElementById('modalOverlay').classList.add('show');
+  setTimeout(() => document.getElementById('commentInput').focus(), 100);
+  renderSvg();
+}
+
+function closeModal() {
+  state.selectedNode = null;
+  document.getElementById('modalOverlay').classList.remove('show');
+  renderSvg();
+}
+
+function saveComment() {
+  const nodeId = state.selectedNode;
+  const text = document.getElementById('commentInput').value.trim();
+  if (text) {
+    state.comments[nodeId] = text;
+  } else {
+    delete state.comments[nodeId];
+  }
+  saveState();
+  closeModal();
+  updateCommentsList();
+  renderSvg();
+  generatePrompt();
+}
+
+function deleteComment() {
+  const nodeId = state.selectedNode;
+  delete state.comments[nodeId];
+  saveState();
+  closeModal();
+  updateCommentsList();
+  renderSvg();
+  generatePrompt();
+}
+
+function updateCommentsList() {
+  const list = document.getElementById('commentsList');
+  const entries = Object.entries(state.comments);
+  if (entries.length === 0) {
+    list.innerHTML = '<div class="no-comments">노드를 클릭하여 코멘트를 추가하세요</div>';
+    return;
+  }
+  list.innerHTML = entries.map(([id, text]) => {
+    const node = getNodeById(id);
+    return `<div class="comment-card" onclick="openModal('${id}')">
+      <div class="node-name">${node?.label||id}</div>
+      <div class="comment-text">${escapeHtml(text)}</div>
+    </div>`;
+  }).join('');
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Prompt Generation ──
+function generatePrompt() {
+  const parts = [];
+
+  // Preset / focus
+  if (state.activePreset && PRESETS[state.activePreset]) {
+    parts.push(`[아키텍처 포커스: ${PRESETS[state.activePreset].desc}]`);
+  }
+
+  // Visible layers
+  const visLayers = LAYERS.filter(l=>state.layers[l.id]);
+  if (visLayers.length < LAYERS.length) {
+    parts.push(`표시 레이어: ${visLayers.map(l=>l.label).join(', ')}`);
+  }
+
+  // Active connection types
+  const visConns = CONN_TYPES.filter(c=>state.connTypes[c.id]);
+  if (visConns.length < CONN_TYPES.length) {
+    parts.push(`활성 연결: ${visConns.map(c=>c.label).join(', ')}`);
+  }
+
+  // Visible nodes summary
+  const visNodes = NODES.filter(n=>state.layers[n.layer]);
+  parts.push(`\n보이는 모듈 (${visNodes.length}개):`);
+  const byLayer = {};
+  visNodes.forEach(n => {
+    const ll = getLayerById(n.layer).label;
+    if (!byLayer[ll]) byLayer[ll]=[];
+    byLayer[ll].push(n.label);
+  });
+  Object.entries(byLayer).forEach(([layer, names]) => {
+    parts.push(`  ${layer}: ${names.join(', ')}`);
+  });
+
+  // Active connections summary
+  const visConnections = CONNECTIONS.filter(c =>
+    state.connTypes[c.type] && state.layers[getNodeById(c.from)?.layer] && state.layers[getNodeById(c.to)?.layer]
+  );
+  if (visConnections.length > 0) {
+    parts.push(`\n활성 연결 (${visConnections.length}개):`);
+    const byType = {};
+    visConnections.forEach(c => {
+      const tl = CONN_TYPES.find(t=>t.id===c.type)?.label || c.type;
+      if(!byType[tl]) byType[tl]=[];
+      const fn = getNodeById(c.from)?.label || c.from;
+      const tn = getNodeById(c.to)?.label || c.to;
+      byType[tl].push(`${fn} -> ${tn}`);
+    });
+    Object.entries(byType).forEach(([type, conns]) => {
+      parts.push(`  [${type}]`);
+      conns.forEach(c => parts.push(`    ${c}`));
+    });
+  }
+
+  // Comments
+  const commentEntries = Object.entries(state.comments);
+  if (commentEntries.length > 0) {
+    parts.push('\n사용자 코멘트:');
+    commentEntries.forEach(([id, text]) => {
+      const node = getNodeById(id);
+      parts.push(`  - ${node?.label||id} (${node?.sub||''}): ${text}`);
+    });
+  }
+
+  document.getElementById('promptOutput').textContent = parts.join('\n');
+}
+
+function copyPrompt() {
+  const text = document.getElementById('promptOutput').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('.copy-btn');
+    btn.textContent = '복사됨!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '복사'; btn.classList.remove('copied'); }, 1500);
+  });
+}
+
+// ── Keyboard ──
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+  if (e.key === '=' || e.key === '+') { if (!document.getElementById('modalOverlay').classList.contains('show')) zoomIn(); }
+  if (e.key === '-') { if (!document.getElementById('modalOverlay').classList.contains('show')) zoomOut(); }
+  if (e.key === '0') { if (!document.getElementById('modalOverlay').classList.contains('show')) zoomReset(); }
+});
+
+// ── Init ──
+buildControls();
+renderSvg();
+generatePrompt();
+</script>
+</body>
+</html>

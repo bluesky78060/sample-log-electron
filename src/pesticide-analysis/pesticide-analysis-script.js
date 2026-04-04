@@ -181,7 +181,8 @@ class PesticideAnalysisViewer {
 
         const fragment = document.createDocumentFragment();
         for (const { log, result } of rows) {
-            fragment.appendChild(this.createTableRow(log, result));
+            const trs = this.createTableRows(log, result);
+            for (const tr of trs) fragment.appendChild(tr);
         }
 
         this.tableBody.innerHTML = '';
@@ -207,103 +208,104 @@ class PesticideAnalysisViewer {
             });
     }
 
-    createTableRow(log, result) {
-        const tr = document.createElement('tr');
-        if (log.isComplete) tr.classList.add('row-completed');
-
+    /**
+     * 시료 1건에 대해 검출 농약 수만큼 행 배열을 반환
+     * 접수정보 셀은 rowSpan으로 병합
+     */
+    createTableRows(log, result) {
         const detections = result?.detections || [];
         const isAllNd = result?.allNd || false;
+        const rowCount = Math.max(detections.length, 1);
+        const rows = [];
 
-        // 접수번호
-        this.addCell(tr, 'col-num sticky-col', log.receptionNumber || '-');
+        for (let i = 0; i < rowCount; i++) {
+            const tr = document.createElement('tr');
+            if (log.isComplete) tr.classList.add('row-completed');
+            if (i > 0) tr.classList.add('det-sub-row');
 
-        // 접수일자
-        this.addCell(tr, 'col-date sticky-col', log.date || '-');
+            // 첫 번째 행에만 접수 정보 (rowSpan 적용)
+            if (i === 0) {
+                this.addMergedCell(tr, 'col-num sticky-col', log.receptionNumber || '-', rowCount);
+                this.addMergedCell(tr, 'col-date sticky-col', log.date || '-', rowCount);
+                this.addMergedCell(tr, 'col-name sticky-col', log.name || '-', rowCount);
+                this.addMergedCell(tr, 'col-crop sticky-col', log.requestContent || log.cropName || '-', rowCount);
+                this.addMergedCell(tr, 'col-purpose sticky-col', log.purpose || '-', rowCount);
+                this.addMergedCell(tr, 'col-test-date', result?.testDate || '-', rowCount);
 
-        // 성명
-        const tdName = document.createElement('td');
-        tdName.className = 'col-name sticky-col';
-        tdName.textContent = log.name || '-';
-        tr.appendChild(tdName);
-
-        // 의뢰물품
-        this.addCell(tr, 'col-crop sticky-col', log.requestContent || log.cropName || '-');
-
-        // 목적
-        this.addCell(tr, 'col-purpose sticky-col', log.purpose || '-');
-
-        // 검사일자
-        this.addCell(tr, 'col-test-date', result?.testDate || '-');
-
-        // 검출수
-        const detectedCount = detections.length;
-        const tdCount = document.createElement('td');
-        tdCount.className = 'col-detection-count';
-        if (isAllNd) {
-            tdCount.textContent = '불검출';
-            tdCount.classList.add('all-clean');
-        } else if (detections.length === 0) {
-            tdCount.textContent = '-';
-            tdCount.classList.add('no-result');
-        } else {
-            tdCount.textContent = `${detectedCount}종`;
-            tdCount.classList.add('has-detected');
-        }
-        tr.appendChild(tdCount);
-
-        // 검출 농약 목록
-        const tdDetections = document.createElement('td');
-        tdDetections.className = 'col-detections';
-
-        if (isAllNd) {
-            tdDetections.innerHTML = '<span class="det-clean">전체 불검출</span>';
-        } else if (detections.length === 0) {
-            tdDetections.innerHTML = '<span class="det-empty">미입력</span>';
-        } else {
-            // 서브테이블로 성분명 / 검출량 / 분석법 표시
-            const subTable = document.createElement('table');
-            subTable.className = 'det-sub-table';
-
-            for (const det of detections) {
-                const subTr = document.createElement('tr');
-
-                const tdName = document.createElement('td');
-                tdName.className = 'det-sub-name';
-                tdName.textContent = det.name || '';
-                subTr.appendChild(tdName);
-
-                const tdVal = document.createElement('td');
-                tdVal.className = 'det-sub-value';
-                tdVal.textContent = det.value ? `${det.value} mg/kg` : '';
-                subTr.appendChild(tdVal);
-
-                const tdMeth = document.createElement('td');
-                tdMeth.className = 'det-sub-method';
-                tdMeth.textContent = det.method || '';
-                subTr.appendChild(tdMeth);
-
-                subTable.appendChild(subTr);
+                // 검출수
+                const tdCount = document.createElement('td');
+                tdCount.className = 'col-detection-count';
+                if (rowCount > 1) tdCount.rowSpan = rowCount;
+                if (isAllNd) {
+                    tdCount.textContent = '불검출';
+                    tdCount.classList.add('all-clean');
+                } else if (detections.length === 0) {
+                    tdCount.textContent = '-';
+                    tdCount.classList.add('no-result');
+                } else {
+                    tdCount.textContent = `${detections.length}종`;
+                    tdCount.classList.add('has-detected');
+                }
+                tr.appendChild(tdCount);
             }
 
-            tdDetections.appendChild(subTable);
-        }
-        tr.appendChild(tdDetections);
+            // 농약명 / 검출량 / 분석법
+            if (detections.length === 0) {
+                // 미입력 또는 전체 불검출
+                const tdName = document.createElement('td');
+                tdName.className = 'col-det-name';
+                if (isAllNd) {
+                    tdName.textContent = '전체 불검출';
+                    tdName.classList.add('det-clean');
+                } else {
+                    tdName.textContent = '미입력';
+                    tdName.classList.add('det-empty');
+                }
+                tr.appendChild(tdName);
+                this.addCell(tr, 'col-det-raw', '');
+                this.addCell(tr, 'col-det-value', '');
+                this.addCell(tr, 'col-det-method', '');
+            } else {
+                const det = detections[i];
+                const tdDetName = document.createElement('td');
+                tdDetName.className = 'col-det-name';
+                tdDetName.textContent = det.name || '';
+                tr.appendChild(tdDetName);
 
-        // 판정
-        const tdJudgment = document.createElement('td');
-        tdJudgment.className = 'col-judgment';
-        if (isAllNd) {
-            tdJudgment.textContent = '불검출';
-            tdJudgment.classList.add('judgment-pass');
-        } else if (detections.length > 0) {
-            tdJudgment.textContent = '검출';
-            tdJudgment.classList.add('judgment-fail');
-        } else {
-            tdJudgment.textContent = '-';
-        }
-        tr.appendChild(tdJudgment);
+                this.addCell(tr, 'col-det-raw', det.rawValue || '');
+                this.addCell(tr, 'col-det-value', det.value ? `${det.value}` : '');
+                this.addCell(tr, 'col-det-method', det.method || '');
+            }
 
-        return tr;
+            // 판정 (첫 행에만)
+            if (i === 0) {
+                const tdJudgment = document.createElement('td');
+                tdJudgment.className = 'col-judgment';
+                if (rowCount > 1) tdJudgment.rowSpan = rowCount;
+                if (isAllNd) {
+                    tdJudgment.textContent = '불검출';
+                    tdJudgment.classList.add('judgment-pass');
+                } else if (detections.length > 0) {
+                    tdJudgment.textContent = '검출';
+                    tdJudgment.classList.add('judgment-fail');
+                } else {
+                    tdJudgment.textContent = '-';
+                }
+                tr.appendChild(tdJudgment);
+            }
+
+            rows.push(tr);
+        }
+
+        return rows;
+    }
+
+    addMergedCell(tr, className, text, rowSpan) {
+        const td = document.createElement('td');
+        td.className = className;
+        td.textContent = text;
+        if (rowSpan > 1) td.rowSpan = rowSpan;
+        tr.appendChild(td);
     }
 
     addCell(tr, className, text) {
@@ -329,7 +331,7 @@ class PesticideAnalysisViewer {
             const data = [];
 
             // 헤더
-            data.push(['접수번호', '접수일자', '성명', '의뢰물품', '목적', '검사일자', '검출수', '검출농약', '검출량(mg/kg)', '분석법', '판정']);
+            data.push(['접수번호', '접수일자', '성명', '의뢰물품', '목적', '검사일자', '검출수', '검출농약', '기기분석값(ng/kg)', '검출량(mg/kg)', '분석법', '판정']);
 
             // 데이터 행: 시료당 검출 농약 수만큼 행 생성
             for (const { log, result } of rows) {
@@ -350,14 +352,14 @@ class PesticideAnalysisViewer {
 
                 if (detections.length === 0) {
                     // 검출 없음: 1행
-                    data.push([...baseRow, isAllNd ? '전체 불검출' : '', '', '', judgment]);
+                    data.push([...baseRow, isAllNd ? '전체 불검출' : '', '', '', '', judgment]);
                 } else {
                     // 첫 번째 검출 농약: 접수 정보 포함
-                    data.push([...baseRow, detections[0].name || '', detections[0].value || '', detections[0].method || '', judgment]);
+                    data.push([...baseRow, detections[0].name || '', detections[0].rawValue || '', detections[0].value || '', detections[0].method || '', judgment]);
 
                     // 2번째 이후: 접수 정보 빈칸, 검출 농약만
                     for (let i = 1; i < detections.length; i++) {
-                        data.push(['', '', '', '', '', '', '', detections[i].name || '', detections[i].value || '', detections[i].method || '', '']);
+                        data.push(['', '', '', '', '', '', '', detections[i].name || '', detections[i].rawValue || '', detections[i].value || '', detections[i].method || '', '']);
                     }
                 }
             }
@@ -424,7 +426,7 @@ class PesticideAnalysisViewer {
             ws['!cols'] = [
                 { wch: 10 }, { wch: 12 }, { wch: 10 }, { wch: 15 },
                 { wch: 10 }, { wch: 12 }, { wch: 8 },
-                { wch: 25 }, { wch: 14 }, { wch: 8 }, { wch: 8 }
+                { wch: 25 }, { wch: 14 }, { wch: 14 }, { wch: 8 }, { wch: 8 }
             ];
 
             XLSX.utils.book_append_sheet(wb, ws, '잔류농약분석결과');

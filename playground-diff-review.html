@@ -1,0 +1,1660 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diff Review / Code Review Playground</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #1a1a2e;
+  --panel: #16213e;
+  --panel-hover: #1a2744;
+  --border: #2a3a5c;
+  --accent: #e94560;
+  --accent-hover: #ff6b81;
+  --blue: #4fc3f7;
+  --green: #66bb6a;
+  --yellow: #ffd54f;
+  --orange: #ffb74d;
+  --purple: #ce93d8;
+  --pink: #f48fb1;
+  --text: #e0e0e0;
+  --text-dim: #8892a4;
+  --text-bright: #ffffff;
+  --input-bg: #0f1629;
+  --chip-bg: #2a3a5c;
+  --chip-active: #e94560;
+  --radius: 8px;
+  --radius-sm: 4px;
+  --shadow: 0 2px 8px rgba(0,0,0,0.3);
+  --transition: 0.2s ease;
+  --diff-add-bg: rgba(102,187,106,0.08);
+  --diff-add-border: rgba(102,187,106,0.25);
+  --diff-del-bg: rgba(233,69,96,0.08);
+  --diff-del-border: rgba(233,69,96,0.25);
+  --diff-hunk-bg: rgba(79,195,247,0.06);
+  --diff-hunk-border: rgba(79,195,247,0.2);
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app {
+  display: flex;
+  height: 100vh;
+}
+
+/* ========== LEFT PANEL ========== */
+.left-panel {
+  width: 320px;
+  min-width: 280px;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ========== RIGHT PANEL ========== */
+.right-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.diff-panel {
+  flex: 1;
+  min-height: 200px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.prompt-output {
+  height: 220px;
+  min-height: 150px;
+  background: var(--panel);
+  padding: 20px;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+/* ========== HEADER ========== */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.app-header h1 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-bright);
+}
+
+.app-header .subtitle {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+/* ========== SECTION (collapsible) ========== */
+.section {
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: border-color var(--transition);
+}
+
+.section:hover {
+  border-color: #3a4a6c;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  cursor: pointer;
+  user-select: none;
+  background: rgba(255,255,255,0.02);
+  position: relative;
+}
+
+.section-header:hover {
+  background: rgba(255,255,255,0.04);
+}
+
+.section-header::before {
+  content: '';
+  display: inline-block;
+  width: 0;
+  height: 0;
+  border-left: 5px solid var(--text-dim);
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  margin-right: 8px;
+  transition: transform var(--transition);
+  flex-shrink: 0;
+}
+
+.section:not(.collapsed) .section-header::before {
+  transform: rotate(90deg);
+}
+
+.section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--blue);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-title .keyword {
+  background: rgba(79,195,247,0.15);
+  color: var(--blue);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.section-badge {
+  font-size: 11px;
+  color: var(--text-dim);
+  background: var(--chip-bg);
+  padding: 2px 8px;
+  border-radius: 10px;
+  transition: all var(--transition);
+}
+
+.section-badge.has-data {
+  color: var(--accent);
+  background: rgba(233,69,96,0.15);
+  font-weight: 600;
+}
+
+.section-body {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.section.collapsed .section-body {
+  display: none;
+}
+
+.section.collapsed {
+  border-color: transparent;
+  background: transparent;
+}
+
+.section.collapsed .section-header {
+  background: rgba(255,255,255,0.02);
+  border-radius: var(--radius);
+}
+
+.section.collapsed:hover {
+  border-color: var(--border);
+}
+
+/* ========== PRESET BUTTONS ========== */
+.presets-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.preset-btn {
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-dim);
+  transition: all var(--transition);
+}
+
+.preset-btn:hover {
+  border-color: var(--orange);
+  color: var(--orange);
+  background: rgba(255,183,77,0.1);
+}
+
+.preset-btn.active {
+  border-color: var(--orange);
+  color: var(--orange);
+  background: rgba(255,183,77,0.15);
+  font-weight: 600;
+}
+
+/* ========== COMMIT INFO ========== */
+.commit-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.commit-hash {
+  font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
+  font-size: 12px;
+  color: var(--yellow);
+}
+
+.commit-msg {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-bright);
+  line-height: 1.4;
+}
+
+.commit-meta {
+  font-size: 11px;
+  color: var(--text-dim);
+  display: flex;
+  gap: 12px;
+}
+
+.commit-meta span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ========== FILE LIST ========== */
+.file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.file-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition);
+  font-size: 12px;
+}
+
+.file-item:hover {
+  background: rgba(255,255,255,0.05);
+}
+
+.file-item .file-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.file-item .file-name {
+  font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-item .file-stats {
+  margin-left: auto;
+  font-size: 11px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.file-item .file-stats .add-count {
+  color: var(--green);
+}
+
+.file-item .file-stats .del-count {
+  color: var(--accent);
+  margin-left: 4px;
+}
+
+/* ========== REVIEW SUMMARY ========== */
+.summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.summary-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  text-align: center;
+}
+
+.summary-card .num {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-bright);
+}
+
+.summary-card .label {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+/* ========== DIFF CONTENT ========== */
+.diff-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.diff-header h2 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-bright);
+}
+
+.diff-file-card {
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+
+.diff-file-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: rgba(255,255,255,0.03);
+  cursor: pointer;
+  user-select: none;
+  border-bottom: 1px solid var(--border);
+  transition: background var(--transition);
+}
+
+.diff-file-header:hover {
+  background: rgba(255,255,255,0.05);
+}
+
+.diff-file-header .file-path {
+  font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
+  font-size: 13px;
+  color: var(--blue);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.diff-file-header .file-path .chevron {
+  font-size: 10px;
+  color: var(--text-dim);
+  transition: transform var(--transition);
+  display: inline-block;
+}
+
+.diff-file-card:not(.collapsed) .diff-file-header .chevron {
+  transform: rotate(90deg);
+}
+
+.diff-file-header .file-stat-pills {
+  display: flex;
+  gap: 6px;
+  font-size: 11px;
+  font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
+}
+
+.stat-pill-add {
+  color: var(--green);
+  background: rgba(102,187,106,0.12);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.stat-pill-del {
+  color: var(--accent);
+  background: rgba(233,69,96,0.12);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.diff-file-body {
+  overflow: hidden;
+}
+
+.diff-file-card.collapsed .diff-file-body {
+  display: none;
+}
+
+/* ========== DIFF LINES ========== */
+.diff-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.diff-line {
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.diff-line:hover {
+  filter: brightness(1.3);
+}
+
+.diff-line td {
+  padding: 1px 0;
+  vertical-align: top;
+  white-space: pre;
+}
+
+.diff-line .line-num {
+  width: 44px;
+  min-width: 44px;
+  text-align: right;
+  padding-right: 8px;
+  color: var(--text-dim);
+  user-select: none;
+  font-size: 11px;
+  opacity: 0.6;
+}
+
+.diff-line .line-num-old {
+  border-right: 1px solid rgba(255,255,255,0.04);
+}
+
+.diff-line .line-prefix {
+  width: 18px;
+  min-width: 18px;
+  text-align: center;
+  user-select: none;
+  font-weight: 600;
+}
+
+.diff-line .line-content {
+  padding-left: 8px;
+  padding-right: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Line type styles */
+.diff-line.line-context {
+  background: transparent;
+}
+
+.diff-line.line-add {
+  background: var(--diff-add-bg);
+}
+.diff-line.line-add .line-prefix {
+  color: var(--green);
+}
+.diff-line.line-add .line-content {
+  color: var(--green);
+}
+
+.diff-line.line-del {
+  background: var(--diff-del-bg);
+}
+.diff-line.line-del .line-prefix {
+  color: var(--accent);
+}
+.diff-line.line-del .line-content {
+  color: var(--accent);
+}
+
+.diff-line.line-hunk {
+  background: var(--diff-hunk-bg);
+  cursor: default;
+}
+.diff-line.line-hunk:hover {
+  filter: none;
+}
+.diff-line.line-hunk td {
+  padding: 4px 0;
+}
+.diff-line.line-hunk .line-content {
+  color: var(--blue);
+  font-style: italic;
+  font-weight: 500;
+}
+
+/* Comment badge */
+.comment-badge {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 12px;
+  vertical-align: middle;
+  cursor: pointer;
+  opacity: 0.8;
+}
+
+/* ========== INLINE COMMENT ========== */
+.inline-comment-row td {
+  padding: 0 !important;
+}
+
+.inline-comment-box {
+  background: rgba(79,195,247,0.05);
+  border-top: 2px solid var(--blue);
+  border-bottom: 2px solid var(--blue);
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.inline-comment-box textarea {
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  padding: 8px 10px;
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+  resize: vertical;
+  min-height: 60px;
+  transition: border-color var(--transition);
+  width: 100%;
+}
+
+.inline-comment-box textarea:focus {
+  border-color: var(--blue);
+}
+
+.inline-comment-box .comment-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.btn {
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--chip-bg);
+  color: var(--text);
+  transition: all var(--transition);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn:hover {
+  background: var(--panel-hover);
+  border-color: var(--blue);
+  color: var(--blue);
+}
+
+.btn-primary {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #0f1629;
+  font-weight: 600;
+}
+
+.btn-primary:hover {
+  background: #7ad4fa;
+  border-color: #7ad4fa;
+  color: #0f1629;
+}
+
+.btn-cancel {
+  color: var(--text-dim);
+}
+
+.btn-cancel:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* Saved comment display */
+.saved-comment-row td {
+  padding: 0 !important;
+}
+
+.saved-comment-display {
+  background: rgba(79,195,247,0.04);
+  border-left: 3px solid var(--blue);
+  padding: 8px 16px;
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.5;
+  cursor: pointer;
+  transition: background var(--transition);
+}
+
+.saved-comment-display:hover {
+  background: rgba(79,195,247,0.08);
+}
+
+.saved-comment-display .comment-author {
+  font-weight: 600;
+  color: var(--blue);
+  margin-bottom: 2px;
+  font-size: 11px;
+}
+
+/* ========== PROMPT OUTPUT ========== */
+.prompt-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.prompt-header h2 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-bright);
+}
+
+.prompt-text {
+  font-size: 13px;
+  line-height: 1.7;
+  padding: 16px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  min-height: 60px;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.prompt-text .review-file {
+  color: var(--blue);
+  font-weight: 600;
+}
+
+.prompt-text .review-line {
+  color: var(--yellow);
+  font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
+  font-size: 12px;
+}
+
+.prompt-text .review-code {
+  color: var(--text-dim);
+  font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
+  font-size: 12px;
+}
+
+.prompt-text .review-comment {
+  color: var(--text-bright);
+}
+
+.copy-btn {
+  padding: 6px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--accent);
+  background: transparent;
+  color: var(--accent);
+  transition: all var(--transition);
+}
+
+.copy-btn:hover {
+  background: var(--accent);
+  color: white;
+}
+
+.copy-btn.copied {
+  background: var(--green);
+  border-color: var(--green);
+  color: white;
+}
+
+/* ========== RESET BUTTON ========== */
+.reset-btn {
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-dim);
+  transition: all var(--transition);
+}
+
+.reset-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ========== EMPTY HINT ========== */
+.empty-hint {
+  font-size: 12px;
+  color: var(--text-dim);
+  font-style: italic;
+  padding: 8px 0;
+}
+
+/* ========== SCROLLBAR ========== */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #4a5a7c; }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- LEFT PANEL -->
+  <div class="left-panel" id="leftPanel">
+    <div class="app-header">
+      <div>
+        <h1>Diff Review</h1>
+        <div class="subtitle">Interactive Code Review Playground</div>
+      </div>
+      <button class="reset-btn" onclick="resetAll()">초기화</button>
+    </div>
+
+    <!-- Presets -->
+    <div class="section" id="presetSection">
+      <div class="section-header" onclick="toggleSection(this)">
+        <span class="section-title">프리셋 <span class="keyword">PRESETS</span></span>
+      </div>
+      <div class="section-body">
+        <div class="presets-bar" id="presetsBar"></div>
+      </div>
+    </div>
+
+    <!-- Commit Info -->
+    <div class="section" id="commitSection">
+      <div class="section-header" onclick="toggleSection(this)">
+        <span class="section-title">커밋 정보 <span class="keyword">COMMIT</span></span>
+      </div>
+      <div class="section-body" style="max-height:none;">
+        <div class="commit-info" id="commitInfo">
+          <div class="empty-hint">프리셋을 선택하세요</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- File List -->
+    <div class="section" id="fileSection">
+      <div class="section-header" onclick="toggleSection(this)">
+        <span class="section-title">변경 파일 <span class="keyword">FILES</span></span>
+        <span class="section-badge" id="fileCount">0개</span>
+      </div>
+      <div class="section-body">
+        <div class="file-list" id="fileList">
+          <div class="empty-hint">프리셋을 선택하세요</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Review Summary -->
+    <div class="section" id="summarySection">
+      <div class="section-header" onclick="toggleSection(this)">
+        <span class="section-title">리뷰 요약 <span class="keyword">SUMMARY</span></span>
+        <span class="section-badge" id="reviewBadge">0건</span>
+      </div>
+      <div class="section-body" style="max-height:none;">
+        <div class="summary-grid" id="summaryGrid">
+          <div class="summary-card">
+            <div class="num" id="totalComments">0</div>
+            <div class="label">코멘트</div>
+          </div>
+          <div class="summary-card">
+            <div class="num" id="filesReviewed">0</div>
+            <div class="label">리뷰 파일</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="right-panel">
+    <div class="diff-panel" id="diffPanel">
+      <div class="diff-header">
+        <h2>Diff 미리보기</h2>
+      </div>
+      <div id="diffContent">
+        <div class="empty-hint" style="text-align:center;padding:40px;">프리셋을 선택하여 Diff를 로드하세요</div>
+      </div>
+    </div>
+    <div class="prompt-output">
+      <div class="prompt-header">
+        <h2>코드 리뷰 출력</h2>
+        <button class="copy-btn" id="promptCopyBtn" onclick="copyPrompt()">리뷰 복사</button>
+      </div>
+      <div class="prompt-text" id="promptOutput">코드 리뷰 없음 - 라인을 클릭하여 리뷰를 시작하세요</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================
+// PRESET DATA
+// ============================================
+
+var PRESETS = [
+  {
+    name: '리팩토링: 유틸 함수 추출',
+    commit: {
+      hash: 'a3f8c12',
+      message: 'refactor: 유틸리티 함수를 별도 모듈로 추출',
+      author: 'Kim Developer',
+      date: '2026-02-20 14:32'
+    },
+    files: [
+      {
+        path: 'src/components/Dashboard.tsx',
+        hunks: [
+          {
+            header: '@@ -12,18 +12,8 @@ import React from "react";',
+            lines: [
+              { type: 'context', old: 12, new: 12, text: 'import React from "react";' },
+              { type: 'context', old: 13, new: 13, text: 'import { useEffect, useState } from "react";' },
+              { type: 'del', old: 14, new: null, text: 'import moment from "moment";' },
+              { type: 'add', old: null, new: 14, text: 'import { formatDate, formatCurrency } from "../utils/formatters";' },
+              { type: 'context', old: 15, new: 15, text: '' },
+              { type: 'context', old: 16, new: 16, text: 'export function Dashboard({ data }) {' },
+              { type: 'del', old: 17, new: null, text: '  const formatDate = (d) => moment(d).format("YYYY-MM-DD");' },
+              { type: 'del', old: 18, new: null, text: '  const formatCurrency = (v) => {' },
+              { type: 'del', old: 19, new: null, text: '    return new Intl.NumberFormat("ko-KR", {' },
+              { type: 'del', old: 20, new: null, text: '      style: "currency", currency: "KRW"' },
+              { type: 'del', old: 21, new: null, text: '    }).format(v);' },
+              { type: 'del', old: 22, new: null, text: '  };' },
+              { type: 'context', old: 23, new: 17, text: '  const [items, setItems] = useState([]);' },
+              { type: 'context', old: 24, new: 18, text: '' },
+              { type: 'context', old: 25, new: 19, text: '  useEffect(() => {' }
+            ]
+          }
+        ]
+      },
+      {
+        path: 'src/utils/formatters.ts',
+        hunks: [
+          {
+            header: '@@ -0,0 +1,22 @@',
+            lines: [
+              { type: 'add', old: null, new: 1, text: '/**' },
+              { type: 'add', old: null, new: 2, text: ' * 공통 포맷팅 유틸리티' },
+              { type: 'add', old: null, new: 3, text: ' */' },
+              { type: 'add', old: null, new: 4, text: '' },
+              { type: 'add', old: null, new: 5, text: 'export function formatDate(date: Date | string): string {' },
+              { type: 'add', old: null, new: 6, text: '  const d = new Date(date);' },
+              { type: 'add', old: null, new: 7, text: '  const year = d.getFullYear();' },
+              { type: 'add', old: null, new: 8, text: '  const month = String(d.getMonth() + 1).padStart(2, "0");' },
+              { type: 'add', old: null, new: 9, text: '  const day = String(d.getDate()).padStart(2, "0");' },
+              { type: 'add', old: null, new: 10, text: '  return `${year}-${month}-${day}`;' },
+              { type: 'add', old: null, new: 11, text: '}' },
+              { type: 'add', old: null, new: 12, text: '' },
+              { type: 'add', old: null, new: 13, text: 'export function formatCurrency(value: number): string {' },
+              { type: 'add', old: null, new: 14, text: '  return new Intl.NumberFormat("ko-KR", {' },
+              { type: 'add', old: null, new: 15, text: '    style: "currency",' },
+              { type: 'add', old: null, new: 16, text: '    currency: "KRW"' },
+              { type: 'add', old: null, new: 17, text: '  }).format(value);' },
+              { type: 'add', old: null, new: 18, text: '}' }
+            ]
+          }
+        ]
+      },
+      {
+        path: 'src/components/ReportTable.tsx',
+        hunks: [
+          {
+            header: '@@ -5,10 +5,10 @@ import { Column } from "../types";',
+            lines: [
+              { type: 'context', old: 5, new: 5, text: 'import { Column } from "../types";' },
+              { type: 'del', old: 6, new: null, text: 'import moment from "moment";' },
+              { type: 'add', old: null, new: 6, text: 'import { formatDate } from "../utils/formatters";' },
+              { type: 'context', old: 7, new: 7, text: '' },
+              { type: 'context', old: 8, new: 8, text: 'export function ReportTable({ columns, rows }: Props) {' },
+              { type: 'context', old: 9, new: 9, text: '  return (' },
+              { type: 'context', old: 10, new: 10, text: '    <table className="report-table">' },
+              { type: 'del', old: 11, new: null, text: '      {rows.map(r => <td>{moment(r.date).format("YYYY-MM-DD")}</td>)}' },
+              { type: 'add', old: null, new: 11, text: '      {rows.map(r => <td>{formatDate(r.date)}</td>)}' },
+              { type: 'context', old: 12, new: 12, text: '    </table>' },
+              { type: 'context', old: 13, new: 13, text: '  );' }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    name: '버그 수정: null 체크 추가',
+    commit: {
+      hash: 'b7e2d45',
+      message: 'fix: 사용자 프로필 로딩 시 null 참조 오류 수정',
+      author: 'Park Engineer',
+      date: '2026-02-19 09:15'
+    },
+    files: [
+      {
+        path: 'src/services/userService.js',
+        hunks: [
+          {
+            header: '@@ -28,12 +28,16 @@ export class UserService {',
+            lines: [
+              { type: 'context', old: 28, new: 28, text: 'export class UserService {' },
+              { type: 'context', old: 29, new: 29, text: '  async getProfile(userId) {' },
+              { type: 'del', old: 30, new: null, text: '    const user = await this.db.findById(userId);' },
+              { type: 'del', old: 31, new: null, text: '    const settings = user.settings;' },
+              { type: 'del', old: 32, new: null, text: '    return {' },
+              { type: 'del', old: 33, new: null, text: '      name: user.name,' },
+              { type: 'del', old: 34, new: null, text: '      email: user.email,' },
+              { type: 'del', old: 35, new: null, text: '      theme: settings.theme' },
+              { type: 'del', old: 36, new: null, text: '    };' },
+              { type: 'add', old: null, new: 30, text: '    const user = await this.db.findById(userId);' },
+              { type: 'add', old: null, new: 31, text: '    if (!user) {' },
+              { type: 'add', old: null, new: 32, text: '      throw new Error(`User not found: ${userId}`);' },
+              { type: 'add', old: null, new: 33, text: '    }' },
+              { type: 'add', old: null, new: 34, text: '    const settings = user.settings ?? {};' },
+              { type: 'add', old: null, new: 35, text: '    return {' },
+              { type: 'add', old: null, new: 36, text: '      name: user.name ?? "Unknown",' },
+              { type: 'add', old: null, new: 37, text: '      email: user.email ?? "",' },
+              { type: 'add', old: null, new: 38, text: '      theme: settings.theme ?? "light"' },
+              { type: 'add', old: null, new: 39, text: '    };' },
+              { type: 'context', old: 37, new: 40, text: '  }' },
+              { type: 'context', old: 38, new: 41, text: '' }
+            ]
+          }
+        ]
+      },
+      {
+        path: 'src/hooks/useUser.ts',
+        hunks: [
+          {
+            header: '@@ -15,8 +15,13 @@ export function useUser(userId: string) {',
+            lines: [
+              { type: 'context', old: 15, new: 15, text: 'export function useUser(userId: string) {' },
+              { type: 'context', old: 16, new: 16, text: '  const [user, setUser] = useState<User | null>(null);' },
+              { type: 'context', old: 17, new: 17, text: '  const [loading, setLoading] = useState(true);' },
+              { type: 'add', old: null, new: 18, text: '  const [error, setError] = useState<string | null>(null);' },
+              { type: 'context', old: 18, new: 19, text: '' },
+              { type: 'context', old: 19, new: 20, text: '  useEffect(() => {' },
+              { type: 'del', old: 20, new: null, text: '    userService.getProfile(userId).then(setUser);' },
+              { type: 'add', old: null, new: 21, text: '    userService.getProfile(userId)' },
+              { type: 'add', old: null, new: 22, text: '      .then(setUser)' },
+              { type: 'add', old: null, new: 23, text: '      .catch(err => setError(err.message))' },
+              { type: 'add', old: null, new: 24, text: '      .finally(() => setLoading(false));' },
+              { type: 'context', old: 21, new: 25, text: '  }, [userId]);' },
+              { type: 'context', old: 22, new: 26, text: '' },
+              { type: 'del', old: 23, new: null, text: '  return { user, loading };' },
+              { type: 'add', old: null, new: 27, text: '  return { user, loading, error };' },
+              { type: 'context', old: 24, new: 28, text: '}' }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    name: '기능 추가: 검색 필터',
+    commit: {
+      hash: 'c9d1f78',
+      message: 'feat: 테이블에 다중 조건 검색 필터 추가',
+      author: 'Lee Frontend',
+      date: '2026-02-18 16:40'
+    },
+    files: [
+      {
+        path: 'src/components/SearchFilter.tsx',
+        hunks: [
+          {
+            header: '@@ -0,0 +1,35 @@',
+            lines: [
+              { type: 'add', old: null, new: 1, text: 'import React, { useState, useCallback } from "react";' },
+              { type: 'add', old: null, new: 2, text: 'import { debounce } from "../utils/debounce";' },
+              { type: 'add', old: null, new: 3, text: '' },
+              { type: 'add', old: null, new: 4, text: 'interface FilterProps {' },
+              { type: 'add', old: null, new: 5, text: '  columns: string[];' },
+              { type: 'add', old: null, new: 6, text: '  onFilter: (filters: Record<string, string>) => void;' },
+              { type: 'add', old: null, new: 7, text: '}' },
+              { type: 'add', old: null, new: 8, text: '' },
+              { type: 'add', old: null, new: 9, text: 'export function SearchFilter({ columns, onFilter }: FilterProps) {' },
+              { type: 'add', old: null, new: 10, text: '  const [filters, setFilters] = useState<Record<string, string>>({});' },
+              { type: 'add', old: null, new: 11, text: '' },
+              { type: 'add', old: null, new: 12, text: '  const debouncedFilter = useCallback(' },
+              { type: 'add', old: null, new: 13, text: '    debounce((f: Record<string, string>) => onFilter(f), 300),' },
+              { type: 'add', old: null, new: 14, text: '    [onFilter]' },
+              { type: 'add', old: null, new: 15, text: '  );' },
+              { type: 'add', old: null, new: 16, text: '' },
+              { type: 'add', old: null, new: 17, text: '  const handleChange = (col: string, value: string) => {' },
+              { type: 'add', old: null, new: 18, text: '    const next = { ...filters, [col]: value };' },
+              { type: 'add', old: null, new: 19, text: '    if (!value) delete next[col];' },
+              { type: 'add', old: null, new: 20, text: '    setFilters(next);' },
+              { type: 'add', old: null, new: 21, text: '    debouncedFilter(next);' },
+              { type: 'add', old: null, new: 22, text: '  };' },
+              { type: 'add', old: null, new: 23, text: '' },
+              { type: 'add', old: null, new: 24, text: '  return (' },
+              { type: 'add', old: null, new: 25, text: '    <div className="search-filter-row">' },
+              { type: 'add', old: null, new: 26, text: '      {columns.map(col => (' },
+              { type: 'add', old: null, new: 27, text: '        <input' },
+              { type: 'add', old: null, new: 28, text: '          key={col}' },
+              { type: 'add', old: null, new: 29, text: '          placeholder={`${col} 검색...`}' },
+              { type: 'add', old: null, new: 30, text: '          onChange={e => handleChange(col, e.target.value)}' },
+              { type: 'add', old: null, new: 31, text: '        />' },
+              { type: 'add', old: null, new: 32, text: '      ))}' },
+              { type: 'add', old: null, new: 33, text: '    </div>' },
+              { type: 'add', old: null, new: 34, text: '  );' },
+              { type: 'add', old: null, new: 35, text: '}' }
+            ]
+          }
+        ]
+      },
+      {
+        path: 'src/components/DataTable.tsx',
+        hunks: [
+          {
+            header: '@@ -8,6 +8,9 @@ import { Pagination } from "./Pagination";',
+            lines: [
+              { type: 'context', old: 8, new: 8, text: 'import { Pagination } from "./Pagination";' },
+              { type: 'add', old: null, new: 9, text: 'import { SearchFilter } from "./SearchFilter";' },
+              { type: 'context', old: 9, new: 10, text: '' },
+              { type: 'context', old: 10, new: 11, text: 'export function DataTable({ data, columns }: TableProps) {' },
+              { type: 'add', old: null, new: 12, text: '  const [filteredData, setFilteredData] = useState(data);' },
+              { type: 'add', old: null, new: 13, text: '' },
+              { type: 'context', old: 11, new: 14, text: '  return (' },
+              { type: 'context', old: 12, new: 15, text: '    <div className="data-table-wrapper">' }
+            ]
+          },
+          {
+            header: '@@ -18,6 +21,18 @@ export function DataTable({ data, columns }: TableProps) {',
+            lines: [
+              { type: 'context', old: 18, new: 21, text: '      <table>' },
+              { type: 'add', old: null, new: 22, text: '        <SearchFilter' },
+              { type: 'add', old: null, new: 23, text: '          columns={columns.map(c => c.key)}' },
+              { type: 'add', old: null, new: 24, text: '          onFilter={(filters) => {' },
+              { type: 'add', old: null, new: 25, text: '            const result = data.filter(row =>' },
+              { type: 'add', old: null, new: 26, text: '              Object.entries(filters).every(([key, val]) =>' },
+              { type: 'add', old: null, new: 27, text: '                String(row[key]).toLowerCase().includes(val.toLowerCase())' },
+              { type: 'add', old: null, new: 28, text: '              )' },
+              { type: 'add', old: null, new: 29, text: '            );' },
+              { type: 'add', old: null, new: 30, text: '            setFilteredData(result);' },
+              { type: 'add', old: null, new: 31, text: '          }}' },
+              { type: 'add', old: null, new: 32, text: '        />' },
+              { type: 'context', old: 19, new: 33, text: '        <thead>' }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    name: '보안 패치: XSS 방지',
+    commit: {
+      hash: 'd5a4b91',
+      message: 'security: 사용자 입력 새니타이징으로 XSS 취약점 수정',
+      author: 'Choi Security',
+      date: '2026-02-17 11:20'
+    },
+    files: [
+      {
+        path: 'src/shared/sanitize.js',
+        hunks: [
+          {
+            header: '@@ -1,8 +1,19 @@',
+            lines: [
+              { type: 'del', old: 1, new: null, text: 'function escapeHTML(str) {' },
+              { type: 'del', old: 2, new: null, text: '  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;");' },
+              { type: 'del', old: 3, new: null, text: '}' },
+              { type: 'add', old: null, new: 1, text: '/**' },
+              { type: 'add', old: null, new: 2, text: ' * HTML 새니타이징 - XSS 공격 방지' },
+              { type: 'add', old: null, new: 3, text: ' * @param {string} str - 새니타이징할 문자열' },
+              { type: 'add', old: null, new: 4, text: ' * @returns {string} 안전한 문자열' },
+              { type: 'add', old: null, new: 5, text: ' */' },
+              { type: 'add', old: null, new: 6, text: 'function escapeHTML(str) {' },
+              { type: 'add', old: null, new: 7, text: '  if (typeof str !== "string") return "";' },
+              { type: 'add', old: null, new: 8, text: '  return str' },
+              { type: 'add', old: null, new: 9, text: '    .replace(/&/g, "&amp;")' },
+              { type: 'add', old: null, new: 10, text: '    .replace(/</g, "&lt;")' },
+              { type: 'add', old: null, new: 11, text: '    .replace(/>/g, "&gt;")' },
+              { type: 'add', old: null, new: 12, text: '    .replace(/"/g, "&quot;")' },
+              { type: 'add', old: null, new: 13, text: '    .replace(/\'/g, "&#x27;")' },
+              { type: 'add', old: null, new: 14, text: '    .replace(/\\//g, "&#x2F;");' },
+              { type: 'add', old: null, new: 15, text: '}' },
+              { type: 'context', old: 4, new: 16, text: '' },
+              { type: 'del', old: 5, new: null, text: 'function sanitizeJSON(obj) {' },
+              { type: 'del', old: 6, new: null, text: '  return JSON.parse(JSON.stringify(obj));' },
+              { type: 'del', old: 7, new: null, text: '}' },
+              { type: 'add', old: null, new: 17, text: 'function sanitizeJSON(obj) {' },
+              { type: 'add', old: null, new: 18, text: '  try {' },
+              { type: 'add', old: null, new: 19, text: '    const str = JSON.stringify(obj);' },
+              { type: 'add', old: null, new: 20, text: '    return JSON.parse(str, (key, val) => {' },
+              { type: 'add', old: null, new: 21, text: '      if (typeof val === "string") return escapeHTML(val);' },
+              { type: 'add', old: null, new: 22, text: '      return val;' },
+              { type: 'add', old: null, new: 23, text: '    });' },
+              { type: 'add', old: null, new: 24, text: '  } catch (e) {' },
+              { type: 'add', old: null, new: 25, text: '    console.error("sanitizeJSON failed:", e);' },
+              { type: 'add', old: null, new: 26, text: '    return {};' },
+              { type: 'add', old: null, new: 27, text: '  }' },
+              { type: 'add', old: null, new: 28, text: '}' }
+            ]
+          }
+        ]
+      },
+      {
+        path: 'src/shared/form-validator.js',
+        hunks: [
+          {
+            header: '@@ -42,7 +42,11 @@ class FormValidator {',
+            lines: [
+              { type: 'context', old: 42, new: 42, text: 'class FormValidator {' },
+              { type: 'context', old: 43, new: 43, text: '  validateField(name, value) {' },
+              { type: 'del', old: 44, new: null, text: '    this.fields[name] = value;' },
+              { type: 'add', old: null, new: 44, text: '    const sanitized = typeof value === "string" ? escapeHTML(value) : value;' },
+              { type: 'add', old: null, new: 45, text: '    this.fields[name] = sanitized;' },
+              { type: 'context', old: 45, new: 46, text: '    const rules = this.rules[name];' },
+              { type: 'context', old: 46, new: 47, text: '    if (!rules) return true;' },
+              { type: 'context', old: 47, new: 48, text: '' },
+              { type: 'del', old: 48, new: null, text: '    if (rules.required && !value) {' },
+              { type: 'add', old: null, new: 49, text: '    if (rules.required && !sanitized) {' },
+              { type: 'context', old: 49, new: 50, text: '      return this.setError(name, "필수 입력 항목입니다.");' },
+              { type: 'context', old: 50, new: 51, text: '    }' }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    name: '성능 개선: 메모이제이션',
+    commit: {
+      hash: 'e2c6a03',
+      message: 'perf: 대용량 리스트 렌더링 메모이제이션 적용',
+      author: 'Yoon Optimizer',
+      date: '2026-02-16 18:05'
+    },
+    files: [
+      {
+        path: 'src/hooks/useFilteredData.ts',
+        hunks: [
+          {
+            header: '@@ -3,12 +3,18 @@ import { useMemo } from "react";',
+            lines: [
+              { type: 'context', old: 3, new: 3, text: 'import { useMemo } from "react";' },
+              { type: 'context', old: 4, new: 4, text: '' },
+              { type: 'del', old: 5, new: null, text: 'export function useFilteredData(data: any[], query: string) {' },
+              { type: 'del', old: 6, new: null, text: '  const filtered = data.filter(item =>' },
+              { type: 'del', old: 7, new: null, text: '    Object.values(item).some(v =>' },
+              { type: 'del', old: 8, new: null, text: '      String(v).toLowerCase().includes(query.toLowerCase())' },
+              { type: 'del', old: 9, new: null, text: '    )' },
+              { type: 'del', old: 10, new: null, text: '  );' },
+              { type: 'del', old: 11, new: null, text: '  return filtered;' },
+              { type: 'add', old: null, new: 5, text: 'export function useFilteredData(data: any[], query: string) {' },
+              { type: 'add', old: null, new: 6, text: '  const normalizedQuery = useMemo(' },
+              { type: 'add', old: null, new: 7, text: '    () => query.toLowerCase().trim(),' },
+              { type: 'add', old: null, new: 8, text: '    [query]' },
+              { type: 'add', old: null, new: 9, text: '  );' },
+              { type: 'add', old: null, new: 10, text: '' },
+              { type: 'add', old: null, new: 11, text: '  const filtered = useMemo(() => {' },
+              { type: 'add', old: null, new: 12, text: '    if (!normalizedQuery) return data;' },
+              { type: 'add', old: null, new: 13, text: '    return data.filter(item =>' },
+              { type: 'add', old: null, new: 14, text: '      Object.values(item).some(v =>' },
+              { type: 'add', old: null, new: 15, text: '        String(v).toLowerCase().includes(normalizedQuery)' },
+              { type: 'add', old: null, new: 16, text: '      )' },
+              { type: 'add', old: null, new: 17, text: '    );' },
+              { type: 'add', old: null, new: 18, text: '  }, [data, normalizedQuery]);' },
+              { type: 'add', old: null, new: 19, text: '' },
+              { type: 'add', old: null, new: 20, text: '  return filtered;' },
+              { type: 'context', old: 12, new: 21, text: '}' }
+            ]
+          }
+        ]
+      },
+      {
+        path: 'src/components/VirtualList.tsx',
+        hunks: [
+          {
+            header: '@@ -1,6 +1,7 @@',
+            lines: [
+              { type: 'del', old: 1, new: null, text: 'import React from "react";' },
+              { type: 'add', old: null, new: 1, text: 'import React, { memo, useCallback } from "react";' },
+              { type: 'context', old: 2, new: 2, text: '' },
+              { type: 'context', old: 3, new: 3, text: 'interface VirtualListProps {' },
+              { type: 'context', old: 4, new: 4, text: '  items: any[];' },
+              { type: 'context', old: 5, new: 5, text: '  rowHeight: number;' },
+              { type: 'context', old: 6, new: 6, text: '  renderItem: (item: any, index: number) => React.ReactNode;' }
+            ]
+          },
+          {
+            header: '@@ -22,5 +23,12 @@ export function VirtualList({ items, rowHeight, renderItem }: VirtualListProps) {',
+            lines: [
+              { type: 'context', old: 22, new: 23, text: '  );' },
+              { type: 'context', old: 23, new: 24, text: '}' },
+              { type: 'add', old: null, new: 25, text: '' },
+              { type: 'add', old: null, new: 26, text: 'const MemoizedRow = memo(function Row({ item, index, renderItem }: any) {' },
+              { type: 'add', old: null, new: 27, text: '  return <div className="virtual-row">{renderItem(item, index)}</div>;' },
+              { type: 'add', old: null, new: 28, text: '});' },
+              { type: 'add', old: null, new: 29, text: '' },
+              { type: 'add', old: null, new: 30, text: 'export const MemoizedVirtualList = memo(VirtualList);' }
+            ]
+          }
+        ]
+      },
+      {
+        path: 'src/utils/debounce.ts',
+        hunks: [
+          {
+            header: '@@ -1,6 +1,10 @@',
+            lines: [
+              { type: 'del', old: 1, new: null, text: 'export function debounce(fn: Function, ms: number) {' },
+              { type: 'del', old: 2, new: null, text: '  let timer: any;' },
+              { type: 'del', old: 3, new: null, text: '  return (...args: any[]) => {' },
+              { type: 'del', old: 4, new: null, text: '    clearTimeout(timer);' },
+              { type: 'del', old: 5, new: null, text: '    timer = setTimeout(() => fn(...args), ms);' },
+              { type: 'add', old: null, new: 1, text: 'export function debounce<T extends (...args: any[]) => any>(' },
+              { type: 'add', old: null, new: 2, text: '  fn: T,' },
+              { type: 'add', old: null, new: 3, text: '  ms: number' },
+              { type: 'add', old: null, new: 4, text: '): (...args: Parameters<T>) => void {' },
+              { type: 'add', old: null, new: 5, text: '  let timer: ReturnType<typeof setTimeout>;' },
+              { type: 'add', old: null, new: 6, text: '  return (...args: Parameters<T>) => {' },
+              { type: 'add', old: null, new: 7, text: '    clearTimeout(timer);' },
+              { type: 'add', old: null, new: 8, text: '    timer = setTimeout(() => fn(...args), ms);' },
+              { type: 'context', old: 6, new: 9, text: '  };' },
+              { type: 'context', old: 7, new: 10, text: '}' }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+];
+
+// ============================================
+// STATE
+// ============================================
+
+var state = {
+  activePreset: -1,
+  comments: {},      // key: "fileIdx-lineIdx" => { text, fileIdx, lineIdx }
+  openCommentKey: null // currently open inline comment editor
+};
+
+// ============================================
+// CORE FUNCTIONS
+// ============================================
+
+function resetAll() {
+  state = {
+    activePreset: -1,
+    comments: {},
+    openCommentKey: null
+  };
+  renderAll();
+}
+
+function toggleSection(header) {
+  header.parentElement.classList.toggle('collapsed');
+}
+
+function selectPreset(idx) {
+  state.activePreset = idx;
+  state.comments = {};
+  state.openCommentKey = null;
+  renderAll();
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+}
+
+// ============================================
+// RENDER
+// ============================================
+
+function renderAll() {
+  renderPresets();
+  renderCommitInfo();
+  renderFileList();
+  renderDiff();
+  renderSummary();
+  renderPrompt();
+}
+
+function renderPresets() {
+  var el = document.getElementById('presetsBar');
+  el.innerHTML = PRESETS.map(function(p, i) {
+    var cls = state.activePreset === i ? 'preset-btn active' : 'preset-btn';
+    return '<button class="' + cls + '" onclick="selectPreset(' + i + ')">' + escapeHtml(p.name) + '</button>';
+  }).join('');
+}
+
+function renderCommitInfo() {
+  var el = document.getElementById('commitInfo');
+  if (state.activePreset < 0) {
+    el.innerHTML = '<div class="empty-hint">프리셋을 선택하세요</div>';
+    return;
+  }
+  var c = PRESETS[state.activePreset].commit;
+  el.innerHTML =
+    '<div class="commit-hash">' + escapeHtml(c.hash) + '</div>' +
+    '<div class="commit-msg">' + escapeHtml(c.message) + '</div>' +
+    '<div class="commit-meta">' +
+      '<span>&#128100; ' + escapeHtml(c.author) + '</span>' +
+      '<span>&#128197; ' + escapeHtml(c.date) + '</span>' +
+    '</div>';
+}
+
+function renderFileList() {
+  var el = document.getElementById('fileList');
+  var badge = document.getElementById('fileCount');
+  if (state.activePreset < 0) {
+    el.innerHTML = '<div class="empty-hint">프리셋을 선택하세요</div>';
+    badge.textContent = '0개';
+    badge.classList.remove('has-data');
+    return;
+  }
+  var files = PRESETS[state.activePreset].files;
+  badge.textContent = files.length + '개';
+  badge.classList.add('has-data');
+
+  el.innerHTML = files.map(function(f, fi) {
+    var adds = 0, dels = 0;
+    f.hunks.forEach(function(h) {
+      h.lines.forEach(function(l) {
+        if (l.type === 'add') adds++;
+        if (l.type === 'del') dels++;
+      });
+    });
+    var ext = f.path.split('.').pop();
+    var icon = ext === 'ts' || ext === 'tsx' ? '&#128309;' : ext === 'js' || ext === 'jsx' ? '&#128993;' : '&#128196;';
+    return '<div class="file-item" onclick="scrollToFile(' + fi + ')">' +
+      '<span class="file-icon">' + icon + '</span>' +
+      '<span class="file-name">' + escapeHtml(f.path) + '</span>' +
+      '<span class="file-stats"><span class="add-count">+' + adds + '</span><span class="del-count">-' + dels + '</span></span>' +
+    '</div>';
+  }).join('');
+}
+
+function renderDiff() {
+  var el = document.getElementById('diffContent');
+  if (state.activePreset < 0) {
+    el.innerHTML = '<div class="empty-hint" style="text-align:center;padding:40px;">프리셋을 선택하여 Diff를 로드하세요</div>';
+    return;
+  }
+  var files = PRESETS[state.activePreset].files;
+  var html = '';
+  files.forEach(function(file, fi) {
+    var adds = 0, dels = 0;
+    file.hunks.forEach(function(h) {
+      h.lines.forEach(function(l) {
+        if (l.type === 'add') adds++;
+        if (l.type === 'del') dels++;
+      });
+    });
+
+    html += '<div class="diff-file-card" id="file-card-' + fi + '">';
+    html += '<div class="diff-file-header" onclick="toggleFileCard(' + fi + ')">';
+    html += '<span class="file-path"><span class="chevron">&#9654;</span> ' + escapeHtml(file.path) + '</span>';
+    html += '<span class="file-stat-pills">';
+    if (adds > 0) html += '<span class="stat-pill-add">+' + adds + '</span>';
+    if (dels > 0) html += '<span class="stat-pill-del">-' + dels + '</span>';
+    html += '</span>';
+    html += '</div>';
+    html += '<div class="diff-file-body">';
+    html += '<table class="diff-table">';
+
+    file.hunks.forEach(function(hunk) {
+      // Hunk header line
+      html += '<tr class="diff-line line-hunk">';
+      html += '<td class="line-num line-num-old"></td>';
+      html += '<td class="line-num"></td>';
+      html += '<td class="line-prefix"></td>';
+      html += '<td class="line-content">' + escapeHtml(hunk.header) + '</td>';
+      html += '</tr>';
+
+      hunk.lines.forEach(function(line, li) {
+        var key = fi + '-' + hunk.header + '-' + li;
+        var lineClass = 'diff-line';
+        var prefix = ' ';
+        if (line.type === 'add') { lineClass += ' line-add'; prefix = '+'; }
+        else if (line.type === 'del') { lineClass += ' line-del'; prefix = '-'; }
+        else { lineClass += ' line-context'; }
+
+        var hasComment = state.comments[key] && state.comments[key].text;
+        var commentBadge = hasComment ? '<span class="comment-badge">&#128172;</span>' : '';
+
+        html += '<tr class="' + lineClass + '" onclick="toggleComment(\'' + escapeHtml(key) + '\',' + fi + ')" data-key="' + escapeHtml(key) + '">';
+        html += '<td class="line-num line-num-old">' + (line.old !== null ? line.old : '') + '</td>';
+        html += '<td class="line-num">' + (line.new !== null ? line.new : '') + '</td>';
+        html += '<td class="line-prefix">' + prefix + '</td>';
+        html += '<td class="line-content">' + escapeHtml(line.text) + commentBadge + '</td>';
+        html += '</tr>';
+
+        // Saved comment display
+        if (hasComment && state.openCommentKey !== key) {
+          html += '<tr class="saved-comment-row">';
+          html += '<td colspan="4"><div class="saved-comment-display" onclick="toggleComment(\'' + escapeHtml(key) + '\',' + fi + ')">';
+          html += '<div class="comment-author">&#9998; 리뷰 코멘트</div>';
+          html += '<div>' + escapeHtml(state.comments[key].text) + '</div>';
+          html += '</div></td>';
+          html += '</tr>';
+        }
+
+        // Inline comment editor
+        if (state.openCommentKey === key) {
+          var existingText = (state.comments[key] && state.comments[key].text) || '';
+          html += '<tr class="inline-comment-row">';
+          html += '<td colspan="4"><div class="inline-comment-box">';
+          html += '<textarea id="comment-textarea" placeholder="코드 리뷰 코멘트를 입력하세요...">' + escapeHtml(existingText) + '</textarea>';
+          html += '<div class="comment-actions">';
+          html += '<button class="btn btn-cancel" onclick="cancelComment(event)">취소</button>';
+          html += '<button class="btn btn-primary" onclick="saveComment(event, \'' + escapeHtml(key) + '\',' + fi + ')">저장</button>';
+          html += '</div>';
+          html += '</div></td>';
+          html += '</tr>';
+        }
+      });
+    });
+
+    html += '</table>';
+    html += '</div>'; // diff-file-body
+    html += '</div>'; // diff-file-card
+  });
+
+  el.innerHTML = html;
+
+  // Focus textarea if open
+  if (state.openCommentKey !== null) {
+    var ta = document.getElementById('comment-textarea');
+    if (ta) {
+      ta.focus();
+      // Move cursor to end
+      ta.selectionStart = ta.selectionEnd = ta.value.length;
+    }
+  }
+}
+
+function renderSummary() {
+  var totalComments = 0;
+  var fileSet = {};
+  Object.keys(state.comments).forEach(function(key) {
+    if (state.comments[key] && state.comments[key].text) {
+      totalComments++;
+      fileSet[state.comments[key].fileIdx] = true;
+    }
+  });
+  var filesReviewed = Object.keys(fileSet).length;
+
+  document.getElementById('totalComments').textContent = totalComments;
+  document.getElementById('filesReviewed').textContent = filesReviewed;
+
+  var badge = document.getElementById('reviewBadge');
+  badge.textContent = totalComments + '건';
+  if (totalComments > 0) {
+    badge.classList.add('has-data');
+  } else {
+    badge.classList.remove('has-data');
+  }
+}
+
+function renderPrompt() {
+  var el = document.getElementById('promptOutput');
+  var entries = [];
+  if (state.activePreset < 0) {
+    el.innerHTML = '코드 리뷰 없음 - 라인을 클릭하여 리뷰를 시작하세요';
+    return;
+  }
+
+  var files = PRESETS[state.activePreset].files;
+
+  Object.keys(state.comments).forEach(function(key) {
+    var c = state.comments[key];
+    if (!c || !c.text) return;
+    // Parse key to find line info
+    var parts = key.split('-');
+    var fileIdx = parseInt(parts[0]);
+    var hunkHeader = parts.slice(1, parts.length - 1).join('-');
+    var lineIdx = parseInt(parts[parts.length - 1]);
+
+    var file = files[fileIdx];
+    if (!file) return;
+
+    // Find the actual line
+    var lineInfo = null;
+    file.hunks.forEach(function(h) {
+      if (h.header === hunkHeader && h.lines[lineIdx]) {
+        lineInfo = h.lines[lineIdx];
+      }
+    });
+
+    if (lineInfo) {
+      var lineNum = lineInfo.new !== null ? lineInfo.new : lineInfo.old;
+      entries.push({
+        filePath: file.path,
+        lineNum: lineNum,
+        code: lineInfo.text,
+        comment: c.text
+      });
+    }
+  });
+
+  if (entries.length === 0) {
+    el.innerHTML = '코드 리뷰 없음 - 라인을 클릭하여 리뷰를 시작하세요';
+    return;
+  }
+
+  // Sort by file path then line number
+  entries.sort(function(a, b) {
+    if (a.filePath !== b.filePath) return a.filePath.localeCompare(b.filePath);
+    return a.lineNum - b.lineNum;
+  });
+
+  var html = '';
+  var currentFile = '';
+  entries.forEach(function(e) {
+    if (e.filePath !== currentFile) {
+      if (currentFile) html += '\n';
+      html += '<span class="review-file">' + escapeHtml(e.filePath) + '</span>\n';
+      currentFile = e.filePath;
+    }
+    html += '  <span class="review-line">L' + e.lineNum + '</span> <span class="review-code">' + escapeHtml(e.code.trim()) + '</span>\n';
+    html += '  <span class="review-comment">&rarr; ' + escapeHtml(e.comment) + '</span>\n';
+  });
+
+  el.innerHTML = html;
+}
+
+// ============================================
+// INTERACTION
+// ============================================
+
+function toggleFileCard(fi) {
+  var card = document.getElementById('file-card-' + fi);
+  if (card) card.classList.toggle('collapsed');
+}
+
+function scrollToFile(fi) {
+  var card = document.getElementById('file-card-' + fi);
+  if (!card) return;
+  // Ensure it's not collapsed
+  card.classList.remove('collapsed');
+  card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function toggleComment(key, fileIdx) {
+  if (state.openCommentKey === key) {
+    state.openCommentKey = null;
+  } else {
+    state.openCommentKey = key;
+  }
+  renderDiff();
+}
+
+function saveComment(event, key, fileIdx) {
+  event.stopPropagation();
+  var ta = document.getElementById('comment-textarea');
+  var text = ta ? ta.value.trim() : '';
+
+  if (text) {
+    state.comments[key] = { text: text, fileIdx: fileIdx };
+  } else {
+    // Empty text = delete comment
+    delete state.comments[key];
+  }
+  state.openCommentKey = null;
+  renderDiff();
+  renderSummary();
+  renderPrompt();
+}
+
+function cancelComment(event) {
+  event.stopPropagation();
+  state.openCommentKey = null;
+  renderDiff();
+}
+
+function copyPrompt() {
+  var el = document.getElementById('promptOutput');
+  var text = el.innerText || el.textContent;
+  navigator.clipboard.writeText(text).then(function() {
+    var btn = document.getElementById('promptCopyBtn');
+    btn.textContent = '복사됨!';
+    btn.classList.add('copied');
+    setTimeout(function() {
+      btn.textContent = '리뷰 복사';
+      btn.classList.remove('copied');
+    }, 1500);
+  });
+}
+
+// ============================================
+// INIT
+// ============================================
+
+renderAll();
+</script>
+</body>
+</html>

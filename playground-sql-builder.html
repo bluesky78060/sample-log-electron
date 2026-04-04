@@ -1,0 +1,1922 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SQL Query Builder Playground</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #1a1a2e;
+  --panel: #16213e;
+  --panel-hover: #1a2744;
+  --border: #2a3a5c;
+  --accent: #e94560;
+  --accent-hover: #ff6b81;
+  --blue: #4fc3f7;
+  --green: #66bb6a;
+  --yellow: #ffd54f;
+  --orange: #ffb74d;
+  --purple: #ce93d8;
+  --pink: #f48fb1;
+  --text: #e0e0e0;
+  --text-dim: #8892a4;
+  --text-bright: #ffffff;
+  --input-bg: #0f1629;
+  --chip-bg: #2a3a5c;
+  --chip-active: #e94560;
+  --radius: 8px;
+  --radius-sm: 4px;
+  --shadow: 0 2px 8px rgba(0,0,0,0.3);
+  --transition: 0.2s ease;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app {
+  display: flex;
+  height: 100vh;
+}
+
+.left-panel {
+  width: 440px;
+  min-width: 380px;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.right-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sql-preview {
+  flex: 1;
+  min-height: 200px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.prompt-output {
+  flex: 1;
+  min-height: 150px;
+  background: var(--panel);
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.app-header h1 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-bright);
+}
+
+.app-header .subtitle {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.section {
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: border-color var(--transition);
+}
+
+.section:hover {
+  border-color: #3a4a6c;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  cursor: pointer;
+  user-select: none;
+  background: rgba(255,255,255,0.02);
+  position: relative;
+}
+
+.section-header:hover {
+  background: rgba(255,255,255,0.04);
+}
+
+.section-header::before {
+  content: '';
+  display: inline-block;
+  width: 0;
+  height: 0;
+  border-left: 5px solid var(--text-dim);
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  margin-right: 8px;
+  transition: transform var(--transition);
+  flex-shrink: 0;
+}
+
+.section:not(.collapsed) .section-header::before {
+  transform: rotate(90deg);
+}
+
+.section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--blue);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-title .keyword {
+  background: rgba(79,195,247,0.15);
+  color: var(--blue);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.section-badge {
+  font-size: 11px;
+  color: var(--text-dim);
+  background: var(--chip-bg);
+  padding: 2px 8px;
+  border-radius: 10px;
+  transition: all var(--transition);
+}
+
+.section-badge.has-data {
+  color: var(--accent);
+  background: rgba(233,69,96,0.15);
+  font-weight: 600;
+}
+
+.section-body {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.section.collapsed .section-body {
+  display: none;
+}
+
+.section.collapsed {
+  border-color: transparent;
+  background: transparent;
+}
+
+.section.collapsed .section-header {
+  background: rgba(255,255,255,0.02);
+  border-radius: var(--radius);
+}
+
+.section.collapsed:hover {
+  border-color: var(--border);
+}
+
+.chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--chip-bg);
+  color: var(--text);
+  transition: all var(--transition);
+  user-select: none;
+}
+
+.chip:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.chip.active {
+  background: var(--chip-active);
+  border-color: var(--chip-active);
+  color: white;
+}
+
+.chip .col-type {
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-left: 4px;
+}
+
+.chip.active .col-type {
+  color: rgba(255,255,255,0.7);
+}
+
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.check-row input[type="checkbox"] {
+  accent-color: var(--accent);
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+
+.check-row label {
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.check-row label .type-hint {
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+input[type="text"], input[type="number"], select, textarea {
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  padding: 6px 10px;
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color var(--transition);
+  width: 100%;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: var(--blue);
+}
+
+select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238892a4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  padding-right: 24px;
+}
+
+.dynamic-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 6px;
+  background: rgba(255,255,255,0.02);
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  transition: all var(--transition);
+}
+
+.dynamic-row:hover {
+  border-color: var(--border);
+}
+
+.dynamic-row select, .dynamic-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.dynamic-row .small-select {
+  flex: 0 0 auto;
+  width: 80px;
+}
+
+.dynamic-row .op-select {
+  flex: 0 0 auto;
+  width: 90px;
+}
+
+.btn {
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--chip-bg);
+  color: var(--text);
+  transition: all var(--transition);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn:hover {
+  background: var(--panel-hover);
+  border-color: var(--blue);
+  color: var(--blue);
+}
+
+.btn-add {
+  border-style: dashed;
+  width: 100%;
+  justify-content: center;
+  padding: 8px;
+}
+
+.btn-remove {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 14px;
+  color: var(--text-dim);
+}
+
+.btn-remove:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.presets-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.preset-btn {
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-dim);
+  transition: all var(--transition);
+}
+
+.preset-btn:hover {
+  border-color: var(--orange);
+  color: var(--orange);
+  background: rgba(255,183,77,0.1);
+}
+
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.slider-row input[type="range"] {
+  flex: 1;
+  accent-color: var(--accent);
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.slider-value {
+  font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
+  font-size: 13px;
+  color: var(--yellow);
+  min-width: 36px;
+  text-align: right;
+}
+
+.preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.preview-header h2 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-bright);
+}
+
+.sql-code {
+  font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  font-size: 13px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-all;
+  padding: 16px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  min-height: 80px;
+}
+
+.sql-code .kw { color: var(--blue); font-weight: 700; }
+.sql-code .tbl { color: var(--green); }
+.sql-code .col { color: var(--text-bright); }
+.sql-code .str { color: var(--yellow); }
+.sql-code .num { color: var(--orange); }
+.sql-code .op { color: var(--accent); }
+.sql-code .fn { color: var(--purple); font-weight: 600; }
+.sql-code .alias { color: var(--pink); font-style: italic; }
+.sql-code .comment { color: var(--text-dim); font-style: italic; }
+
+.prompt-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.prompt-header h2 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-bright);
+}
+
+.prompt-text {
+  font-size: 13px;
+  line-height: 1.7;
+  padding: 16px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  min-height: 60px;
+  color: var(--text);
+}
+
+.copy-btn {
+  padding: 6px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--accent);
+  background: transparent;
+  color: var(--accent);
+  transition: all var(--transition);
+}
+
+.copy-btn:hover {
+  background: var(--accent);
+  color: white;
+}
+
+.copy-btn.copied {
+  background: var(--green);
+  border-color: var(--green);
+  color: white;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.toggle {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  border-radius: 10px;
+  background: var(--chip-bg);
+  cursor: pointer;
+  border: 1px solid var(--border);
+  transition: all var(--transition);
+}
+
+.toggle.active {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.toggle::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: white;
+  transition: transform var(--transition);
+}
+
+.toggle.active::after {
+  transform: translateX(16px);
+}
+
+.multi-chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.multi-chip {
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-dim);
+  transition: all var(--transition);
+  user-select: none;
+}
+
+.multi-chip:hover {
+  border-color: var(--purple);
+  color: var(--purple);
+}
+
+.multi-chip.active {
+  background: rgba(206,147,216,0.2);
+  border-color: var(--purple);
+  color: var(--purple);
+}
+
+.dir-toggle {
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-dim);
+  transition: all var(--transition);
+  min-width: 46px;
+  text-align: center;
+}
+
+.dir-toggle:hover {
+  border-color: var(--yellow);
+  color: var(--yellow);
+}
+
+.dir-toggle.desc {
+  color: var(--yellow);
+  border-color: var(--yellow);
+  background: rgba(255,213,79,0.1);
+}
+
+.empty-hint {
+  font-size: 12px;
+  color: var(--text-dim);
+  font-style: italic;
+  padding: 8px 0;
+}
+
+.reset-btn {
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-dim);
+  transition: all var(--transition);
+}
+
+.reset-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #4a5a7c; }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- LEFT PANEL -->
+  <div class="left-panel" id="leftPanel">
+    <div class="app-header">
+      <div>
+        <h1>SQL Query Builder</h1>
+        <div class="subtitle">Interactive SQL Playground</div>
+      </div>
+      <button class="reset-btn" onclick="resetAll()">초기화</button>
+    </div>
+
+    <!-- Presets -->
+    <div class="section" id="presetSection">
+      <div class="section-header" onclick="toggleSection(this)">
+        <span class="section-title">프리셋 <span class="keyword">PRESETS</span></span>
+      </div>
+      <div class="section-body">
+        <div class="presets-bar" id="presetsBar"></div>
+      </div>
+    </div>
+
+    <!-- Tables -->
+    <div class="section" id="tableSection">
+      <div class="section-header" onclick="toggleSection(this)">
+        <span class="section-title">테이블 선택 <span class="keyword">FROM</span></span>
+        <span class="section-badge" id="tableCount">0개 선택</span>
+      </div>
+      <div class="section-body">
+        <div class="chip-group" id="tableChips"></div>
+      </div>
+    </div>
+
+    <!-- Select Columns -->
+    <div class="section" id="selectSection">
+      <div class="section-header" onclick="toggleSection(this)">
+        <span class="section-title">컬럼 선택 <span class="keyword">SELECT</span></span>
+        <span class="section-badge" id="colCount">SELECT *</span>
+      </div>
+      <div class="section-body">
+        <div class="toggle-row">
+          <div class="toggle" id="selectAllToggle" onclick="toggleSelectAll()"></div>
+          <label style="font-size:12px;cursor:pointer" onclick="toggleSelectAll()">SELECT * (모든 컬럼)</label>
+        </div>
+        <div id="columnChecks"></div>
+      </div>
+    </div>
+
+    <!-- Aggregations -->
+    <div class="section collapsed" id="aggSection">
+      <div class="section-header" onclick="toggleSection(this)">
+        <span class="section-title">집계 함수 <span class="keyword">AGGREGATIONS</span></span>
+        <span class="section-badge" id="aggCount">0개</span>
+      </div>
+      <div class="section-body">
+        <div id="aggRows"></div>
+        <button class="btn btn-add" onclick="addAggregation()">+ 집계 함수 추가</button>
+      </div>
+    </div>
+
+    <!-- JOIN -->
+    <div class="section collapsed" id="joinSection">
+      <div class="section-header" onclick="toggleSection(this)">
+        <span class="section-title">조인 <span class="keyword">JOIN</span></span>
+        <span class="section-badge" id="joinCount">0개</span>
+      </div>
+      <div class="section-body">
+        <div id="joinRows"></div>
+        <button class="btn btn-add" onclick="addJoin()">+ JOIN 추가</button>
+      </div>
+    </div>
+
+    <!-- WHERE -->
+    <div class="section collapsed" id="whereSection">
+      <div class="section-header" onclick="toggleSection(this)">
+        <span class="section-title">필터 조건 <span class="keyword">WHERE</span></span>
+        <span class="section-badge" id="whereCount">0개</span>
+      </div>
+      <div class="section-body">
+        <div id="whereRows"></div>
+        <button class="btn btn-add" onclick="addWhere()">+ 조건 추가</button>
+      </div>
+    </div>
+
+    <!-- GROUP BY -->
+    <div class="section collapsed" id="groupSection">
+      <div class="section-header" onclick="toggleSection(this)">
+        <span class="section-title">그룹화 <span class="keyword">GROUP BY</span></span>
+        <span class="section-badge" id="groupCount">0개</span>
+      </div>
+      <div class="section-body">
+        <div class="multi-chip-group" id="groupByChips"></div>
+        <div class="empty-hint" id="groupByHint">테이블을 먼저 선택하세요</div>
+      </div>
+    </div>
+
+    <!-- HAVING -->
+    <div class="section collapsed" id="havingSection">
+      <div class="section-header" onclick="toggleSection(this)">
+        <span class="section-title">그룹 필터 <span class="keyword">HAVING</span></span>
+        <span class="section-badge" id="havingCount">0개</span>
+      </div>
+      <div class="section-body">
+        <div id="havingRows"></div>
+        <button class="btn btn-add" onclick="addHaving()">+ HAVING 조건 추가</button>
+      </div>
+    </div>
+
+    <!-- ORDER BY -->
+    <div class="section collapsed" id="orderSection">
+      <div class="section-header" onclick="toggleSection(this)">
+        <span class="section-title">정렬 <span class="keyword">ORDER BY</span></span>
+        <span class="section-badge" id="orderCount">0개</span>
+      </div>
+      <div class="section-body">
+        <div id="orderRows"></div>
+        <button class="btn btn-add" onclick="addOrderBy()">+ 정렬 추가</button>
+      </div>
+    </div>
+
+    <!-- LIMIT -->
+    <div class="section collapsed" id="limitSection">
+      <div class="section-header" onclick="toggleSection(this)">
+        <span class="section-title">제한 <span class="keyword">LIMIT</span></span>
+        <span class="section-badge" id="limitBadge">100</span>
+      </div>
+      <div class="section-body">
+        <div class="slider-row">
+          <input type="range" min="1" max="500" value="100" id="limitSlider" oninput="onLimitChange(this.value)">
+          <span class="slider-value" id="limitValue">100</span>
+        </div>
+        <div class="toggle-row" style="margin-top:4px">
+          <div class="toggle active" id="limitToggle" onclick="toggleLimit()"></div>
+          <label style="font-size:12px;cursor:pointer" onclick="toggleLimit()">LIMIT 사용</label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="right-panel">
+    <div class="sql-preview">
+      <div class="preview-header">
+        <h2>SQL 미리보기</h2>
+        <button class="copy-btn" id="sqlCopyBtn" onclick="copySql()">SQL 복사</button>
+      </div>
+      <div class="sql-code" id="sqlPreview"></div>
+    </div>
+    <div class="prompt-output">
+      <div class="prompt-header">
+        <h2>프롬프트 출력</h2>
+        <button class="copy-btn" id="promptCopyBtn" onclick="copyPrompt()">프롬프트 복사</button>
+      </div>
+      <div class="prompt-text" id="promptOutput"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================
+// DATA MODEL
+// ============================================
+
+var TABLES = {
+  users: {
+    label: 'users',
+    columns: [
+      { name: 'id', type: 'INT', pk: true },
+      { name: 'name', type: 'VARCHAR' },
+      { name: 'email', type: 'VARCHAR' },
+      { name: 'age', type: 'INT' },
+      { name: 'city', type: 'VARCHAR' },
+      { name: 'created_at', type: 'TIMESTAMP' }
+    ]
+  },
+  orders: {
+    label: 'orders',
+    columns: [
+      { name: 'id', type: 'INT', pk: true },
+      { name: 'user_id', type: 'INT', fk: 'users.id' },
+      { name: 'product_id', type: 'INT', fk: 'products.id' },
+      { name: 'total', type: 'DECIMAL' },
+      { name: 'status', type: 'VARCHAR' },
+      { name: 'ordered_at', type: 'TIMESTAMP' }
+    ]
+  },
+  products: {
+    label: 'products',
+    columns: [
+      { name: 'id', type: 'INT', pk: true },
+      { name: 'name', type: 'VARCHAR' },
+      { name: 'category', type: 'VARCHAR' },
+      { name: 'price', type: 'DECIMAL' },
+      { name: 'stock', type: 'INT' }
+    ]
+  },
+  categories: {
+    label: 'categories',
+    columns: [
+      { name: 'id', type: 'INT', pk: true },
+      { name: 'name', type: 'VARCHAR' },
+      { name: 'description', type: 'TEXT' }
+    ]
+  }
+};
+
+var OPERATORS = ['=', '!=', '>', '<', '>=', '<=', 'LIKE', 'IN', 'IS NULL', 'IS NOT NULL', 'BETWEEN'];
+var JOIN_TYPES = ['INNER JOIN', 'LEFT JOIN', 'RIGHT JOIN', 'FULL OUTER JOIN'];
+var AGG_FUNCS = ['COUNT', 'SUM', 'AVG', 'MIN', 'MAX'];
+
+var FK_MAP = {
+  'orders.user_id': 'users.id',
+  'orders.product_id': 'products.id'
+};
+
+// ============================================
+// STATE
+// ============================================
+
+var state = getDefaultState();
+
+function getDefaultState() {
+  return {
+    selectedTables: [],
+    selectAll: true,
+    selectedColumns: [],
+    joins: [],
+    wheres: [],
+    groupBy: [],
+    having: [],
+    orderBy: [],
+    limitEnabled: true,
+    limitValue: 100,
+    aggregations: []
+  };
+}
+
+// ============================================
+// PRESETS
+// ============================================
+
+var PRESETS = [
+  {
+    name: 'Simple Select',
+    label: '간단 조회',
+    apply: function() {
+      resetState();
+      state.selectedTables = ['users'];
+      state.selectAll = true;
+      state.limitEnabled = true;
+      state.limitValue = 10;
+    }
+  },
+  {
+    name: 'User Orders',
+    label: '사용자 주문',
+    apply: function() {
+      resetState();
+      state.selectedTables = ['users', 'orders'];
+      state.selectAll = false;
+      state.selectedColumns = [
+        { table: 'users', column: 'name' },
+        { table: 'users', column: 'email' },
+        { table: 'orders', column: 'total' },
+        { table: 'orders', column: 'status' },
+        { table: 'orders', column: 'ordered_at' }
+      ];
+      state.joins = [
+        { type: 'INNER JOIN', table: 'orders', leftCol: 'users.id', rightCol: 'orders.user_id' }
+      ];
+      state.wheres = [
+        { column: 'orders.ordered_at', operator: '>=', value: "'2024-01-01'", conjunction: 'AND' }
+      ];
+      state.orderBy = [{ column: 'orders.ordered_at', direction: 'DESC' }];
+      state.limitEnabled = true;
+      state.limitValue = 50;
+    }
+  },
+  {
+    name: 'Top Products',
+    label: '인기 상품',
+    apply: function() {
+      resetState();
+      state.selectedTables = ['products'];
+      state.selectAll = false;
+      state.selectedColumns = [
+        { table: 'products', column: 'category' }
+      ];
+      state.aggregations = [
+        { func: 'COUNT', column: 'products.id', alias: 'product_count' }
+      ];
+      state.groupBy = ['products.category'];
+      state.orderBy = [{ column: 'product_count', direction: 'DESC' }];
+      state.limitEnabled = true;
+      state.limitValue = 10;
+    }
+  },
+  {
+    name: 'Revenue Report',
+    label: '매출 리포트',
+    apply: function() {
+      resetState();
+      state.selectedTables = ['users', 'orders', 'products'];
+      state.selectAll = false;
+      state.selectedColumns = [
+        { table: 'users', column: 'name' },
+        { table: 'products', column: 'category' }
+      ];
+      state.aggregations = [
+        { func: 'SUM', column: 'orders.total', alias: 'total_revenue' },
+        { func: 'COUNT', column: 'orders.id', alias: 'order_count' }
+      ];
+      state.joins = [
+        { type: 'INNER JOIN', table: 'orders', leftCol: 'users.id', rightCol: 'orders.user_id' },
+        { type: 'INNER JOIN', table: 'products', leftCol: 'orders.product_id', rightCol: 'products.id' }
+      ];
+      state.groupBy = ['users.name', 'products.category'];
+      state.having = [
+        { expression: 'SUM(orders.total)', operator: '>', value: '100', conjunction: 'AND' }
+      ];
+      state.orderBy = [{ column: 'total_revenue', direction: 'DESC' }];
+      state.limitEnabled = true;
+      state.limitValue = 20;
+    }
+  },
+  {
+    name: 'Active Users',
+    label: '활성 사용자',
+    apply: function() {
+      resetState();
+      state.selectedTables = ['users'];
+      state.selectAll = true;
+      state.wheres = [
+        { column: 'users.age', operator: '>=', value: '18', conjunction: 'AND' },
+        { column: 'users.age', operator: '<=', value: '65', conjunction: 'AND' },
+        { column: 'users.city', operator: 'IS NOT NULL', value: '', conjunction: 'AND' },
+        { column: 'users.email', operator: 'LIKE', value: "'%@gmail.com'", conjunction: 'AND' }
+      ];
+      state.orderBy = [{ column: 'users.created_at', direction: 'DESC' }];
+      state.limitEnabled = true;
+      state.limitValue = 100;
+    }
+  }
+];
+
+// ============================================
+// HELPERS
+// ============================================
+
+function resetState() {
+  state = getDefaultState();
+}
+
+function getAllColumns() {
+  var cols = [];
+  var tableSet = new Set(state.selectedTables.concat(state.joins.map(function(j) { return j.table; })));
+  tableSet.forEach(function(t) {
+    if (TABLES[t]) {
+      TABLES[t].columns.forEach(function(c) {
+        cols.push({ table: t, column: c.name, type: c.type, pk: c.pk, fk: c.fk });
+      });
+    }
+  });
+  return cols;
+}
+
+function getAllColumnNames() {
+  return getAllColumns().map(function(c) { return c.table + '.' + c.column; });
+}
+
+function suggestJoinCondition(fromTable, toTable) {
+  var entries = Object.entries(FK_MAP);
+  for (var i = 0; i < entries.length; i++) {
+    var fk = entries[i][0];
+    var pk = entries[i][1];
+    var fkParts = fk.split('.');
+    var pkParts = pk.split('.');
+    if (fkParts[0] === toTable && pkParts[0] === fromTable) {
+      return { left: pk, right: fk };
+    }
+    if (pkParts[0] === toTable && fkParts[0] === fromTable) {
+      return { left: fk, right: pk };
+    }
+    if (fkParts[0] === toTable && state.selectedTables.indexOf(pkParts[0]) >= 0) {
+      return { left: pk, right: fk };
+    }
+    if (pkParts[0] === toTable && state.selectedTables.indexOf(fkParts[0]) >= 0) {
+      return { left: fk, right: pk };
+    }
+  }
+  return { left: '', right: '' };
+}
+
+function escapeAttr(str) {
+  return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// ============================================
+// RENDER
+// ============================================
+
+function renderAll() {
+  renderPresets();
+  renderTableChips();
+  renderColumnChecks();
+  renderAggRows();
+  renderJoinRows();
+  renderWhereRows();
+  renderGroupByChips();
+  renderHavingRows();
+  renderOrderByRows();
+  renderLimitControls();
+  updateBadges();
+  renderSqlPreview();
+  renderPromptOutput();
+}
+
+function renderPresets() {
+  var el = document.getElementById('presetsBar');
+  el.innerHTML = PRESETS.map(function(p, i) {
+    return '<button class="preset-btn" onclick="applyPreset(' + i + ')">' + p.label + '</button>';
+  }).join('');
+}
+
+function renderTableChips() {
+  var el = document.getElementById('tableChips');
+  el.innerHTML = Object.keys(TABLES).map(function(key) {
+    var t = TABLES[key];
+    var active = state.selectedTables.indexOf(key) >= 0 ? ' active' : '';
+    return '<span class="chip' + active + '" onclick="toggleTable(\'' + key + '\')">' + t.label + ' <span class="col-type">' + t.columns.length + 'cols</span></span>';
+  }).join('');
+}
+
+function renderColumnChecks() {
+  var el = document.getElementById('columnChecks');
+  var toggle = document.getElementById('selectAllToggle');
+
+  if (state.selectAll) {
+    toggle.classList.add('active');
+  } else {
+    toggle.classList.remove('active');
+  }
+
+  if (state.selectedTables.length === 0) {
+    el.innerHTML = '<div class="empty-hint">테이블을 먼저 선택하세요</div>';
+    return;
+  }
+
+  if (state.selectAll) {
+    el.innerHTML = '<div class="empty-hint">모든 컬럼이 선택됩니다</div>';
+    return;
+  }
+
+  var html = '';
+  for (var ti = 0; ti < state.selectedTables.length; ti++) {
+    var t = state.selectedTables[ti];
+    var table = TABLES[t];
+    if (!table) continue;
+    html += '<div style="margin-top:6px;font-size:11px;color:var(--green);font-weight:600">' + t + '</div>';
+    for (var ci = 0; ci < table.columns.length; ci++) {
+      var c = table.columns[ci];
+      var checked = state.selectedColumns.some(function(sc) { return sc.table === t && sc.column === c.name; });
+      html += '<div class="check-row">' +
+        '<input type="checkbox" id="col_' + t + '_' + c.name + '" ' + (checked ? 'checked' : '') + ' onchange="toggleColumn(\'' + t + '\',\'' + c.name + '\')">' +
+        '<label for="col_' + t + '_' + c.name + '">' + c.name + ' <span class="type-hint">' + c.type + '</span></label>' +
+        '</div>';
+    }
+  }
+  el.innerHTML = html;
+}
+
+function renderAggRows() {
+  var el = document.getElementById('aggRows');
+  var allCols = getAllColumnNames();
+
+  if (state.aggregations.length === 0) {
+    el.innerHTML = '';
+    return;
+  }
+
+  el.innerHTML = state.aggregations.map(function(a, i) {
+    var funcOpts = AGG_FUNCS.map(function(f) { return '<option value="' + f + '" ' + (a.func === f ? 'selected' : '') + '>' + f + '</option>'; }).join('');
+    var colOpts = ['*'].concat(allCols).map(function(c) { return '<option value="' + c + '" ' + (a.column === c ? 'selected' : '') + '>' + c + '</option>'; }).join('');
+    return '<div class="dynamic-row">' +
+      '<select class="small-select" onchange="updateAgg(' + i + ',\'func\',this.value)">' + funcOpts + '</select>' +
+      '<select onchange="updateAgg(' + i + ',\'column\',this.value)">' + colOpts + '</select>' +
+      '<input type="text" placeholder="별칭 (alias)" value="' + escapeAttr(a.alias || '') + '" onchange="updateAgg(' + i + ',\'alias\',this.value)" style="flex:0 0 110px">' +
+      '<button class="btn btn-remove" onclick="removeAgg(' + i + ')">x</button>' +
+      '</div>';
+  }).join('');
+}
+
+function renderJoinRows() {
+  var el = document.getElementById('joinRows');
+  var allTables = Object.keys(TABLES);
+
+  if (state.joins.length === 0) {
+    el.innerHTML = '';
+    return;
+  }
+
+  function allAvailableCols() {
+    var cols = [];
+    var tables = new Set(state.selectedTables.concat(state.joins.map(function(j) { return j.table; })));
+    tables.forEach(function(t) {
+      if (TABLES[t]) {
+        TABLES[t].columns.forEach(function(c) {
+          cols.push(t + '.' + c.name);
+        });
+      }
+    });
+    return cols;
+  }
+
+  el.innerHTML = state.joins.map(function(j, i) {
+    var typeOpts = JOIN_TYPES.map(function(t) { return '<option value="' + t + '" ' + (j.type === t ? 'selected' : '') + '>' + t + '</option>'; }).join('');
+    var tableOpts = allTables.map(function(t) { return '<option value="' + t + '" ' + (j.table === t ? 'selected' : '') + '>' + t + '</option>'; }).join('');
+    var cols = allAvailableCols();
+    var leftOpts = [''].concat(cols).map(function(c) { return '<option value="' + c + '" ' + (j.leftCol === c ? 'selected' : '') + '>' + (c || '-- 좌측 --') + '</option>'; }).join('');
+    var rightOpts = [''].concat(cols).map(function(c) { return '<option value="' + c + '" ' + (j.rightCol === c ? 'selected' : '') + '>' + (c || '-- 우측 --') + '</option>'; }).join('');
+
+    return '<div class="dynamic-row" style="flex-wrap:wrap">' +
+      '<select class="small-select" style="width:120px" onchange="updateJoin(' + i + ',\'type\',this.value)">' + typeOpts + '</select>' +
+      '<select style="flex:0 0 90px" onchange="updateJoinTable(' + i + ',this.value)">' + tableOpts + '</select>' +
+      '<span style="font-size:11px;color:var(--text-dim)">ON</span>' +
+      '<select style="flex:1" onchange="updateJoin(' + i + ',\'leftCol\',this.value)">' + leftOpts + '</select>' +
+      '<span style="font-size:11px;color:var(--op)">=</span>' +
+      '<select style="flex:1" onchange="updateJoin(' + i + ',\'rightCol\',this.value)">' + rightOpts + '</select>' +
+      '<button class="btn btn-remove" onclick="removeJoin(' + i + ')">x</button>' +
+      '</div>';
+  }).join('');
+}
+
+function renderWhereRows() {
+  var el = document.getElementById('whereRows');
+  var allCols = getAllColumnNames();
+
+  if (state.wheres.length === 0) {
+    el.innerHTML = '';
+    return;
+  }
+
+  el.innerHTML = state.wheres.map(function(w, i) {
+    var colOpts = [''].concat(allCols).map(function(c) { return '<option value="' + c + '" ' + (w.column === c ? 'selected' : '') + '>' + (c || '-- 컬럼 --') + '</option>'; }).join('');
+    var opOpts = OPERATORS.map(function(o) { return '<option value="' + o + '" ' + (w.operator === o ? 'selected' : '') + '>' + o + '</option>'; }).join('');
+    var needsValue = ['IS NULL', 'IS NOT NULL'].indexOf(w.operator) < 0;
+    var conjOpts = i === 0 ? '' : '<select class="small-select" style="width:56px" onchange="updateWhere(' + i + ',\'conjunction\',this.value)">' +
+      '<option value="AND" ' + (w.conjunction === 'AND' ? 'selected' : '') + '>AND</option>' +
+      '<option value="OR" ' + (w.conjunction === 'OR' ? 'selected' : '') + '>OR</option>' +
+      '</select>';
+
+    return '<div class="dynamic-row">' +
+      conjOpts +
+      '<select onchange="updateWhere(' + i + ',\'column\',this.value)">' + colOpts + '</select>' +
+      '<select class="op-select" onchange="updateWhere(' + i + ',\'operator\',this.value)">' + opOpts + '</select>' +
+      (needsValue ? '<input type="text" placeholder="값" value="' + escapeAttr(w.value) + '" onchange="updateWhere(' + i + ',\'value\',this.value)">' : '') +
+      '<button class="btn btn-remove" onclick="removeWhere(' + i + ')">x</button>' +
+      '</div>';
+  }).join('');
+}
+
+function renderGroupByChips() {
+  var el = document.getElementById('groupByChips');
+  var hint = document.getElementById('groupByHint');
+  var allCols = getAllColumnNames();
+
+  if (allCols.length === 0) {
+    el.innerHTML = '';
+    hint.style.display = 'block';
+    return;
+  }
+
+  hint.style.display = 'none';
+  el.innerHTML = allCols.map(function(c) {
+    var active = state.groupBy.indexOf(c) >= 0 ? ' active' : '';
+    return '<span class="multi-chip' + active + '" onclick="toggleGroupBy(\'' + c + '\')">' + c + '</span>';
+  }).join('');
+}
+
+function renderHavingRows() {
+  var el = document.getElementById('havingRows');
+
+  if (state.having.length === 0) {
+    el.innerHTML = '';
+    return;
+  }
+
+  el.innerHTML = state.having.map(function(h, i) {
+    var ops = ['=', '!=', '>', '<', '>=', '<='];
+    var opOpts = ops.map(function(o) { return '<option value="' + o + '" ' + (h.operator === o ? 'selected' : '') + '>' + o + '</option>'; }).join('');
+    var conjOpts = i === 0 ? '' : '<select class="small-select" style="width:56px" onchange="updateHaving(' + i + ',\'conjunction\',this.value)">' +
+      '<option value="AND" ' + (h.conjunction === 'AND' ? 'selected' : '') + '>AND</option>' +
+      '<option value="OR" ' + (h.conjunction === 'OR' ? 'selected' : '') + '>OR</option>' +
+      '</select>';
+
+    return '<div class="dynamic-row">' +
+      conjOpts +
+      '<input type="text" placeholder="예: COUNT(*)" value="' + escapeAttr(h.expression) + '" onchange="updateHaving(' + i + ',\'expression\',this.value)">' +
+      '<select class="op-select" onchange="updateHaving(' + i + ',\'operator\',this.value)">' + opOpts + '</select>' +
+      '<input type="text" placeholder="값" value="' + escapeAttr(h.value) + '" onchange="updateHaving(' + i + ',\'value\',this.value)">' +
+      '<button class="btn btn-remove" onclick="removeHaving(' + i + ')">x</button>' +
+      '</div>';
+  }).join('');
+}
+
+function renderOrderByRows() {
+  var el = document.getElementById('orderRows');
+  var allCols = getAllColumnNames();
+  var aliases = state.aggregations.filter(function(a) { return a.alias; }).map(function(a) { return a.alias; });
+  var allOptions = allCols.concat(aliases);
+
+  if (state.orderBy.length === 0) {
+    el.innerHTML = '';
+    return;
+  }
+
+  el.innerHTML = state.orderBy.map(function(o, i) {
+    var colOpts = [''].concat(allOptions).map(function(c) { return '<option value="' + c + '" ' + (o.column === c ? 'selected' : '') + '>' + (c || '-- 컬럼 --') + '</option>'; }).join('');
+    var dirClass = o.direction === 'DESC' ? ' desc' : '';
+
+    return '<div class="dynamic-row">' +
+      '<select onchange="updateOrderBy(' + i + ',\'column\',this.value)">' + colOpts + '</select>' +
+      '<button class="dir-toggle' + dirClass + '" onclick="toggleOrderDir(' + i + ')">' + o.direction + '</button>' +
+      '<button class="btn btn-remove" onclick="removeOrderBy(' + i + ')">x</button>' +
+      '</div>';
+  }).join('');
+}
+
+function renderLimitControls() {
+  var slider = document.getElementById('limitSlider');
+  var value = document.getElementById('limitValue');
+  var toggle = document.getElementById('limitToggle');
+
+  slider.value = state.limitValue;
+  value.textContent = state.limitValue;
+
+  if (state.limitEnabled) {
+    toggle.classList.add('active');
+  } else {
+    toggle.classList.remove('active');
+  }
+}
+
+function updateBadges() {
+  function setBadge(id, text, hasData) {
+    var el = document.getElementById(id);
+    el.textContent = text;
+    if (hasData) { el.classList.add('has-data'); } else { el.classList.remove('has-data'); }
+  }
+
+  setBadge('tableCount', state.selectedTables.length + '개 선택', state.selectedTables.length > 0);
+  setBadge('joinCount', state.joins.length + '개', state.joins.length > 0);
+  setBadge('whereCount', state.wheres.length + '개', state.wheres.length > 0);
+  setBadge('groupCount', state.groupBy.length + '개', state.groupBy.length > 0);
+  setBadge('havingCount', state.having.length + '개', state.having.length > 0);
+  setBadge('orderCount', state.orderBy.length + '개', state.orderBy.length > 0);
+  setBadge('aggCount', state.aggregations.length + '개', state.aggregations.length > 0);
+  setBadge('limitBadge', state.limitEnabled ? state.limitValue : 'OFF', state.limitEnabled);
+
+  if (state.selectAll) {
+    setBadge('colCount', 'SELECT *', false);
+  } else {
+    var n = state.selectedColumns.length + state.aggregations.length;
+    setBadge('colCount', n + '개 선택', n > 0);
+  }
+}
+
+// ============================================
+// EVENT HANDLERS
+// ============================================
+
+function toggleSection(header) {
+  header.parentElement.classList.toggle('collapsed');
+}
+
+function toggleTable(name) {
+  var idx = state.selectedTables.indexOf(name);
+  if (idx >= 0) {
+    state.selectedTables.splice(idx, 1);
+    state.selectedColumns = state.selectedColumns.filter(function(c) { return c.table !== name; });
+    state.groupBy = state.groupBy.filter(function(g) { return g.indexOf(name + '.') !== 0; });
+    state.orderBy = state.orderBy.filter(function(o) { return o.column.indexOf(name + '.') !== 0; });
+    state.joins = state.joins.filter(function(j) { return j.table !== name; });
+    state.wheres = state.wheres.filter(function(w) { return w.column.indexOf(name + '.') !== 0; });
+    state.aggregations = state.aggregations.filter(function(a) { return a.column.indexOf(name + '.') !== 0; });
+  } else {
+    state.selectedTables.push(name);
+  }
+  renderAll();
+}
+
+function toggleSelectAll() {
+  state.selectAll = !state.selectAll;
+  if (state.selectAll) {
+    state.selectedColumns = [];
+  }
+  renderAll();
+}
+
+function toggleColumn(table, column) {
+  var idx = state.selectedColumns.findIndex(function(c) { return c.table === table && c.column === column; });
+  if (idx >= 0) {
+    state.selectedColumns.splice(idx, 1);
+  } else {
+    state.selectedColumns.push({ table: table, column: column });
+  }
+  renderAll();
+}
+
+function addJoin() {
+  var availableTables = Object.keys(TABLES);
+  var defaultTable = availableTables.find(function(t) { return state.selectedTables.indexOf(t) < 0; }) || availableTables[0];
+  var mainTable = state.selectedTables[0] || '';
+  var suggestion = suggestJoinCondition(mainTable, defaultTable);
+
+  state.joins.push({
+    type: 'INNER JOIN',
+    table: defaultTable,
+    leftCol: suggestion.left,
+    rightCol: suggestion.right
+  });
+  renderAll();
+}
+
+function updateJoin(i, field, value) {
+  state.joins[i][field] = value;
+  renderAll();
+}
+
+function updateJoinTable(i, newTable) {
+  state.joins[i].table = newTable;
+  var mainTable = state.selectedTables[0] || '';
+  var suggestion = suggestJoinCondition(mainTable, newTable);
+  state.joins[i].leftCol = suggestion.left;
+  state.joins[i].rightCol = suggestion.right;
+  renderAll();
+}
+
+function removeJoin(i) {
+  state.joins.splice(i, 1);
+  renderAll();
+}
+
+function addWhere() {
+  var allCols = getAllColumnNames();
+  state.wheres.push({
+    column: allCols[0] || '',
+    operator: '=',
+    value: '',
+    conjunction: 'AND'
+  });
+  renderAll();
+}
+
+function updateWhere(i, field, value) {
+  state.wheres[i][field] = value;
+  renderAll();
+}
+
+function removeWhere(i) {
+  state.wheres.splice(i, 1);
+  renderAll();
+}
+
+function toggleGroupBy(col) {
+  var idx = state.groupBy.indexOf(col);
+  if (idx >= 0) {
+    state.groupBy.splice(idx, 1);
+  } else {
+    state.groupBy.push(col);
+  }
+  renderAll();
+}
+
+function addHaving() {
+  state.having.push({
+    expression: '',
+    operator: '>',
+    value: '',
+    conjunction: 'AND'
+  });
+  renderAll();
+}
+
+function updateHaving(i, field, value) {
+  state.having[i][field] = value;
+  renderAll();
+}
+
+function removeHaving(i) {
+  state.having.splice(i, 1);
+  renderAll();
+}
+
+function addOrderBy() {
+  var allCols = getAllColumnNames();
+  var aliases = state.aggregations.filter(function(a) { return a.alias; }).map(function(a) { return a.alias; });
+  var options = allCols.concat(aliases);
+  state.orderBy.push({
+    column: options[0] || '',
+    direction: 'ASC'
+  });
+  renderAll();
+}
+
+function updateOrderBy(i, field, value) {
+  state.orderBy[i][field] = value;
+  renderAll();
+}
+
+function toggleOrderDir(i) {
+  state.orderBy[i].direction = state.orderBy[i].direction === 'ASC' ? 'DESC' : 'ASC';
+  renderAll();
+}
+
+function removeOrderBy(i) {
+  state.orderBy.splice(i, 1);
+  renderAll();
+}
+
+function onLimitChange(val) {
+  state.limitValue = parseInt(val);
+  renderAll();
+}
+
+function toggleLimit() {
+  state.limitEnabled = !state.limitEnabled;
+  renderAll();
+}
+
+function addAggregation() {
+  var allCols = getAllColumnNames();
+  state.aggregations.push({
+    func: 'COUNT',
+    column: allCols[0] || '*',
+    alias: ''
+  });
+  renderAll();
+}
+
+function updateAgg(i, field, value) {
+  state.aggregations[i][field] = value;
+  renderAll();
+}
+
+function removeAgg(i) {
+  state.aggregations.splice(i, 1);
+  renderAll();
+}
+
+function applyPreset(i) {
+  PRESETS[i].apply();
+  autoExpandSections();
+  renderAll();
+}
+
+function autoExpandSections() {
+  // 프리셋/테이블은 프리셋 적용 후 접기
+  document.getElementById('presetSection').classList.add('collapsed');
+  document.getElementById('tableSection').classList.add('collapsed');
+
+  var mapping = [
+    { id: 'selectSection', hasData: !state.selectAll && state.selectedColumns.length > 0 },
+    { id: 'aggSection', hasData: state.aggregations.length > 0 },
+    { id: 'joinSection', hasData: state.joins.length > 0 },
+    { id: 'whereSection', hasData: state.wheres.length > 0 },
+    { id: 'groupSection', hasData: state.groupBy.length > 0 },
+    { id: 'havingSection', hasData: state.having.length > 0 },
+    { id: 'orderSection', hasData: state.orderBy.length > 0 },
+    { id: 'limitSection', hasData: state.limitEnabled }
+  ];
+  mapping.forEach(function(m) {
+    var el = document.getElementById(m.id);
+    if (el) {
+      if (m.hasData) {
+        el.classList.remove('collapsed');
+      } else {
+        el.classList.add('collapsed');
+      }
+    }
+  });
+}
+
+function resetAll() {
+  resetState();
+  // 하위 섹션들 다시 접기
+  ['aggSection','joinSection','whereSection','groupSection','havingSection','orderSection','limitSection'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.classList.add('collapsed');
+  });
+  renderAll();
+}
+
+// ============================================
+// SQL GENERATION
+// ============================================
+
+function generateSql() {
+  if (state.selectedTables.length === 0) {
+    return '-- 테이블을 선택하세요';
+  }
+
+  var parts = [];
+  var mainTable = state.selectedTables[0];
+
+  // SELECT
+  var selectParts = [];
+
+  if (state.selectAll && state.aggregations.length === 0) {
+    selectParts.push('*');
+  } else {
+    if (!state.selectAll) {
+      state.selectedColumns.forEach(function(c) {
+        selectParts.push(c.table + '.' + c.column);
+      });
+    }
+    state.aggregations.forEach(function(a) {
+      var col = a.column === '*' ? '*' : a.column;
+      var expr = a.func + '(' + col + ')';
+      if (a.alias) expr += ' AS ' + a.alias;
+      selectParts.push(expr);
+    });
+  }
+
+  // If selectAll + aggregations + groupBy, show groupBy cols + aggs
+  if (state.selectAll && state.aggregations.length > 0) {
+    if (state.groupBy.length > 0) {
+      selectParts = state.groupBy.slice();
+      state.aggregations.forEach(function(a) {
+        var col = a.column === '*' ? '*' : a.column;
+        var expr = a.func + '(' + col + ')';
+        if (a.alias) expr += ' AS ' + a.alias;
+        selectParts.push(expr);
+      });
+    }
+  }
+
+  if (selectParts.length === 0) selectParts.push('*');
+
+  parts.push('SELECT\n  ' + selectParts.join(',\n  '));
+
+  // FROM
+  parts.push('FROM ' + mainTable);
+
+  // JOIN
+  state.joins.forEach(function(j) {
+    if (j.leftCol && j.rightCol) {
+      parts.push(j.type + ' ' + j.table + '\n  ON ' + j.leftCol + ' = ' + j.rightCol);
+    } else {
+      parts.push(j.type + ' ' + j.table);
+    }
+  });
+
+  // WHERE
+  if (state.wheres.length > 0) {
+    var conditions = state.wheres.map(function(w, i) {
+      var cond = '';
+      if (i > 0) cond += '  ' + w.conjunction + ' ';
+      else cond += '  ';
+
+      if (w.operator === 'IS NULL' || w.operator === 'IS NOT NULL') {
+        cond += w.column + ' ' + w.operator;
+      } else if (w.operator === 'BETWEEN') {
+        cond += w.column + ' BETWEEN ' + w.value;
+      } else if (w.operator === 'IN') {
+        cond += w.column + ' IN (' + w.value + ')';
+      } else {
+        cond += w.column + ' ' + w.operator + ' ' + w.value;
+      }
+      return cond;
+    });
+    parts.push('WHERE\n' + conditions.join('\n'));
+  }
+
+  // GROUP BY
+  if (state.groupBy.length > 0) {
+    parts.push('GROUP BY ' + state.groupBy.join(', '));
+  }
+
+  // HAVING
+  if (state.having.length > 0) {
+    var havingConds = state.having.map(function(h, i) {
+      var cond = '';
+      if (i > 0) cond += '  ' + h.conjunction + ' ';
+      else cond += '  ';
+      cond += h.expression + ' ' + h.operator + ' ' + h.value;
+      return cond;
+    });
+    parts.push('HAVING\n' + havingConds.join('\n'));
+  }
+
+  // ORDER BY
+  if (state.orderBy.length > 0) {
+    var orderCols = state.orderBy.filter(function(o) { return o.column; }).map(function(o) { return o.column + ' ' + o.direction; });
+    if (orderCols.length > 0) {
+      parts.push('ORDER BY ' + orderCols.join(', '));
+    }
+  }
+
+  // LIMIT
+  if (state.limitEnabled) {
+    parts.push('LIMIT ' + state.limitValue);
+  }
+
+  return parts.join('\n') + ';';
+}
+
+// ============================================
+// SYNTAX HIGHLIGHTING
+// ============================================
+
+function highlightSql(sql) {
+  if (sql.indexOf('--') === 0) {
+    return '<span class="comment">' + escapeHtml(sql) + '</span>';
+  }
+
+  var keywords = ['SELECT', 'FROM', 'WHERE', 'AND', 'OR', 'ON', 'AS',
+    'ORDER', 'BY', 'GROUP', 'HAVING', 'LIMIT', 'OFFSET',
+    'INNER', 'LEFT', 'RIGHT', 'FULL', 'OUTER', 'CROSS', 'JOIN',
+    'IS', 'NULL', 'NOT', 'IN', 'LIKE', 'BETWEEN',
+    'ASC', 'DESC', 'DISTINCT', 'ALL', 'EXISTS',
+    'UNION', 'INTERSECT', 'EXCEPT'];
+  var keywordSet = {};
+  keywords.forEach(function(k) { keywordSet[k] = true; });
+
+  var functions = ['COUNT', 'SUM', 'AVG', 'MIN', 'MAX', 'COALESCE', 'IFNULL', 'CAST'];
+  var functionSet = {};
+  functions.forEach(function(f) { functionSet[f] = true; });
+
+  var tableNames = {};
+  Object.keys(TABLES).forEach(function(t) { tableNames[t] = true; });
+
+  var tokens = [];
+  var i = 0;
+  var s = sql;
+
+  while (i < s.length) {
+    if (/\s/.test(s[i])) {
+      var start = i;
+      while (i < s.length && /\s/.test(s[i])) i++;
+      tokens.push({ type: 'ws', value: s.slice(start, i) });
+      continue;
+    }
+
+    if (s[i] === '-' && i + 1 < s.length && s[i + 1] === '-') {
+      var start = i;
+      while (i < s.length && s[i] !== '\n') i++;
+      tokens.push({ type: 'comment', value: s.slice(start, i) });
+      continue;
+    }
+
+    if (s[i] === "'") {
+      var start = i;
+      i++;
+      while (i < s.length && s[i] !== "'") i++;
+      if (i < s.length) i++;
+      tokens.push({ type: 'string', value: s.slice(start, i) });
+      continue;
+    }
+
+    if (/\d/.test(s[i]) && (i === 0 || /[\s,=(><]/.test(s[i - 1]))) {
+      var start = i;
+      while (i < s.length && /[\d.]/.test(s[i])) i++;
+      tokens.push({ type: 'number', value: s.slice(start, i) });
+      continue;
+    }
+
+    if (/[=<>!,;()*.]/.test(s[i])) {
+      var start = i;
+      if ((s[i] === '>' || s[i] === '<' || s[i] === '!' || s[i] === '=') && i + 1 < s.length && s[i + 1] === '=') {
+        i += 2;
+      } else {
+        i++;
+      }
+      tokens.push({ type: 'op', value: s.slice(start, i) });
+      continue;
+    }
+
+    if (/[a-zA-Z_%]/.test(s[i])) {
+      var start = i;
+      while (i < s.length && /[a-zA-Z0-9_%]/.test(s[i])) i++;
+      var word = s.slice(start, i);
+      var upper = word.toUpperCase();
+
+      if (keywordSet[upper]) {
+        tokens.push({ type: 'keyword', value: word });
+      } else if (functionSet[upper]) {
+        tokens.push({ type: 'function', value: word });
+      } else if (tableNames[word]) {
+        tokens.push({ type: 'table', value: word });
+      } else {
+        var prevNonWs = null;
+        for (var j = tokens.length - 1; j >= 0; j--) {
+          if (tokens[j].type !== 'ws') { prevNonWs = tokens[j]; break; }
+        }
+        if (prevNonWs && prevNonWs.type === 'keyword' && prevNonWs.value.toUpperCase() === 'AS') {
+          tokens.push({ type: 'alias', value: word });
+        } else {
+          tokens.push({ type: 'column', value: word });
+        }
+      }
+      continue;
+    }
+
+    tokens.push({ type: 'other', value: s[i] });
+    i++;
+  }
+
+  return tokens.map(function(t) {
+    var v = escapeHtml(t.value);
+    switch (t.type) {
+      case 'keyword': return '<span class="kw">' + v + '</span>';
+      case 'function': return '<span class="fn">' + v + '</span>';
+      case 'table': return '<span class="tbl">' + v + '</span>';
+      case 'column': return '<span class="col">' + v + '</span>';
+      case 'string': return '<span class="str">' + v + '</span>';
+      case 'number': return '<span class="num">' + v + '</span>';
+      case 'op': return '<span class="op">' + v + '</span>';
+      case 'alias': return '<span class="alias">' + v + '</span>';
+      case 'comment': return '<span class="comment">' + v + '</span>';
+      default: return v;
+    }
+  }).join('');
+}
+
+function renderSqlPreview() {
+  var sql = generateSql();
+  document.getElementById('sqlPreview').innerHTML = highlightSql(sql);
+}
+
+// ============================================
+// PROMPT GENERATION
+// ============================================
+
+function generatePrompt() {
+  if (state.selectedTables.length === 0) {
+    return '테이블을 선택하면 자연어 프롬프트가 여기에 생성됩니다.';
+  }
+
+  var parts = [];
+  var mainTable = state.selectedTables[0];
+
+  // Base
+  if (!state.selectAll && state.selectedColumns.length > 0) {
+    var colNames = state.selectedColumns.map(function(c) { return c.column; });
+    parts.push('Write a SQL query that selects ' + colNames.join(', ') + ' from the ' + mainTable + ' table');
+  } else {
+    parts.push('Write a SQL query that retrieves data from the ' + mainTable + ' table');
+  }
+
+  // Aggregations
+  if (state.aggregations.length > 0) {
+    var aggDescs = state.aggregations.map(function(a) {
+      var col = a.column === '*' ? 'all rows' : a.column;
+      return a.func + '(' + col + ')' + (a.alias ? ' as ' + a.alias : '');
+    });
+    parts.push('with aggregations: ' + aggDescs.join(', '));
+  }
+
+  // Joins
+  state.joins.forEach(function(j) {
+    var joinType = j.type.replace(' JOIN', '').toLowerCase();
+    if (j.leftCol && j.rightCol) {
+      parts.push(joinType + ' joins ' + j.table + ' on ' + j.leftCol + ' = ' + j.rightCol);
+    } else {
+      parts.push(joinType + ' joins ' + j.table);
+    }
+  });
+
+  // Where
+  if (state.wheres.length > 0) {
+    var conditions = state.wheres.map(function(w, i) {
+      var desc = '';
+      if (i > 0) desc += ' ' + w.conjunction.toLowerCase() + ' ';
+      if (w.operator === 'IS NULL' || w.operator === 'IS NOT NULL') {
+        desc += w.column + ' ' + w.operator.toLowerCase();
+      } else if (w.operator === 'LIKE') {
+        desc += w.column + ' matches pattern ' + w.value;
+      } else if (w.operator === 'IN') {
+        desc += w.column + ' is in (' + w.value + ')';
+      } else if (w.operator === 'BETWEEN') {
+        desc += w.column + ' is between ' + w.value;
+      } else {
+        desc += w.column + ' ' + w.operator + ' ' + w.value;
+      }
+      return desc;
+    });
+    parts.push('filters where ' + conditions.join(''));
+  }
+
+  // Group By
+  if (state.groupBy.length > 0) {
+    parts.push('groups by ' + state.groupBy.join(', '));
+  }
+
+  // Having
+  if (state.having.length > 0) {
+    var havConds = state.having.map(function(h, i) {
+      var desc = '';
+      if (i > 0) desc += ' ' + h.conjunction.toLowerCase() + ' ';
+      desc += h.expression + ' ' + h.operator + ' ' + h.value;
+      return desc;
+    });
+    parts.push('with group filter: ' + havConds.join(''));
+  }
+
+  // Order
+  if (state.orderBy.length > 0) {
+    var orders = state.orderBy.filter(function(o) { return o.column; }).map(function(o) {
+      return o.column + ' ' + (o.direction === 'DESC' ? 'descending' : 'ascending');
+    });
+    if (orders.length > 0) {
+      parts.push('ordered by ' + orders.join(', '));
+    }
+  }
+
+  // Limit
+  if (state.limitEnabled) {
+    parts.push('limited to ' + state.limitValue + ' results');
+  }
+
+  var prompt = parts[0];
+  if (parts.length > 1) {
+    prompt += ' that ' + parts.slice(1).join(', ');
+  }
+  prompt += '.';
+
+  return prompt;
+}
+
+function renderPromptOutput() {
+  document.getElementById('promptOutput').textContent = generatePrompt();
+}
+
+// ============================================
+// COPY
+// ============================================
+
+function copySql() {
+  var sql = generateSql();
+  var btn = document.getElementById('sqlCopyBtn');
+  copyToClipboard(sql, btn);
+}
+
+function copyPrompt() {
+  var prompt = generatePrompt();
+  var btn = document.getElementById('promptCopyBtn');
+  copyToClipboard(prompt, btn);
+}
+
+function copyToClipboard(text, btn) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function() {
+      showCopied(btn);
+    }).catch(function() {
+      fallbackCopy(text, btn);
+    });
+  } else {
+    fallbackCopy(text, btn);
+  }
+}
+
+function fallbackCopy(text, btn) {
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.left = '-9999px';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); } catch(e) {}
+  document.body.removeChild(ta);
+  showCopied(btn);
+}
+
+function showCopied(btn) {
+  var original = btn.textContent;
+  btn.textContent = '복사됨!';
+  btn.classList.add('copied');
+  setTimeout(function() {
+    btn.textContent = original;
+    btn.classList.remove('copied');
+  }, 1500);
+}
+
+// ============================================
+// INIT
+// ============================================
+
+renderAll();
+</script>
+</body>
+</html>

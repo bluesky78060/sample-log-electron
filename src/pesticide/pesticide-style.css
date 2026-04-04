@@ -1664,10 +1664,18 @@
 
 .pa-col-no { width: 35px; }
 .pa-col-method { width: 65px; }
-.pa-col-name { width: 200px; }
-.pa-col-value { width: 110px; }
+.pa-col-name { width: 180px; }
+.pa-col-raw { width: 90px; }
+.pa-col-value { width: 100px; }
 .pa-col-nd { width: 50px; }
 .pa-col-del { width: 35px; }
+
+.pa-raw-input {
+    width: 75px; padding: 0.3rem 0.4rem; border: 1px solid #cbd5e1; border-radius: 5px;
+    font-size: 0.8rem; font-family: inherit; text-align: center; color: #1e293b;
+}
+.pa-raw-input:focus { border-color: #dc2626; box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.12); outline: none; }
+[data-theme="dark"] .pa-raw-input { background: #1e293b; border-color: #475569; color: #e2e8f0; }
 
 /* 분석법 셀렉트 */
 .pa-method-select {

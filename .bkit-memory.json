@@ -1,0 +1,130 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2026-02-18T00:00:00.000Z",
+  "activeFeatures": [
+    {
+      "name": "code-refactoring",
+      "phase": "completed",
+      "startedAt": "2026-01-31T00:00:00.000Z",
+      "doCompletedAt": "2026-01-31T00:00:00.000Z",
+      "checkCompletedAt": "2026-01-31T00:00:00.000Z",
+      "reportCompletedAt": "2026-01-31T00:00:00.000Z",
+      "matchRate": 95,
+      "documents": {
+        "plan": "docs/01-plan/features/code-refactoring.plan.md",
+        "design": "docs/02-design/features/code-refactoring.design.md",
+        "analysis": "docs/03-analysis/code-refactoring.analysis.md",
+        "report": "docs/04-report/code-refactoring.report.md"
+      },
+      "implementedFiles": [
+        "src/shared/constants.js",
+        "src/shared/EventDelegator.js",
+        "src/shared/BaseSampleManager.js",
+        "src/soil/SoilSampleManager.js",
+        "src/water/WaterSampleManager.js",
+        "src/compost/CompostSampleManager.js",
+        "src/pesticide/PesticideSampleManager.js",
+        "src/heavy-metal/HeavyMetalSampleManager.js"
+      ]
+    },
+    {
+      "name": "performance-optimization",
+      "phase": "check",
+      "startedAt": "2026-02-18T00:00:00.000Z",
+      "doCompletedAt": "2026-02-18T00:00:00.000Z",
+      "checkCompletedAt": "2026-02-18T00:00:00.000Z",
+      "matchRate": 100,
+      "documents": {
+        "plan": "docs/01-plan/features/performance-optimization.plan.md",
+        "design": "docs/02-design/features/performance-optimization.design.md",
+        "analysis": "docs/03-analysis/features/performance-optimization.analysis.md"
+      },
+      "implementedFiles": [
+        "src/shared/utils.js",
+        "src/shared/storage-manager.js",
+        "src/shared/BaseSampleManager.js",
+        "src/compost/compost-script.js",
+        "src/water/water-script.js",
+        "src/soil/soil-script.js",
+        "src/pesticide/pesticide-script.js",
+        "src/heavy-metal/heavy-metal-script.js",
+        "src/index.html",
+        "src/soil/index.html",
+        "src/water/index.html",
+        "src/compost/index.html",
+        "src/heavy-metal/index.html",
+        "src/pesticide/index.html",
+        "src/soil/SoilSampleManager.js",
+        "src/water/WaterSampleManager.js",
+        "src/compost/CompostSampleManager.js",
+        "src/heavy-metal/HeavyMetalSampleManager.js",
+        "src/pesticide/PesticideSampleManager.js"
+      ]
+    },
+    {
+      "name": "structural-improvement",
+      "phase": "check",
+      "startedAt": "2026-02-18T00:00:00.000Z",
+      "doCompletedAt": "2026-02-18T00:00:00.000Z",
+      "checkCompletedAt": "2026-02-18T00:00:00.000Z",
+      "matchRate": 92,
+      "documents": {
+        "plan": "docs/01-plan/features/structural-improvement.plan.md",
+        "design": "docs/02-design/features/structural-improvement.design.md",
+        "analysis": "docs/03-analysis/features/structural-improvement.analysis.md"
+      },
+      "implementedFiles": [
+        "src/shared/constants.js",
+        "src/shared/main-init.js",
+        "src/index.html",
+        "src/settings/index.html",
+        "src/settings/settings-script.js",
+        "src/index.js",
+        "package.json",
+        "scripts/sync-docs.js"
+      ]
+    },
+    {
+      "name": "modernization",
+      "phase": "check",
+      "startedAt": "2026-02-18T00:00:00.000Z",
+      "doCompletedAt": "2026-02-18T00:00:00.000Z",
+      "checkCompletedAt": "2026-02-18T00:00:00.000Z",
+      "matchRate": 100,
+      "documents": {
+        "plan": "docs/01-plan/features/modernization.plan.md",
+        "design": "docs/02-design/features/modernization.design.md",
+        "analysis": "docs/03-analysis/features/modernization.analysis.md"
+      },
+      "implementedFiles": [
+        "tailwind.config.js",
+        "vite.config.js",
+        "package.json",
+        "src/styles/input.css",
+        "src/styles/theme-colors.css",
+        "src/shared/tailwind-output.css",
+        "src/shared/firebase-config.js",
+        "src/shared/firestore-db.js",
+        "src/main-entry.js",
+        "src/soil/soil-entry.js",
+        "src/water/water-entry.js",
+        "src/compost/compost-entry.js",
+        "src/heavy-metal/heavy-metal-entry.js",
+        "src/pesticide/pesticide-entry.js",
+        "src/settings/settings-entry.js",
+        "src/label-print/label-entry.js",
+        "src/index.html",
+        "src/soil/index.html",
+        "src/water/index.html",
+        "src/compost/index.html",
+        "src/heavy-metal/index.html",
+        "src/pesticide/index.html",
+        "src/settings/index.html",
+        "src/label-print/index.html",
+        "src/index.js"
+      ]
+    }
+  ],
+  "projectLevel": "Dynamic",
+  "codeQualityScore": 90
+}
