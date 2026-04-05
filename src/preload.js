@@ -96,6 +96,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // 잔류농약 분석결과 조회 팝업 윈도우 열기
     openPesticideAnalysis: () => ipcRenderer.invoke('open-pesticide-analysis'),
 
+    // 퇴·액비 검정결과 조회 팝업 윈도우 열기
+    openCompostAnalysis: () => ipcRenderer.invoke('open-compost-analysis'),
+
+    // 토양 중금속 분석결과 조회 팝업 윈도우 열기
+    openHeavyMetalAnalysis: () => ipcRenderer.invoke('open-heavy-metal-analysis'),
+
     // VWORLD 지번 지오코딩 (main process 경유, Origin 제한 없음)
     vworldGeocode: (address, apiKey) => ipcRenderer.invoke('vworld-geocode', { address, apiKey }),
 

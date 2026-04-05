@@ -246,7 +246,24 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
         tdMailDate.textContent = item.mailDate || '-';
         tr.appendChild(tdMailDate);
 
-        // 19. Action buttons
+        // 19. Analysis result button
+        const tdAnalysis = document.createElement('td');
+        tdAnalysis.className = 'col-analysis';
+        const btnAnalysis = document.createElement('button');
+        btnAnalysis.className = 'btn-analysis-open';
+        btnAnalysis.dataset.id = item.id;
+        btnAnalysis.title = '분석결과 입력/수정';
+        const existingResult = this.loadHeavyMetalTestResult(item.id);
+        if (existingResult && Object.keys(existingResult).some(k => !['id','testDate','judgment','updatedAt','_resultKey'].includes(k) && existingResult[k])) {
+            btnAnalysis.classList.add('has-result');
+            btnAnalysis.textContent = '결과확인';
+        } else {
+            btnAnalysis.textContent = '결과입력';
+        }
+        tdAnalysis.appendChild(btnAnalysis);
+        tr.appendChild(tdAnalysis);
+
+        // 20. Action buttons
         const tdActions = document.createElement('td');
         const actionDiv = document.createElement('div');
         actionDiv.className = 'action-btns';
@@ -511,6 +528,8 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
     // ========================================
     onYearChange(newYear) {
         this.updateListViewTitle();
+        this._cachedHeavyMetalResults = null;
+        this.syncHeavyMetalTestResultsFromFirestore();
     }
 
     // ========================================
@@ -539,6 +558,12 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
             // 수정 버튼
             if (e.target.closest('.btn-edit')) {
                 this.editSample(id);
+                return;
+            }
+
+            // 분석결과 버튼
+            if (e.target.closest('.btn-analysis-open')) {
+                this.openHeavyMetalAnalysisModal(id);
                 return;
             }
 
@@ -1942,6 +1967,361 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
             }
         });
         excelImporter.init();
+
+        // 분석결과 모달 초기화
+        this.initHeavyMetalAnalysisModal();
+        // Firestore 동기화
+        this.syncHeavyMetalTestResultsFromFirestore();
+
+        // 분석결과 조회 버튼
+        const heavyMetalAnalysisViewBtn = document.getElementById('heavyMetalAnalysisViewBtn');
+        if (heavyMetalAnalysisViewBtn) heavyMetalAnalysisViewBtn.addEventListener('click', () => {
+            localStorage.setItem('heavyMetalAnalysis_year', this.selectedYear);
+            const selectedIds = Array.from(document.querySelectorAll('.row-checkbox:checked')).map(cb => cb.dataset.id).filter(Boolean);
+            localStorage.setItem('heavyMetalAnalysis_selected_ids', JSON.stringify(selectedIds));
+
+            const isElectron = window.electronAPI?.isElectron === true;
+            if (isElectron) {
+                window.electronAPI.openHeavyMetalAnalysis();
+            } else {
+                const popup = window.open('../heavy-metal-analysis/index.html', '_blank');
+                if (!popup) window.location.href = '../heavy-metal-analysis/index.html';
+            }
+        });
+    }
+
+    // ========================================
+    // 토양 중금속 분석결과 모달
+    // ========================================
+
+    /**
+     * 분석 항목 정의 (토양오염우려기준, mg/kg)
+     * 1지역: 전/답/과수원
+     * 2지역: 임야/학교/공원/주거
+     * 3지역: 공장/도로 등
+     */
+    static HEAVY_METAL_FIELDS = [
+        { key: 'cadmium', label: '카드뮴(Cd)', unit: 'mg/kg', standard1: 4, standard2: 10, standard3: 60 },
+        { key: 'copper', label: '구리(Cu)', unit: 'mg/kg', standard1: 150, standard2: 500, standard3: 2000 },
+        { key: 'arsenic', label: '비소(As)', unit: 'mg/kg', standard1: 25, standard2: 50, standard3: 200 },
+        { key: 'mercury', label: '수은(Hg)', unit: 'mg/kg', standard1: 4, standard2: 10, standard3: 20 },
+        { key: 'lead', label: '납(Pb)', unit: 'mg/kg', standard1: 200, standard2: 400, standard3: 700 },
+        { key: 'chromium6', label: '6가크롬(Cr6+)', unit: 'mg/kg', standard1: 5, standard2: 15, standard3: 40 },
+        { key: 'zinc', label: '아연(Zn)', unit: 'mg/kg', standard1: 300, standard2: 600, standard3: 2000 },
+        { key: 'nickel', label: '니켈(Ni)', unit: 'mg/kg', standard1: 100, standard2: 200, standard3: 500 },
+    ];
+
+    /**
+     * 용도(목적)에 따라 적용할 기준 지역 결정
+     * 1지역: 전, 답, 과수원, 일반재배, 무농약, 유기농, GAP, 저탄소
+     * 기본값: 1지역
+     */
+    getStandardRegion(purpose) {
+        // 기본적으로 1지역 적용 (전/답/과수원 등 농업 용도)
+        return 1;
+    }
+
+    getStandardValue(field, region) {
+        if (region === 3) return field.standard3;
+        if (region === 2) return field.standard2;
+        return field.standard1;
+    }
+
+    getStandardLabel(field, region) {
+        const val = this.getStandardValue(field, region);
+        return `${val.toLocaleString()} 이하`;
+    }
+
+    initHeavyMetalAnalysisModal() {
+        const modal = document.getElementById('heavyMetalAnalysisModal');
+        if (!modal) return;
+
+        const closeModal = () => { modal.classList.add('hidden'); this._hmLogId = null; };
+        document.getElementById('closeHeavyMetalAnalysisModal')?.addEventListener('click', closeModal);
+        document.getElementById('cancelHeavyMetalAnalysisBtn')?.addEventListener('click', closeModal);
+        modal.querySelector('.modal-overlay')?.addEventListener('click', closeModal);
+        modal.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+        document.getElementById('saveHeavyMetalAnalysisBtn')?.addEventListener('click', () => this.saveHeavyMetalAnalysis());
+    }
+
+    openHeavyMetalAnalysisModal(logId) {
+        const log = this.sampleLogs.find(l => String(l.id) === String(logId));
+        if (!log) return;
+
+        const modal = document.getElementById('heavyMetalAnalysisModal');
+        if (!modal) return;
+
+        this._hmLogId = logId;
+
+        // 시료 정보
+        document.getElementById('hmReceptionNumber').textContent = log.receptionNumber || '-';
+        document.getElementById('hmDate').textContent = log.date || '-';
+        document.getElementById('hmName').textContent = log.name || '-';
+        document.getElementById('hmLocation').textContent = log.samplingLocation || '-';
+        document.getElementById('hmPurpose').textContent = log.purpose || '-';
+
+        // 용도 기반 기준지역 결정
+        const region = this.getStandardRegion(log.purpose);
+        this._hmRegion = region;
+
+        const fields = HeavyMetalSampleManager.HEAVY_METAL_FIELDS;
+        this.renderHeavyMetalFields(fields, region);
+
+        // 기존 결과 로드
+        const existing = this.loadHeavyMetalTestResult(logId);
+        if (existing) {
+            document.getElementById('hmTestDate').value = existing.testDate || '';
+            for (const field of fields) {
+                const input = document.getElementById(`hm_${field.key}`);
+                if (input) input.value = existing[field.key] || '';
+                // 상태 업데이트
+                const statusEl = document.getElementById(`hm_status_${field.key}`);
+                if (input && statusEl) this.checkHeavyMetalFieldStatus(field, input.value, statusEl, region);
+            }
+            const judgment = existing.judgment || '';
+            if (['', 'pass', 'fail'].includes(judgment)) {
+                const radio = document.querySelector(`input[name="hmJudgment"][value="${judgment}"]`);
+                if (radio) radio.checked = true;
+            }
+        } else {
+            document.getElementById('hmTestDate').value = '';
+            for (const field of fields) {
+                const input = document.getElementById(`hm_${field.key}`);
+                if (input) input.value = '';
+            }
+            const defaultRadio = document.querySelector('input[name="hmJudgment"][value=""]');
+            if (defaultRadio) defaultRadio.checked = true;
+        }
+
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            const firstInput = modal.querySelector('.hm-result-input');
+            if (firstInput) firstInput.focus();
+        }, 100);
+    }
+
+    renderHeavyMetalFields(fields, region) {
+        const tbody = document.getElementById('hmFieldsBody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        fields.forEach(field => {
+            const tr = document.createElement('tr');
+
+            const tdName = document.createElement('td');
+            tdName.className = 'hm-col-name';
+            tdName.textContent = field.label;
+            tr.appendChild(tdName);
+
+            const tdUnit = document.createElement('td');
+            tdUnit.className = 'hm-col-unit';
+            tdUnit.textContent = field.unit || '-';
+            tr.appendChild(tdUnit);
+
+            // 기준값 (지역별)
+            const tdStandard = document.createElement('td');
+            tdStandard.className = 'hm-col-standard';
+            tdStandard.textContent = this.getStandardLabel(field, region);
+            tr.appendChild(tdStandard);
+
+            const tdValue = document.createElement('td');
+            tdValue.className = 'hm-col-value';
+
+            const tdStatus = document.createElement('td');
+            tdStatus.className = 'hm-col-status';
+            tdStatus.id = `hm_status_${field.key}`;
+
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'hm-result-input';
+            input.id = `hm_${field.key}`;
+            input.placeholder = field.unit || '-';
+            input.autocomplete = 'off';
+            input.addEventListener('input', () => {
+                this.checkHeavyMetalFieldStatus(field, input.value, tdStatus, region);
+            });
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const nextRow = tr.nextElementSibling;
+                    if (nextRow) {
+                        const nextInput = nextRow.querySelector('.hm-result-input');
+                        if (nextInput) nextInput.focus();
+                    }
+                }
+            });
+            tdValue.appendChild(input);
+
+            tr.appendChild(tdValue);
+            tr.appendChild(tdStatus);
+
+            tbody.appendChild(tr);
+        });
+    }
+
+    checkHeavyMetalFieldStatus(field, value, statusEl, region) {
+        if (!value || !statusEl) {
+            if (statusEl) statusEl.textContent = '';
+            return;
+        }
+
+        const num = parseFloat(value.replace(/,/g, ''));
+        if (isNaN(num)) { statusEl.textContent = ''; return; }
+
+        const standardVal = this.getStandardValue(field, region);
+        const isOk = num <= standardVal;
+
+        // Use DOM API, not innerHTML
+        statusEl.textContent = '';
+        const span = document.createElement('span');
+        span.style.color = isOk ? '#16a34a' : '#dc2626';
+        span.textContent = isOk ? '\u2713' : '\u2715';
+        statusEl.appendChild(span);
+    }
+
+    autoJudgeHeavyMetal(result, region) {
+        const fields = HeavyMetalSampleManager.HEAVY_METAL_FIELDS;
+        for (const field of fields) {
+            const val = result[field.key];
+            if (val) {
+                const num = parseFloat(String(val).replace(/,/g, ''));
+                if (!isNaN(num) && num > this.getStandardValue(field, region)) {
+                    return 'fail';
+                }
+            }
+        }
+        return 'pass';
+    }
+
+    saveHeavyMetalAnalysis() {
+        const logId = this._hmLogId;
+        if (!logId) return;
+
+        const log = this.sampleLogs.find(l => String(l.id) === String(logId));
+        if (!log) return;
+
+        const fields = HeavyMetalSampleManager.HEAVY_METAL_FIELDS;
+        const allResults = this.loadAllHeavyMetalTestResults();
+        const region = this._hmRegion || 1;
+
+        const result = {
+            id: logId,
+            testDate: document.getElementById('hmTestDate')?.value || '',
+            judgment: document.querySelector('input[name="hmJudgment"]:checked')?.value || '',
+            updatedAt: new Date().toISOString()
+        };
+
+        for (const field of fields) {
+            const input = document.getElementById(`hm_${field.key}`);
+            if (input) result[field.key] = input.value.trim();
+        }
+
+        // 자동 판정: 모든 항목이 기준 이내이면 적합, 하나라도 초과면 부적합
+        const autoJudgment = this.autoJudgeHeavyMetal(result, region);
+        if (!result.judgment) result.judgment = autoJudgment;
+
+        allResults[logId] = result;
+        this.saveAllHeavyMetalTestResults(allResults);
+
+        // 접수 데이터에 판정 동기화
+        log.testResult = result.judgment || '';
+        this.saveLogs();
+
+        document.getElementById('heavyMetalAnalysisModal')?.classList.add('hidden');
+        this._hmLogId = null;
+        this.filterAndRenderLogs();
+        this.showToast('분석결과가 저장되었습니다.', 'success');
+    }
+
+    // === 데이터 저장/로드 ===
+
+    loadHeavyMetalTestResult(logId) {
+        if (!this._cachedHeavyMetalResults) {
+            this._cachedHeavyMetalResults = this.loadAllHeavyMetalTestResults();
+        }
+        return this._cachedHeavyMetalResults[logId] || null;
+    }
+
+    loadAllHeavyMetalTestResults() {
+        const key = `heavyMetalTestResults_${this.selectedYear}`;
+        try {
+            const data = localStorage.getItem(key);
+            if (!data) return {};
+            return JSON.parse(data) || {};
+        } catch (e) {
+            (window.logger?.error || console.error)('중금속 검사 결과 로드 실패:', e);
+            return {};
+        }
+    }
+
+    saveAllHeavyMetalTestResults(results) {
+        const key = `heavyMetalTestResults_${this.selectedYear}`;
+        try {
+            localStorage.setItem(key, JSON.stringify(results));
+            this._cachedHeavyMetalResults = results;
+            this.syncHeavyMetalTestResultsToFirestore(results);
+        } catch (e) {
+            (window.logger?.error || console.error)('중금속 검사 결과 저장 실패:', e);
+        }
+    }
+
+    async syncHeavyMetalTestResultsToFirestore(results) {
+        if (!window.firestoreDb?.isEnabled()) return;
+        try {
+            const year = parseInt(this.selectedYear);
+            const entries = Object.entries(results);
+            if (entries.length === 0) return;
+            const documents = entries.map(([docKey, data]) => ({ ...data, id: docKey, _resultKey: docKey }));
+            await window.firestoreDb.batchSave('heavyMetalTestResults', year, documents);
+        } catch (e) {
+            (window.logger?.error || console.error)('중금속 Firestore 동기화 실패:', e);
+        }
+    }
+
+    async syncHeavyMetalTestResultsFromFirestore() {
+        if (!window.firestoreDb?.isEnabled()) return;
+        try {
+            const year = parseInt(this.selectedYear);
+            const cloudData = await window.firestoreDb.getAll('heavyMetalTestResults', year);
+            if (!cloudData || cloudData.length === 0) return;
+
+            const cloudMap = {};
+            for (const doc of cloudData) {
+                const key = doc._resultKey || doc.id;
+                if (key) {
+                    const { _resultKey, syncedAt, ...rest } = doc;
+                    cloudMap[key] = rest;
+                }
+            }
+
+            const localResults = this.loadAllHeavyMetalTestResults();
+            const merged = { ...localResults };
+            for (const [key, cloudVal] of Object.entries(cloudMap)) {
+                const localVal = merged[key];
+                if (!localVal || !localVal.updatedAt || new Date(cloudVal.updatedAt) >= new Date(localVal.updatedAt)) {
+                    merged[key] = cloudVal;
+                }
+            }
+
+            const lsKey = `heavyMetalTestResults_${this.selectedYear}`;
+            localStorage.setItem(lsKey, JSON.stringify(merged));
+            this._cachedHeavyMetalResults = merged;
+
+            // 접수 데이터 판정 동기화
+            let syncCount = 0;
+            for (const [resultId, resultData] of Object.entries(merged)) {
+                const log = this.sampleLogs.find(l => String(l.id) === String(resultId));
+                if (log) {
+                    if (resultData.judgment) log.testResult = resultData.judgment;
+                    syncCount++;
+                }
+            }
+            if (syncCount > 0) this.saveLogs();
+            this.filterAndRenderLogs();
+        } catch (e) {
+            (window.logger?.error || console.error)('중금속 Firestore 로드 실패:', e);
+        }
     }
 }
 

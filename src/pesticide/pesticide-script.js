@@ -3404,7 +3404,7 @@ class PesticideSampleManager extends window.BaseSampleManager {
             for (const doc of cloudData) {
                 const key = doc._resultKey || doc.id;
                 if (key) {
-                    const { _resultKey, syncedAt, updatedAt: _, ...rest } = doc;
+                    const { _resultKey, syncedAt, ...rest } = doc;
                     cloudMap[key] = rest;
                 }
             }

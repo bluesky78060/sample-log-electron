@@ -273,7 +273,7 @@ async function initializeFirebase() {
 
         // 오프라인 지원 활성화 (멀티탭 동기화 모드)
         try {
-            await db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
+            await db.enablePersistence({ synchronizeTabs: true });
             isOfflineEnabled = true;
             logFirebase('오프라인 지원 활성화됨');
         } catch (err) {

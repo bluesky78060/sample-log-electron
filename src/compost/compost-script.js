@@ -321,7 +321,7 @@ class CompostSampleManager extends window.BaseSampleManager {
         const selectMaturity = document.createElement('select');
         selectMaturity.className = 'maturity-select';
         selectMaturity.dataset.id = logItem.id;
-        const maturityOptions = ['', '부숙초기', '부숙중기', '부숙후기', '부숙완료'];
+        const maturityOptions = ['', '미부숙', '부숙초기', '부숙중기', '부숙완료', '완전부숙'];
         maturityOptions.forEach(opt => {
             const option = document.createElement('option');
             option.value = opt;
@@ -457,7 +457,24 @@ class CompostSampleManager extends window.BaseSampleManager {
         tdMailDate.textContent = logItem.mailDate || '-';
         row.appendChild(tdMailDate);
 
-        // 22. Action buttons (edit/delete)
+        // 22. Analysis result button
+        const tdAnalysis = document.createElement('td');
+        tdAnalysis.className = 'col-analysis';
+        const btnAnalysis = document.createElement('button');
+        btnAnalysis.className = 'btn-analysis-open';
+        btnAnalysis.dataset.id = logItem.id;
+        btnAnalysis.title = '분석결과 입력/수정';
+        const existingResult = this.loadCompostTestResult(logItem.id);
+        if (existingResult && (existingResult.moisture || existingResult.maturity)) {
+            btnAnalysis.classList.add('has-result');
+            btnAnalysis.textContent = '결과확인';
+        } else {
+            btnAnalysis.textContent = '결과입력';
+        }
+        tdAnalysis.appendChild(btnAnalysis);
+        row.appendChild(tdAnalysis);
+
+        // 23. Action buttons (edit/delete)
         const tdAction = document.createElement('td');
         tdAction.className = 'col-action';
         const btnEdit = document.createElement('button');
@@ -1040,6 +1057,13 @@ class CompostSampleManager extends window.BaseSampleManager {
             if (editBtn) {
                 const id = editBtn.dataset.id;
                 this.editSample(id);
+                return;
+            }
+
+            // 분석결과 버튼
+            const analysisBtn = e.target.closest('.btn-analysis-open');
+            if (analysisBtn) {
+                this.openCompostAnalysisModal(analysisBtn.dataset.id);
                 return;
             }
         });
@@ -2254,6 +2278,481 @@ class CompostSampleManager extends window.BaseSampleManager {
             }
         });
         excelImporter.init();
+
+        // 분석결과 모달 초기화
+        this.initCompostAnalysisModal();
+        // Firestore 동기화
+        this.syncCompostTestResultsFromFirestore();
+
+        // 검정결과 조회 버튼
+        const compostAnalysisViewBtn = document.getElementById('compostAnalysisViewBtn');
+        if (compostAnalysisViewBtn) compostAnalysisViewBtn.addEventListener('click', () => {
+            localStorage.setItem('compostAnalysis_year', this.selectedYear);
+            const selectedIds = Array.from(document.querySelectorAll('.row-checkbox:checked')).map(cb => cb.dataset.id).filter(Boolean);
+            localStorage.setItem('compostAnalysis_selected_ids', JSON.stringify(selectedIds));
+
+            const isElectron = window.electronAPI?.isElectron === true;
+            if (isElectron) {
+                window.electronAPI.openCompostAnalysis();
+            } else {
+                const popup = window.open('../compost-analysis/index.html', '_blank');
+                if (!popup) window.location.href = '../compost-analysis/index.html';
+            }
+        });
+    }
+
+    // ========================================
+    // 퇴·액비 분석결과 모달
+    // ========================================
+
+    /**
+     * 분석 항목 정의
+     * 퇴비(가축분퇴비): 함수율 70% 이하, 부숙도, 소:염분, 돼지:구리500/아연1200
+     * 액비(가축분뇨발효액): 함수율 95% 이하, 부숙도, 돼지:구리70/아연170
+     */
+    static COMPOST_FIELDS = {
+        // === 퇴비 (가축분퇴비) ===
+        compost_common: [
+            { key: 'moisture', label: '함수율', unit: '%', standard: '70 이하' },
+            { key: 'maturity', label: '부숙도', unit: '', type: 'select', options: ['', '미부숙', '부숙초기', '부숙중기', '부숙완료', '완전부숙'], standard: '부숙중기 이상' },
+        ],
+        compost_cattle: [
+            { key: 'salinity', label: '염분', unit: '%', standard: '2.5 이하' },
+        ],
+        compost_pig: [
+            { key: 'copper', label: '구리(Cu)', unit: 'mg/kg', standard: '500 이하' },
+            { key: 'zinc', label: '아연(Zn)', unit: 'mg/kg', standard: '1,200 이하' },
+        ],
+        // === 액비 (가축분뇨발효액) ===
+        liquid_common: [
+            { key: 'moisture', label: '함수율', unit: '%', standard: '95 이하' },
+            { key: 'maturity', label: '부숙도', unit: '', type: 'select', options: ['', '미부숙', '부숙초기', '부숙중기', '부숙완료', '완전부숙'], standard: '부숙중기 이상' },
+        ],
+        liquid_pig: [
+            { key: 'copper', label: '구리(Cu)', unit: 'mg/kg', standard: '70 이하' },
+            { key: 'zinc', label: '아연(Zn)', unit: 'mg/kg', standard: '170 이하' },
+        ],
+    };
+
+    getFieldsForSample(sampleType, animalType) {
+        const isLiquid = sampleType === '가축분뇨발효액';
+        const F = CompostSampleManager.COMPOST_FIELDS;
+
+        const fields = isLiquid
+            ? [...F.liquid_common]
+            : [...F.compost_common];
+
+        if (isLiquid) {
+            // 액비: 돼지만 구리/아연 추가
+            if (animalType === '돼지') fields.push(...F.liquid_pig);
+        } else {
+            // 퇴비: 소→염분, 돼지→구리/아연
+            if (animalType === '소') fields.push(...F.compost_cattle);
+            else if (animalType === '돼지') fields.push(...F.compost_pig);
+        }
+
+        return fields;
+    }
+
+    initCompostAnalysisModal() {
+        const modal = document.getElementById('compostAnalysisModal');
+        if (!modal) return;
+
+        const closeModal = () => { modal.classList.add('hidden'); this._caLogId = null; };
+        document.getElementById('closeCompostAnalysisModal')?.addEventListener('click', closeModal);
+        document.getElementById('cancelCompostAnalysisBtn')?.addEventListener('click', closeModal);
+        modal.querySelector('.modal-overlay')?.addEventListener('click', closeModal);
+        modal.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+        document.getElementById('saveCompostAnalysisBtn')?.addEventListener('click', () => this.saveCompostAnalysis());
+    }
+
+    openCompostAnalysisModal(logId) {
+        const log = this.sampleLogs.find(l => String(l.id) === String(logId));
+        if (!log) return;
+
+        const modal = document.getElementById('compostAnalysisModal');
+        if (!modal) return;
+
+        this._caLogId = logId;
+
+        // 시료 정보
+        document.getElementById('caReceptionNumber').textContent = log.receptionNumber || '-';
+        document.getElementById('caDate').textContent = log.date || '-';
+        document.getElementById('caName').textContent = log.name || '-';
+        document.getElementById('caSampleType').textContent = log.sampleType || log.subCategory || '-';
+        document.getElementById('caPurpose').textContent = log.purpose || '-';
+
+        const animalEl = document.getElementById('caAnimalType');
+        const animalType = log.animalType || '-';
+        animalEl.textContent = animalType;
+
+        // 면적 기반 부숙도 기준 동적 설정
+        const sampleType = log.sampleType || '가축분퇴비';
+        const areaSqm = this.getAreaInSqm(log.farmArea, log.farmAreaUnit);
+        const maturityStandard = areaSqm >= 1500 ? '부숙완료 이상' : '부숙중기 이상';
+
+        // 시료종류+축종별 분석 항목 렌더
+        const fields = this.getFieldsForSample(sampleType, animalType);
+        // 부숙도 기준을 면적에 따라 동적 변경
+        const adjustedFields = fields.map(f => {
+            if (f.key === 'maturity') return { ...f, standard: `${maturityStandard} (${areaSqm > 0 ? areaSqm.toLocaleString() + '㎡' : '면적미입력'})` };
+            return f;
+        });
+        this._caAreaSqm = areaSqm;
+        this.renderCompostFields(adjustedFields);
+
+        // 기존 결과 로드
+        const existing = this.loadCompostTestResult(logId);
+        if (existing) {
+            document.getElementById('caTestDate').value = existing.testDate || '';
+            for (const field of fields) {
+                const input = document.getElementById(`ca_${field.key}`);
+                if (input) input.value = existing[field.key] || '';
+            }
+            const judgment = existing.judgment || '';
+            if (['', 'pass', 'fail'].includes(judgment)) {
+                const radio = document.querySelector(`input[name="caJudgment"][value="${judgment}"]`);
+                if (radio) radio.checked = true;
+            }
+        } else {
+            document.getElementById('caTestDate').value = '';
+            // 기존 인라인 함수율/부숙도 값 가져오기
+            for (const field of fields) {
+                const input = document.getElementById(`ca_${field.key}`);
+                if (input) {
+                    if (field.key === 'moisture') input.value = log.moisture || '';
+                    else if (field.key === 'maturity') input.value = log.maturity || '';
+                    else input.value = '';
+                }
+            }
+            const defaultRadio = document.querySelector('input[name="caJudgment"][value=""]');
+            if (defaultRadio) defaultRadio.checked = true;
+        }
+
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            const firstInput = modal.querySelector('.ca-result-input, .ca-result-select');
+            if (firstInput) firstInput.focus();
+        }, 100);
+    }
+
+    renderCompostFields(fields) {
+        const tbody = document.getElementById('caFieldsBody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        fields.forEach(field => {
+            const tr = document.createElement('tr');
+
+            const tdName = document.createElement('td');
+            tdName.className = 'ca-col-name';
+            tdName.textContent = field.label;
+            tr.appendChild(tdName);
+
+            const tdUnit = document.createElement('td');
+            tdUnit.className = 'ca-col-unit';
+            tdUnit.textContent = field.unit || '-';
+            tr.appendChild(tdUnit);
+
+            // 기준값
+            const tdStandard = document.createElement('td');
+            tdStandard.className = 'ca-col-standard';
+            tdStandard.textContent = field.standard || '-';
+            tr.appendChild(tdStandard);
+
+            const tdValue = document.createElement('td');
+            tdValue.className = 'ca-col-value';
+
+            const tdStatus = document.createElement('td');
+            tdStatus.className = 'ca-col-status';
+            tdStatus.id = `ca_status_${field.key}`;
+
+            if (field.type === 'select') {
+                const select = document.createElement('select');
+                select.className = 'ca-result-select';
+                select.id = `ca_${field.key}`;
+                (field.options || []).forEach(opt => {
+                    const option = document.createElement('option');
+                    option.value = opt;
+                    option.textContent = opt || '선택';
+                    select.appendChild(option);
+                });
+                // 부숙도 변경 시 상태 업데이트
+                select.addEventListener('change', () => {
+                    this.checkCompostFieldStatus(field, select.value, tdStatus);
+                });
+                tdValue.appendChild(select);
+            } else {
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'ca-result-input';
+                input.id = `ca_${field.key}`;
+                input.placeholder = field.unit || '-';
+                input.autocomplete = 'off';
+                // 입력 시 기준 비교
+                input.addEventListener('input', () => {
+                    this.checkCompostFieldStatus(field, input.value, tdStatus);
+                });
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const nextRow = tr.nextElementSibling;
+                        if (nextRow) {
+                            const nextInput = nextRow.querySelector('.ca-result-input, .ca-result-select');
+                            if (nextInput) nextInput.focus();
+                        }
+                    }
+                });
+                tdValue.appendChild(input);
+            }
+            tr.appendChild(tdValue);
+            tr.appendChild(tdStatus);
+
+            tbody.appendChild(tr);
+        });
+    }
+
+    /** 부숙도 순서 (높을수록 잘 부숙됨) */
+    static MATURITY_ORDER = { '미부숙': 0, '부숙초기': 1, '부숙중기': 2, '부숙완료': 3, '완전부숙': 4 };
+
+    /**
+     * 면적을 ㎡로 환산
+     * @param {string|number} area - 면적 값
+     * @param {string} unit - 'pyeong' 또는 'sqm'
+     * @returns {number} ㎡ 값
+     */
+    getAreaInSqm(area, unit) {
+        const val = parseFloat(area);
+        if (isNaN(val)) return 0;
+        return unit === 'pyeong' ? Math.round(val * 3.3058) : val;
+    }
+
+    autoJudgeCompost(result, animalType, log) {
+        // 데이터가 없으면 판정하지 않음
+        const hasData = result.moisture || result.maturity || result.salinity || result.copper || result.zinc;
+        if (!hasData) return '';
+
+        let pass = true;
+        const isLiquid = log?.sampleType === '가축분뇨발효액';
+        const moistureLimit = isLiquid ? 95 : 70;
+
+        // 함수율: 퇴비 70% / 액비 95%
+        if (result.moisture) {
+            const m = parseFloat(result.moisture);
+            if (!isNaN(m) && m > moistureLimit) pass = false;
+        }
+
+        // 부숙도: 면적 기준
+        if (result.maturity) {
+            const order = CompostSampleManager.MATURITY_ORDER[result.maturity];
+            const areaSqm = log ? this.getAreaInSqm(log.farmArea, log.farmAreaUnit) : 0;
+            const requiredLevel = areaSqm >= 1500 ? 3 : 2;
+            if (order !== undefined && order < requiredLevel) pass = false;
+        }
+
+        if (isLiquid) {
+            // 액비: 돼지만 구리 70 / 아연 170
+            if (animalType === '돼지') {
+                if (result.copper) {
+                    const cu = parseFloat(result.copper);
+                    if (!isNaN(cu) && cu > 70) pass = false;
+                }
+                if (result.zinc) {
+                    const zn = parseFloat(result.zinc);
+                    if (!isNaN(zn) && zn > 170) pass = false;
+                }
+            }
+        } else {
+            // 퇴비: 소→염분 2.5%, 돼지→구리 500/아연 1200
+            if (animalType === '소' && result.salinity) {
+                const s = parseFloat(result.salinity);
+                if (!isNaN(s) && s > 2.5) pass = false;
+            }
+            if (animalType === '돼지') {
+                if (result.copper) {
+                    const cu = parseFloat(result.copper);
+                    if (!isNaN(cu) && cu > 500) pass = false;
+                }
+                if (result.zinc) {
+                    const zn = parseFloat(result.zinc);
+                    if (!isNaN(zn) && zn > 1200) pass = false;
+                }
+            }
+        }
+
+        return pass ? 'pass' : 'fail';
+    }
+
+    checkCompostFieldStatus(field, value, statusEl) {
+        if (!value || !statusEl) {
+            if (statusEl) statusEl.innerHTML = '';
+            return;
+        }
+
+        let isOk = true;
+
+        if (field.key === 'maturity') {
+            // 면적 기준: 1500㎡ 이상 → 부숙완료(3) 이상, 미만 → 부숙중기(2) 이상
+            const order = CompostSampleManager.MATURITY_ORDER[value];
+            const requiredLevel = (this._caAreaSqm && this._caAreaSqm >= 1500) ? 3 : 2;
+            isOk = order !== undefined && order >= requiredLevel;
+        } else if (field.standard) {
+            const num = parseFloat(value.replace(/,/g, ''));
+            if (isNaN(num)) { statusEl.innerHTML = ''; return; }
+
+            const cleanStd = field.standard.replace(/,/g, '');
+            const maxMatch = cleanStd.match(/^([\d.]+)\s*이하$/);
+            if (maxMatch) {
+                isOk = num <= parseFloat(maxMatch[1]);
+            }
+        }
+
+        statusEl.textContent = '';
+        const span = document.createElement('span');
+        span.style.color = isOk ? '#16a34a' : '#dc2626';
+        span.textContent = isOk ? '✓' : '✕';
+        statusEl.appendChild(span);
+    }
+
+    saveCompostAnalysis() {
+        const logId = this._caLogId;
+        if (!logId) return;
+
+        const log = this.sampleLogs.find(l => String(l.id) === String(logId));
+        if (!log) return;
+
+        const fields = this.getFieldsForSample(log.sampleType || '가축분퇴비', log.animalType || '');
+        const allResults = this.loadAllCompostTestResults();
+
+        const result = {
+            id: logId,
+            testDate: document.getElementById('caTestDate')?.value || '',
+            judgment: document.querySelector('input[name="caJudgment"]:checked')?.value || '',
+            animalType: log.animalType || '',
+            updatedAt: new Date().toISOString()
+        };
+
+        for (const field of fields) {
+            const input = document.getElementById(`ca_${field.key}`);
+            if (input) result[field.key] = input.value.trim();
+        }
+
+        // 자동 판정: 모든 항목이 기준 이내이면 적합, 하나라도 초과면 부적합
+        const autoJudgment = this.autoJudgeCompost(result, log.animalType || '', log);
+        if (!result.judgment) result.judgment = autoJudgment;
+
+        allResults[logId] = result;
+        this.saveAllCompostTestResults(allResults);
+
+        // 접수 데이터에 함수율/부숙도 동기화
+        if (result.moisture) log.moisture = result.moisture;
+        if (result.maturity) log.maturity = result.maturity;
+        log.testResult = result.judgment || '';
+        this.saveLogs();
+
+        document.getElementById('compostAnalysisModal')?.classList.add('hidden');
+        this._caLogId = null;
+        this.filterAndRenderLogs();
+        this.showToast('분석결과가 저장되었습니다.', 'success');
+    }
+
+    // === 데이터 저장/로드 ===
+
+    loadCompostTestResult(logId) {
+        if (!this._cachedCompostResults) {
+            this._cachedCompostResults = this.loadAllCompostTestResults();
+        }
+        return this._cachedCompostResults[logId] || null;
+    }
+
+    loadAllCompostTestResults() {
+        const key = `compostTestResults_${this.selectedYear}`;
+        try {
+            const data = localStorage.getItem(key);
+            if (!data) return {};
+            return JSON.parse(data) || {};
+        } catch (e) {
+            (window.logger?.error || console.error)('퇴·액비 검사 결과 로드 실패:', e);
+            return {};
+        }
+    }
+
+    saveAllCompostTestResults(results) {
+        const key = `compostTestResults_${this.selectedYear}`;
+        try {
+            localStorage.setItem(key, JSON.stringify(results));
+            this._cachedCompostResults = results;
+            this.syncCompostTestResultsToFirestore(results);
+        } catch (e) {
+            (window.logger?.error || console.error)('퇴·액비 검사 결과 저장 실패:', e);
+        }
+    }
+
+    async syncCompostTestResultsToFirestore(results) {
+        if (!window.firestoreDb?.isEnabled()) return;
+        try {
+            const year = parseInt(this.selectedYear);
+            const entries = Object.entries(results);
+            if (entries.length === 0) return;
+            const documents = entries.map(([docKey, data]) => ({ ...data, id: docKey, _resultKey: docKey }));
+            await window.firestoreDb.batchSave('compostTestResults', year, documents);
+        } catch (e) {
+            (window.logger?.error || console.error)('퇴·액비 Firestore 동기화 실패:', e);
+        }
+    }
+
+    async syncCompostTestResultsFromFirestore() {
+        if (!window.firestoreDb?.isEnabled()) return;
+        try {
+            const year = parseInt(this.selectedYear);
+            const cloudData = await window.firestoreDb.getAll('compostTestResults', year);
+            if (!cloudData || cloudData.length === 0) return;
+
+            const cloudMap = {};
+            for (const doc of cloudData) {
+                const key = doc._resultKey || doc.id;
+                if (key) {
+                    const { _resultKey, syncedAt, ...rest } = doc;
+                    cloudMap[key] = rest;
+                }
+            }
+
+            const localResults = this.loadAllCompostTestResults();
+            const merged = { ...localResults };
+            for (const [key, cloudVal] of Object.entries(cloudMap)) {
+                const localVal = merged[key];
+                if (!localVal || !localVal.updatedAt || new Date(cloudVal.updatedAt) >= new Date(localVal.updatedAt)) {
+                    merged[key] = cloudVal;
+                }
+            }
+
+            const lsKey = `compostTestResults_${this.selectedYear}`;
+            localStorage.setItem(lsKey, JSON.stringify(merged));
+            this._cachedCompostResults = merged;
+
+            // 접수 데이터 판정/함수율/부숙도 동기화
+            let syncCount = 0;
+            for (const [resultId, resultData] of Object.entries(merged)) {
+                const log = this.sampleLogs.find(l => String(l.id) === String(resultId));
+                if (log) {
+                    if (resultData.judgment) log.testResult = resultData.judgment;
+                    if (resultData.moisture) log.moisture = resultData.moisture;
+                    if (resultData.maturity) log.maturity = resultData.maturity;
+                    syncCount++;
+                }
+            }
+            if (syncCount > 0) this.saveLogs();
+            this.filterAndRenderLogs();
+        } catch (e) {
+            (window.logger?.error || console.error)('퇴·액비 Firestore 로드 실패:', e);
+        }
+    }
+
+    onYearChange(newYear) {
+        this.updateListViewTitle();
+        this._cachedCompostResults = null;
+        this.syncCompostTestResultsFromFirestore();
     }
 
     // ========================================

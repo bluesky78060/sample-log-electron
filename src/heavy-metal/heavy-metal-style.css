@@ -1048,3 +1048,96 @@
 [data-theme="dark"] .col-name:hover {
     background-color: rgba(251, 146, 60, 0.15);
 }
+
+/* ========================================
+   토양 중금속 분석결과 모달
+   ======================================== */
+
+/* 분석결과 조회 버튼 (툴바) */
+.hm-view-btn {
+    background: linear-gradient(135deg, #d97706, #b45309) !important;
+    color: white !important; border: none !important; border-radius: 6px !important;
+}
+.hm-view-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+.hm-view-btn .material-icons-outlined { color: white !important; }
+.hm-view-btn .util-btn-label { color: white !important; }
+
+.btn-analysis-open {
+    background: none; border: 1px solid #d97706; color: #d97706;
+    border-radius: 4px; padding: 0.15rem 0.4rem; font-size: 0.7rem;
+    cursor: pointer; transition: all 0.2s; white-space: nowrap;
+}
+.btn-analysis-open:hover { background: #d97706; color: white; }
+.btn-analysis-open.has-result { background: #fffbeb; border-color: #f59e0b; color: #d97706; }
+.btn-analysis-open.has-result:hover { background: #f59e0b; color: white; }
+
+.modal-hm-analysis { max-width: 600px; width: 95vw; max-height: 85vh; display: flex; flex-direction: column; }
+.hm-analysis-header {
+    background: linear-gradient(135deg, #fffbeb, #fef3c7);
+    border-bottom: 2px solid #fcd34d; padding: 0.75rem 1rem;
+}
+.hm-analysis-header h3 { color: #92400e; font-size: 0.95rem; display: flex; align-items: center; gap: 0.35rem; }
+.hm-analysis-body { overflow-y: auto; padding: 1rem; flex: 1; }
+
+.hm-sample-info { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.6rem 0.8rem; margin-bottom: 0.75rem; }
+.hm-sample-info .info-row { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.35rem; }
+.hm-sample-info .info-row:last-child { margin-bottom: 0; }
+.hm-sample-info .info-label { font-size: 0.7rem; font-weight: 600; color: #64748b; min-width: 50px; }
+.hm-sample-info .info-value { font-size: 0.8rem; font-weight: 500; color: #1e293b; margin-right: 1rem; }
+
+.hm-test-date-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; }
+.hm-test-date-row label { font-size: 0.8rem; font-weight: 600; color: #334155; min-width: 55px; }
+.hm-input { padding: 0.35rem 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.8rem; font-family: inherit; color: #1e293b; }
+.hm-input:focus { border-color: #d97706; box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.15); outline: none; }
+
+.hm-fields-wrapper { border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; margin-bottom: 0.75rem; }
+.hm-fields-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+.hm-fields-table thead th { background: #f1f5f9; padding: 0.45rem 0.5rem; font-weight: 600; font-size: 0.7rem; color: #475569; text-align: center; border-bottom: 2px solid #e2e8f0; }
+.hm-fields-table tbody td { padding: 0.4rem 0.5rem; border-bottom: 1px solid #f1f5f9; text-align: center; vertical-align: middle; }
+.hm-fields-table tbody tr:hover { background: #f8fafc; }
+
+.hm-col-name { width: 110px; text-align: left !important; font-weight: 500; }
+.hm-col-unit { width: 60px; color: #64748b; font-size: 0.75rem; }
+.hm-col-standard { width: 90px; color: #0369A1; font-size: 0.75rem; font-weight: 500; }
+.hm-col-value { width: 110px; }
+.hm-col-status { width: 40px; font-size: 1rem; }
+
+.hm-result-input {
+    width: 100px; padding: 0.3rem 0.4rem; border: 1px solid #cbd5e1; border-radius: 5px;
+    font-size: 0.8rem; font-family: inherit; text-align: center; color: #1e293b;
+}
+.hm-result-input:focus { border-color: #d97706; box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.15); outline: none; }
+
+.hm-judgment-row { display: flex; align-items: center; gap: 0.75rem; }
+.hm-judgment-row > label { font-size: 0.8rem; font-weight: 600; color: #334155; min-width: 35px; }
+
+.hm-analysis-body .judgment-options { display: flex; gap: 0.5rem; }
+.hm-analysis-body .judgment-option { cursor: pointer; }
+.hm-analysis-body .judgment-option input[type="radio"] { display: none; }
+.hm-analysis-body .judgment-chip { display: inline-block; padding: 0.3rem 0.8rem; border-radius: 16px; font-size: 0.8rem; font-weight: 500; border: 2px solid #e2e8f0; color: #64748b; transition: all 0.2s; }
+.hm-analysis-body .judgment-option input:checked + .judgment-chip { border-color: #94a3b8; background: #f1f5f9; color: #334155; }
+.hm-analysis-body .judgment-option input:checked + .chip-pass { border-color: #22c55e; background: #f0fdf4; color: #16a34a; }
+.hm-analysis-body .judgment-option input:checked + .chip-fail { border-color: #ef4444; background: #fef2f2; color: #dc2626; }
+
+.hm-analysis-footer { border-top: 1px solid #e2e8f0; padding: 0.6rem 1rem; display: flex; justify-content: flex-end; gap: 0.5rem; }
+.btn-hm-save { background: linear-gradient(135deg, #d97706, #b45309) !important; color: white !important; }
+
+/* 다크 모드 - 분석결과 모달 */
+[data-theme="dark"] .hm-analysis-header { background: linear-gradient(135deg, rgba(146,64,14,0.2), rgba(217,119,6,0.1)); border-bottom-color: rgba(252,211,77,0.3); }
+[data-theme="dark"] .hm-analysis-header h3 { color: #fcd34d; }
+[data-theme="dark"] .hm-sample-info { background: #1e293b; border-color: #334155; }
+[data-theme="dark"] .hm-sample-info .info-label { color: #94a3b8; }
+[data-theme="dark"] .hm-sample-info .info-value { color: #e2e8f0; }
+[data-theme="dark"] .hm-input, [data-theme="dark"] .hm-result-input { background: #1e293b; border-color: #475569; color: #e2e8f0; }
+[data-theme="dark"] .hm-fields-wrapper { border-color: #334155; }
+[data-theme="dark"] .hm-fields-table thead th { background: #1e293b; color: #94a3b8; border-bottom-color: #334155; }
+[data-theme="dark"] .hm-fields-table tbody td { border-bottom-color: #1e293b; color: #e2e8f0; }
+[data-theme="dark"] .hm-fields-table tbody tr:hover { background: rgba(217,119,6,0.05); }
+[data-theme="dark"] .hm-col-standard { color: #7dd3fc; }
+[data-theme="dark"] .hm-judgment-row > label, [data-theme="dark"] .hm-test-date-row label { color: #cbd5e1; }
+[data-theme="dark"] .hm-analysis-footer { border-top-color: #334155; }
+[data-theme="dark"] .hm-analysis-body .judgment-option input:checked + .chip-pass { border-color: #22c55e; background: rgba(34,197,94,0.15); color: #86efac; }
+[data-theme="dark"] .hm-analysis-body .judgment-option input:checked + .chip-fail { border-color: #ef4444; background: rgba(239,68,68,0.15); color: #fca5a5; }
+[data-theme="dark"] .btn-analysis-open { border-color: #f59e0b; color: #fcd34d; }
+[data-theme="dark"] .btn-analysis-open:hover { background: #d97706; color: white; }
+[data-theme="dark"] .btn-analysis-open.has-result { background: rgba(245,158,11,0.1); border-color: #f59e0b; color: #fcd34d; }

@@ -38,18 +38,18 @@
             color: #fcd34d !important;
         }
     </style>
-  <script type="module" crossorigin src="../assets/compost-DQNwKLJN.js"></script>
+  <script type="module" crossorigin src="../assets/compost-CzFkzXFS.js"></script>
   <link rel="modulepreload" crossorigin href="../assets/theme-BmPSn4YP.js">
-  <link rel="modulepreload" crossorigin href="../assets/tooltip-lQAknlz5.js">
+  <link rel="modulepreload" crossorigin href="../assets/tooltip-Dkelu9TD.js">
   <link rel="modulepreload" crossorigin href="../assets/xlsx-CY41JvjH.js">
   <link rel="modulepreload" crossorigin href="../assets/purify.es-A66Cw1IH.js">
   <link rel="modulepreload" crossorigin href="../assets/excel-import-manager-DTFDtChC.js">
   <link rel="modulepreload" crossorigin href="../assets/toast-CYVUzQgW.js">
   <link rel="modulepreload" crossorigin href="../assets/bonghwaData-B7YY21oY.js">
   <link rel="modulepreload" crossorigin href="../assets/storage-manager-D0riC6DW.js">
-  <link rel="modulepreload" crossorigin href="../assets/firestore-db-Db4tTXJK.js">
+  <link rel="modulepreload" crossorigin href="../assets/firestore-db-6zAcD48n.js">
   <link rel="stylesheet" crossorigin href="../assets/tooltip-B_VCVgGp.css">
-  <link rel="stylesheet" crossorigin href="../assets/compost-DKLa7m40.css">
+  <link rel="stylesheet" crossorigin href="../assets/compost-DO1pTI26.css">
   <link rel="stylesheet" crossorigin href="../assets/tailwind-output-uplGniQ-.css">
 </head>
 
@@ -139,6 +139,10 @@
                 <span class="util-btn-label">불러오기</span>
                 <input type="file" id="loadJsonInput" accept=".json" hidden>
             </label>
+            <button type="button" id="compostAnalysisViewBtn" class="util-btn ca-view-btn" title="검정결과 확인">
+                <span class="material-icons-outlined">science</span>
+                <span class="util-btn-label">검정결과</span>
+            </button>
         </div>
 
         <div class="navbar-divider"></div>
@@ -487,6 +491,7 @@
                             <th>통보방법</th>
                             <th class="col-note">비고</th>
                             <th class="col-mail-date">발송일자</th>
+                            <th class="col-analysis">분석결과</th>
                             <th class="col-action">관리</th>
                         </tr>
                     </thead>
@@ -785,6 +790,67 @@
                 <div class="modal-footer-spacer"></div>
                 <button type="button" id="cancelExcelImportBtn" class="btn-cancel">취소</button>
                 <button type="button" id="excelImportNextBtn" class="btn-confirm">다음</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 퇴·액비 분석결과 입력 모달 -->
+    <div id="compostAnalysisModal" class="modal hidden">
+        <div class="modal-overlay"></div>
+        <div class="modal-content modal-compost-analysis">
+            <div class="modal-header compost-analysis-header">
+                <h3><span class="material-icons-outlined" style="font-size:20px;vertical-align:middle;">science</span> 퇴·액비 분석결과 입력</h3>
+                <button type="button" class="modal-close" id="closeCompostAnalysisModal">&times;</button>
+            </div>
+            <div class="modal-body compost-analysis-body">
+                <div class="ca-sample-info">
+                    <div class="info-row">
+                        <span class="info-label">접수번호</span>
+                        <span class="info-value" id="caReceptionNumber">-</span>
+                        <span class="info-label">접수일자</span>
+                        <span class="info-value" id="caDate">-</span>
+                        <span class="info-label">축종</span>
+                        <span class="info-value ca-animal-badge" id="caAnimalType">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">성명</span>
+                        <span class="info-value" id="caName">-</span>
+                        <span class="info-label">시료종류</span>
+                        <span class="info-value" id="caSampleType">-</span>
+                        <span class="info-label">목적</span>
+                        <span class="info-value" id="caPurpose">-</span>
+                    </div>
+                </div>
+                <div class="ca-test-date-row">
+                    <label for="caTestDate">검사일자</label>
+                    <input type="date" id="caTestDate" class="ca-input">
+                </div>
+                <div class="ca-fields-wrapper">
+                    <table class="ca-fields-table">
+                        <thead>
+                            <tr>
+                                <th class="ca-col-name">분석항목</th>
+                                <th class="ca-col-unit">단위</th>
+                                <th class="ca-col-standard">기준</th>
+                                <th class="ca-col-value">결과값</th>
+                                <th class="ca-col-status">상태</th>
+                            </tr>
+                        </thead>
+                        <tbody id="caFieldsBody"></tbody>
+                    </table>
+                </div>
+                <div class="ca-judgment-row">
+                    <label>판정</label>
+                    <div class="judgment-options">
+                        <label class="judgment-option"><input type="radio" name="caJudgment" value=""><span class="judgment-chip">미판정</span></label>
+                        <label class="judgment-option"><input type="radio" name="caJudgment" value="pass"><span class="judgment-chip chip-pass">적합</span></label>
+                        <label class="judgment-option"><input type="radio" name="caJudgment" value="fail"><span class="judgment-chip chip-fail">부적합</span></label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer compost-analysis-footer">
+                <button type="button" id="cancelCompostAnalysisBtn" class="btn-cancel">닫기</button>
+                <button type="button" id="saveCompostAnalysisBtn" class="btn-confirm btn-ca-save">저장</button>
             </div>
         </div>
     </div>

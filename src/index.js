@@ -28,6 +28,8 @@ if (require('electron-squirrel-startup')) {
 /** @type {Electron.BrowserWindow | null} */
 let mainWindow = null;
 
+/** Vite 개발 서버 URL (전체 IPC 핸들러 공통) */
+
 /**
  * M-3: 앱의 실제 docs 디렉토리 절대 경로 (will-navigate 검증용)
  * realpath로 심볼릭 링크 해석 (존재하지 않으면 resolve 경로 사용)
@@ -283,7 +285,6 @@ const createWindow = () => {
   // 1. VITE_DEV_SERVER_URL 환경변수가 있으면 Vite dev server 사용
   // 2. 없으면 Vite dev server(localhost:3000)에 연결 시도
   // 3. 둘 다 안 되면 빌드된 docs/index.html 로드
-  const VITE_DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL || 'http://localhost:3000';
   const docsPath = path.join(__dirname, '..', 'docs', 'index.html');
 
   /** @type {string|null} 현재 로드 원본 (dev server URL 또는 null) */
@@ -477,6 +478,82 @@ app.on('window-all-closed', () => {
 });
 
 // ========================================
+// 분석 팝업 윈도우 공통 헬퍼
+// ========================================
+
+/** 윈도우 참조 관리 맵 */
+const analysisWindows = {};
+
+/**
+ * 분석 결과 팝업 윈도우 생성 헬퍼
+ * @param {string} key - 윈도우 키 (예: 'heuktoram', 'waterAnalysis')
+ * @param {Object} options - { title, width, height, minWidth, minHeight, subPath }
+ */
+async function openAnalysisPopup(key, options) {
+    const existing = analysisWindows[key];
+    if (existing && !existing.isDestroyed()) {
+        existing.focus();
+        return true;
+    }
+
+    const win = new BrowserWindow({
+        width: options.width || 1400,
+        height: options.height || 850,
+        minWidth: options.minWidth || 1000,
+        minHeight: options.minHeight || 600,
+        title: options.title,
+        webPreferences: {
+            preload: path.join(__dirname, 'preload.js'),
+            contextIsolation: true,
+            nodeIntegration: false
+        },
+    });
+
+    analysisWindows[key] = win;
+    win.on('closed', () => { analysisWindows[key] = null; });
+
+    // 외부 URL 네비게이션 차단
+    win.webContents.on('will-navigate', (event, url) => {
+        if (url.startsWith('file://')) {
+            try {
+                const fileUrl = new URL(url);
+                const filePath = decodeURIComponent(fileUrl.pathname);
+                const normalizedPath = process.platform === 'win32' ? filePath.replace(/^\//, '') : filePath;
+                let realFilePath;
+                try { realFilePath = fs.realpathSync(normalizedPath); } catch { realFilePath = path.resolve(normalizedPath); }
+                if (realFilePath.startsWith(DOCS_DIR + path.sep) || realFilePath === DOCS_DIR) return;
+            } catch { /* 차단 */ }
+            event.preventDefault();
+            return;
+        }
+        if (url.startsWith('http://localhost:')) return;
+        event.preventDefault();
+    });
+
+    // dev server / 빌드 파일 로드
+    try {
+        const http = require('node:http');
+        await new Promise((resolve, reject) => {
+            const req = http.get(VITE_DEV_SERVER_URL, { timeout: 1000 }, (res) => { res.destroy(); resolve(); });
+            req.on('error', reject);
+            req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
+        });
+        win.loadURL(`${VITE_DEV_SERVER_URL}/${options.subPath}/`);
+    } catch {
+        const pagePath = path.join(__dirname, '..', 'docs', options.subPath, 'index.html');
+        if (fs.existsSync(pagePath)) {
+            win.loadFile(pagePath);
+        } else {
+            win.loadURL(`data:text/html;charset=utf-8,
+                <h2 style="font-family:sans-serif;padding:2rem;">${options.title} 페이지를 찾을 수 없습니다</h2>
+                <p style="font-family:sans-serif;padding:0 2rem;"><code>npm run build</code>로 빌드해주세요.</p>`);
+        }
+    }
+
+    return true;
+}
+
+// ========================================
 // 흙토람 팝업 윈도우
 // ========================================
 
@@ -534,7 +611,6 @@ ipcMain.handle('open-heuktoram', async () => {
     });
 
     // 메인 윈도우와 동일한 로드 전략
-    const VITE_DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL || 'http://localhost:3000';
 
     try {
         const http = require('node:http');
@@ -565,156 +641,24 @@ ipcMain.handle('open-heuktoram', async () => {
 });
 
 // ========================================
-// 수질분석 결과 입력 팝업 윈도우
+// 분석 결과 팝업 윈도우 (공통 헬퍼 사용)
 // ========================================
 
-/** @type {Electron.BrowserWindow | null} */
-let waterAnalysisWindow = null;
+ipcMain.handle('open-water-analysis', () =>
+    openAnalysisPopup('waterAnalysis', { title: '수질분석 결과 입력', width: 1500, minWidth: 1100, subPath: 'water-analysis' })
+);
 
-ipcMain.handle('open-water-analysis', async () => {
-    if (waterAnalysisWindow && !waterAnalysisWindow.isDestroyed()) {
-        waterAnalysisWindow.focus();
-        return true;
-    }
+ipcMain.handle('open-pesticide-analysis', () =>
+    openAnalysisPopup('pesticideAnalysis', { title: '잔류농약 분석결과 조회', subPath: 'pesticide-analysis' })
+);
 
-    waterAnalysisWindow = new BrowserWindow({
-        width: 1500,
-        height: 850,
-        minWidth: 1100,
-        minHeight: 600,
-        title: '수질분석 결과 입력',
-        webPreferences: {
-            preload: path.join(__dirname, 'preload.js'),
-            contextIsolation: true,
-            nodeIntegration: false
-        },
-    });
+ipcMain.handle('open-compost-analysis', () =>
+    openAnalysisPopup('compostAnalysis', { title: '퇴·액비 검정결과 조회', width: 1300, height: 800, minWidth: 900, subPath: 'compost-analysis' })
+);
 
-    waterAnalysisWindow.on('closed', () => { waterAnalysisWindow = null; });
-
-    // 외부 URL 네비게이션 차단
-    waterAnalysisWindow.webContents.on('will-navigate', (event, url) => {
-        if (url.startsWith('file://')) {
-            try {
-                const fileUrl = new URL(url);
-                const filePath = decodeURIComponent(fileUrl.pathname);
-                const normalizedPath = process.platform === 'win32' ? filePath.replace(/^\//, '') : filePath;
-                let realFilePath;
-                try {
-                    realFilePath = fs.realpathSync(normalizedPath);
-                } catch {
-                    realFilePath = path.resolve(normalizedPath);
-                }
-                if (realFilePath.startsWith(DOCS_DIR + path.sep) || realFilePath === DOCS_DIR) {
-                    return;
-                }
-            } catch {
-                // 경로 파싱 실패 시 차단
-            }
-            event.preventDefault();
-            return;
-        }
-        if (url.startsWith('http://localhost:')) return;
-        event.preventDefault();
-    });
-
-    const VITE_DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL || 'http://localhost:3000';
-
-    try {
-        const http = require('node:http');
-        await new Promise((resolve, reject) => {
-            const req = http.get(VITE_DEV_SERVER_URL, { timeout: 1000 }, (res) => {
-                res.destroy();
-                resolve();
-            });
-            req.on('error', reject);
-            req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
-        });
-        waterAnalysisWindow.loadURL(`${VITE_DEV_SERVER_URL}/water-analysis/`);
-    } catch {
-        const waterAnalysisPath = path.join(__dirname, '..', 'docs', 'water-analysis', 'index.html');
-        if (fs.existsSync(waterAnalysisPath)) {
-            waterAnalysisWindow.loadFile(waterAnalysisPath);
-        } else {
-            waterAnalysisWindow.loadURL(`data:text/html;charset=utf-8,
-                <h2 style="font-family:sans-serif;padding:2rem;">수질분석 결과 입력 페이지를 찾을 수 없습니다</h2>
-                <p style="font-family:sans-serif;padding:0 2rem;">
-                    <code>npm run build</code>로 빌드해주세요.
-                </p>`);
-        }
-    }
-
-    return true;
-});
-
-// ========================================
-// 잔류농약 분석결과 조회 팝업 윈도우
-// ========================================
-
-/** @type {Electron.BrowserWindow | null} */
-let pesticideAnalysisWindow = null;
-
-ipcMain.handle('open-pesticide-analysis', async () => {
-    if (pesticideAnalysisWindow && !pesticideAnalysisWindow.isDestroyed()) {
-        pesticideAnalysisWindow.focus();
-        return true;
-    }
-
-    pesticideAnalysisWindow = new BrowserWindow({
-        width: 1400,
-        height: 850,
-        minWidth: 1000,
-        minHeight: 600,
-        title: '잔류농약 분석결과 조회',
-        webPreferences: {
-            preload: path.join(__dirname, 'preload.js'),
-            contextIsolation: true,
-            nodeIntegration: false
-        },
-    });
-
-    pesticideAnalysisWindow.on('closed', () => { pesticideAnalysisWindow = null; });
-
-    pesticideAnalysisWindow.webContents.on('will-navigate', (event, url) => {
-        if (url.startsWith('file://')) {
-            try {
-                const fileUrl = new URL(url);
-                const filePath = decodeURIComponent(fileUrl.pathname);
-                const normalizedPath = process.platform === 'win32' ? filePath.replace(/^\//, '') : filePath;
-                let realFilePath;
-                try { realFilePath = fs.realpathSync(normalizedPath); } catch { realFilePath = path.resolve(normalizedPath); }
-                if (realFilePath.startsWith(DOCS_DIR + path.sep) || realFilePath === DOCS_DIR) return;
-            } catch { /* 차단 */ }
-            event.preventDefault();
-            return;
-        }
-        if (url.startsWith('http://localhost:')) return;
-        event.preventDefault();
-    });
-
-    const VITE_DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL || 'http://localhost:3000';
-
-    try {
-        const http = require('node:http');
-        await new Promise((resolve, reject) => {
-            const req = http.get(VITE_DEV_SERVER_URL, { timeout: 1000 }, (res) => { res.destroy(); resolve(); });
-            req.on('error', reject);
-            req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
-        });
-        pesticideAnalysisWindow.loadURL(`${VITE_DEV_SERVER_URL}/pesticide-analysis/`);
-    } catch {
-        const pagePath = path.join(__dirname, '..', 'docs', 'pesticide-analysis', 'index.html');
-        if (fs.existsSync(pagePath)) {
-            pesticideAnalysisWindow.loadFile(pagePath);
-        } else {
-            pesticideAnalysisWindow.loadURL(`data:text/html;charset=utf-8,
-                <h2 style="font-family:sans-serif;padding:2rem;">잔류농약 분석결과 페이지를 찾을 수 없습니다</h2>
-                <p style="font-family:sans-serif;padding:0 2rem;"><code>npm run build</code>로 빌드해주세요.</p>`);
-        }
-    }
-
-    return true;
-});
+ipcMain.handle('open-heavy-metal-analysis', () =>
+    openAnalysisPopup('heavyMetalAnalysis', { title: '토양 중금속 분석결과 조회', height: 800, subPath: 'heavy-metal-analysis' })
+);
 
 // ========================================
 // 파일 시스템 IPC 핸들러
