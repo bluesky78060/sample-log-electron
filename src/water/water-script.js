@@ -69,6 +69,14 @@ class WaterSampleManager extends window.BaseSampleManager {
     }
 
     // ========================================
+    // 오버라이드: 연도 변경 시 분석결과 재동기화
+    // ========================================
+    onYearChange(newYear) {
+        this._cachedTestResults = null;
+        this.syncTestResultsFromFirestore();
+    }
+
+    // ========================================
     // 오버라이드: DOM 요소 캐싱
     // ========================================
     cacheElements() {

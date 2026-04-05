@@ -371,6 +371,9 @@ class PesticideSampleManager extends window.BaseSampleManager {
 
     onYearChange(newYear) {
         this.updateListViewTitle();
+        // 연도 변경 시 분석결과 캐시 무효화 + Firestore 재동기화
+        this._cachedPesticideResults = null;
+        this.syncPesticideTestResultsFromFirestore();
     }
 
     // onBeforeSave: BaseSampleManager.saveLogs에서 listViewStale 설정하므로 별도 오버라이드 불필요
@@ -3407,7 +3410,6 @@ class PesticideSampleManager extends window.BaseSampleManager {
             }
 
             const localResults = this.loadAllPesticideTestResults();
-            // updatedAt 기준 병합 (최신 데이터 우선)
             const merged = { ...localResults };
             for (const [key, cloudVal] of Object.entries(cloudMap)) {
                 const localVal = merged[key];
