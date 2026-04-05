@@ -242,6 +242,8 @@ async function initializeFirebase() {
         }
 
         db = firebase.firestore();
+        // 오프라인 캐시 설정 (enablePersistence 대체)
+        db.settings({ cacheSizeBytes: firebase.firestore.CACHE_SIZE_UNLIMITED, merge: true });
         logFirebase('Firestore 연결됨');
 
         // 익명 인증 수행
@@ -271,9 +273,9 @@ async function initializeFirebase() {
 
         // 오프라인 지원 활성화 (멀티탭 동기화 모드)
         try {
-            await db.enablePersistence({ synchronizeTabs: true });
+            await db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
             isOfflineEnabled = true;
-            logFirebase('오프라인 지원 활성화됨 (멀티탭 동기화)');
+            logFirebase('오프라인 지원 활성화됨');
         } catch (err) {
             (window.logger?.warn || console.warn)('[Firebase] 오프라인 지원 에러:', err.code, err.message);
             if (err.code === 'failed-precondition') {
