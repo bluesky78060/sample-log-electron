@@ -596,9 +596,42 @@
                 </div>
             </div>
 
-            <!-- v1.7.80 -->
+            <!-- v1.7.95 -->
             <div class="version-entry">
                 <div class="version-dot latest"></div>
+                <div class="version-card">
+                    <div class="version-card-header">
+                        <div>
+                            <div class="version-meta">
+                                <span class="version-number">v1.7.95</span>
+                                <span class="version-date">2026-04-05</span>
+                            </div>
+                            <div class="version-title">분석결과 입력 기능 (5개 시료 타입) + 고정 컬럼</div>
+                        </div>
+                        <div class="badge-row">
+                            <span class="badge badge-latest">★ 최신</span>
+                            <span class="badge badge-feature">기능</span>
+                            <span class="badge badge-fix">수정</span>
+                            <span class="badge badge-security">보안</span>
+                        </div>
+                    </div>
+                    <ul class="change-list">
+                        <li><strong>수질분석 결과 입력</strong> — 지하수법 시행규칙 별표9 기준 20항목, 모달 + 결과 입력 페이지, 불검출(ND) 체크박스, 기준값 비교</li>
+                        <li><strong>잔류농약 분석결과 입력</strong> — 515종 농약 자동완성(GC/LC), 동적 행 추가, 전체 불검출, 기기분석값(ng/kg)→검출량(mg/kg) 자동 환산</li>
+                        <li><strong>퇴·액비 분석결과 입력</strong> — 축종별 항목(함수율/부숙도/염분/구리/아연), 퇴비/액비 기준 분리, 면적 기반 부숙도 판정</li>
+                        <li><strong>토양 중금속 분석결과 입력</strong> — 8항목(Cd/Cu/As/Hg/Pb/Cr6+/Zn/Ni), 토양오염우려기준 1/2/3지역</li>
+                        <li><strong>분석결과 조회 페이지</strong> — 수질/잔류농약/퇴·액비/중금속 각각 별도 창, 엑셀 내보내기(셀 병합), 필터</li>
+                        <li><strong>Firebase Firestore 연동</strong> — 모든 분석결과 자동 동기화, updatedAt 기준 충돌 해결, 연도 변경 시 재동기화</li>
+                        <li><strong>목록 고정 컬럼</strong> — 5개 시료 타입 목록에서 성명까지 가로 스크롤 시 고정</li>
+                        <li><strong>보안 수정</strong> — 주소 자동완성 XSS 취약점 17건 수정 (innerHTML→DOM API)</li>
+                        <li><strong>리팩터링</strong> — IPC 핸들러 헬퍼 함수 추출(~200줄 절감), VITE_DEV_SERVER_URL 중복 제거</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- v1.7.80 -->
+            <div class="version-entry">
+                <div class="version-dot"></div>
                 <div class="version-card">
                     <div class="version-card-header">
                         <div>
@@ -609,7 +642,6 @@
                             <div class="version-title">등록 모달 주소 검증 + 하위필지 검증 + CI 키 주입</div>
                         </div>
                         <div class="badge-row">
-                            <span class="badge badge-latest">★ 최신</span>
                             <span class="badge badge-feature">기능</span>
                             <span class="badge badge-fix">수정</span>
                         </div>

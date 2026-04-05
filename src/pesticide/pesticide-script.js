@@ -1267,7 +1267,7 @@ class PesticideSampleManager extends window.BaseSampleManager {
 
             // Checkbox column
             const tdCheckbox = document.createElement('td');
-            tdCheckbox.className = 'col-checkbox';
+            tdCheckbox.className = 'sticky-col col-checkbox';
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.className = 'row-checkbox';
@@ -1277,7 +1277,7 @@ class PesticideSampleManager extends window.BaseSampleManager {
 
             // Complete button column
             const tdComplete = document.createElement('td');
-            tdComplete.className = 'col-complete';
+            tdComplete.className = 'sticky-col col-complete';
             const btnComplete = document.createElement('button');
             btnComplete.className = 'btn-complete' + (isComplete ? ' completed' : '');
             btnComplete.dataset.id = row.id;
@@ -1288,7 +1288,7 @@ class PesticideSampleManager extends window.BaseSampleManager {
 
             // Result button column
             const tdResult = document.createElement('td');
-            tdResult.className = 'col-result';
+            tdResult.className = 'sticky-col col-result';
             const btnResult = document.createElement('button');
             btnResult.className = 'btn-result';
             if (row.testResult === 'pass') {
@@ -1309,11 +1309,13 @@ class PesticideSampleManager extends window.BaseSampleManager {
 
             // Display number
             const tdNumber = document.createElement('td');
+            tdNumber.className = 'sticky-col col-num';
             tdNumber.textContent = row._displayNumber;
             tr.appendChild(tdNumber);
 
             // Date
             const tdDate = document.createElement('td');
+            tdDate.className = 'sticky-col col-date';
             tdDate.textContent = row.date;
             tr.appendChild(tdDate);
 
@@ -1331,17 +1333,19 @@ class PesticideSampleManager extends window.BaseSampleManager {
 
             // Sub category
             const tdSubCategory = document.createElement('td');
+            tdSubCategory.className = 'sticky-col col-category';
             tdSubCategory.textContent = row.subCategory || '-';
             tr.appendChild(tdSubCategory);
 
             // Purpose
             const tdPurpose = document.createElement('td');
+            tdPurpose.className = 'sticky-col col-purpose';
             tdPurpose.textContent = row.purpose || '-';
             tr.appendChild(tdPurpose);
 
             // Name (클릭 시 같은 이름 일괄 선택)
             const tdName = document.createElement('td');
-            tdName.className = 'col-name';
+            tdName.className = 'sticky-col col-name';
             tdName.dataset.name = row.name || '';
             tdName.textContent = safeName;
             tdName.title = `"${safeName}" 클릭하면 같은 이름 일괄 선택`;

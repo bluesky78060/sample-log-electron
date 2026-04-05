@@ -170,7 +170,7 @@ class WaterSampleManager extends window.BaseSampleManager {
 
         // 1. Checkbox
         const tdCheckbox = document.createElement('td');
-        tdCheckbox.className = 'col-checkbox';
+        tdCheckbox.className = 'col-checkbox sticky-col';
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.className = 'row-checkbox';
@@ -180,7 +180,7 @@ class WaterSampleManager extends window.BaseSampleManager {
 
         // 2. Complete button
         const tdComplete = document.createElement('td');
-        tdComplete.className = 'col-complete';
+        tdComplete.className = 'col-complete sticky-col';
         const btnComplete = document.createElement('button');
         btnComplete.className = `btn-complete ${log.isComplete ? 'completed' : ''}`;
         btnComplete.dataset.id = log.id;
@@ -191,7 +191,7 @@ class WaterSampleManager extends window.BaseSampleManager {
 
         // 3. Result button
         const tdResult = document.createElement('td');
-        tdResult.className = 'col-result';
+        tdResult.className = 'col-result sticky-col';
         const btnResult = document.createElement('button');
         btnResult.className = `btn-result ${log.testResult === 'pass' ? 'pass' : log.testResult === 'fail' ? 'fail' : ''}`;
         btnResult.dataset.id = log.id;
@@ -202,11 +202,13 @@ class WaterSampleManager extends window.BaseSampleManager {
 
         // 4. Reception number
         const tdReceptionNumber = document.createElement('td');
+        tdReceptionNumber.className = 'col-num sticky-col';
         tdReceptionNumber.textContent = log.receptionNumber || '-';
         row.appendChild(tdReceptionNumber);
 
         // 5. Date
         const tdDate = document.createElement('td');
+        tdDate.className = 'col-date sticky-col';
         tdDate.textContent = log.date || '-';
         row.appendChild(tdDate);
 
@@ -224,7 +226,7 @@ class WaterSampleManager extends window.BaseSampleManager {
 
         // 8. Name (클릭 시 같은 이름 일괄 선택)
         const tdName = document.createElement('td');
-        tdName.className = 'col-name';
+        tdName.className = 'col-name sticky-col';
         tdName.dataset.name = log.name || '';
         tdName.textContent = safeName;
         tdName.title = `"${safeName}" 클릭하면 같은 이름 일괄 선택`;

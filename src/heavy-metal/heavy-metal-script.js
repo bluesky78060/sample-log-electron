@@ -128,6 +128,7 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
 
         // 1. Checkbox
         const tdCheckbox = document.createElement('td');
+        tdCheckbox.className = 'sticky-col col-checkbox';
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.className = 'row-checkbox';
@@ -137,6 +138,7 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
 
         // 2. Complete button
         const tdComplete = document.createElement('td');
+        tdComplete.className = 'sticky-col col-complete';
         const btnComplete = document.createElement('button');
         btnComplete.className = item.isComplete ? 'btn-complete completed' : 'btn-complete';
         btnComplete.dataset.id = item.id;
@@ -147,7 +149,7 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
 
         // 3. Result button
         const tdResult = document.createElement('td');
-        tdResult.className = 'col-result';
+        tdResult.className = 'sticky-col col-result';
         const btnResult = document.createElement('button');
         btnResult.className = 'btn-result' +
             (item.testResult === 'pass' ? ' pass' :
@@ -162,17 +164,19 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
 
         // 4. Reception number
         const tdReceptionNumber = document.createElement('td');
+        tdReceptionNumber.className = 'sticky-col col-num';
         tdReceptionNumber.textContent = item.receptionNumber || '-';
         tr.appendChild(tdReceptionNumber);
 
         // 5. Date
         const tdDate = document.createElement('td');
+        tdDate.className = 'sticky-col col-date';
         tdDate.textContent = item.date || '-';
         tr.appendChild(tdDate);
 
         // 6. Name (클릭 시 같은 이름 일괄 선택)
         const tdName = document.createElement('td');
-        tdName.className = 'col-name';
+        tdName.className = 'sticky-col col-name';
         tdName.dataset.name = item.name || '';
         tdName.textContent = safeName;
         tdName.title = `"${safeName}" 클릭하면 같은 이름 일괄 선택`;

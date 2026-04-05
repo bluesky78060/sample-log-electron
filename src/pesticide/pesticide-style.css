@@ -1787,3 +1787,61 @@
 [data-theme="dark"] .btn-analysis-open.has-result:hover { background: #22c55e; color: white; }
 [data-theme="dark"] .pesticide-analysis-body .judgment-option input:checked + .chip-pass { border-color: #22c55e; background: rgba(34,197,94,0.15); color: #86efac; }
 [data-theme="dark"] .pesticide-analysis-body .judgment-option input:checked + .chip-fail { border-color: #ef4444; background: rgba(239,68,68,0.15); color: #fca5a5; }
+
+/* ========================================
+   목록 테이블 고정 컬럼 (성명까지)
+   ======================================== */
+
+.data-table .sticky-col {
+    position: sticky;
+    background: white;
+    z-index: 2;
+}
+
+.data-table thead .sticky-col {
+    z-index: 12;
+}
+
+/* 고정 컬럼 left 위치 */
+.data-table .col-checkbox { left: 0; min-width: 40px; width: 40px; }
+.data-table .col-complete { left: 40px; min-width: 45px; width: 45px; }
+.data-table .col-result   { left: 85px; min-width: 50px; }
+.data-table .col-num      { left: 135px; min-width: 65px; }
+.data-table .col-date     { left: 200px; min-width: 90px; }
+.data-table .col-category { left: 290px; min-width: 55px; }
+.data-table .col-purpose  { left: 345px; min-width: 70px; }
+.data-table .col-name     { left: 415px; min-width: 70px; border-right: 2px solid #fecaca; }
+
+/* 고정 컬럼 행 배경 (tbody) */
+.data-table tbody td.sticky-col {
+    background: white;
+}
+
+.data-table tbody tr:hover td.sticky-col {
+    background-color: #fef2f2;
+}
+
+.data-table tbody tr.row-completed td.sticky-col {
+    background: #f0fdf4;
+}
+
+/* 다크 모드 */
+[data-theme="dark"] .data-table .sticky-col {
+    background: #1C1917;
+}
+
+[data-theme="dark"] .data-table thead .sticky-col {
+    background: #292524;
+}
+
+[data-theme="dark"] .data-table tbody td.sticky-col {
+    background: #1C1917;
+}
+
+[data-theme="dark"] .data-table tbody tr:hover td.sticky-col {
+    background-color: rgba(220, 38, 38, 0.08);
+}
+
+[data-theme="dark"] .data-table .col-name {
+    border-right-color: #7f1d1d;
+}

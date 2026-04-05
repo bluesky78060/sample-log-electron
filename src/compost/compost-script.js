@@ -285,7 +285,7 @@ class CompostSampleManager extends window.BaseSampleManager {
 
         // 1. Checkbox column
         const tdCheckbox = document.createElement('td');
-        tdCheckbox.className = 'col-checkbox';
+        tdCheckbox.className = 'col-checkbox sticky-col';
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.className = 'row-checkbox';
@@ -295,7 +295,7 @@ class CompostSampleManager extends window.BaseSampleManager {
 
         // 2. Complete button column
         const tdComplete = document.createElement('td');
-        tdComplete.className = 'col-complete';
+        tdComplete.className = 'col-complete sticky-col';
         const btnComplete = document.createElement('button');
         btnComplete.className = `btn-complete ${logItem.isComplete ? 'completed' : ''}`;
         btnComplete.dataset.id = logItem.id;
@@ -306,7 +306,7 @@ class CompostSampleManager extends window.BaseSampleManager {
 
         // 3. Result button column
         const tdResult = document.createElement('td');
-        tdResult.className = 'col-result';
+        tdResult.className = 'col-result sticky-col';
         const btnResult = document.createElement('button');
         btnResult.className = `btn-result ${logItem.testResult === 'pass' ? 'pass' : logItem.testResult === 'fail' ? 'fail' : ''}`;
         btnResult.dataset.id = logItem.id;
@@ -317,7 +317,7 @@ class CompostSampleManager extends window.BaseSampleManager {
 
         // 3-1. Maturity level (부숙도) dropdown
         const tdMaturity = document.createElement('td');
-        tdMaturity.className = 'col-maturity';
+        tdMaturity.className = 'col-maturity sticky-col';
         const selectMaturity = document.createElement('select');
         selectMaturity.className = 'maturity-select';
         selectMaturity.dataset.id = logItem.id;
@@ -334,7 +334,7 @@ class CompostSampleManager extends window.BaseSampleManager {
 
         // 3-2. Moisture content (함수율) input
         const tdMoisture = document.createElement('td');
-        tdMoisture.className = 'col-moisture';
+        tdMoisture.className = 'col-moisture sticky-col';
         const inputMoisture = document.createElement('input');
         inputMoisture.type = 'text';
         inputMoisture.className = 'moisture-input';
@@ -347,11 +347,13 @@ class CompostSampleManager extends window.BaseSampleManager {
 
         // 4. Reception number
         const tdReceptionNumber = document.createElement('td');
+        tdReceptionNumber.className = 'col-num sticky-col';
         tdReceptionNumber.textContent = logItem.receptionNumber || '-';
         row.appendChild(tdReceptionNumber);
 
         // 5. Date
         const tdDate = document.createElement('td');
+        tdDate.className = 'col-date sticky-col';
         tdDate.textContent = logItem.date || '-';
         row.appendChild(tdDate);
 
@@ -369,12 +371,13 @@ class CompostSampleManager extends window.BaseSampleManager {
 
         // 8. Farm name
         const tdFarmName = document.createElement('td');
+        tdFarmName.className = 'col-farm-name sticky-col';
         tdFarmName.textContent = safeFarmName;
         row.appendChild(tdFarmName);
 
         // 9. Name (클릭 시 같은 이름 일괄 선택)
         const tdName = document.createElement('td');
-        tdName.className = 'col-name';
+        tdName.className = 'col-name sticky-col';
         tdName.dataset.name = logItem.name || '';
         tdName.textContent = safeName;
         tdName.title = `"${safeName}" 클릭하면 같은 이름 일괄 선택`;

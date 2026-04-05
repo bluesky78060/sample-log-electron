@@ -3153,7 +3153,7 @@ class SoilSampleManager extends window.BaseSampleManager {
 
             // 체크박스
             const tdCheckbox = document.createElement('td');
-            tdCheckbox.className = 'col-checkbox';
+            tdCheckbox.className = 'col-checkbox sticky-col';
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.className = 'row-checkbox';
@@ -3163,7 +3163,7 @@ class SoilSampleManager extends window.BaseSampleManager {
 
             // 완료 버튼
             const tdComplete = document.createElement('td');
-            tdComplete.className = 'col-complete';
+            tdComplete.className = 'col-complete sticky-col';
             const btnComplete = document.createElement('button');
             btnComplete.className = `btn-complete ${isComplete ? 'completed' : ''}`;
             btnComplete.dataset.id = row.id;
@@ -3174,27 +3174,31 @@ class SoilSampleManager extends window.BaseSampleManager {
 
             // 접수번호
             const tdNumber = document.createElement('td');
+            tdNumber.className = 'col-num sticky-col';
             tdNumber.textContent = row._displayNumber;
             tr.appendChild(tdNumber);
 
             // 날짜
             const tdDate = document.createElement('td');
+            tdDate.className = 'col-date sticky-col';
             tdDate.textContent = row.date;
             tr.appendChild(tdDate);
 
             // 하위 카테고리
             const tdSubCategory = document.createElement('td');
+            tdSubCategory.className = 'col-category sticky-col';
             tdSubCategory.textContent = row.subCategory || '-';
             tr.appendChild(tdSubCategory);
 
             // 목적
             const tdPurpose = document.createElement('td');
+            tdPurpose.className = 'col-purpose sticky-col';
             tdPurpose.textContent = row._parcelPurpose || row.purpose || '-';
             tr.appendChild(tdPurpose);
 
             // 성명 (클릭 시 같은 이름 일괄 선택)
             const tdName = document.createElement('td');
-            tdName.className = 'col-name';
+            tdName.className = 'col-name sticky-col';
             tdName.dataset.name = row.name;
             tdName.textContent = row.name;
             tdName.title = `"${row.name}" 클릭하면 같은 이름 일괄 선택`;

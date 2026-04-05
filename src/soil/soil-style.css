@@ -1247,3 +1247,60 @@ tr.farm-separator:hover {
     from { opacity: 0; transform: scale(0.8); }
     to { opacity: 1; transform: scale(1); }
 }
+
+/* ========================================
+   목록 테이블 고정 컬럼 (성명까지)
+   ======================================== */
+
+.data-table .sticky-col {
+    position: sticky;
+    background: white;
+    z-index: 2;
+}
+
+.data-table thead .sticky-col {
+    z-index: 12;
+}
+
+/* 고정 컬럼 left 위치 */
+.data-table .col-checkbox   { left: 0; min-width: 40px; width: 40px; }
+.data-table .col-complete   { left: 40px; min-width: 45px; width: 45px; }
+.data-table .col-num        { left: 85px; min-width: 65px; }
+.data-table .col-date       { left: 150px; min-width: 90px; }
+.data-table .col-category   { left: 240px; min-width: 55px; }
+.data-table .col-purpose    { left: 295px; min-width: 70px; }
+.data-table .col-name       { left: 365px; min-width: 70px; border-right: 2px solid #e2d9c8; }
+
+/* 고정 컬럼 행 배경 (tbody) */
+.data-table tbody td.sticky-col {
+    background: white;
+}
+
+.data-table tbody tr:hover td.sticky-col {
+    background-color: #faf8f5;
+}
+
+.data-table tbody tr.row-completed td.sticky-col {
+    background: #f0fdf4;
+}
+
+/* 다크 모드 */
+[data-theme="dark"] .data-table .sticky-col {
+    background: #1C1917;
+}
+
+[data-theme="dark"] .data-table thead .sticky-col {
+    background: #292524;
+}
+
+[data-theme="dark"] .data-table tbody td.sticky-col {
+    background: #1C1917;
+}
+
+[data-theme="dark"] .data-table tbody tr:hover td.sticky-col {
+    background-color: rgba(139, 92, 246, 0.08);
+}
+
+[data-theme="dark"] .data-table .col-name {
+    border-right-color: #44403c;
+}
