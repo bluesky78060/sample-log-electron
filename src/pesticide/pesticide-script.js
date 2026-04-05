@@ -3418,7 +3418,23 @@ class PesticideSampleManager extends window.BaseSampleManager {
             const lsKey = `pesticideTestResults_${this.selectedYear}`;
             localStorage.setItem(lsKey, JSON.stringify(merged));
             this._cachedPesticideResults = merged;
+
+            // 접수 데이터의 판정도 동기화
+            let syncCount = 0;
+            for (const [resultId, resultData] of Object.entries(merged)) {
+                const log = this.sampleLogs.find(l => String(l.id) === String(resultId));
+                if (log && resultData.judgment) {
+                    log.testResult = resultData.judgment;
+                    syncCount++;
+                }
+            }
+            if (syncCount > 0) {
+                this.saveLogs();
+                (window.logger?.info || console.log)(`[잔류농약] Firestore → 접수 대장 판정 동기화: ${syncCount}건`);
+            }
+
             this.filterAndRenderLogs();
+            (window.logger?.info || console.log)(`[잔류농약] Firestore → localStorage 동기화 완료: ${Object.keys(merged).length}건`);
         } catch (e) {
             (window.logger?.error || console.error)('잔류농약 Firestore 로드 실패:', e);
         }

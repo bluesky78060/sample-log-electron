@@ -2358,9 +2358,24 @@ class WaterSampleManager extends window.BaseSampleManager {
         localStorage.setItem(key, JSON.stringify(merged));
         this._cachedTestResults = merged;
 
+        // 접수 데이터의 판정도 동기화
+        let syncCount = 0;
+        for (const [resultId, resultData] of Object.entries(merged)) {
+            // key 형식: logId_0 → logId 추출
+            const logId = resultId.replace(/_\d+$/, '');
+            const log = this.sampleLogs.find(l => String(l.id) === String(logId));
+            if (log && resultData.judgment) {
+                log.testResult = resultData.judgment;
+                syncCount++;
+            }
+        }
+        if (syncCount > 0) {
+            this.saveLogs();
+        }
+
         // 목록 갱신
         this.filterAndRenderLogs();
-        (window.logger?.info || console.log)('[수질분석] Firestore → localStorage 동기화 완료');
+        (window.logger?.info || console.log)(`[수질분석] Firestore → localStorage 동기화 완료: ${Object.keys(merged).length}건`);
     }
 
     saveAllTestResults(results) {
