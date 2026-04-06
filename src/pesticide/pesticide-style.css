@@ -1533,7 +1533,7 @@
 
 /* 모달 크기 */
 .modal-pesticide-analysis {
-    max-width: 700px;
+    max-width: 780px;
     width: 95vw;
     max-height: 90vh;
     display: flex;
@@ -1657,31 +1657,56 @@
     font-size: 0.7rem; color: #475569; text-align: center; border-bottom: 2px solid #e2e8f0;
 }
 .pa-detections-table tbody td {
-    padding: 0.3rem 0.4rem; border-bottom: 1px solid #f1f5f9;
+    padding: 0.2rem 0.25rem; border-bottom: 1px solid #f1f5f9;
     text-align: center; vertical-align: middle;
 }
 .pa-detections-table tbody tr:hover { background: #f8fafc; }
 
-.pa-col-no { width: 35px; }
-.pa-col-method { width: 65px; }
+.pa-col-no { width: 22px; }
+.pa-col-equip { width: 50px; }
 .pa-col-name { width: 180px; }
-.pa-col-raw { width: 90px; }
-.pa-col-value { width: 100px; }
+.pa-col-type { width: 48px; font-size: 0.7rem; font-weight: 600; }
+
+/* Original/Acid 구분 라벨 */
+.pa-type-orig { color: #065f46; background: rgba(236,253,245,0.5); }
+.pa-type-acid { color: #92400e; background: rgba(254,243,199,0.5); }
+
+/* Acid 행 구분선 */
+.pa-acid-row td { border-bottom: 2px solid #e2e8f0 !important; }
+
+[data-theme="dark"] .pa-type-orig { color: #6ee7b7; background: rgba(6,95,70,0.15); }
+[data-theme="dark"] .pa-type-acid { color: #fcd34d; background: rgba(146,64,14,0.15); }
+[data-theme="dark"] .pa-acid-row td { border-bottom-color: #334155 !important; }
 .pa-col-nd { width: 50px; }
 .pa-col-del { width: 35px; }
 
+.pa-dilution-input {
+    width: 30px; padding: 0.3rem 0.4rem; border: 1px solid #cbd5e1; border-radius: 5px;
+    font-size: 0.8rem; font-family: inherit; text-align: center; color: #1e293b;
+}
+.pa-dilution-input:focus { border-color: #dc2626; box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.12); outline: none; }
+[data-theme="dark"] .pa-dilution-input { background: #1e293b; border-color: #475569; color: #e2e8f0; }
+
 .pa-raw-input {
-    width: 75px; padding: 0.3rem 0.4rem; border: 1px solid #cbd5e1; border-radius: 5px;
+    width: 50px; padding: 0.3rem 0.4rem; border: 1px solid #cbd5e1; border-radius: 5px;
     font-size: 0.8rem; font-family: inherit; text-align: center; color: #1e293b;
 }
 .pa-raw-input:focus { border-color: #dc2626; box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.12); outline: none; }
 [data-theme="dark"] .pa-raw-input { background: #1e293b; border-color: #475569; color: #e2e8f0; }
 
-/* 분석법 셀렉트 */
-.pa-method-select {
+/* 장비/분석법 셀렉트 */
+.pa-equip-select {
     padding: 0.25rem 0.3rem; border: 1px solid #cbd5e1; border-radius: 4px;
     font-size: 0.75rem; font-family: inherit; background: white; color: #1e293b;
-    width: 55px; text-align: center;
+    width: 48px; text-align: center;
+}
+.pa-equip-select:focus { border-color: #dc2626; outline: none; }
+[data-theme="dark"] .pa-equip-select { background: #1e293b; border-color: #475569; color: #e2e8f0; }
+
+.pa-method-select {
+    padding: 0.25rem 0.3rem; border: 1px solid #cbd5e1; border-radius: 4px;
+    font-size: 0.7rem; font-family: inherit; background: white; color: #1e293b;
+    width: 65px; text-align: center;
 }
 .pa-method-select:focus { border-color: #dc2626; outline: none; }
 
@@ -1709,6 +1734,10 @@
 .pa-suggestion-item:last-child { border-bottom: none; }
 .pa-suggestion-item:hover { background: #fef2f2; }
 .pa-sug-name { font-weight: 500; color: #1e293b; }
+.pa-sug-qualitative { color: #1d4ed8 !important; font-weight: 700 !important; }
+.pa-name-qualitative { color: #1d4ed8 !important; font-weight: 700 !important; }
+[data-theme="dark"] .pa-sug-qualitative { color: #60a5fa !important; }
+[data-theme="dark"] .pa-name-qualitative { color: #60a5fa !important; }
 .pa-sug-eng { font-size: 0.7rem; color: #94a3b8; }
 .pa-sug-method {
     font-size: 0.6rem; font-weight: 600; padding: 0.1rem 0.3rem;
@@ -1717,7 +1746,7 @@
 
 /* 검출량 입력 */
 .pa-value-input {
-    width: 80px; padding: 0.3rem 0.4rem; border: 1px solid #cbd5e1; border-radius: 5px;
+    width: 50px; padding: 0.3rem 0.4rem; border: 1px solid #cbd5e1; border-radius: 5px;
     font-size: 0.8rem; font-family: inherit; text-align: center; color: #1e293b;
 }
 .pa-value-input:focus { border-color: #dc2626; box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.12); outline: none; }

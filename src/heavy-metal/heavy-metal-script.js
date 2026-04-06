@@ -2186,6 +2186,9 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
 
     autoJudgeHeavyMetal(result, region) {
         const fields = HeavyMetalSampleManager.HEAVY_METAL_FIELDS;
+        const hasData = fields.some(f => result[f.key]);
+        if (!hasData) return '';
+
         for (const field of fields) {
             const val = result[field.key];
             if (val) {

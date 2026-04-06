@@ -3094,32 +3094,75 @@ class PesticideSampleManager extends window.BaseSampleManager {
 
         const tr = document.createElement('tr');
         tr.className = 'pa-detection-row';
-        const rowIdx = tbody.querySelectorAll('tr').length;
+        // Original 행만 카운트 (Acid 행 제외)
+        const rowIdx = tbody.querySelectorAll('.pa-detection-row:not(.pa-acid-row)').length;
 
-        // No
-        const tdNo = document.createElement('td');
-        tdNo.className = 'pa-col-no';
-        tdNo.textContent = rowIdx + 1;
-        tr.appendChild(tdNo);
+        // 자동 계산 헬퍼
+        const createCalcInput = (prefix, fieldData) => {
+            const rawIn = document.createElement('input');
+            rawIn.type = 'text';
+            rawIn.className = `pa-raw-input pa-${prefix}-raw`;
+            rawIn.placeholder = '-';
+            rawIn.autocomplete = 'off';
+            if (fieldData?.raw) rawIn.value = fieldData.raw;
 
-        // 분석법 선택
-        const tdMethod = document.createElement('td');
-        tdMethod.className = 'pa-col-method';
-        const selMethod = document.createElement('select');
-        selMethod.className = 'pa-method-select';
+            const dilIn = document.createElement('input');
+            dilIn.type = 'text';
+            dilIn.className = `pa-dilution-input pa-${prefix}-dil`;
+            dilIn.placeholder = '1';
+            dilIn.autocomplete = 'off';
+            dilIn.value = fieldData?.dil || '1';
+
+            const valIn = document.createElement('input');
+            valIn.type = 'text';
+            valIn.className = `pa-value-input pa-${prefix}-val`;
+            valIn.placeholder = '0.00';
+            valIn.autocomplete = 'off';
+            if (fieldData?.val) valIn.value = fieldData.val;
+
+            const calc = () => {
+                const ppb = parseFloat(rawIn.value);
+                const dil = Math.max(parseFloat(dilIn.value) || 1, 1);
+                if (!isNaN(ppb)) {
+                    valIn.value = ((ppb * dil) / 1000).toFixed(3).replace(/\.?0+$/, '');
+                } else {
+                    valIn.value = '';
+                }
+            };
+            rawIn.addEventListener('input', calc);
+            dilIn.addEventListener('input', calc);
+
+            return { rawIn, dilIn, valIn };
+        };
+
+        // === 1행: Original ===
+
+        // No (rowSpan=2)
+        const tdNo2 = document.createElement('td');
+        tdNo2.className = 'pa-col-no';
+        tdNo2.rowSpan = 2;
+        tdNo2.textContent = rowIdx + 1;
+        tr.appendChild(tdNo2);
+
+        // 장비 (rowSpan=2)
+        const tdEquip = document.createElement('td');
+        tdEquip.className = 'pa-col-equip';
+        tdEquip.rowSpan = 2;
+        const selEquip = document.createElement('select');
+        selEquip.className = 'pa-equip-select';
         ['GC', 'LC'].forEach(m => {
             const opt = document.createElement('option');
-            opt.value = m;
-            opt.textContent = m;
-            selMethod.appendChild(opt);
+            opt.value = m; opt.textContent = m;
+            selEquip.appendChild(opt);
         });
-        if (data?.method) selMethod.value = data.method;
-        tdMethod.appendChild(selMethod);
-        tr.appendChild(tdMethod);
+        if (data?.equipment) selEquip.value = data.equipment;
+        tdEquip.appendChild(selEquip);
+        tr.appendChild(tdEquip);
 
-        // 농약명 (자동완성)
+        // 농약명 (rowSpan=2)
         const tdName = document.createElement('td');
         tdName.className = 'pa-col-name';
+        tdName.rowSpan = 2;
         const nameWrapper = document.createElement('div');
         nameWrapper.className = 'pa-autocomplete-wrapper';
         const nameInput = document.createElement('input');
@@ -3127,97 +3170,71 @@ class PesticideSampleManager extends window.BaseSampleManager {
         nameInput.className = 'pa-name-input';
         nameInput.placeholder = '농약명 검색...';
         nameInput.autocomplete = 'off';
-        if (data?.name) nameInput.value = data.name;
+        if (data?.name) {
+            nameInput.value = data.name;
+            nameInput.classList.toggle('pa-name-qualitative', window.isQualitativePesticide?.(data.name));
+        }
 
         const sugList = document.createElement('ul');
         sugList.className = 'pa-suggestions hidden';
-
-        // 자동완성 이벤트
         nameInput.addEventListener('input', () => {
             const q = nameInput.value.trim();
-            const method = selMethod.value;
             if (q.length < 1) { sugList.classList.add('hidden'); return; }
-
-            const results = window.searchPesticides ? window.searchPesticides(q, 'all', 10) : [];
+            const equip = selEquip.value || 'all';
+            const results = window.searchPesticides ? window.searchPesticides(q, equip, 10) : [];
             sugList.innerHTML = '';
             if (results.length === 0) { sugList.classList.add('hidden'); return; }
-
             results.forEach(p => {
                 const li = document.createElement('li');
                 li.className = 'pa-suggestion-item';
-                li.innerHTML = `<span class="pa-sug-name">${this.escapeHTMLForSuggestion(p.engName)}</span>`;
+                const isQual = window.isQualitativePesticide ? window.isQualitativePesticide(p.engName) : false;
+                li.innerHTML = `<span class="pa-sug-name${isQual ? ' pa-sug-qualitative' : ''}">${this.escapeHTMLForSuggestion(p.engName)}</span>`;
                 li.addEventListener('mousedown', (e) => {
                     e.preventDefault();
                     nameInput.value = p.engName;
                     nameInput.dataset.engName = p.engName;
+                    nameInput.classList.toggle('pa-name-qualitative', window.isQualitativePesticide?.(p.engName));
                     sugList.classList.add('hidden');
                 });
                 sugList.appendChild(li);
             });
-
-            // position: fixed 기준으로 입력 필드 아래에 위치
             const rect = nameInput.getBoundingClientRect();
             sugList.style.top = `${rect.bottom + 2}px`;
             sugList.style.left = `${rect.left}px`;
             sugList.style.width = `${rect.width}px`;
             sugList.classList.remove('hidden');
         });
-
-        nameInput.addEventListener('blur', () => {
-            setTimeout(() => sugList.classList.add('hidden'), 200);
-        });
-
+        nameInput.addEventListener('blur', () => { setTimeout(() => sugList.classList.add('hidden'), 200); });
         nameWrapper.appendChild(nameInput);
         nameWrapper.appendChild(sugList);
         tdName.appendChild(nameWrapper);
         tr.appendChild(tdName);
 
-        // 검출량
-        const tdValue = document.createElement('td');
-        tdValue.className = 'pa-col-value';
-        const valInput = document.createElement('input');
-        valInput.type = 'text';
-        valInput.className = 'pa-value-input';
-        valInput.placeholder = '0.00';
-        valInput.autocomplete = 'off';
-        if (data?.value) valInput.value = data.value;
-        tdValue.appendChild(valInput);
+        // Original 구분 라벨
+        const tdOrigLabel = document.createElement('td');
+        tdOrigLabel.className = 'pa-col-type pa-type-orig';
+        tdOrigLabel.textContent = 'Original';
+        tr.appendChild(tdOrigLabel);
 
-        // 기기분석값 (검출량 앞에 배치)
-        const tdRaw = document.createElement('td');
-        tdRaw.className = 'pa-col-raw';
-        const rawInput = document.createElement('input');
-        rawInput.type = 'text';
-        rawInput.className = 'pa-raw-input';
-        rawInput.placeholder = '-';
-        rawInput.autocomplete = 'off';
-        if (data?.rawValue) rawInput.value = data.rawValue;
-
-        // 기기분석값 입력 시 검출량 자동 계산 (ppb ÷ 1000 = ppm)
-        rawInput.addEventListener('input', () => {
-            const ppb = parseFloat(rawInput.value);
-            if (!isNaN(ppb)) {
-                valInput.value = (ppb / 1000).toFixed(3).replace(/\.?0+$/, '');
-            } else {
-                valInput.value = '';
-            }
+        // Original 입력 필드
+        const orig = createCalcInput('orig', {
+            raw: data?.origRaw || '', dil: data?.origDil || '1', val: data?.origVal || ''
         });
+        const tdOrigRaw = document.createElement('td'); tdOrigRaw.appendChild(orig.rawIn); tr.appendChild(tdOrigRaw);
+        const tdOrigDil = document.createElement('td'); tdOrigDil.appendChild(orig.dilIn); tr.appendChild(tdOrigDil);
+        const tdOrigVal = document.createElement('td'); tdOrigVal.appendChild(orig.valIn); tr.appendChild(tdOrigVal);
 
-        tdRaw.appendChild(rawInput);
-
-        // 순서: 기기분석값 → 검출량
-        tr.appendChild(tdRaw);
-        tr.appendChild(tdValue);
-
-        // 삭제
+        // 삭제 (rowSpan=2)
         const tdDel = document.createElement('td');
         tdDel.className = 'pa-col-del';
+        tdDel.rowSpan = 2;
         const btnDel = document.createElement('button');
         btnDel.className = 'pa-del-btn';
         btnDel.title = '삭제';
         btnDel.textContent = '✕';
         btnDel.addEventListener('click', () => {
             tr.remove();
+            tr2.remove();
             this.renumberDetectionRows();
             this.updateDetectionCount();
             this.toggleEmptyMsg();
@@ -3225,7 +3242,24 @@ class PesticideSampleManager extends window.BaseSampleManager {
         tdDel.appendChild(btnDel);
         tr.appendChild(tdDel);
 
+        // === 2행: Acid ===
+        const tr2 = document.createElement('tr');
+        tr2.className = 'pa-detection-row pa-acid-row';
+
+        const tdAcidLabel = document.createElement('td');
+        tdAcidLabel.className = 'pa-col-type pa-type-acid';
+        tdAcidLabel.textContent = 'Acid';
+        tr2.appendChild(tdAcidLabel);
+
+        const acid = createCalcInput('acid', {
+            raw: data?.acidRaw || '', dil: data?.acidDil || '1', val: data?.acidVal || ''
+        });
+        const tdAcidRaw = document.createElement('td'); tdAcidRaw.appendChild(acid.rawIn); tr2.appendChild(tdAcidRaw);
+        const tdAcidDil = document.createElement('td'); tdAcidDil.appendChild(acid.dilIn); tr2.appendChild(tdAcidDil);
+        const tdAcidVal = document.createElement('td'); tdAcidVal.appendChild(acid.valIn); tr2.appendChild(tdAcidVal);
+
         tbody.appendChild(tr);
+        tbody.appendChild(tr2);
         this.updateDetectionCount();
         this.toggleEmptyMsg();
 
@@ -3239,15 +3273,16 @@ class PesticideSampleManager extends window.BaseSampleManager {
     }
 
     renumberDetectionRows() {
-        const rows = document.querySelectorAll('#paDetectionsBody .pa-detection-row');
-        rows.forEach((tr, idx) => {
+        // No 셀은 Original 행(rowSpan=2)에만 있음 — acid-row 제외
+        const origRows = document.querySelectorAll('#paDetectionsBody .pa-detection-row:not(.pa-acid-row)');
+        origRows.forEach((tr, idx) => {
             const noCell = tr.querySelector('.pa-col-no');
             if (noCell) noCell.textContent = idx + 1;
         });
     }
 
     updateDetectionCount() {
-        const count = document.querySelectorAll('#paDetectionsBody .pa-detection-row').length;
+        const count = document.querySelectorAll('#paDetectionsBody .pa-detection-row:not(.pa-acid-row)').length;
         const el = document.getElementById('paDetectionCount');
         if (el) el.textContent = `${count}건`;
     }
@@ -3286,7 +3321,7 @@ class PesticideSampleManager extends window.BaseSampleManager {
     }
 
     toggleEmptyMsg() {
-        const count = document.querySelectorAll('#paDetectionsBody .pa-detection-row').length;
+        const count = document.querySelectorAll('#paDetectionsBody .pa-detection-row:not(.pa-acid-row)').length;
         const msg = document.getElementById('paEmptyMsg');
         if (msg) msg.style.display = (count > 0 || this._paAllNd) ? 'none' : 'block';
     }
@@ -3302,16 +3337,29 @@ class PesticideSampleManager extends window.BaseSampleManager {
 
         // 검출 농약 수집
         const detections = [];
-        const rows = document.querySelectorAll('#paDetectionsBody .pa-detection-row');
-        rows.forEach(tr => {
-            const method = tr.querySelector('.pa-method-select')?.value || 'GC';
+        // Original 행만 순회 (Acid 행은 바로 다음 형제)
+        const origRows = document.querySelectorAll('#paDetectionsBody .pa-detection-row:not(.pa-acid-row)');
+        origRows.forEach(tr => {
+            const equipment = tr.querySelector('.pa-equip-select')?.value || 'GC';
             const name = tr.querySelector('.pa-name-input')?.value?.trim() || '';
             const engName = tr.querySelector('.pa-name-input')?.dataset?.engName || '';
-            const rawValue = tr.querySelector('.pa-raw-input')?.value?.trim() || '';
-            const value = tr.querySelector('.pa-value-input')?.value?.trim() || '';
+
+            // Original (현재 행)
+            const origRaw = tr.querySelector('.pa-orig-raw')?.value?.trim() || '';
+            const origDil = tr.querySelector('.pa-orig-dil')?.value?.trim() || '1';
+            const origVal = tr.querySelector('.pa-orig-val')?.value?.trim() || '';
+
+            // Acid (다음 형제 행)
+            const acidRow = tr.nextElementSibling;
+            const acidRaw = acidRow?.querySelector('.pa-acid-raw')?.value?.trim() || '';
+            const acidDil = acidRow?.querySelector('.pa-acid-dil')?.value?.trim() || '1';
+            const acidVal = acidRow?.querySelector('.pa-acid-val')?.value?.trim() || '';
+
+            // 최종 검출량: Original 우선, 없으면 Acid
+            const value = origVal || acidVal || '';
 
             if (name) {
-                detections.push({ method, name, engName, rawValue, value });
+                detections.push({ equipment, name, engName, origRaw, origDil, origVal, acidRaw, acidDil, acidVal, value });
             }
         });
 
@@ -3324,16 +3372,14 @@ class PesticideSampleManager extends window.BaseSampleManager {
             updatedAt: new Date().toISOString()
         };
 
-        // 판정 자동 결정: 전체 불검출이면 pass, 검출 농약 있으면 fail
-        if (this._paAllNd && detections.length === 0) {
+        // 판정: 라디오 버튼 값 사용 (전체 불검출/검출 추가 시 자동 선택됨)
+        const selectedJudgment = document.querySelector('input[name="paJudgment"]:checked')?.value || '';
+        if (selectedJudgment) {
+            allResults[logId].judgment = selectedJudgment;
+        } else if (this._paAllNd && detections.length === 0) {
             allResults[logId].judgment = 'pass';
         } else if (detections.length > 0) {
             allResults[logId].judgment = 'fail';
-        }
-        // 수동 선택한 판정이 있으면 우선
-        const manualJudgment = document.querySelector('input[name="paJudgment"]:checked')?.value;
-        if (manualJudgment) {
-            allResults[logId].judgment = manualJudgment;
         }
 
         this.saveAllPesticideTestResults(allResults);

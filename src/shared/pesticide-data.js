@@ -552,6 +552,41 @@ window.searchPesticides = function(query, method, limit) {
     return pool.filter(function(p) { return p.engName.toLowerCase().includes(q); }).slice(0, limit);
 };
 
+/**
+ * 정성 분석 항목 (464종 분석체계 중 정성 항목)
+ * 다성분 40종 기준이나 DDT/Cyhalothrin 등 하위 변종 포함하여 52 + 단성분 6 = 58 엔트리
+ */
+const QUALITATIVE_PESTICIDES = new Set([
+    // 다성분 40종 (525종 데이터와 이름 일치시킴)
+    'Abamectin B1a', 'Acequinocyl', 'BioResmethrin', 'Bispyribac-sodium',
+    'Bitertanol', 'Carbofuran', '3-hydroxycarbofuran', 'Furathiocarb',
+    'Foramsulfuron', 'Gibberellic acid', 'Haloxyfop', 'Lepimectin',
+    'Mecoprop-P', 'Methomyl', 'Thiodicarb', 'Nicosulfuron', 'Novaluron',
+    'Propargite', 'Pyridate', 'Pyriproxyfen', 'Spirotetramat-enol',
+    'Tefuryltrione', 'Triclopyr', 'Triforine', 'Tetramethrin',
+    '2.6-DIPN', 'Acetochlor', 'EMA', 'HEMA',
+    'Acrinathrin', 'Chinomethionat', 'Chlorothalonil', 'Cyfluthrin',
+    'Cyhalothrin-γ', 'Cyhalothrin-λ', 'Cypermethrin',
+    'DDT-op', 'DDT-pp', 'DDD-pp', 'DDE-pp',
+    'Dimethipin', 'Dimethomorph E', 'Dimethomorph Z', 'Edifenphos', 'Fenvalerate',
+    'Fluvalinate', 'Iprodione', '2-phenyl phenol',
+    'Prochloraz', '2,4,6-trichlorophenol', 'Acibenzolar acid',
+    // 단성분 6종
+    'Amitraz', 'Cyromazine', 'Dichlofluanid', 'Folpet',
+    'Pymetrozine', 'Trinexapac-ethyl'
+]);
+window.QUALITATIVE_PESTICIDES = QUALITATIVE_PESTICIDES;
+
+/**
+ * 정성 분석 항목인지 확인
+ * @param {string} name - 농약 영문명
+ * @returns {boolean}
+ */
+window.isQualitativePesticide = function(name) {
+    if (!name) return false;
+    return QUALITATIVE_PESTICIDES.has(name);
+};
+
 window.getPesticideStats = function() {
     var gcOnly = PESTICIDE_ANALYSIS_DATA.filter(function(p) { return p.method === 'GC'; }).length;
     var lcOnly = PESTICIDE_ANALYSIS_DATA.filter(function(p) { return p.method === 'LC'; }).length;
