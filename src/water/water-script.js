@@ -2022,7 +2022,9 @@ class WaterSampleManager extends window.BaseSampleManager {
         { key: 'arsenic',       label: '비소',          unit: 'mg/L',       group: '유해', living: '0.05 이하',  agri: '0.05 이하',  industry: '0.1 이하' },
         { key: 'cyanide',       label: '시안',          unit: 'mg/L',       group: '유해', living: '0.01 이하',  agri: '0.01 이하',  industry: '0.2 이하' },
         { key: 'mercury',       label: '수은',          unit: 'mg/L',       group: '유해', living: '0.001 이하', agri: '0.001 이하', industry: '0.001 이하' },
-        { key: 'organophos',    label: '유기인',        unit: 'mg/L',       group: '유해', living: '0.0005 이하', agri: '0.0005 이하', industry: '0.0005 이하' },
+        { key: 'diazinon',      label: '다이아지논',    unit: 'mg/L',       group: '유해', living: '0.02 이하',  agri: '0.02 이하',  industry: '0.02 이하' },
+        { key: 'parathion',     label: '파라티온',      unit: 'mg/L',       group: '유해', living: '0.06 이하',  agri: '0.06 이하',  industry: '0.06 이하' },
+        // ⚠️ 다이아지논/파라티온 기준값은 먹는물 수질기준(다이아지논 0.02, 파라티온 0.06 mg/L) 참고치임. 지하수법 기준 확인 후 조정 필요
         { key: 'phenol',        label: '페놀',          unit: 'mg/L',       group: '유해', living: '0.005 이하', agri: '0.005 이하', industry: '0.01 이하' },
         { key: 'lead',          label: '납',            unit: 'mg/L',       group: '유해', living: '0.1 이하',   agri: '0.1 이하',   industry: '0.2 이하' },
         { key: 'chromium6',     label: '6가크롬',       unit: 'mg/L',       group: '유해', living: '0.05 이하',  agri: '0.05 이하',  industry: '0.1 이하' },
