@@ -596,9 +596,43 @@
                 </div>
             </div>
 
-            <!-- v1.7.97 -->
+            <!-- v1.7.98 -->
             <div class="version-entry">
                 <div class="version-dot latest"></div>
+                <div class="version-card">
+                    <div class="version-card-header">
+                        <div>
+                            <div class="version-meta">
+                                <span class="version-number">v1.7.98</span>
+                                <span class="version-date">2026-04-13</span>
+                            </div>
+                            <div class="version-title">잔류농약 MRL 자동 조회 + 동기화 안전 개선</div>
+                        </div>
+                        <div class="badge-row">
+                            <span class="badge badge-latest">★ 최신</span>
+                            <span class="badge badge-feature">기능</span>
+                            <span class="badge badge-fix">수정</span>
+                            <span class="badge badge-security">보안</span>
+                        </div>
+                    </div>
+                    <ul class="change-list">
+                        <li><strong>잔류농약 MRL 자동 조회</strong> — 식품안전나라 OpenAPI(I1050) 연동, 검출 농약 테이블에 MRL 기준값/판정 컬럼 자동 표시</li>
+                        <li><strong>영한 농약명 매핑</strong> — 525종 영문 농약명 99.8% 한글 매핑 (엑셀 수동 검증 + 자동 매칭)</li>
+                        <li><strong>작물 별명 매핑</strong> — 159건 품종명 자동 변환 (서리태→대두, 찰옥수수→옥수수, 청양고추→고추 등)</li>
+                        <li><strong>MRL 계층 조회</strong> — 개별식품 → 작물별명 → 중분류(곡류/채소류 등) 순서로 fallback 조회</li>
+                        <li><strong>설정 페이지</strong> — 식품안전나라 API 키 관리, 캐시 상태, 연결 테스트, 수동 동기화</li>
+                        <li><strong>동기화 안전 개선</strong> — placeholder가 실 데이터를 덮어쓰지 않도록 안전 병합 (mergeResultSafe)</li>
+                        <li><strong>분석결과 뱃지 수정</strong> — detections 존재 시 allNd보다 우선 표시, 빈 저장 방지 confirm</li>
+                        <li><strong>진단 도구</strong> — Ctrl+Shift+D 로 데이터 진단 모달, Firestore 강제 복원 지원</li>
+                        <li><strong>HTTPS 전환</strong> — 식품안전나라 API를 HTTPS로 전환 + CSP connect-src 화이트리스트 추가</li>
+                        <li><strong>라벨 인쇄</strong> — 긴 주소 2줄 시 우편번호 잘림 방지 (글꼴 자동 축소 + 상단 여백 16mm)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- v1.7.97 -->
+            <div class="version-entry">
+                <div class="version-dot"></div>
                 <div class="version-card">
                     <div class="version-card-header">
                         <div>
@@ -609,7 +643,6 @@
                             <div class="version-title">수질 분석결과: 유기인 → 다이아지논·파라티온</div>
                         </div>
                         <div class="badge-row">
-                            <span class="badge badge-latest">★ 최신</span>
                             <span class="badge badge-fix">수정</span>
                         </div>
                     </div>

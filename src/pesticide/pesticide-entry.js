@@ -31,6 +31,10 @@ import '../shared/excel-import-manager.js';
 import '../cropData.js';
 import '../bonghwaData.js';
 import '../shared/pesticide-data.js';
+import '../shared/pesticide-name-map.js';
+
+// MRL API (식품안전나라)
+import '../shared/mrl-api.js';
 
 // Main script
 import './pesticide-script.js';

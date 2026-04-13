@@ -379,7 +379,7 @@ app.whenReady().then(() => {
           "script-src 'self' file: https://t1.kakaocdn.net https://t1.daumcdn.net; " +
           "style-src 'self' 'unsafe-inline' file: https://fonts.googleapis.com; " +
           "font-src 'self' file: https://fonts.gstatic.com; " +
-          "connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.ipify.org; " +
+          "connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.ipify.org https://openapi.foodsafetykorea.go.kr; " +
           "img-src 'self' file: data:; " +
           "frame-src 'self' https://t1.kakaocdn.net https://postcode.map.kakao.com https://*.kakaocdn.net https://t1.daumcdn.net https://postcode.map.daum.net https://*.daumcdn.net; " +  // Kakao 우편번호 API iframe (전환기간 중 기존 도메인 유지)
           "object-src 'none'; " +  // Flash, Java 등 플러그인 차단

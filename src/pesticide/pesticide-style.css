@@ -1533,7 +1533,7 @@
 
 /* 모달 크기 */
 .modal-pesticide-analysis {
-    max-width: 780px;
+    max-width: 960px;
     width: 95vw;
     max-height: 90vh;
     display: flex;
@@ -1679,6 +1679,119 @@
 [data-theme="dark"] .pa-acid-row td { border-bottom-color: #334155 !important; }
 .pa-col-nd { width: 50px; }
 .pa-col-del { width: 35px; }
+
+/* MRL / 판정 컬럼 */
+.pa-col-mrl { width: 80px; text-align: center; background: rgba(254, 243, 199, 0.3); }
+.pa-col-judgment { width: 70px; text-align: center; background: rgba(254, 243, 199, 0.3); }
+
+.pa-mrl-cell {
+    font-weight: 600;
+    color: #059669;
+    font-size: 0.85rem;
+}
+.pa-mrl-cell.pa-mrl-loading { color: #94a3b8; font-style: italic; }
+.pa-mrl-cell.pa-mrl-none { color: #64748b; font-size: 0.75rem; font-weight: 500; }
+.pa-mrl-cell.pa-mrl-error { color: #dc2626; font-size: 0.7rem; font-weight: 500; }
+.pa-mrl-cell.pa-mrl-category { color: #0369a1; }
+.pa-mrl-src {
+    display: block;
+    font-size: 0.6rem;
+    font-weight: 400;
+    color: #64748b;
+    line-height: 1;
+    margin-top: 1px;
+}
+[data-theme="dark"] .pa-mrl-cell.pa-mrl-category { color: #38bdf8; }
+[data-theme="dark"] .pa-mrl-src { color: #94a3b8; }
+
+.pa-judgment-badge {
+    display: inline-block;
+    padding: 3px 9px;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    min-width: 42px;
+}
+.pa-judgment-pass { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+.pa-judgment-fail { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+.pa-judgment-none { background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
+
+[data-theme="dark"] .pa-col-mrl,
+[data-theme="dark"] .pa-col-judgment {
+    background: rgba(146, 64, 14, 0.12);
+}
+[data-theme="dark"] .pa-mrl-cell { color: #34d399; }
+[data-theme="dark"] .pa-mrl-cell.pa-mrl-none { color: #94a3b8; }
+[data-theme="dark"] .pa-judgment-pass { background: rgba(6, 95, 70, 0.3); color: #6ee7b7; border-color: #065f46; }
+[data-theme="dark"] .pa-judgment-fail { background: rgba(127, 29, 29, 0.3); color: #fca5a5; border-color: #991b1b; }
+[data-theme="dark"] .pa-judgment-none { background: rgba(51, 65, 85, 0.5); color: #94a3b8; border-color: #475569; }
+
+/* MRL 일괄 조회 버튼 */
+.pa-mrl-btn {
+    padding: 0.35rem 0.7rem;
+    border: 1px solid #10b981;
+    background: #fff;
+    color: #059669;
+    border-radius: 5px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+}
+.pa-mrl-btn:hover { background: #059669; color: #fff; }
+.pa-mrl-btn:disabled { opacity: 0.4; cursor: default; }
+.pa-mrl-btn:disabled:hover { background: #fff; color: #059669; }
+[data-theme="dark"] .pa-mrl-btn { background: #1e293b; border-color: #10b981; color: #6ee7b7; }
+[data-theme="dark"] .pa-mrl-btn:hover { background: #10b981; color: #0f172a; }
+
+/* MRL API 상태 표시줄 */
+.pa-mrl-status {
+    margin-top: 0.6rem;
+    padding: 0.55rem 0.85rem;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.78rem;
+    color: #1e40af;
+}
+.pa-mrl-status.pa-mrl-status-warn {
+    background: #fef3c7;
+    border-color: #fcd34d;
+    color: #92400e;
+}
+.pa-mrl-status.pa-mrl-status-error {
+    background: #fee2e2;
+    border-color: #fca5a5;
+    color: #991b1b;
+}
+.pa-mrl-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #10b981;
+    flex-shrink: 0;
+}
+.pa-mrl-status.pa-mrl-status-warn .pa-mrl-dot { background: #f59e0b; }
+.pa-mrl-status.pa-mrl-status-error .pa-mrl-dot { background: #dc2626; }
+.pa-mrl-link-btn {
+    margin-left: auto;
+    background: transparent;
+    border: 1px solid currentColor;
+    color: inherit;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    cursor: pointer;
+}
+.pa-mrl-link-btn:hover { background: rgba(255, 255, 255, 0.4); }
+[data-theme="dark"] .pa-mrl-status { background: rgba(30, 58, 138, 0.2); border-color: #1e40af; color: #93c5fd; }
+[data-theme="dark"] .pa-mrl-status.pa-mrl-status-warn { background: rgba(146, 64, 14, 0.2); border-color: #92400e; color: #fcd34d; }
+[data-theme="dark"] .pa-mrl-status.pa-mrl-status-error { background: rgba(127, 29, 29, 0.2); border-color: #7f1d1d; color: #fca5a5; }
 
 .pa-dilution-input {
     width: 30px; padding: 0.3rem 0.4rem; border: 1px solid #cbd5e1; border-radius: 5px;

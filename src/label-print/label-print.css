@@ -49,7 +49,7 @@
 .label-sheet-2x9 {
     width: 210mm;
     height: 297mm;
-    padding-top: 17mm;
+    padding-top: 16mm;
     padding-left: 5mm;
     padding-bottom: 12mm;
     margin: 0;
@@ -129,7 +129,7 @@
 .label-sheet-3x7 {
     width: 210mm;
     height: 297mm;
-    padding-top: 17mm;
+    padding-top: 16mm;
     padding-left: 5mm;
     padding-bottom: 12mm;
     margin: 0;
@@ -150,7 +150,7 @@
 .label-sheet-4x6 {
     width: 210mm;
     height: 297mm;
-    padding-top: 17mm;
+    padding-top: 16mm;
     padding-left: 5mm;
     padding-bottom: 12mm;
     margin: 0;
@@ -167,11 +167,26 @@
     height: 43mm;
 }
 
-/* 라벨 내용이 긴 경우 처리 */
-.label-item.long-content .label-address-line,
+/* 라벨 내용이 긴 경우 처리 (2줄 주소 등) */
+/* 기본: center 정렬 → 긴 콘텐츠: flex-start + 글꼴 축소 */
+.label-item.long-content {
+    justify-content: flex-start;
+    padding-top: 1.5mm;
+}
+.label-item.long-content .label-address-block {
+    gap: 0.3mm;
+    margin-bottom: 0.5mm;
+}
+.label-item.long-content .label-address-line {
+    font-size: 10pt;
+    line-height: 1.2;
+}
 .label-item.long-content .label-name-line {
     font-size: 11pt;
-    line-height: 1.25;
+    margin-bottom: 0.3mm;
+}
+.label-item.long-content .label-postal-line {
+    font-size: 10pt;
 }
 .label-item.long-content .label-postal-line {
     font-size: 11pt;

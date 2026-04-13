@@ -512,7 +512,8 @@
           if (name) displayNameParts.push(name);
           if (nameSuffix) displayNameParts.push(nameSuffix);
           const displayName = displayNameParts.join(' ');
-          const isLong = combinedAddress.length > 36 || displayName.length > 20 || `${postalCode}`.length > 8;
+          // 100mm 폭, 12pt 한글 기준 약 23자에서 줄바꿈 → 24자 초과 시 long-content 적용
+          const isLong = combinedAddress.length > 24 || displayName.length > 18 || `${postalCode}`.length > 8;
 
           const addressBlock = combinedAddress
             ? `<div class="label-address-line">${combinedAddress}</div>`

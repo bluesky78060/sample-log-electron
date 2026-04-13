@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>MRL 자동 조회 UI 목업 - 잔류농약 분석결과 입력</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif;
+    background: #f1f5f9;
+    padding: 2rem;
+    color: #1e293b;
+  }
+  .page-title {
+    max-width: 1100px;
+    margin: 0 auto 1.5rem;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #0f172a;
+  }
+  .note {
+    max-width: 1100px;
+    margin: 0 auto 1.5rem;
+    padding: 0.75rem 1rem;
+    background: #fef3c7;
+    border-left: 4px solid #f59e0b;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+
+  /* ===== 모달 ===== */
+  .modal {
+    max-width: 1100px;
+    margin: 0 auto 2rem;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+    overflow: hidden;
+  }
+  .modal-header {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    color: #fff;
+    padding: 1rem 1.25rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .modal-header h3 {
+    font-size: 1.05rem;
+    font-weight: 600;
+  }
+  .modal-body { padding: 1.25rem; }
+
+  /* 시료 정보 */
+  .sample-info {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    display: grid;
+    grid-template-columns: repeat(6, auto);
+    gap: 0.5rem 1.25rem;
+    font-size: 0.85rem;
+  }
+  .info-label { color: #64748b; font-weight: 500; }
+  .info-value { color: #0f172a; font-weight: 600; }
+  .crop-highlight {
+    background: #dbeafe;
+    color: #1e40af;
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+
+  /* 검사일자 / 판정 */
+  .meta-row {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 1rem;
+    padding: 0.75rem 1rem;
+    background: #f8fafc;
+    border-radius: 8px;
+  }
+  .meta-field label {
+    display: block;
+    font-size: 0.75rem;
+    color: #64748b;
+    margin-bottom: 4px;
+  }
+  .meta-field input[type=date] {
+    padding: 6px 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+  }
+  .chip {
+    display: inline-block;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-right: 6px;
+    border: 1px solid transparent;
+  }
+  .chip-pass { background: #dcfce7; color: #166534; border-color: #86efac; }
+  .chip-fail { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+  .chip-none { background: #f1f5f9; color: #64748b; border-color: #cbd5e1; }
+
+  /* 검출 농약 섹션 */
+  .detections-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+  .detections-title { font-weight: 700; font-size: 0.95rem; }
+  .detections-count {
+    background: #e0e7ff;
+    color: #3730a3;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  .btn {
+    padding: 6px 12px;
+    border: 1px solid #cbd5e1;
+    background: #fff;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    cursor: pointer;
+  }
+  .btn-add { background: #3b82f6; color: #fff; border-color: #2563eb; }
+  .btn-mrl { background: #10b981; color: #fff; border-color: #059669; margin-left: auto; }
+  .btn-mrl:hover { background: #059669; }
+
+  /* 검출 테이블 */
+  .detections-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .detections-table th {
+    background: #f1f5f9;
+    padding: 10px 8px;
+    text-align: center;
+    font-weight: 600;
+    color: #475569;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 0.75rem;
+  }
+  .detections-table td {
+    padding: 8px;
+    border-bottom: 1px solid #f1f5f9;
+    text-align: center;
+    vertical-align: middle;
+  }
+  .detections-table input {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    text-align: center;
+  }
+  .col-no { width: 40px; }
+  .col-equip { width: 60px; }
+  .col-name { width: 170px; }
+  .col-type { width: 70px; }
+  .col-raw, .col-dil, .col-value { width: 95px; }
+  .col-mrl-new { width: 100px; background: #fef3c7 !important; }
+  .col-judg-new { width: 85px; background: #fef3c7 !important; }
+  .col-del { width: 40px; }
+
+  .mrl-cell {
+    font-weight: 600;
+    color: #059669;
+  }
+  .mrl-cell.loading { color: #94a3b8; font-style: italic; }
+  .mrl-cell.not-found { color: #dc2626; font-weight: 500; }
+
+  .badge {
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    display: inline-block;
+  }
+  .badge-pass { background: #dcfce7; color: #166534; }
+  .badge-fail { background: #fee2e2; color: #991b1b; }
+  .badge-none { background: #f1f5f9; color: #64748b; }
+
+  .del-btn {
+    background: #fee2e2;
+    color: #dc2626;
+    border: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  /* MRL 조회 상태 표시줄 */
+  .mrl-status-bar {
+    margin-top: 0.75rem;
+    padding: 0.6rem 0.9rem;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.8rem;
+    color: #1e40af;
+  }
+  .mrl-status-bar.offline {
+    background: #fef3c7;
+    border-color: #fcd34d;
+    color: #92400e;
+  }
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #10b981;
+  }
+  .dot.offline { background: #f59e0b; }
+
+  /* 모달 푸터 */
+  .modal-footer {
+    padding: 1rem 1.25rem;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+  .btn-cancel { background: #fff; color: #475569; border: 1px solid #cbd5e1; padding: 8px 16px; border-radius: 6px; cursor: pointer; }
+  .btn-save { background: #059669; color: #fff; border: none; padding: 8px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; }
+
+  /* 섹션 제목 */
+  .section-title {
+    max-width: 1100px;
+    margin: 2.5rem auto 0.75rem;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #0f172a;
+    padding-left: 0.5rem;
+    border-left: 4px solid #059669;
+  }
+
+  /* 설명 박스 */
+  .explain {
+    max-width: 1100px;
+    margin: 0.75rem auto;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    font-size: 0.85rem;
+    line-height: 1.7;
+    color: #334155;
+  }
+  .explain h4 {
+    color: #0f172a;
+    margin-bottom: 0.5rem;
+    font-size: 0.95rem;
+  }
+  .explain code {
+    background: #f1f5f9;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    color: #be123c;
+  }
+  .explain ul { margin-left: 1.25rem; }
+  .explain li { margin-bottom: 0.25rem; }
+
+  /* 하이라이트 표시 */
+  .arrow-hint {
+    position: relative;
+    background: #fef3c7;
+    border: 2px dashed #f59e0b;
+    padding: 4px;
+    border-radius: 6px;
+  }
+  .new-label {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    background: #f59e0b;
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.65rem;
+    font-weight: 700;
+  }
+
+  /* Flow diagram */
+  .flow {
+    max-width: 1100px;
+    margin: 1rem auto;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 1.5rem;
+  }
+  .flow-steps {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+  .flow-step {
+    flex: 1;
+    text-align: center;
+    padding: 0.75rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.8rem;
+  }
+  .flow-step strong { display: block; color: #059669; margin-bottom: 4px; }
+  .flow-arrow { color: #94a3b8; font-size: 1.5rem; }
+</style>
+</head>
+<body>
+
+<h1 class="page-title">🎨 MRL 자동 조회 UI 목업 - 잔류농약 분석결과 입력 모달</h1>
+
+<div class="note">
+  💡 <strong>목업 안내:</strong> 노란 점선 박스 + <span style="background:#f59e0b;color:#fff;padding:1px 6px;border-radius:4px;font-size:0.7rem;">NEW</span> 배지는 이번에 추가될 부분입니다.
+  기존 모달 구조는 그대로 두고, 검출 농약 테이블에 <strong>MRL 기준값</strong>과 <strong>적합/부적합 자동 판정</strong> 두 컬럼만 추가합니다.
+</div>
+
+<h2 class="section-title">① 수정된 모달 화면</h2>
+
+<div class="modal">
+  <div class="modal-header">
+    <h3>🧬 잔류농약 분석결과 입력</h3>
+    <span style="cursor:pointer;font-size:1.2rem;">×</span>
+  </div>
+  <div class="modal-body">
+
+    <!-- 시료 정보 -->
+    <div class="sample-info">
+      <span class="info-label">접수번호</span>
+      <span class="info-value">P-2026-0123</span>
+      <span class="info-label">접수일자</span>
+      <span class="info-value">2026-04-07</span>
+      <span class="info-label">구분</span>
+      <span class="info-value">의뢰</span>
+      <span class="info-label">성명</span>
+      <span class="info-value">김철수</span>
+      <span class="info-label">의뢰물품</span>
+      <span class="info-value crop-highlight">사과 🍎</span>
+      <span class="info-label">목적</span>
+      <span class="info-value">출하 전 검사</span>
+    </div>
+
+    <!-- 검사일자 + 판정 -->
+    <div class="meta-row">
+      <div class="meta-field">
+        <label>검사일자</label>
+        <input type="date" value="2026-04-07">
+      </div>
+      <div class="meta-field" style="flex:1;">
+        <label>판정</label>
+        <div>
+          <span class="chip chip-none">미판정</span>
+          <span class="chip chip-pass" style="outline: 2px solid #16a34a;">불검출</span>
+          <span class="chip chip-fail">검출</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 검출 농약 섹션 -->
+    <div class="detections-header">
+      <span class="detections-title">검출 농약</span>
+      <span class="detections-count">3건</span>
+      <button class="btn">⚪ 전체 불검출</button>
+      <button class="btn btn-add">➕ 추가</button>
+      <button class="btn btn-mrl">🔄 MRL 일괄 조회</button>
+    </div>
+
+    <table class="detections-table">
+      <thead>
+        <tr>
+          <th class="col-no">No.</th>
+          <th class="col-equip">장비</th>
+          <th class="col-name">농약명</th>
+          <th class="col-type">구분</th>
+          <th class="col-raw">분석값<br>(ng/kg)</th>
+          <th class="col-dil">희석배수</th>
+          <th class="col-value">검출량<br>(mg/kg)</th>
+          <th class="col-mrl-new arrow-hint" style="position:relative;">
+            MRL 기준<br>(mg/kg)
+            <span class="new-label">NEW</span>
+          </th>
+          <th class="col-judg-new">판정</th>
+          <th class="col-del"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>GC</td>
+          <td style="text-align:left;padding-left:8px;">다이아지논</td>
+          <td>정량</td>
+          <td>15,000</td>
+          <td>100</td>
+          <td><strong>0.015</strong></td>
+          <td class="col-mrl-new"><span class="mrl-cell">0.05</span></td>
+          <td class="col-judg-new"><span class="badge badge-pass">적합</span></td>
+          <td><button class="del-btn">×</button></td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td>GC</td>
+          <td style="text-align:left;padding-left:8px;">파라티온</td>
+          <td>정량</td>
+          <td>80,000</td>
+          <td>100</td>
+          <td><strong>0.080</strong></td>
+          <td class="col-mrl-new"><span class="mrl-cell">0.05</span></td>
+          <td class="col-judg-new"><span class="badge badge-fail">부적합</span></td>
+          <td><button class="del-btn">×</button></td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td>LC</td>
+          <td style="text-align:left;padding-left:8px;">카바릴</td>
+          <td>정량</td>
+          <td>3,000</td>
+          <td>100</td>
+          <td><strong>0.003</strong></td>
+          <td class="col-mrl-new"><span class="mrl-cell not-found">기준없음</span></td>
+          <td class="col-judg-new"><span class="badge badge-none">-</span></td>
+          <td><button class="del-btn">×</button></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- MRL 조회 상태 표시줄 -->
+    <div class="mrl-status-bar">
+      <span class="dot"></span>
+      <span>✅ 식품안전나라 API 연결됨</span>
+      <span style="color:#64748b;">|</span>
+      <span>작물: <strong>사과</strong></span>
+      <span style="color:#64748b;">|</span>
+      <span>조회됨: 2건 / 기준없음: 1건</span>
+      <span style="margin-left:auto;color:#64748b;font-size:0.75rem;">마지막 조회: 방금 전</span>
+    </div>
+
+  </div>
+  <div class="modal-footer">
+    <button class="btn-cancel">닫기</button>
+    <button class="btn-save">저장</button>
+  </div>
+</div>
+
+<div class="explain">
+  <h4>📝 변경점 요약</h4>
+  <ul>
+    <li>기존 테이블 끝에 <code>MRL 기준(mg/kg)</code>, <code>판정</code> 두 컬럼 추가</li>
+    <li>헤더에 <code>🔄 MRL 일괄 조회</code> 버튼 추가 — 클릭 시 작물명 + 농약명으로 일괄 조회</li>
+    <li>농약명 입력 후 자동 조회(debounce 500ms) 또는 포커스 아웃 시 조회</li>
+    <li>검출량 vs MRL 비교로 <strong>적합 / 부적합 / 기준없음</strong> 자동 판정</li>
+    <li>모달 하단에 API 연결 상태 + 조회 결과 요약 표시</li>
+  </ul>
+</div>
+
+<h2 class="section-title">② 판정 로직</h2>
+
+<div class="explain">
+  <h4>자동 판정 기준</h4>
+  <ul>
+    <li><span class="badge badge-pass">적합</span> — 검출량 ≤ MRL 기준값 (예: 0.015 ≤ 0.05)</li>
+    <li><span class="badge badge-fail">부적합</span> — 검출량 &gt; MRL 기준값 (예: 0.080 &gt; 0.05)</li>
+    <li><span class="badge badge-none">-</span> — MRL 기준값 DB에 없음 (카바릴/사과 같은 케이스) → 사용자가 수동 판정</li>
+  </ul>
+  <h4 style="margin-top:1rem;">전체 판정 자동 연동</h4>
+  <ul>
+    <li>모든 검출 농약이 <strong>적합</strong> → 상단 판정 칩이 자동으로 <span class="chip chip-pass" style="font-size:0.7rem;padding:2px 8px;">불검출</span>으로 표시됨 (제안)</li>
+    <li>하나라도 <strong>부적합</strong> → 자동으로 <span class="chip chip-fail" style="font-size:0.7rem;padding:2px 8px;">검출</span> (부적합) 표시</li>
+    <li>사용자는 수동으로 변경 가능 (최종 결정권은 사용자)</li>
+  </ul>
+</div>
+
+<h2 class="section-title">③ API 조회 흐름</h2>
+
+<div class="flow">
+  <div class="flow-steps">
+    <div class="flow-step">
+      <strong>1. 입력</strong>
+      의뢰물품: 사과<br>농약명: 다이아지논
+    </div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-step">
+      <strong>2. 캐시 확인</strong>
+      localStorage<br><code style="font-size:0.7rem;">mrl_cache</code>
+    </div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-step">
+      <strong>3. API 호출</strong>
+      식품안전나라<br>OpenAPI
+    </div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-step">
+      <strong>4. 결과 저장</strong>
+      MRL: 0.05 mg/kg<br>캐시 7일
+    </div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-step">
+      <strong>5. 비교 판정</strong>
+      0.015 vs 0.05<br><span class="badge badge-pass">적합</span>
+    </div>
+  </div>
+</div>
+
+<h2 class="section-title">④ 오프라인 / API 장애 시</h2>
+
+<div class="modal" style="max-width:1100px;margin-bottom:1rem;">
+  <div class="modal-body">
+    <div class="mrl-status-bar offline">
+      <span class="dot offline"></span>
+      <span>⚠️ 식품안전나라 API 연결 실패 — 로컬 캐시 사용 중</span>
+      <span style="color:#64748b;">|</span>
+      <span>캐시된 MRL: 147건</span>
+      <span style="margin-left:auto;">
+        <button class="btn" style="font-size:0.75rem;">🔄 재시도</button>
+      </span>
+    </div>
+  </div>
+</div>
+
+<div class="explain">
+  <h4>오프라인 대응 전략</h4>
+  <ul>
+    <li>API 호출 성공 시 결과를 <code>localStorage.mrl_cache</code>에 <strong>7일간 저장</strong> (작물+농약 키)</li>
+    <li>Electron 앱이라 오프라인 사용 빈번 → 초기 설치 시 <strong>주요 MRL 데이터 일괄 다운로드</strong> 옵션 제공 (설정 페이지)</li>
+    <li>API 실패해도 캐시된 항목은 계속 조회 가능</li>
+    <li>Firebase Firestore에도 동기화(선택) → 다른 PC에서도 동일 캐시 공유</li>
+  </ul>
+</div>
+
+<h2 class="section-title">⑤ 설정 페이지에 추가될 항목</h2>
+
+<div class="modal" style="max-width:1100px;">
+  <div class="modal-body" style="font-size:0.85rem;">
+    <div style="padding:1rem;background:#f8fafc;border-radius:8px;">
+      <h4 style="margin-bottom:0.75rem;">📡 식품안전나라 API 설정 <span class="new-label" style="position:static;">NEW</span></h4>
+      <div style="display:grid;grid-template-columns:140px 1fr;gap:0.75rem 1rem;align-items:center;">
+        <label>API 인증키</label>
+        <input type="password" value="●●●●●●●●●●●●●●●●●●●●" style="padding:6px 10px;border:1px solid #cbd5e1;border-radius:4px;">
+
+        <label>캐시 유효기간</label>
+        <select style="padding:6px 10px;border:1px solid #cbd5e1;border-radius:4px;">
+          <option>1일</option><option selected>7일</option><option>30일</option>
+        </select>
+
+        <label>캐시된 MRL</label>
+        <span>147건 <button class="btn" style="font-size:0.75rem;margin-left:0.5rem;">전체 삭제</button></span>
+
+        <label>초기 데이터 다운로드</label>
+        <button class="btn btn-add">📥 주요 작물 MRL 일괄 다운로드 (약 5분)</button>
+
+        <label>연결 상태</label>
+        <span><span class="dot" style="display:inline-block;vertical-align:middle;"></span> 정상 (마지막 확인: 방금 전)</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h2 class="section-title">⑥ 구현 범위 (티켓 분할 제안)</h2>
+
+<div class="explain">
+  <ol style="margin-left:1.25rem;">
+    <li><strong>Phase 1 — API 모듈</strong>: <code>src/shared/mrl-api.js</code> 작성 (fetch + 캐시 + 에러 처리)</li>
+    <li><strong>Phase 2 — UI 통합</strong>: 잔류농약 모달에 2개 컬럼 + 조회 버튼 추가</li>
+    <li><strong>Phase 3 — 자동 판정</strong>: 검출량/MRL 비교 로직, 전체 판정 자동 연동</li>
+    <li><strong>Phase 4 — 설정 페이지</strong>: API 키 입력 UI, 캐시 관리, 일괄 다운로드</li>
+    <li><strong>Phase 5 — 오프라인 대응</strong>: 초기 MRL 데이터 번들링 또는 Firebase 동기화</li>
+  </ol>
+  <p style="margin-top:0.75rem;color:#64748b;">
+    💡 Phase 1-3만으로도 기본 기능은 동작합니다. Phase 4-5는 필요 시 추가.
+  </p>
+</div>
+
+<div style="max-width:1100px;margin:2rem auto;text-align:center;color:#94a3b8;font-size:0.8rem;">
+  📄 docs-internal/MRL_LOOKUP_MOCKUP.html — 잔류농약 MRL 자동 조회 UI 설계 목업 (2026-04-07)
+</div>
+
+</body>
+</html>
