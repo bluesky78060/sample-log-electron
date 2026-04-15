@@ -3,9 +3,9 @@
  * 수질 접수 데이터(waterSampleLogs)를 읽어와 분석 결과를 입력하고
  * 엑셀(.xlsx)로 내보내는 페이지 스크립트
  *
- * 지하수법 시행규칙 [별표 9] 기준:
- * - 일반오염물질 5개 + 특정유해물질 14개 = 총 19개
- * - 생활용수 19항목 / 농업용수 15항목 (공통 15 + 생활용수 전용 4)
+ * 지하수법 시행규칙 [별표 9] 기준 (유기인→다이아지논+파라티온 변경 반영):
+ * - 일반오염물질 6개 + 특정유해물질 11개 + 생활용수전용 4개 = 총 21개
+ * - 생활용수 21항목 / 농업용수 17항목 (공통 17 + 생활용수 전용 4)
  */
 
 // ========================================
@@ -20,7 +20,7 @@ const WATER_QUALITY_FIELDS = [
     { key: 'nitrate',       label: '질산성질소',             unit: 'mg/L',       group: '일반', living: '20 이하',     agri: '20 이하',     industry: '40 이하' },
     { key: 'chloride',      label: '염소이온',               unit: 'mg/L',       group: '일반', living: '250 이하',    agri: '250 이하',    industry: '500 이하' },
     { key: 'cadmium',       label: '카드뮴',                 unit: 'mg/L',       group: '일반', living: '0.01 이하',   agri: '0.01 이하',   industry: '0.02 이하' },
-    // === 특정유해물질 (14개) ===
+    // === 특정유해물질 (11개, 공통) ===
     { key: 'arsenic',       label: '비소',                   unit: 'mg/L',       group: '유해', living: '0.05 이하',   agri: '0.05 이하',   industry: '0.1 이하' },
     { key: 'cyanide',       label: '시안',                   unit: 'mg/L',       group: '유해', living: '0.01 이하',   agri: '0.01 이하',   industry: '0.2 이하' },
     { key: 'mercury',       label: '수은',                   unit: 'mg/L',       group: '유해', living: '0.001 이하',  agri: '0.001 이하',  industry: '0.001 이하' },
