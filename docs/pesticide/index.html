@@ -38,12 +38,12 @@
             color: #e9d5ff !important;
         }
     </style>
-  <script type="module" crossorigin src="../assets/pesticide-CIer2gs3.js"></script>
+  <script type="module" crossorigin src="../assets/pesticide-CDdySdwM.js"></script>
   <link rel="modulepreload" crossorigin href="../assets/theme-BmPSn4YP.js">
-  <link rel="modulepreload" crossorigin href="../assets/tooltip-dP2DkuEi.js">
+  <link rel="modulepreload" crossorigin href="../assets/tooltip-DHfpWT48.js">
   <link rel="modulepreload" crossorigin href="../assets/xlsx-CY41JvjH.js">
   <link rel="modulepreload" crossorigin href="../assets/purify.es-A66Cw1IH.js">
-  <link rel="modulepreload" crossorigin href="../assets/excel-import-manager-DTFDtChC.js">
+  <link rel="modulepreload" crossorigin href="../assets/excel-import-manager-BP_X95DY.js">
   <link rel="modulepreload" crossorigin href="../assets/toast-CYVUzQgW.js">
   <link rel="modulepreload" crossorigin href="../assets/bonghwaData-B7YY21oY.js">
   <link rel="modulepreload" crossorigin href="../assets/storage-manager-D0riC6DW.js">
@@ -51,7 +51,7 @@
   <link rel="modulepreload" crossorigin href="../assets/cropData-D4YHZ2cy.js">
   <link rel="modulepreload" crossorigin href="../assets/pesticide-data-df7o846k.js">
   <link rel="modulepreload" crossorigin href="../assets/mrl-api-CZ4KIMLE.js">
-  <link rel="stylesheet" crossorigin href="../assets/tooltip-B_VCVgGp.css">
+  <link rel="stylesheet" crossorigin href="../assets/tooltip-Dh27mr68.css">
   <link rel="stylesheet" crossorigin href="../assets/pesticide-D5VKvaCZ.css">
   <link rel="stylesheet" crossorigin href="../assets/tailwind-output-uplGniQ-.css">
 </head>
@@ -671,21 +671,30 @@
                     <!-- 요약 카드 -->
                     <div class="stats-summary">
                         <div class="stat-card total">
-                            <div class="stat-icon">📋</div>
+                            <div class="stat-card-top">
+                                <div class="stat-icon">📋</div>
+                                <span class="stat-card-badge" id="statTotalBadge"></span>
+                            </div>
                             <div class="stat-info">
                                 <span class="stat-value" id="statTotalCount">0</span>
                                 <span class="stat-label">총 접수</span>
                             </div>
                         </div>
                         <div class="stat-card completed">
-                            <div class="stat-icon">✅</div>
+                            <div class="stat-card-top">
+                                <div class="stat-icon">✅</div>
+                                <span class="stat-card-badge" id="statCompletedRate"></span>
+                            </div>
                             <div class="stat-info">
                                 <span class="stat-value" id="statCompletedCount">0</span>
                                 <span class="stat-label">완료</span>
                             </div>
                         </div>
                         <div class="stat-card pending">
-                            <div class="stat-icon">⏳</div>
+                            <div class="stat-card-top">
+                                <div class="stat-icon">⏳</div>
+                                <span class="stat-card-badge" id="statPendingRate"></span>
+                            </div>
                             <div class="stat-info">
                                 <span class="stat-value" id="statPendingCount">0</span>
                                 <span class="stat-label">미완료</span>
@@ -695,23 +704,28 @@
 
                     <!-- 상세 통계 -->
                     <div class="stats-details">
-                        <!-- 목적(용도)별 통계 -->
+                        <div class="stats-section">
+                            <h4>🏷️ 구분별</h4>
+                            <div class="stats-chart" id="statsByCategory"></div>
+                        </div>
                         <div class="stats-section">
                             <h4>🎯 목적(용도)별</h4>
                             <div class="stats-chart" id="statsByPurpose"></div>
                         </div>
+                    </div>
 
-                        <!-- 월별 통계 -->
-                        <div class="stats-section stats-section-full">
-                            <h4>📅 월별 접수 현황</h4>
+                    <div class="stats-bottom-row">
+                        <div class="stats-section stats-section-monthly">
+                            <div class="stats-section-header">
+                                <h4>월별 접수 현황</h4>
+                                <span class="stats-section-sub" id="statsMonthRange"></span>
+                            </div>
                             <div class="stats-chart-monthly" id="statsByMonth"></div>
                             <div class="stats-quarterly" id="statsQuarterly"></div>
                         </div>
-
-                        <!-- 수령 방법별 통계 -->
-                        <div class="stats-section">
-                            <h4>📮 수령 방법별</h4>
-                            <div class="stats-chart" id="statsByReceptionMethod"></div>
+                        <div class="stats-section stats-section-method">
+                            <h4>수령 방법별</h4>
+                            <div class="stats-method-list" id="statsByReceptionMethod"></div>
                         </div>
                     </div>
                 </div>

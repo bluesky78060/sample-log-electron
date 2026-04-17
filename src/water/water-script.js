@@ -391,8 +391,8 @@ class WaterSampleManager extends window.BaseSampleManager {
         for (let i = 0; i < samplingLocations.length; i++) {
             const data = {
                 ...commonData,
-                id: SampleUtils.generateUUID(),
-                receptionNumber: receptionNumbers[i] || String(parseInt(receptionNumbers[0], 10) + i),
+                id: this.generateId(),
+                receptionNumber: receptionNumbers[i] || String(parseInt(receptionNumbers[0]) + i),
                 sampleName: sampleNames[i] || formData.get('sampleName') || '지하수',
                 sampleCount: '1',
                 samplingLocation: samplingLocations[i] || '',
@@ -748,115 +748,10 @@ class WaterSampleManager extends window.BaseSampleManager {
     // 채취장소 자동완성
     // ========================================
     bindLocationAutocomplete(input, autocompleteList) {
-        if (!input || !autocompleteList) return;
-        if (typeof suggestRegionVillages !== 'function') return;
-
-        input.addEventListener('input', (e) => {
-            const value = e.target.value.trim();
-
-            if (GYEONGBUK_REGION_NAMES.some(name => value.startsWith(name))) {
-                autocompleteList.classList.remove('show');
-                return;
-            }
-
-            if (value.length >= 1) {
-                const suggestions = suggestRegionVillages(value, null, true);
-                if (suggestions.length > 0) {
-                    autocompleteList.innerHTML = '';
-                    suggestions.forEach(item => {
-                        const li = document.createElement('li');
-                        li.dataset.village = item.village || '';
-                        li.dataset.district = item.district || '';
-                        li.dataset.regionKey = item.regionKey || '';
-                        li.dataset.region = item.region || '';
-                        li.dataset.isMountain = item.isMountain || false;
-                        li.textContent = item.displayText || '';
-                        autocompleteList.appendChild(li);
-                    });
-                    autocompleteList.classList.add('show');
-                } else {
-                    autocompleteList.classList.remove('show');
-                }
-            } else {
-                autocompleteList.classList.remove('show');
-            }
-        });
-
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                const value = input.value.trim();
-
-                if (GYEONGBUK_REGION_NAMES.some(name => value.startsWith(name))) {
-                    autocompleteList.classList.remove('show');
-                    return;
-                }
-
-                if (typeof parseParcelAddress === 'function') {
-                    const result = parseParcelAddress(value);
-                    if (result) {
-                        if (result.isDuplicate && result.locations) {
-                            autocompleteList.innerHTML = '';
-                            result.locations.forEach(loc => {
-                                const li = document.createElement('li');
-                                li.dataset.village = result.villageName || '';
-                                li.dataset.district = loc.district || '';
-                                li.dataset.regionKey = loc.regionKey || '';
-                                li.dataset.lot = result.lotNumber || '';
-                                li.textContent = (loc.fullAddress || '') + (result.lotNumber ? ' ' + result.lotNumber : '');
-                                autocompleteList.appendChild(li);
-                            });
-                            autocompleteList.classList.add('show');
-                        } else if (result.alternatives && result.alternatives.length > 1) {
-                            autocompleteList.innerHTML = '';
-                            result.alternatives.forEach(district => {
-                                const li = document.createElement('li');
-                                li.dataset.village = result.village || '';
-                                li.dataset.district = district || '';
-                                li.dataset.lot = result.lotNumber || '';
-                                li.dataset.regionKey = result.regionKey || '';
-                                li.textContent = [result.region, district, result.village, result.lotNumber || ''].filter(Boolean).join(' ');
-                                autocompleteList.appendChild(li);
-                            });
-                            autocompleteList.classList.add('show');
-                        } else {
-                            input.value = result.fullAddress;
-                            autocompleteList.classList.remove('show');
-                        }
-                    }
-                }
-            }
-        });
-
-        autocompleteList.addEventListener('click', (e) => {
-            if (e.target.tagName === 'LI') {
-                const village = e.target.dataset.village;
-                const district = e.target.dataset.district;
-                const regionKey = e.target.dataset.regionKey;
-                const isMountain = e.target.dataset.isMountain === 'true';
-                const lot = e.target.dataset.lot;
-
-                const LOCAL_REGIONS = { 'bonghwa': '봉화군', 'yeongju': '영주시', 'uljin': '울진군' };
-                const region = e.target.dataset.region || LOCAL_REGIONS[regionKey] || regionKey;
-                const villageWithMountain = isMountain ? `${village} 산` : village;
-
-                const currentValue = input.value.trim();
-                const match = currentValue.match(/\d+(-\d+)?$/);
-                const extractedLot = lot || (match ? match[0] : '');
-
-                const fullAddress = extractedLot
-                    ? `${region} ${district} ${villageWithMountain} ${extractedLot}`
-                    : `${region} ${district} ${villageWithMountain}`;
-
-                input.value = fullAddress;
-                autocompleteList.classList.remove('show');
-            }
-        });
-
-        input.addEventListener('blur', () => {
-            setTimeout(() => {
-                autocompleteList.classList.remove('show');
-            }, 200);
+        // regionNames: 경북 전체 지역명 배열로 전체 주소 스킵 조건 처리
+        window.AddressAutocomplete.bind(input, autocompleteList, {
+            regionKeys: null,
+            regionNames: typeof GYEONGBUK_REGION_NAMES !== 'undefined' ? GYEONGBUK_REGION_NAMES : null,
         });
     }
 
@@ -985,9 +880,19 @@ class WaterSampleManager extends window.BaseSampleManager {
         const completed = this.sampleLogs.filter(l => l.isComplete).length;
         const pending = total - completed;
 
-        document.getElementById('statTotalCount').textContent = total;
-        document.getElementById('statCompletedCount').textContent = completed;
-        document.getElementById('statPendingCount').textContent = pending;
+        document.getElementById('statTotalCount').textContent = total.toLocaleString();
+        document.getElementById('statCompletedCount').textContent = completed.toLocaleString();
+        document.getElementById('statPendingCount').textContent = pending.toLocaleString();
+
+        // 뱃지 업데이트
+        const completedRate = total > 0 ? ((completed / total) * 100).toFixed(1) : 0;
+        const pendingRate = total > 0 ? ((pending / total) * 100).toFixed(1) : 0;
+        const totalBadge = document.getElementById('statTotalBadge');
+        const completedRateEl = document.getElementById('statCompletedRate');
+        const pendingRateEl = document.getElementById('statPendingRate');
+        if (totalBadge) totalBadge.textContent = `${total}건`;
+        if (completedRateEl) completedRateEl.textContent = `${completedRate}%`;
+        if (pendingRateEl) pendingRateEl.textContent = `${pendingRate}%`;
 
         // 시료명별
         const byWaterType = {};
@@ -997,8 +902,14 @@ class WaterSampleManager extends window.BaseSampleManager {
         });
         this.renderStatsChart('statsByWaterType', byWaterType, total);
 
-        // 목적별
-        const byPurpose = {};
+        // 목적별 (모든 카테고리 미리 초기화)
+        const byPurpose = {
+            '참고용': 0,
+            '무농약': 0,
+            '유기농': 0,
+            'GAP': 0,
+            '기타': 0
+        };
         this.sampleLogs.forEach(l => {
             const purpose = l.purpose || '미지정';
             byPurpose[purpose] = (byPurpose[purpose] || 0) + 1;
@@ -1069,19 +980,35 @@ class WaterSampleManager extends window.BaseSampleManager {
         const testItemsClassMap = { '생활용수': 'test-living', '농업용수': 'test-agricultural' };
         const waterTypeClassMap = { '지하수': 'water-underground', '하천수': 'water-river', '저수지': 'water-reservoir', '수돗물': 'water-tap' };
 
-        container.innerHTML = sanitizeHTML(entries.map(([label, count]) => {
+        container.innerHTML = '';
+        entries.forEach(([label, count]) => {
             const percentage = total > 0 ? ((count / total) * 100).toFixed(1) : 0;
             const barClass = testItemsClassMap[label] || waterTypeClassMap[label] || 'water-other';
-            return `
-                <div class="stat-bar-item">
-                    <div class="stat-bar-label">${label}</div>
-                    <div class="stat-bar-wrapper">
-                        <div class="stat-bar-fill ${barClass}" style="width: ${percentage}%"></div>
-                    </div>
-                    <div class="stat-bar-value">${count}건 (${percentage}%)</div>
-                </div>
-            `;
-        }).join(''));
+
+            const item = document.createElement('div');
+            item.className = 'stat-bar-item';
+
+            const labelEl = document.createElement('div');
+            labelEl.className = 'stat-bar-label';
+            labelEl.textContent = label;
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'stat-bar-wrapper';
+
+            const fill = document.createElement('div');
+            fill.className = `stat-bar-fill ${barClass}`;
+            fill.style.width = `${percentage}%`;
+            wrapper.appendChild(fill);
+
+            const valueEl = document.createElement('div');
+            valueEl.className = 'stat-bar-value';
+            valueEl.textContent = `${count}건 (${percentage}%)`;
+
+            item.appendChild(labelEl);
+            item.appendChild(wrapper);
+            item.appendChild(valueEl);
+            container.appendChild(item);
+        });
     }
 
     renderMonthlyChart(containerId, data) {
@@ -1097,32 +1024,66 @@ class WaterSampleManager extends window.BaseSampleManager {
             return;
         }
 
-        container.innerHTML = sanitizeHTML(`
-            <div class="monthly-chart">
-                <div class="monthly-bars">
-                    ${entries.map(([key, value]) => {
-                        const heightPercent = maxCount > 0 ? (value.count / maxCount) * 100 : 0;
-                        const completedPercent = value.count > 0 ? (value.completed / value.count) * 100 : 0;
-                        return `
-                            <div class="monthly-bar-group">
-                                <div class="monthly-bar-container">
-                                    <div class="monthly-bar-stack" style="height: ${heightPercent}%">
-                                        <div class="monthly-bar-completed" style="height: ${completedPercent}%" title="완료: ${value.completed}건"></div>
-                                        <div class="monthly-bar-pending" style="height: ${100 - completedPercent}%" title="미완료: ${value.pending}건"></div>
-                                    </div>
-                    ${value.count > 0 ? `<span class="monthly-bar-value">${value.count}</span>` : ''}
-                                </div>
-                                <span class="monthly-bar-label">${value.label}</span>
-                            </div>
-                        `;
-                    }).join('')}
-                </div>
-                <div class="monthly-legend">
-                    <span class="legend-item"><span class="legend-color completed"></span> 완료</span>
-                    <span class="legend-item"><span class="legend-color pending"></span> 미완료</span>
-                </div>
-            </div>
-        `);
+        container.innerHTML = '';
+
+        const chart = document.createElement('div');
+        chart.className = 'monthly-chart';
+
+        const barsRow = document.createElement('div');
+        barsRow.className = 'monthly-bars';
+
+        entries.forEach(([key, value]) => {
+            const heightPercent = maxCount > 0 ? (value.count / maxCount) * 100 : 0;
+            const completedPercent = value.count > 0 ? (value.completed / value.count) * 100 : 0;
+
+            const group = document.createElement('div');
+            group.className = 'monthly-bar-group';
+
+            const barContainer = document.createElement('div');
+            barContainer.className = 'monthly-bar-container';
+
+            const stack = document.createElement('div');
+            stack.className = 'monthly-bar-stack';
+            stack.style.height = `${heightPercent}%`;
+
+            const completed = document.createElement('div');
+            completed.className = 'monthly-bar-completed';
+            completed.style.height = `${completedPercent}%`;
+            completed.title = `완료: ${value.completed}건`;
+
+            const pending = document.createElement('div');
+            pending.className = 'monthly-bar-pending';
+            pending.style.height = `${100 - completedPercent}%`;
+            pending.title = `미완료: ${value.pending}건`;
+
+            stack.appendChild(completed);
+            stack.appendChild(pending);
+            barContainer.appendChild(stack);
+
+            if (value.count > 0) {
+                const val = document.createElement('span');
+                val.className = 'monthly-bar-value';
+                val.textContent = value.count;
+                barContainer.appendChild(val);
+            }
+
+            const label = document.createElement('span');
+            label.className = 'monthly-bar-label';
+            label.textContent = value.label;
+
+            group.appendChild(barContainer);
+            group.appendChild(label);
+            barsRow.appendChild(group);
+        });
+
+        chart.appendChild(barsRow);
+
+        const legend = document.createElement('div');
+        legend.className = 'monthly-legend';
+        legend.innerHTML = sanitizeHTML('<span class="legend-item"><span class="legend-color completed"></span> 완료</span><span class="legend-item"><span class="legend-color pending"></span> 미완료</span>');
+        chart.appendChild(legend);
+
+        container.appendChild(chart);
     }
 
     renderQuarterlySummary(containerId, data) {
@@ -1131,29 +1092,61 @@ class WaterSampleManager extends window.BaseSampleManager {
 
         const totalCount = Object.values(data).reduce((sum, q) => sum + q.count, 0);
 
-        container.innerHTML = sanitizeHTML(`
-            <div class="quarterly-summary">
-                ${Object.entries(data).map(([key, value]) => {
-                    const percent = totalCount > 0 ? ((value.count / totalCount) * 100).toFixed(1) : 0;
-                    const completionRate = value.count > 0 ? ((value.completed / value.count) * 100).toFixed(0) : 0;
-                    return `
-                        <div class="quarterly-item">
-                            <div class="quarterly-label">${value.label}</div>
-                            <div class="quarterly-stats">
-                                <span class="quarterly-count">${value.count}건</span>
-                                <span class="quarterly-percent">(${percent}%)</span>
-                            </div>
-                            <div class="quarterly-completion">
-                                <div class="completion-bar">
-                                    <div class="completion-fill" style="width: ${completionRate}%"></div>
-                                </div>
-                                <span class="completion-text">완료율 ${completionRate}%</span>
-                            </div>
-                        </div>
-                    `;
-                }).join('')}
-            </div>
-        `);
+        container.innerHTML = '';
+
+        const summary = document.createElement('div');
+        summary.className = 'quarterly-summary';
+
+        Object.entries(data).forEach(([key, value]) => {
+            const percent = totalCount > 0 ? ((value.count / totalCount) * 100).toFixed(1) : 0;
+            const completionRate = value.count > 0 ? ((value.completed / value.count) * 100).toFixed(0) : 0;
+
+            const item = document.createElement('div');
+            item.className = 'quarterly-item';
+
+            const labelEl = document.createElement('div');
+            labelEl.className = 'quarterly-label';
+            labelEl.textContent = value.label;
+
+            const statsEl = document.createElement('div');
+            statsEl.className = 'quarterly-stats';
+
+            const countEl = document.createElement('span');
+            countEl.className = 'quarterly-count';
+            countEl.textContent = `${value.count}건`;
+
+            const percentEl = document.createElement('span');
+            percentEl.className = 'quarterly-percent';
+            percentEl.textContent = `(${percent}%)`;
+
+            statsEl.appendChild(countEl);
+            statsEl.appendChild(percentEl);
+
+            const completionEl = document.createElement('div');
+            completionEl.className = 'quarterly-completion';
+
+            const bar = document.createElement('div');
+            bar.className = 'completion-bar';
+
+            const fill = document.createElement('div');
+            fill.className = 'completion-fill';
+            fill.style.width = `${completionRate}%`;
+            bar.appendChild(fill);
+
+            const text = document.createElement('span');
+            text.className = 'completion-text';
+            text.textContent = `완료율 ${completionRate}%`;
+
+            completionEl.appendChild(bar);
+            completionEl.appendChild(text);
+
+            item.appendChild(labelEl);
+            item.appendChild(statsEl);
+            item.appendChild(completionEl);
+            summary.appendChild(item);
+        });
+
+        container.appendChild(summary);
     }
 
     // ========================================
@@ -1561,7 +1554,7 @@ class WaterSampleManager extends window.BaseSampleManager {
 
                     if (window.firestoreDb?.isEnabled()) {
                         Promise.all(selectedIds.map(id =>
-                            window.firestoreDb.delete('water', parseInt(this.selectedYear), id)
+                            window.firestoreDb.delete('water', parseInt(this.selectedYear, 10), id)
                         ))
                             .then(() => this.log('Firebase 일괄 삭제 완료:', selectedIds.length, '건'))
                             .catch(err => (window.logger?.error || console.error)('Firebase 일괄 삭제 실패:', err));
@@ -1943,7 +1936,7 @@ class WaterSampleManager extends window.BaseSampleManager {
                 const note = getVal('note') || '';
 
                 return {
-                    id: SampleUtils.generateUUID(),
+                    id: this.generateId(),
                     receptionNumber, date,
                     applicantType: '개인',
                     birthDate: '', corpNumber: '',
@@ -1965,8 +1958,8 @@ class WaterSampleManager extends window.BaseSampleManager {
             onImportComplete: (records) => {
                 records.forEach(logEntry => this.sampleLogs.push(logEntry));
                 this.sampleLogs.sort((a, b) => {
-                    const numA = parseInt(a.receptionNumber) || 0;
-                    const numB = parseInt(b.receptionNumber) || 0;
+                    const numA = parseInt(a.receptionNumber, 10) || 0;
+                    const numB = parseInt(b.receptionNumber, 10) || 0;
                     if (numA !== numB) return numA - numB;
                     return (a.receptionNumber || '').localeCompare(b.receptionNumber || '');
                 });
@@ -2411,7 +2404,7 @@ class WaterSampleManager extends window.BaseSampleManager {
         if (!window.firestoreDb?.isEnabled()) return;
 
         try {
-            const year = parseInt(this.selectedYear);
+            const year = parseInt(this.selectedYear, 10);
             const entries = Object.entries(results);
             if (entries.length === 0) return;
 
@@ -2436,7 +2429,7 @@ class WaterSampleManager extends window.BaseSampleManager {
         if (!window.firestoreDb?.isEnabled()) return null;
 
         try {
-            const year = parseInt(this.selectedYear);
+            const year = parseInt(this.selectedYear, 10);
             const cloudData = await window.firestoreDb.getAll('waterTestResults', year);
             if (!cloudData || cloudData.length === 0) return null;
 

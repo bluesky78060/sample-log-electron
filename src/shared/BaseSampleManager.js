@@ -190,6 +190,22 @@ class BaseSampleManager {
     // ========================================
 
     /**
+     * localStorage에서 JSON 배열을 안전하게 읽기 (M5: 3벌 중복 제거)
+     * @param {string} key - localStorage 키
+     * @returns {Array}
+     */
+    safeParseArray(key) {
+        try {
+            const raw = localStorage.getItem(key);
+            if (!raw) return [];
+            const parsed = JSON.parse(raw);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch {
+            return [];
+        }
+    }
+
+    /**
      * 데이터 저장
      */
     async saveLogs() {
@@ -208,8 +224,17 @@ class BaseSampleManager {
         }));
 
         // 로컬 저장 먼저 (UI 블로킹 방지)
-        localStorage.setItem(yearStorageKey, JSON.stringify(this.sampleLogs));
-        this.log('💾 로컬 저장 완료:', this.sampleLogs.length, '건');
+        try {
+            localStorage.setItem(yearStorageKey, JSON.stringify(this.sampleLogs));
+            this.log('💾 로컬 저장 완료:', this.sampleLogs.length, '건');
+        } catch (e) {
+            if (e.name === 'QuotaExceededError' || e.code === 22) {
+                (window.logger?.warn || console.warn)('localStorage 용량 초과:', e);
+                this.showToast('저장 공간이 부족합니다. 오래된 연도의 데이터를 정리해 주세요.', 'error');
+                return;
+            }
+            throw e;
+        }
 
         // Firebase 백그라운드 동기화 (fire-and-forget — Quota 초과 시에도 UI 블로킹 없음)
         if (window.firestoreDb?.isEnabled()) {
@@ -284,50 +309,17 @@ class BaseSampleManager {
                     } else {
                         this.log(` Firebase에 데이터 없음, localStorage 확인`);
                         // Firebase에 데이터가 없으면 localStorage 확인
-                        const localData = localStorage.getItem(yearStorageKey);
-                        if (localData) {
-                            try {
-                                this.sampleLogs = JSON.parse(localData);
-                                if (!Array.isArray(this.sampleLogs)) {
-                                    this.sampleLogs = [];
-                                }
-                            } catch (e) {
-                                this.sampleLogs = [];
-                            }
-                        } else {
-                            this.sampleLogs = [];
-                        }
+                        this.sampleLogs = this.safeParseArray(yearStorageKey);
                     }
                 } catch (error) {
                     (window.logger?.error || console.error)('Firebase 로드 실패:', error);
                     // Firebase 로드 실패 시 localStorage 폴백
-                    const localData = localStorage.getItem(yearStorageKey);
-                    if (localData) {
-                        try {
-                            this.sampleLogs = JSON.parse(localData);
-                        } catch (e) {
-                            this.sampleLogs = [];
-                        }
-                    } else {
-                        this.sampleLogs = [];
-                    }
+                    this.sampleLogs = this.safeParseArray(yearStorageKey);
                 }
             } else {
                 this.log(` Firebase 비활성화, localStorage에서 로드`);
                 // Firebase가 비활성화되어 있으면 localStorage에서 로드
-                const localData = localStorage.getItem(yearStorageKey);
-                if (localData) {
-                    try {
-                        this.sampleLogs = JSON.parse(localData);
-                        if (!Array.isArray(this.sampleLogs)) {
-                            this.sampleLogs = [];
-                        }
-                    } catch (e) {
-                        this.sampleLogs = [];
-                    }
-                } else {
-                    this.sampleLogs = [];
-                }
+                this.sampleLogs = this.safeParseArray(yearStorageKey);
             }
 
             this.log(` 최종 sampleLogs 설정:`, this.sampleLogs.length, '건');
@@ -398,13 +390,25 @@ class BaseSampleManager {
                 const firebaseLogs = await this.loadFromFirebase(year);
 
                 if (firebaseLogs && firebaseLogs.length > 0) {
-                    const mergedLogs = this.smartMerge(localLogs, firebaseLogs);
+                    // Firebase fetch 중 saveLogs()가 this.sampleLogs를 변경했을 수 있으므로
+                    // 스냅샷(localLogs) 대신 현재 this.sampleLogs를 로컬 기준으로 사용
+                    const currentLogs = this.sampleLogs;
+                    const mergedLogs = this.smartMerge(currentLogs, firebaseLogs);
 
-                    if (mergedLogs.length !== localLogs.length ||
-                        this.hasChanges(localLogs, mergedLogs)) {
+                    if (mergedLogs.length !== currentLogs.length ||
+                        this.hasChanges(currentLogs, mergedLogs)) {
 
                         this.sampleLogs = mergedLogs;
-                        localStorage.setItem(this.getStorageKey(year), JSON.stringify(mergedLogs));
+                        try {
+                            localStorage.setItem(this.getStorageKey(year), JSON.stringify(mergedLogs));
+                        } catch (e) {
+                            if (e.name === 'QuotaExceededError' || e.code === 22) {
+                                (window.logger?.warn || console.warn)('동기화 중 localStorage 용량 초과:', e);
+                                this.sampleLogs = currentLogs;
+                                return;
+                            }
+                            throw e;
+                        }
                         this.log('✅ 클라우드 데이터 병합 완료');
                     }
                 }
@@ -448,8 +452,14 @@ class BaseSampleManager {
         if (window.SyncUtils?.smartMerge) {
             return window.SyncUtils.smartMerge(localData, firebaseData);
         }
-        // 폴백: Firebase 데이터 우선
-        return firebaseData;
+        // 폴백: id 기준 union merge (로컬 우선 — Firebase만 반환하면 로컬 변경 유실)
+        const map = new Map();
+        const noId = [];
+        [...(firebaseData || []), ...(localData || [])].forEach(item => {
+            if (item?.id) map.set(String(item.id), item);
+            else if (item) noId.push(item);
+        });
+        return [...Array.from(map.values()), ...noId];
     }
 
     /**
@@ -700,8 +710,13 @@ class BaseSampleManager {
      * 레코드 수 업데이트
      */
     updateRecordCount() {
-        if (this.recordCountEl) {
-            this.recordCountEl.textContent = `총 ${this.sampleLogs.length}건`;
+        if (!this.recordCountEl) return;
+        const total = this.sampleLogs.length;
+        const incomplete = this.sampleLogs.filter(log => !log.isComplete).length;
+        if (incomplete > 0) {
+            this.recordCountEl.textContent = `${total}건 (미완료 ${incomplete}건)`;
+        } else {
+            this.recordCountEl.textContent = `총 ${total}건`;
         }
     }
 

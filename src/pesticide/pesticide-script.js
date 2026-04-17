@@ -360,8 +360,13 @@ class PesticideSampleManager extends window.BaseSampleManager {
     // ========================================
 
     updateRecordCount() {
-        if (this.recordCountEl) {
-            this.recordCountEl.textContent = `${this.sampleLogs.length}건`;
+        if (!this.recordCountEl) return;
+        const total = this.sampleLogs.length;
+        const incomplete = this.sampleLogs.filter(log => !log.isComplete).length;
+        if (incomplete > 0) {
+            this.recordCountEl.textContent = `${total}건 (미완료 ${incomplete}건)`;
+        } else {
+            this.recordCountEl.textContent = `${total}건`;
         }
     }
 
@@ -615,9 +620,8 @@ class PesticideSampleManager extends window.BaseSampleManager {
                 const regionKey = e.target.dataset.regionKey;
                 const isMountain = e.target.dataset.isMountain === 'true';
 
-                const LOCAL_REGIONS = { 'bonghwa': '봉화군', 'yeongju': '영주시', 'uljin': '울진군' };
                 const villageWithMountain = isMountain ? `${village} 산` : village;
-                const region = e.target.dataset.region || LOCAL_REGIONS[regionKey] || regionKey;
+                const region = e.target.dataset.region || window.LOCAL_REGIONS[regionKey] || regionKey;
                 const fullAddress = `${region} ${district} ${villageWithMountain}`;
                 const currentValue = addressInput.value.trim();
                 const match = currentValue.match(/\d+(-\d+)?$/);
@@ -747,9 +751,8 @@ class PesticideSampleManager extends window.BaseSampleManager {
                 const regionKey = e.target.dataset.regionKey;
                 const isMountain = e.target.dataset.isMountain === 'true';
 
-                const LOCAL_REGIONS = { 'bonghwa': '봉화군', 'yeongju': '영주시', 'uljin': '울진군' };
                 const villageWithMountain = isMountain ? `${village} 산` : village;
-                const region = e.target.dataset.region || LOCAL_REGIONS[regionKey] || regionKey;
+                const region = e.target.dataset.region || window.LOCAL_REGIONS[regionKey] || regionKey;
                 const fullAddress = `${region} ${district} ${villageWithMountain}`;
                 const currentValue = this.producerAddressInput.value.trim();
                 const numberMatch = currentValue.match(/\d+(-\d+)?$/);
@@ -1792,6 +1795,23 @@ class PesticideSampleManager extends window.BaseSampleManager {
             byPurpose[purpose].count++;
         });
 
+        // 구분별
+        const categoryMapping = {
+            '생산물': { label: '🥬 생산물', class: 'category-field' },
+            '작물체': { label: '🌿 작물체', class: 'category-fruit' },
+            '토양': { label: '🌱 토양', class: 'category-rice' }
+        };
+        const byCategory = {};
+        Object.entries(categoryMapping).forEach(([key, val]) => {
+            byCategory[key] = { count: 0, ...val };
+        });
+        this.sampleLogs.forEach(log => {
+            const cat = log.subCategory || '';
+            if (cat && byCategory[cat]) {
+                byCategory[cat].count++;
+            }
+        });
+
         const byMonth = {};
         const monthNames = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
         for (let i = 1; i <= 12; i++) {
@@ -1833,23 +1853,24 @@ class PesticideSampleManager extends window.BaseSampleManager {
             byQuarter[quarter].pending += data.pending;
         });
 
-        const byReceptionMethod = {};
         const methodMapping = {
             '우편': { label: '📮 우편', class: 'method-mail' },
             '이메일': { label: '📧 이메일', class: 'method-email' },
             '팩스': { label: '📠 팩스', class: 'method-fax' },
             '직접방문': { label: '🚶 직접방문', class: 'method-visit' }
         };
-
+        const byReceptionMethod = {};
+        Object.entries(methodMapping).forEach(([key, val]) => {
+            byReceptionMethod[key] = { count: 0, ...val };
+        });
         this.sampleLogs.forEach(log => {
-            const method = log.receptionMethod || '기타';
-            if (!byReceptionMethod[method]) {
-                byReceptionMethod[method] = { count: 0, ...methodMapping[method] || { label: method, class: 'method-mail' } };
+            const method = log.receptionMethod || '';
+            if (method && byReceptionMethod[method]) {
+                byReceptionMethod[method].count++;
             }
-            byReceptionMethod[method].count++;
         });
 
-        return { total, completed, pending, byPurpose, byMonth, byQuarter, byReceptionMethod };
+        return { total, completed, pending, byCategory, byPurpose, byMonth, byQuarter, byReceptionMethod };
     }
 
     openStatisticsModal() {
@@ -1858,14 +1879,26 @@ class PesticideSampleManager extends window.BaseSampleManager {
 
         const stats = this.calculateStatistics();
 
-        document.getElementById('statTotalCount').textContent = stats.total;
+        document.getElementById('statTotalCount').textContent = stats.total.toLocaleString();
         document.getElementById('statCompletedCount').textContent = stats.completed;
         document.getElementById('statPendingCount').textContent = stats.pending;
 
+        const completedRate = stats.total > 0 ? ((stats.completed / stats.total) * 100).toFixed(1) : 0;
+        const pendingRate = stats.total > 0 ? ((stats.pending / stats.total) * 100).toFixed(1) : 0;
+        const totalBadge = document.getElementById('statTotalBadge');
+        const completedRateEl = document.getElementById('statCompletedRate');
+        const pendingRateEl = document.getElementById('statPendingRate');
+        if (totalBadge) totalBadge.textContent = `${stats.total}건`;
+        if (completedRateEl) completedRateEl.textContent = `${completedRate}%`;
+        if (pendingRateEl) pendingRateEl.textContent = `${pendingRate}%`;
+        const monthRange = document.getElementById('statsMonthRange');
+        if (monthRange) monthRange.textContent = `${new Date().getFullYear()}년 1월 ~ 12월`;
+
+        this.renderBarChart('statsByCategory', stats.byCategory, 'category');
         this.renderBarChart('statsByPurpose', stats.byPurpose, 'purpose');
         this.renderMonthlyChart('statsByMonth', stats.byMonth);
         this.renderQuarterlySummary('statsQuarterly', stats.byQuarter);
-        this.renderBarChart('statsByReceptionMethod', stats.byReceptionMethod, 'method');
+        this.renderMethodCards('statsByReceptionMethod', stats.byReceptionMethod);
 
         statisticsModal.classList.remove('hidden');
     }
@@ -1882,22 +1915,73 @@ class PesticideSampleManager extends window.BaseSampleManager {
         }
 
         const maxCount = Math.max(...entries.map(([, v]) => v.count));
+        container.innerHTML = '';
 
-        container.innerHTML = sanitizeHTML(entries.map(([key, value]) => {
+        entries.forEach(([key, value]) => {
             const percent = maxCount > 0 ? (value.count / maxCount) * 100 : 0;
-            const showInside = percent > 20;
 
-            return `
-                <div class="stat-bar-item">
-                    <span class="stat-bar-label">${value.label}</span>
-                    <div class="stat-bar-wrapper">
-                        <div class="stat-bar ${value.class}" style="width: ${percent}%"></div>
-                        ${showInside ? `<span class="stat-bar-count">${value.count}건</span>` : ''}
-                    </div>
-                    ${!showInside ? `<span style="font-size: 0.75rem; color: #6b7280; min-width: 40px;">${value.count}건</span>` : ''}
-                </div>
-            `;
-        }).join(''));
+            const item = document.createElement('div');
+            item.className = 'stat-bar-item';
+
+            const label = document.createElement('span');
+            label.className = 'stat-bar-label';
+            label.textContent = value.label;
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'stat-bar-wrapper';
+
+            const bar = document.createElement('div');
+            bar.className = `stat-bar ${value.class || ''}`;
+            bar.style.width = `${percent}%`;
+            wrapper.appendChild(bar);
+
+            if (percent > 20) {
+                const countSpan = document.createElement('span');
+                countSpan.className = 'stat-bar-count';
+                countSpan.textContent = `${value.count}건`;
+                wrapper.appendChild(countSpan);
+            }
+
+            const val = document.createElement('span');
+            val.className = 'stat-bar-value-outside';
+            val.textContent = value.count;
+
+            item.appendChild(label);
+            item.appendChild(wrapper);
+            item.appendChild(val);
+            container.appendChild(item);
+        });
+    }
+
+    renderMethodCards(containerId, data) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        const entries = Object.entries(data);
+
+        if (entries.length === 0) {
+            container.innerHTML = sanitizeHTML('<div class="stats-empty">데이터가 없습니다</div>');
+            return;
+        }
+
+        container.innerHTML = '';
+
+        entries.forEach(([key, value]) => {
+            const card = document.createElement('div');
+            card.className = 'method-card';
+
+            const name = document.createElement('span');
+            name.className = 'method-card-name';
+            name.textContent = value.label;
+
+            const count = document.createElement('span');
+            count.className = 'method-card-count';
+            count.textContent = value.count;
+
+            card.appendChild(name);
+            card.appendChild(count);
+            container.appendChild(card);
+        });
     }
 
     renderMonthlyChart(containerId, data) {
@@ -1913,32 +1997,82 @@ class PesticideSampleManager extends window.BaseSampleManager {
             return;
         }
 
-        container.innerHTML = sanitizeHTML(`
-            <div class="monthly-chart">
-                <div class="monthly-bars">
-                    ${entries.map(([key, value]) => {
-                        const heightPercent = maxCount > 0 ? (value.count / maxCount) * 100 : 0;
-                        const completedPercent = value.count > 0 ? (value.completed / value.count) * 100 : 0;
-                        return `
-                            <div class="monthly-bar-group">
-                                <div class="monthly-bar-container">
-                                    <div class="monthly-bar-stack" style="height: ${heightPercent}%">
-                                        <div class="monthly-bar-completed" style="height: ${completedPercent}%" title="완료: ${value.completed}건"></div>
-                                        <div class="monthly-bar-pending" style="height: ${100 - completedPercent}%" title="미완료: ${value.pending}건"></div>
-                                    </div>
-                                    ${value.count > 0 ? `<span class="monthly-bar-value">${value.count}</span>` : ''}
-                                </div>
-                                <span class="monthly-bar-label">${value.label}</span>
-                            </div>
-                        `;
-                    }).join('')}
-                </div>
-                <div class="monthly-legend">
-                    <span class="legend-item"><span class="legend-color completed"></span> 완료</span>
-                    <span class="legend-item"><span class="legend-color pending"></span> 미완료</span>
-                </div>
-            </div>
-        `);
+        container.innerHTML = '';
+
+        const chart = document.createElement('div');
+        chart.className = 'monthly-chart';
+
+        const barsContainer = document.createElement('div');
+        barsContainer.className = 'monthly-bars';
+
+        entries.forEach(([key, value]) => {
+            const heightPercent = maxCount > 0 ? (value.count / maxCount) * 100 : 0;
+            const completedPercent = value.count > 0 ? (value.completed / value.count) * 100 : 0;
+
+            const group = document.createElement('div');
+            group.className = 'monthly-bar-group';
+
+            const barContainer = document.createElement('div');
+            barContainer.className = 'monthly-bar-container';
+
+            const stack = document.createElement('div');
+            stack.className = 'monthly-bar-stack';
+            stack.style.height = `${heightPercent}%`;
+
+            const completedBar = document.createElement('div');
+            completedBar.className = 'monthly-bar-completed';
+            completedBar.style.height = `${completedPercent}%`;
+            completedBar.title = `완료: ${value.completed}건`;
+
+            const pendingBar = document.createElement('div');
+            pendingBar.className = 'monthly-bar-pending';
+            pendingBar.style.height = `${100 - completedPercent}%`;
+            pendingBar.title = `미완료: ${value.pending}건`;
+
+            stack.appendChild(completedBar);
+            stack.appendChild(pendingBar);
+            barContainer.appendChild(stack);
+
+            if (value.count > 0) {
+                const valueSpan = document.createElement('span');
+                valueSpan.className = 'monthly-bar-value';
+                valueSpan.textContent = value.count;
+                barContainer.appendChild(valueSpan);
+            }
+
+            const labelSpan = document.createElement('span');
+            labelSpan.className = 'monthly-bar-label';
+            labelSpan.textContent = value.label;
+
+            group.appendChild(barContainer);
+            group.appendChild(labelSpan);
+            barsContainer.appendChild(group);
+        });
+
+        chart.appendChild(barsContainer);
+
+        const legend = document.createElement('div');
+        legend.className = 'monthly-legend';
+
+        const completedLegend = document.createElement('span');
+        completedLegend.className = 'legend-item';
+        const completedColor = document.createElement('span');
+        completedColor.className = 'legend-color completed';
+        completedLegend.appendChild(completedColor);
+        completedLegend.appendChild(document.createTextNode(' 완료'));
+
+        const pendingLegend = document.createElement('span');
+        pendingLegend.className = 'legend-item';
+        const pendingColor = document.createElement('span');
+        pendingColor.className = 'legend-color pending';
+        pendingLegend.appendChild(pendingColor);
+        pendingLegend.appendChild(document.createTextNode(' 미완료'));
+
+        legend.appendChild(completedLegend);
+        legend.appendChild(pendingLegend);
+        chart.appendChild(legend);
+
+        container.appendChild(chart);
     }
 
     renderQuarterlySummary(containerId, data) {
@@ -2360,7 +2494,7 @@ class PesticideSampleManager extends window.BaseSampleManager {
                     this.showToast('삭제되었습니다.', 'success');
 
                     if (window.firestoreDb?.isEnabled()) {
-                        window.firestoreDb.delete('pesticide', parseInt(this.selectedYear), String(id))
+                        window.firestoreDb.delete('pesticide', parseInt(this.selectedYear, 10), String(id))
                             .catch(err => (window.logger?.error || console.error)('Firebase 삭제 실패:', err));
                     }
 
@@ -2585,7 +2719,7 @@ class PesticideSampleManager extends window.BaseSampleManager {
 
                 if (window.firestoreDb?.isEnabled()) {
                     Promise.all(selectedIds.map(id =>
-                        window.firestoreDb.delete('pesticide', parseInt(this.selectedYear), id)
+                        window.firestoreDb.delete('pesticide', parseInt(this.selectedYear, 10), id)
                     ))
                         .then(() => this.log('☁️ Firebase 일괄 삭제 완료:', selectedIds.length, '건'))
                         .catch(err => (window.logger?.error || console.error)('Firebase 일괄 삭제 실패:', err));
@@ -2989,8 +3123,8 @@ class PesticideSampleManager extends window.BaseSampleManager {
             onImportComplete: (records) => {
                 records.forEach(logEntry => this.sampleLogs.push(logEntry));
                 this.sampleLogs.sort((a, b) => {
-                    const numA = parseInt(a.receptionNumber) || 0;
-                    const numB = parseInt(b.receptionNumber) || 0;
+                    const numA = parseInt(a.receptionNumber, 10) || 0;
+                    const numB = parseInt(b.receptionNumber, 10) || 0;
                     if (numA !== numB) return numA - numB;
                     return (a.receptionNumber || '').localeCompare(b.receptionNumber || '');
                 });
@@ -3755,7 +3889,7 @@ class PesticideSampleManager extends window.BaseSampleManager {
         };
 
         document.getElementById('pdbgLookupBtn')?.addEventListener('click', () => {
-            const recNo = parseInt(recNoInput.value);
+            const recNo = parseInt(recNoInput.value, 10);
             if (!recNo) {
                 output.value = '접수번호를 입력하세요\n';
                 return;
@@ -3836,7 +3970,7 @@ class PesticideSampleManager extends window.BaseSampleManager {
         if (!window.firestoreDb?.isEnabled()) {
             throw new Error('Firestore not enabled');
         }
-        const year = parseInt(this.selectedYear);
+        const year = parseInt(this.selectedYear, 10);
         const cloudData = await window.firestoreDb.getAll('pesticideTestResults', year);
 
         if (!cloudData || cloudData.length === 0) {
@@ -4010,7 +4144,7 @@ class PesticideSampleManager extends window.BaseSampleManager {
     async syncPesticideTestResultsToFirestore(results) {
         if (!window.firestoreDb?.isEnabled()) return;
         try {
-            const year = parseInt(this.selectedYear);
+            const year = parseInt(this.selectedYear, 10);
             const entries = Object.entries(results);
             if (entries.length === 0) return;
             const documents = entries.map(([docKey, data]) => ({
@@ -4063,7 +4197,7 @@ class PesticideSampleManager extends window.BaseSampleManager {
     async syncPesticideTestResultsFromFirestore() {
         if (!window.firestoreDb?.isEnabled()) return;
         try {
-            const year = parseInt(this.selectedYear);
+            const year = parseInt(this.selectedYear, 10);
             const cloudData = await window.firestoreDb.getAll('pesticideTestResults', year);
             if (!cloudData || cloudData.length === 0) return;
 

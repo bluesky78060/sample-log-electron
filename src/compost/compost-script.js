@@ -228,8 +228,13 @@ class CompostSampleManager extends window.BaseSampleManager {
     // ========================================
 
     updateRecordCount() {
-        if (this.recordCountEl) {
-            this.recordCountEl.textContent = `${this.sampleLogs.length}건`;
+        if (!this.recordCountEl) return;
+        const total = this.sampleLogs.length;
+        const incomplete = this.sampleLogs.filter(log => !log.isComplete).length;
+        if (incomplete > 0) {
+            this.recordCountEl.textContent = `${total}건 (미완료 ${incomplete}건)`;
+        } else {
+            this.recordCountEl.textContent = `${total}건`;
         }
     }
 
@@ -564,7 +569,7 @@ class CompostSampleManager extends window.BaseSampleManager {
         } else {
             // === 신규 등록 모드 ===
             const data = {
-                id: SampleUtils.generateUUID(),
+                id: this.generateId(),
                 receptionNumber: formData.get('receptionNumber'),
                 date: formData.get('date'),
                 applicantType: applicantType,
@@ -1287,7 +1292,7 @@ class CompostSampleManager extends window.BaseSampleManager {
                     if (window.firestoreDb?.isEnabled()) {
                         try {
                             await Promise.all(selectedIds.map(id =>
-                                window.firestoreDb.delete('compost', parseInt(this.selectedYear), id)
+                                window.firestoreDb.delete('compost', parseInt(this.selectedYear, 10), id)
                             ));
                             this.log('Firebase 일괄 삭제 완료:', selectedIds.length, '건');
                         } catch (err) {
@@ -1462,33 +1467,77 @@ class CompostSampleManager extends window.BaseSampleManager {
         const completed = this.sampleLogs.filter(l => l.isComplete).length;
         const pending = total - completed;
 
-        document.getElementById('statTotalCount').textContent = total;
-        document.getElementById('statCompletedCount').textContent = completed;
-        document.getElementById('statPendingCount').textContent = pending;
+        document.getElementById('statTotalCount').textContent = total.toLocaleString();
+        document.getElementById('statCompletedCount').textContent = completed.toLocaleString();
+        document.getElementById('statPendingCount').textContent = pending.toLocaleString();
+
+        // 뱃지 업데이트
+        const completedRate = total > 0 ? ((completed / total) * 100).toFixed(1) : 0;
+        const pendingRate = total > 0 ? ((pending / total) * 100).toFixed(1) : 0;
+        const totalBadge = document.getElementById('statTotalBadge');
+        const completedRateEl = document.getElementById('statCompletedRate');
+        const pendingRateEl = document.getElementById('statPendingRate');
+        if (totalBadge) totalBadge.textContent = `${total}건`;
+        if (completedRateEl) completedRateEl.textContent = `${completedRate}%`;
+        if (pendingRateEl) pendingRateEl.textContent = `${pendingRate}%`;
 
         // 시료종류별
+        const compostClassMap = {
+            '가축분퇴비': { label: '🐄 가축분퇴비', class: 'compost-manure' },
+            '가축분액비': { label: '💧 가축분액비', class: 'compost-liquid' }
+        };
         const bySampleType = {};
+        Object.entries(compostClassMap).forEach(([key, val]) => {
+            bySampleType[key] = { count: 0, ...val };
+        });
         this.sampleLogs.forEach(l => {
             const type = l.sampleType || '미지정';
-            bySampleType[type] = (bySampleType[type] || 0) + 1;
+            if (!bySampleType[type]) {
+                bySampleType[type] = { count: 0, ...compostClassMap[type] || { label: type, class: 'compost-other' } };
+            }
+            bySampleType[type].count++;
         });
-        this.renderStatsChart('statsByCompostType', bySampleType, total, 'compost');
+        this.renderHorizontalBarChart('statsByCompostType', bySampleType, 'compost');
 
-        // 축종별
+        // 축종별 (모든 카테고리 미리 초기화)
+        const animalClassMap = {
+            '소': { label: '🐄 소', class: 'animal-cow' },
+            '돼지': { label: '🐷 돼지', class: 'animal-pig' },
+            '닭/오리': { label: '🐔 닭/오리', class: 'animal-chicken' }
+        };
         const byAnimalType = {};
-        this.sampleLogs.forEach(l => {
-            const type = l.animalType || '미지정';
-            byAnimalType[type] = (byAnimalType[type] || 0) + 1;
+        Object.entries(animalClassMap).forEach(([key, val]) => {
+            byAnimalType[key] = { count: 0, ...val };
         });
-        this.renderStatsChart('statsByAnimalType', byAnimalType, total, 'animal');
+        this.sampleLogs.forEach(l => {
+            let type = l.animalType || '미지정';
+            if (type === '닭' || type === '오리') type = '닭/오리';
+            if (!byAnimalType[type]) {
+                byAnimalType[type] = { count: 0, ...animalClassMap[type] || { label: type, class: 'animal-other' } };
+            }
+            byAnimalType[type].count++;
+        });
+        this.renderHorizontalBarChart('statsByAnimalType', byAnimalType, 'animal');
 
-        // 수령방법별
+        // 수령방법별 (모든 항목 미리 초기화)
+        const methodMapping = {
+            '우편': { label: '📮 우편', class: 'method-mail' },
+            '이메일': { label: '📧 이메일', class: 'method-email' },
+            '팩스': { label: '📠 팩스', class: 'method-fax' },
+            '방문': { label: '🚶 방문', class: 'method-visit' }
+        };
         const byReceptionMethod = {};
-        this.sampleLogs.forEach(l => {
-            const method = l.receptionMethod || '미지정';
-            byReceptionMethod[method] = (byReceptionMethod[method] || 0) + 1;
+        Object.entries(methodMapping).forEach(([key, val]) => {
+            byReceptionMethod[key] = { count: 0, ...val };
         });
-        this.renderStatsChart('statsByReceptionMethod', byReceptionMethod, total, 'method');
+        this.sampleLogs.forEach(l => {
+            let method = l.receptionMethod || '';
+            if (method === '직접방문') method = '방문';
+            if (method && byReceptionMethod[method]) {
+                byReceptionMethod[method].count++;
+            }
+        });
+        this.renderMethodCards('statsByReceptionMethod', byReceptionMethod);
 
         // 월별 집계
         const byMonth = {};
@@ -1543,6 +1592,9 @@ class CompostSampleManager extends window.BaseSampleManager {
         this.renderMonthlyChart('statsByMonth', byMonth);
         this.renderQuarterlySummary('statsQuarterly', byQuarter);
 
+        const monthRange = document.getElementById('statsMonthRange');
+        if (monthRange) monthRange.textContent = `${new Date().getFullYear()}년 1월 ~ 12월`;
+
         statsModal.classList.remove('hidden');
     }
 
@@ -1559,32 +1611,72 @@ class CompostSampleManager extends window.BaseSampleManager {
             return;
         }
 
-        container.innerHTML = sanitizeHTML(`
-            <div class="monthly-chart">
-                <div class="monthly-bars">
-                    ${entries.map(([key, value]) => {
-                        const heightPercent = maxCount > 0 ? (value.count / maxCount) * 100 : 0;
-                        const completedPercent = value.count > 0 ? (value.completed / value.count) * 100 : 0;
-                        return `
-                            <div class="monthly-bar-group">
-                                <div class="monthly-bar-container">
-                                    <div class="monthly-bar-stack" style="height: ${heightPercent}%">
-                                        <div class="monthly-bar-completed" style="height: ${completedPercent}%" title="완료: ${value.completed}건"></div>
-                                        <div class="monthly-bar-pending" style="height: ${100 - completedPercent}%" title="미완료: ${value.pending}건"></div>
-                                    </div>
-                                    ${value.count > 0 ? `<span class="monthly-bar-value">${value.count}</span>` : ''}
-                                </div>
-                                <span class="monthly-bar-label">${value.label}</span>
-                            </div>
-                        `;
-                    }).join('')}
-                </div>
-                <div class="monthly-legend">
-                    <span class="legend-item"><span class="legend-color completed"></span> 완료</span>
-                    <span class="legend-item"><span class="legend-color pending"></span> 미완료</span>
-                </div>
-            </div>
-        `);
+        container.innerHTML = '';
+        const chart = document.createElement('div');
+        chart.className = 'monthly-chart';
+
+        const barsRow = document.createElement('div');
+        barsRow.className = 'monthly-bars';
+
+        entries.forEach(([key, value]) => {
+            const heightPercent = maxCount > 0 ? (value.count / maxCount) * 100 : 0;
+            const completedPercent = value.count > 0 ? (value.completed / value.count) * 100 : 0;
+
+            const group = document.createElement('div');
+            group.className = 'monthly-bar-group';
+
+            const barContainer = document.createElement('div');
+            barContainer.className = 'monthly-bar-container';
+
+            const stack = document.createElement('div');
+            stack.className = 'monthly-bar-stack';
+            stack.style.height = `${heightPercent}%`;
+
+            const completedBar = document.createElement('div');
+            completedBar.className = 'monthly-bar-completed';
+            completedBar.style.height = `${completedPercent}%`;
+            completedBar.title = `완료: ${value.completed}건`;
+
+            const pendingBar = document.createElement('div');
+            pendingBar.className = 'monthly-bar-pending';
+            pendingBar.style.height = `${100 - completedPercent}%`;
+            pendingBar.title = `미완료: ${value.pending}건`;
+
+            stack.appendChild(completedBar);
+            stack.appendChild(pendingBar);
+            barContainer.appendChild(stack);
+
+            if (value.count > 0) {
+                const val = document.createElement('span');
+                val.className = 'monthly-bar-value';
+                val.textContent = value.count;
+                barContainer.appendChild(val);
+            }
+
+            const label = document.createElement('span');
+            label.className = 'monthly-bar-label';
+            label.textContent = value.label;
+
+            group.appendChild(barContainer);
+            group.appendChild(label);
+            barsRow.appendChild(group);
+        });
+
+        chart.appendChild(barsRow);
+
+        const legend = document.createElement('div');
+        legend.className = 'monthly-legend';
+        const legendCompleted = document.createElement('span');
+        legendCompleted.className = 'legend-item';
+        legendCompleted.innerHTML = sanitizeHTML('<span class="legend-color completed"></span> 완료');
+        const legendPending = document.createElement('span');
+        legendPending.className = 'legend-item';
+        legendPending.innerHTML = sanitizeHTML('<span class="legend-color pending"></span> 미완료');
+        legend.appendChild(legendCompleted);
+        legend.appendChild(legendPending);
+        chart.appendChild(legend);
+
+        container.appendChild(chart);
     }
 
     renderQuarterlySummary(containerId, data) {
@@ -1593,75 +1685,120 @@ class CompostSampleManager extends window.BaseSampleManager {
 
         const totalCount = Object.values(data).reduce((sum, q) => sum + q.count, 0);
 
-        container.innerHTML = sanitizeHTML(`
-            <div class="quarterly-summary">
-                ${Object.entries(data).map(([key, value]) => {
-                    const percent = totalCount > 0 ? ((value.count / totalCount) * 100).toFixed(1) : 0;
-                    return `
-                        <div class="quarterly-item">
-                            <div class="quarterly-label">${value.label}</div>
-                            <div class="quarterly-stats">
-                                <span class="quarterly-count">${value.count}건</span>
-                                <span class="quarterly-percent">(${percent}%)</span>
-                            </div>
-                            <div class="quarterly-detail">
-                                <span class="quarterly-completed">완료 ${value.completed}</span>
-                                <span class="quarterly-pending">미완료 ${value.pending}</span>
-                            </div>
-                        </div>
-                    `;
-                }).join('')}
-            </div>
-        `);
+        container.innerHTML = '';
+        const summary = document.createElement('div');
+        summary.className = 'quarterly-summary';
+
+        Object.entries(data).forEach(([key, value]) => {
+            const percent = totalCount > 0 ? ((value.count / totalCount) * 100).toFixed(1) : 0;
+
+            const item = document.createElement('div');
+            item.className = 'quarterly-item';
+
+            const label = document.createElement('div');
+            label.className = 'quarterly-label';
+            label.textContent = value.label;
+
+            const stats = document.createElement('div');
+            stats.className = 'quarterly-stats';
+            const countSpan = document.createElement('span');
+            countSpan.className = 'quarterly-count';
+            countSpan.textContent = `${value.count}건`;
+            const percentSpan = document.createElement('span');
+            percentSpan.className = 'quarterly-percent';
+            percentSpan.textContent = `(${percent}%)`;
+            stats.appendChild(countSpan);
+            stats.appendChild(percentSpan);
+
+            const detail = document.createElement('div');
+            detail.className = 'quarterly-detail';
+            const completedSpan = document.createElement('span');
+            completedSpan.className = 'quarterly-completed';
+            completedSpan.textContent = `완료 ${value.completed}`;
+            const pendingSpan = document.createElement('span');
+            pendingSpan.className = 'quarterly-pending';
+            pendingSpan.textContent = `미완료 ${value.pending}`;
+            detail.appendChild(completedSpan);
+            detail.appendChild(pendingSpan);
+
+            item.appendChild(label);
+            item.appendChild(stats);
+            item.appendChild(detail);
+            summary.appendChild(item);
+        });
+
+        container.appendChild(summary);
     }
 
-    renderStatsChart(containerId, data, total, category) {
+    renderHorizontalBarChart(containerId, data, prefix) {
         const container = document.getElementById(containerId);
         if (!container) return;
 
-        const entries = Object.entries(data).sort((a, b) => b[1] - a[1]);
+        const entries = Object.entries(data).sort((a, b) => b[1].count - a[1].count);
+        if (entries.length === 0) {
+            container.innerHTML = sanitizeHTML('<div class="stats-empty">데이터가 없습니다</div>');
+            return;
+        }
 
-        const compostClassMap = {
-            '가축분퇴비': 'compost-manure',
-            '가축분액비': 'compost-liquid',
-            '기타': 'compost-other'
-        };
-        const animalClassMap = {
-            '소': 'animal-cow',
-            '돼지': 'animal-pig',
-            '닭': 'animal-chicken',
-            '오리': 'animal-duck',
-            '말': 'animal-horse',
-            '혼합': 'animal-mixed',
-            '기타': 'animal-other'
-        };
-        const methodClassMap = {
-            '우편': 'method-mail',
-            '이메일': 'method-email',
-            '팩스': 'method-fax',
-            '직접방문': 'method-visit'
-        };
+        const maxCount = Math.max(...entries.map(([, v]) => v.count));
+        container.innerHTML = '';
 
-        container.innerHTML = sanitizeHTML(entries.map(([label, count]) => {
-            const percentage = total > 0 ? ((count / total) * 100).toFixed(1) : 0;
-            let barClass = '';
-            if (category === 'compost') {
-                barClass = compostClassMap[label] || 'compost-other';
-            } else if (category === 'animal') {
-                barClass = animalClassMap[label] || 'animal-other';
-            } else if (category === 'method') {
-                barClass = methodClassMap[label] || 'method-other';
-            }
-            return `
-                <div class="stat-bar-item">
-                    <div class="stat-bar-label">${label}</div>
-                    <div class="stat-bar-wrapper">
-                        <div class="stat-bar-fill ${barClass}" style="width: ${percentage}%"></div>
-                    </div>
-                    <div class="stat-bar-value">${count}건 (${percentage}%)</div>
-                </div>
-            `;
-        }).join(''));
+        entries.forEach(([key, value]) => {
+            const percent = maxCount > 0 ? (value.count / maxCount) * 100 : 0;
+
+            const item = document.createElement('div');
+            item.className = 'stat-bar-item';
+
+            const label = document.createElement('span');
+            label.className = 'stat-bar-label';
+            label.textContent = value.label;
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'stat-bar-wrapper';
+
+            const bar = document.createElement('div');
+            bar.className = `stat-bar ${value.class}`;
+            bar.style.width = `${percent}%`;
+            wrapper.appendChild(bar);
+
+            const val = document.createElement('span');
+            val.className = 'stat-bar-value-outside';
+            val.textContent = value.count;
+
+            item.appendChild(label);
+            item.appendChild(wrapper);
+            item.appendChild(val);
+            container.appendChild(item);
+        });
+    }
+
+    renderMethodCards(containerId, data) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        const entries = Object.entries(data);
+        if (entries.length === 0) {
+            container.innerHTML = sanitizeHTML('<div class="stats-empty">데이터가 없습니다</div>');
+            return;
+        }
+
+        container.innerHTML = '';
+        entries.forEach(([key, value]) => {
+            const card = document.createElement('div');
+            card.className = 'method-card';
+
+            const name = document.createElement('span');
+            name.className = 'method-card-name';
+            name.textContent = value.label;
+
+            const count = document.createElement('span');
+            count.className = 'method-card-count';
+            count.textContent = value.count;
+
+            card.appendChild(name);
+            card.appendChild(count);
+            container.appendChild(card);
+        });
     }
 
     // ========================================
@@ -2026,122 +2163,13 @@ class CompostSampleManager extends window.BaseSampleManager {
     bindFarmAddressAutocomplete() {
         const farmAddressInput = document.getElementById('farmAddressFull');
         const autocompleteList = document.getElementById('farmAddressAutocomplete');
-
-        if (!farmAddressInput || !autocompleteList) return;
-
-        // 입력 시 자동완성 목록 표시
-        farmAddressInput.addEventListener('input', (e) => {
-            const value = e.target.value.trim();
-
-            // 이미 완전한 주소면 자동완성 비활성화
-            if (value.startsWith('봉화군') || value.startsWith('영주시') || value.startsWith('울진군')) {
-                autocompleteList.classList.remove('show');
-                return;
-            }
-
-            if (value.length > 0 && typeof suggestRegionVillages === 'function') {
-                const suggestions = suggestRegionVillages(value, ['bonghwa', 'yeongju', 'uljin'], true);
-
-                if (suggestions.length > 0) {
-                    autocompleteList.innerHTML = '';
-                    suggestions.forEach(item => {
-                        const li = document.createElement('li');
-                        li.dataset.village = item.village || '';
-                        li.dataset.district = item.district || '';
-                        li.dataset.regionKey = item.regionKey || '';
-                        li.dataset.region = item.region || '';
-                        li.dataset.isMountain = item.isMountain || false;
-                        li.textContent = item.displayText || '';
-                        autocompleteList.appendChild(li);
-                    });
-                    autocompleteList.classList.add('show');
-                } else {
-                    autocompleteList.classList.remove('show');
-                }
-            } else {
-                autocompleteList.classList.remove('show');
-            }
+        window.AddressAutocomplete.bind(farmAddressInput, autocompleteList, {
+            regionKeys: ['bonghwa', 'yeongju', 'uljin'],
         });
-
-        // Enter 키 입력 시 자동 변환
-        farmAddressInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-
-                const value = farmAddressInput.value.trim();
-
-                if (value.startsWith('봉화군') || value.startsWith('영주시') || value.startsWith('울진군')) {
-                    autocompleteList.classList.remove('show');
-                    return;
-                }
-
-                if (typeof parseParcelAddress === 'function') {
-                    const result = parseParcelAddress(value);
-
-                    if (result) {
-                        if (result.isDuplicate) {
-                            autocompleteList.innerHTML = '';
-                            result.locations.forEach(loc => {
-                                const li = document.createElement('li');
-                                li.dataset.village = result.villageName || '';
-                                li.dataset.district = loc.district || '';
-                                li.dataset.regionKey = loc.regionKey || '';
-                                li.dataset.lot = result.lotNumber || '';
-                                li.textContent = `${loc.fullAddress || ''} ${result.lotNumber || ''}`.trim();
-                                autocompleteList.appendChild(li);
-                            });
-                            autocompleteList.classList.add('show');
-                        } else if (result.alternatives && result.alternatives.length > 1) {
-                            autocompleteList.innerHTML = '';
-                            result.alternatives.forEach(district => {
-                                const li = document.createElement('li');
-                                li.dataset.village = result.village || '';
-                                li.dataset.district = district || '';
-                                li.dataset.lot = result.lotNumber || '';
-                                li.dataset.regionKey = result.regionKey || '';
-                                li.textContent = `${result.region || ''} ${district || ''} ${result.village || ''} ${result.lotNumber || ''}`.trim();
-                                autocompleteList.appendChild(li);
-                            });
-                            autocompleteList.classList.add('show');
-                        } else {
-                            const fullAddress = `${result.region} ${result.district} ${result.village}${result.lotNumber ? ' ' + result.lotNumber : ''}`;
-                            farmAddressInput.value = fullAddress;
-                            autocompleteList.classList.remove('show');
-                        }
-                    }
-                }
-            }
-        });
-
-        // 자동완성 목록 클릭 선택
-        autocompleteList.addEventListener('click', (e) => {
-            const li = e.target.closest('li');
-            if (li) {
-                const village = li.dataset.village;
-                const district = li.dataset.district;
-                const regionKey = li.dataset.regionKey;
-                const isMountain = li.dataset.isMountain === 'true';
-                const lot = li.dataset.lot || '';
-
-                const LOCAL_REGIONS = { 'bonghwa': '봉화군', 'yeongju': '영주시', 'uljin': '울진군' };
-                const region = e.target.dataset.region || LOCAL_REGIONS[regionKey] || regionKey;
-
-                const villageWithMountain = isMountain ? `${village} 산` : village;
-
-                const currentValue = farmAddressInput.value.trim();
-                const match = currentValue.match(/\d+(-\d+)?$/);
-                const extractedLot = lot || (match ? match[0] : '');
-
-                const fullAddress = `${region} ${district} ${villageWithMountain}${extractedLot ? ' ' + extractedLot : ''}`;
-                farmAddressInput.value = fullAddress;
-                autocompleteList.classList.remove('show');
-            }
-        });
-
-        // 외부 클릭 시 자동완성 목록 숨기기
+        // 외부 클릭 시 목록 숨기기 (compost 전용 wrapper 클래스)
         document.addEventListener('click', (e) => {
             if (!e.target.closest('.lot-address-autocomplete-wrapper')) {
-                autocompleteList.classList.remove('show');
+                autocompleteList?.classList.remove('show');
             }
         });
     }
@@ -2271,8 +2299,8 @@ class CompostSampleManager extends window.BaseSampleManager {
             onImportComplete: (records) => {
                 records.forEach(logEntry => this.sampleLogs.push(logEntry));
                 this.sampleLogs.sort((a, b) => {
-                    const numA = parseInt(a.receptionNumber) || 0;
-                    const numB = parseInt(b.receptionNumber) || 0;
+                    const numA = parseInt(a.receptionNumber, 10) || 0;
+                    const numB = parseInt(b.receptionNumber, 10) || 0;
                     if (numA !== numB) return numA - numB;
                     return (a.receptionNumber || '').localeCompare(b.receptionNumber || '');
                 });
@@ -2695,7 +2723,7 @@ class CompostSampleManager extends window.BaseSampleManager {
     async syncCompostTestResultsToFirestore(results) {
         if (!window.firestoreDb?.isEnabled()) return;
         try {
-            const year = parseInt(this.selectedYear);
+            const year = parseInt(this.selectedYear, 10);
             const entries = Object.entries(results);
             if (entries.length === 0) return;
             const documents = entries.map(([docKey, data]) => ({ ...data, id: docKey, _resultKey: docKey }));
@@ -2708,7 +2736,7 @@ class CompostSampleManager extends window.BaseSampleManager {
     async syncCompostTestResultsFromFirestore() {
         if (!window.firestoreDb?.isEnabled()) return;
         try {
-            const year = parseInt(this.selectedYear);
+            const year = parseInt(this.selectedYear, 10);
             const cloudData = await window.firestoreDb.getAll('compostTestResults', year);
             if (!cloudData || cloudData.length === 0) return;
 

@@ -320,7 +320,7 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
         const today = new Date().toISOString().split('T')[0];
 
         const data = {
-            id: this.editingId || SampleUtils.generateUUID(),
+            id: this.editingId || this.generateId(),
             receptionNumber: document.getElementById('receptionNumber')?.value || this.generateNextReceptionNumber(),
             date: document.getElementById('date')?.value || today,
             name: name,
@@ -514,8 +514,13 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
     // 오버라이드: 레코드 수 업데이트
     // ========================================
     updateRecordCount() {
-        if (this.recordCountEl) {
-            this.recordCountEl.textContent = `${this.sampleLogs.length}건`;
+        if (!this.recordCountEl) return;
+        const total = this.sampleLogs.length;
+        const incomplete = this.sampleLogs.filter(log => !log.isComplete).length;
+        if (incomplete > 0) {
+            this.recordCountEl.textContent = `${total}건 (미완료 ${incomplete}건)`;
+        } else {
+            this.recordCountEl.textContent = `${total}건`;
         }
     }
 
@@ -709,11 +714,24 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
     // 통계
     // ========================================
     updateStatistics() {
-        document.getElementById('statTotalCount').textContent = this.sampleLogs.length;
+        const total = this.sampleLogs.length;
+        document.getElementById('statTotalCount').textContent = total;
 
         const completed = this.sampleLogs.filter(l => l.isComplete).length;
+        const pending = total - completed;
         document.getElementById('statCompletedCount').textContent = completed;
-        document.getElementById('statPendingCount').textContent = this.sampleLogs.length - completed;
+        document.getElementById('statPendingCount').textContent = pending;
+
+        const completedRate = total > 0 ? ((completed / total) * 100).toFixed(1) : 0;
+        const pendingRate = total > 0 ? ((pending / total) * 100).toFixed(1) : 0;
+        const totalBadge = document.getElementById('statTotalBadge');
+        const completedRateEl = document.getElementById('statCompletedRate');
+        const pendingRateEl = document.getElementById('statPendingRate');
+        if (totalBadge) totalBadge.textContent = `${total}건`;
+        if (completedRateEl) completedRateEl.textContent = `${completedRate}%`;
+        if (pendingRateEl) pendingRateEl.textContent = `${pendingRate}%`;
+        const monthRange = document.getElementById('statsMonthRange');
+        if (monthRange) monthRange.textContent = `${new Date().getFullYear()}년 1월 ~ 12월`;
 
         // 분석항목별 통계
         const byAnalysisItem = {};
@@ -725,11 +743,17 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
         });
         this.renderBarChart('statsByAnalysisItem', byAnalysisItem);
 
-        // 목적별 통계
-        const byPurpose = {};
+        // 목적별 통계 (모든 항목 미리 초기화)
+        const byPurpose = {
+            '일반재배': 0,
+            '무농약': 0,
+            '유기농': 0,
+            'GAP': 0,
+            '저탄소': 0
+        };
         this.sampleLogs.forEach(log => {
-            const p = log.purpose || '미지정';
-            byPurpose[p] = (byPurpose[p] || 0) + 1;
+            const p = log.purpose || '';
+            if (p) byPurpose[p] = (byPurpose[p] || 0) + 1;
         });
         this.renderBarChart('statsByPurpose', byPurpose);
 
@@ -779,13 +803,24 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
         this.renderMonthlyChart('statsByMonth', byMonth);
         this.renderQuarterlySummary('statsQuarterly', byQuarter);
 
-        // 수령방법별 통계
+        // 수령방법별 통계 (모든 항목 미리 초기화, 순서 고정)
+        const methodMapping = {
+            '우편': { label: '📮 우편', count: 0 },
+            '이메일': { label: '📧 이메일', count: 0 },
+            '팩스': { label: '📠 팩스', count: 0 },
+            '직접방문': { label: '🚶 직접방문', count: 0 }
+        };
         const byMethod = {};
-        this.sampleLogs.forEach(log => {
-            const m = log.receptionMethod || '미지정';
-            byMethod[m] = (byMethod[m] || 0) + 1;
+        Object.entries(methodMapping).forEach(([key, val]) => {
+            byMethod[key] = { ...val };
         });
-        this.renderBarChart('statsByReceptionMethod', byMethod);
+        this.sampleLogs.forEach(log => {
+            const m = log.receptionMethod || '';
+            if (m && byMethod[m]) {
+                byMethod[m].count++;
+            }
+        });
+        this.renderMethodCards('statsByReceptionMethod', byMethod);
     }
 
     renderMonthlyChart(containerId, byMonth) {
@@ -801,32 +836,65 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
             return;
         }
 
-        container.innerHTML = sanitizeHTML(`
-            <div class="monthly-chart">
-                <div class="monthly-bars">
-                    ${entries.map(([key, value]) => {
-                        const heightPercent = maxCount > 0 ? (value.count / maxCount) * 100 : 0;
-                        const completedPercent = value.count > 0 ? (value.completed / value.count) * 100 : 0;
-                        return `
-                            <div class="monthly-bar-group">
-                                <div class="monthly-bar-container">
-                                    <div class="monthly-bar-stack" style="height: ${heightPercent}%">
-                                        <div class="monthly-bar-completed" style="height: ${completedPercent}%" title="완료: ${value.completed}건"></div>
-                                        <div class="monthly-bar-pending" style="height: ${100 - completedPercent}%" title="미완료: ${value.pending}건"></div>
-                                    </div>
-                                    ${value.count > 0 ? `<span class="monthly-bar-value">${value.count}</span>` : ''}
-                                </div>
-                                <span class="monthly-bar-label">${value.label}</span>
-                            </div>
-                        `;
-                    }).join('')}
-                </div>
-                <div class="monthly-legend">
-                    <span class="legend-item"><span class="legend-color completed"></span> 완료</span>
-                    <span class="legend-item"><span class="legend-color pending"></span> 미완료</span>
-                </div>
-            </div>
-        `);
+        container.innerHTML = '';
+        const chart = document.createElement('div');
+        chart.className = 'monthly-chart';
+
+        const barsWrap = document.createElement('div');
+        barsWrap.className = 'monthly-bars';
+
+        entries.forEach(([key, value]) => {
+            const heightPercent = maxCount > 0 ? (value.count / maxCount) * 100 : 0;
+            const completedPercent = value.count > 0 ? (value.completed / value.count) * 100 : 0;
+
+            const group = document.createElement('div');
+            group.className = 'monthly-bar-group';
+
+            const barContainer = document.createElement('div');
+            barContainer.className = 'monthly-bar-container';
+
+            const stack = document.createElement('div');
+            stack.className = 'monthly-bar-stack';
+            stack.style.height = `${heightPercent}%`;
+
+            const completedBar = document.createElement('div');
+            completedBar.className = 'monthly-bar-completed';
+            completedBar.style.height = `${completedPercent}%`;
+            completedBar.title = `완료: ${value.completed}건`;
+
+            const pendingBar = document.createElement('div');
+            pendingBar.className = 'monthly-bar-pending';
+            pendingBar.style.height = `${100 - completedPercent}%`;
+            pendingBar.title = `미완료: ${value.pending}건`;
+
+            stack.appendChild(completedBar);
+            stack.appendChild(pendingBar);
+            barContainer.appendChild(stack);
+
+            if (value.count > 0) {
+                const valSpan = document.createElement('span');
+                valSpan.className = 'monthly-bar-value';
+                valSpan.textContent = value.count;
+                barContainer.appendChild(valSpan);
+            }
+
+            const label = document.createElement('span');
+            label.className = 'monthly-bar-label';
+            label.textContent = value.label;
+
+            group.appendChild(barContainer);
+            group.appendChild(label);
+            barsWrap.appendChild(group);
+        });
+
+        chart.appendChild(barsWrap);
+
+        const legend = document.createElement('div');
+        legend.className = 'monthly-legend';
+        legend.innerHTML = sanitizeHTML('<span class="legend-item"><span class="legend-color completed"></span> 완료</span><span class="legend-item"><span class="legend-color pending"></span> 미완료</span>');
+        chart.appendChild(legend);
+
+        container.appendChild(chart);
     }
 
     renderQuarterlySummary(containerId, byQuarter) {
@@ -865,32 +933,75 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
         const maxVal = Math.max(...entries.map(([, v]) => v), 1);
 
         const analysisClassMap = {
-            '납(Pb)': 'analysis-pb', '카드뮴(Cd)': 'analysis-cd',
-            '비소(As)': 'analysis-as', '수은(Hg)': 'analysis-hg',
-            '크롬(Cr)': 'analysis-cr', '구리(Cu)': 'analysis-cu',
-            '니켈(Ni)': 'analysis-ni', '아연(Zn)': 'analysis-zn'
+            '구리': 'analysis-cu', '납': 'analysis-pb',
+            '니켈': 'analysis-ni', '비소': 'analysis-as',
+            '수은': 'analysis-hg', '아연': 'analysis-zn',
+            '카드뮴': 'analysis-cd', '6가크롬': 'analysis-cr'
         };
         const purposeClassMap = {
-            '농경지': 'purpose-farm', '공장부지': 'purpose-factory',
-            '주거지역': 'purpose-residential', '기타': 'purpose-other'
-        };
-        const methodClassMap = {
-            '우편': 'method-mail', '이메일': 'method-email',
-            '팩스': 'method-fax', '직접방문': 'method-visit'
+            '일반재배': 'purpose-general', '무농약': 'purpose-nopesticide',
+            '유기농': 'purpose-organic', 'GAP': 'purpose-gap',
+            '저탄소': 'purpose-lowcarbon'
         };
 
-        container.innerHTML = sanitizeHTML(entries.map(([label, value]) => {
-            const barClass = analysisClassMap[label] || purposeClassMap[label] || methodClassMap[label] || '';
-            return `
-                <div class="stat-bar-row">
-                    <span class="stat-bar-label">${label}</span>
-                    <div class="stat-bar-track">
-                        <div class="stat-bar-fill ${barClass}" style="width: ${(value / maxVal) * 100}%"></div>
-                    </div>
-                    <span class="stat-bar-value">${value}</span>
-                </div>
-            `;
-        }).join(''));
+        container.innerHTML = '';
+        entries.forEach(([label, value]) => {
+            const barClass = analysisClassMap[label] || purposeClassMap[label] || '';
+            const percent = maxVal > 0 ? (value / maxVal) * 100 : 0;
+
+            const item = document.createElement('div');
+            item.className = 'stat-bar-item';
+
+            const labelSpan = document.createElement('span');
+            labelSpan.className = 'stat-bar-label';
+            labelSpan.textContent = label;
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'stat-bar-wrapper';
+
+            const bar = document.createElement('div');
+            bar.className = `stat-bar-fill ${barClass}`.trim();
+            bar.style.width = `${percent}%`;
+            wrapper.appendChild(bar);
+
+            const val = document.createElement('span');
+            val.className = 'stat-bar-value-outside';
+            val.textContent = value;
+
+            item.appendChild(labelSpan);
+            item.appendChild(wrapper);
+            item.appendChild(val);
+            container.appendChild(item);
+        });
+    }
+
+    renderMethodCards(containerId, data) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        const entries = Object.entries(data);
+        if (entries.length === 0) {
+            container.innerHTML = sanitizeHTML('<div class="stats-empty">데이터가 없습니다</div>');
+            return;
+        }
+
+        container.innerHTML = '';
+        entries.forEach(([key, value]) => {
+            const card = document.createElement('div');
+            card.className = 'method-card';
+
+            const name = document.createElement('span');
+            name.className = 'method-card-name';
+            name.textContent = value.label;
+
+            const count = document.createElement('span');
+            count.className = 'method-card-count';
+            count.textContent = value.count;
+
+            card.appendChild(name);
+            card.appendChild(count);
+            container.appendChild(card);
+        });
     }
 
     // ========================================
@@ -1202,7 +1313,7 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
                     // Firebase에서도 삭제
                     if (selectedIds.length > 0 && window.firestoreDb?.isEnabled()) {
                         Promise.all(selectedIds.map(id =>
-                            window.firestoreDb.delete('heavyMetal', parseInt(this.selectedYear), id)
+                            window.firestoreDb.delete('heavyMetal', parseInt(this.selectedYear, 10), id)
                         ))
                             .then(() => this.log('Firebase 일괄 삭제 완료:', selectedIds.length, '건'))
                             .catch(err => (window.logger?.error || console.error)('Firebase 일괄 삭제 실패:', err));
@@ -1456,123 +1567,9 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
     bindLocationAutocomplete() {
         const samplingLocationInput = document.getElementById('samplingLocation');
         const samplingLocationAutocomplete = document.getElementById('samplingLocationAutocomplete');
-
-        if (!samplingLocationInput || !samplingLocationAutocomplete) return;
-
-        samplingLocationInput.addEventListener('input', (e) => {
-            const value = e.target.value.trim();
-            samplingLocationAutocomplete.innerHTML = '';
-            samplingLocationAutocomplete.classList.remove('show');
-
-            if (value.length < 1) return;
-
-            if (this.GYEONGBUK_REGION_NAMES.some(name => value.startsWith(name))) return;
-
-            if (typeof suggestRegionVillages === 'function') {
-                const suggestions = suggestRegionVillages(value, null, true);
-                if (suggestions.length > 0) {
-                    samplingLocationAutocomplete.innerHTML = '';
-                    const fragment1 = document.createDocumentFragment();
-                    suggestions.slice(0, 20).forEach(suggestion => {
-                        const li = document.createElement('li');
-                        li.dataset.village = suggestion.village || '';
-                        li.dataset.district = suggestion.district || '';
-                        li.dataset.regionKey = suggestion.regionKey || '';
-                        li.dataset.region = suggestion.region || '';
-                        li.dataset.isMountain = suggestion.isMountain || false;
-                        li.textContent = suggestion.displayText || '';
-                        fragment1.appendChild(li);
-                    });
-                    samplingLocationAutocomplete.appendChild(fragment1);
-                    samplingLocationAutocomplete.classList.add('show');
-                }
-            }
-        });
-
-        samplingLocationInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                const value = samplingLocationInput.value.trim();
-
-                if (this.GYEONGBUK_REGION_NAMES.some(name => value.startsWith(name))) {
-                    samplingLocationAutocomplete.innerHTML = '';
-                    samplingLocationAutocomplete.classList.remove('show');
-                    return;
-                }
-
-                if (typeof parseParcelAddress === 'function') {
-                    const result = parseParcelAddress(value);
-                    if (result) {
-                        if (result.isDuplicate && result.locations) {
-                            samplingLocationAutocomplete.innerHTML = '';
-                            const fragment2 = document.createDocumentFragment();
-                            result.locations.forEach(loc => {
-                                const li = document.createElement('li');
-                                li.dataset.village = result.villageName || '';
-                                li.dataset.district = loc.district || '';
-                                li.dataset.regionKey = loc.regionKey || '';
-                                li.dataset.lot = result.lotNumber || '';
-                                li.textContent = `${loc.fullAddress} ${result.lotNumber || ''}`.trim();
-                                fragment2.appendChild(li);
-                            });
-                            samplingLocationAutocomplete.appendChild(fragment2);
-                            samplingLocationAutocomplete.classList.add('show');
-                        } else if (result.alternatives && result.alternatives.length > 1) {
-                            samplingLocationAutocomplete.innerHTML = '';
-                            const fragment3 = document.createDocumentFragment();
-                            result.alternatives.forEach(district => {
-                                const li = document.createElement('li');
-                                li.dataset.village = result.village || '';
-                                li.dataset.district = district || '';
-                                li.dataset.lot = result.lotNumber || '';
-                                li.dataset.regionKey = result.regionKey || '';
-                                li.textContent = `${result.region} ${district} ${result.village} ${result.lotNumber || ''}`.trim();
-                                fragment3.appendChild(li);
-                            });
-                            samplingLocationAutocomplete.appendChild(fragment3);
-                            samplingLocationAutocomplete.classList.add('show');
-                        } else if (result.fullAddress) {
-                            samplingLocationAutocomplete.innerHTML = '';
-                            samplingLocationAutocomplete.classList.remove('show');
-                            samplingLocationInput.value = result.fullAddress;
-                        }
-                    }
-                }
-            }
-        });
-
-        samplingLocationAutocomplete.addEventListener('click', (e) => {
-            if (e.target.tagName === 'LI') {
-                const village = e.target.dataset.village;
-                const district = e.target.dataset.district;
-                const regionKey = e.target.dataset.regionKey;
-                const isMountain = e.target.dataset.isMountain === 'true';
-                const lot = e.target.dataset.lot;
-
-                const LOCAL_REGIONS = { 'bonghwa': '봉화군', 'yeongju': '영주시', 'uljin': '울진군' };
-                const region = e.target.dataset.region || LOCAL_REGIONS[regionKey] || regionKey;
-
-                const villageWithMountain = isMountain ? `${village} 산` : village;
-
-                const currentValue = samplingLocationInput.value.trim();
-                const match = currentValue.match(/\d+(-\d+)?$/);
-                const lotNumber = lot || (match ? match[0] : '');
-
-                const fullAddress = lotNumber
-                    ? `${region} ${district} ${villageWithMountain} ${lotNumber}`
-                    : `${region} ${district} ${villageWithMountain}`;
-
-                samplingLocationInput.value = fullAddress;
-                samplingLocationAutocomplete.innerHTML = '';
-                samplingLocationAutocomplete.classList.remove('show');
-            }
-        });
-
-        samplingLocationInput.addEventListener('blur', () => {
-            setTimeout(() => {
-                samplingLocationAutocomplete.innerHTML = '';
-                samplingLocationAutocomplete.classList.remove('show');
-            }, 200);
+        window.AddressAutocomplete.bind(samplingLocationInput, samplingLocationAutocomplete, {
+            regionKeys: null,
+            regionNames: this.GYEONGBUK_REGION_NAMES || null,
         });
     }
 
@@ -1956,12 +1953,12 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
             getExistingLogs: () => this.sampleLogs,
             onImportComplete: (records) => {
                 records.forEach(logEntry => {
-                    logEntry.id = SampleUtils.generateUUID();
+                    logEntry.id = this.generateId();
                     this.sampleLogs.push(logEntry);
                 });
                 this.sampleLogs.sort((a, b) => {
-                    const numA = parseInt(a.receptionNumber) || 0;
-                    const numB = parseInt(b.receptionNumber) || 0;
+                    const numA = parseInt(a.receptionNumber, 10) || 0;
+                    const numB = parseInt(b.receptionNumber, 10) || 0;
                     if (numA !== numB) return numA - numB;
                     return (a.receptionNumber || '').localeCompare(b.receptionNumber || '');
                 });
@@ -2276,7 +2273,7 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
     async syncHeavyMetalTestResultsToFirestore(results) {
         if (!window.firestoreDb?.isEnabled()) return;
         try {
-            const year = parseInt(this.selectedYear);
+            const year = parseInt(this.selectedYear, 10);
             const entries = Object.entries(results);
             if (entries.length === 0) return;
             const documents = entries.map(([docKey, data]) => ({ ...data, id: docKey, _resultKey: docKey }));
@@ -2289,7 +2286,7 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
     async syncHeavyMetalTestResultsFromFirestore() {
         if (!window.firestoreDb?.isEnabled()) return;
         try {
-            const year = parseInt(this.selectedYear);
+            const year = parseInt(this.selectedYear, 10);
             const cloudData = await window.firestoreDb.getAll('heavyMetalTestResults', year);
             if (!cloudData || cloudData.length === 0) return;
 

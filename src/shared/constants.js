@@ -60,6 +60,15 @@ const AUTOCOMPLETE = {
 };
 
 /**
+ * 관할 지역명 (자동완성에서 공통 사용)
+ */
+const LOCAL_REGIONS = {
+    bonghwa: '봉화군',
+    yeongju: '영주시',
+    uljin: '울진군'
+};
+
+/**
  * 저장소 관련 상수
  */
 const STORAGE = {
@@ -156,6 +165,7 @@ window.APP_CONSTANTS = {
     PAGINATION,
     TIMER,
     AUTOCOMPLETE,
+    LOCAL_REGIONS,
     STORAGE,
     FILE,
     VALIDATION,
@@ -173,6 +183,7 @@ window.APP_VERSION = APP_VERSION;
 window.PAGINATION = PAGINATION;
 window.TIMER = TIMER;
 window.AUTOCOMPLETE = AUTOCOMPLETE;
+window.LOCAL_REGIONS = LOCAL_REGIONS;
 window.STORAGE = STORAGE;
 window.FILE = FILE;
 window.VALIDATION = VALIDATION;

@@ -307,8 +307,13 @@ class SoilSampleManager extends window.BaseSampleManager {
     // ========================================
 
     updateRecordCount() {
-        if (this.recordCountEl) {
-            this.recordCountEl.textContent = `${this.sampleLogs.length}건`;
+        if (!this.recordCountEl) return;
+        const total = this.sampleLogs.length;
+        const incomplete = this.sampleLogs.filter(log => !log.isComplete).length;
+        if (incomplete > 0) {
+            this.recordCountEl.textContent = `${total}건 (미완료 ${incomplete}건)`;
+        } else {
+            this.recordCountEl.textContent = `${total}건`;
         }
     }
 
@@ -422,18 +427,26 @@ class SoilSampleManager extends window.BaseSampleManager {
     async saveLogs() {
         const yearStorageKey = this.getStorageKey(this.selectedYear);
         this.listViewStale = true;
+        this._firebaseCache.delete(this.selectedYear);  // PER-9: 캐시 무효화
 
         // ID가 없는 항목에 ID 추가
         this.sampleLogs = this.sampleLogs.map(item => ({
             ...item,
-            id: item.id || SampleUtils.generateUUID()
+            id: item.id || this.generateId()
         }));
 
-        const serialized = JSON.stringify(this.sampleLogs);
-
         // 로컬 저장 (Firebase는 개별 변경 시 호출자에서 직접 처리)
-        localStorage.setItem(yearStorageKey, serialized);
-        this.log('로컬 저장 완료:', this.sampleLogs.length, '건');
+        try {
+            localStorage.setItem(yearStorageKey, JSON.stringify(this.sampleLogs));
+            this.log('로컬 저장 완료:', this.sampleLogs.length, '건');
+        } catch (e) {
+            if (e.name === 'QuotaExceededError' || e.code === 22) {
+                (window.logger?.warn || console.warn)('localStorage 용량 초과:', e);
+                this.showToast('저장 공간이 부족합니다. 오래된 연도의 데이터를 정리해 주세요.', 'error');
+                return;
+            }
+            throw e;
+        }
 
         // 자동 저장 실행
         const autoSaveEnabled = localStorage.getItem('soilAutoSaveEnabled') === 'true';
@@ -457,7 +470,7 @@ class SoilSampleManager extends window.BaseSampleManager {
     firebaseSaveRecords(logs) {
         if (!window.firestoreDb?.isEnabled()) return;
         const arr = Array.isArray(logs) ? logs : [logs];
-        const year = parseInt(this.selectedYear);
+        const year = parseInt(this.selectedYear, 10);
         const promises = arr
             .filter(log => log.id)
             .map(log => window.firestoreDb.save('soil', year, String(log.id), log));
@@ -477,7 +490,7 @@ class SoilSampleManager extends window.BaseSampleManager {
     firebaseDeleteRecords(ids) {
         if (!window.firestoreDb?.isEnabled()) return;
         const arr = Array.isArray(ids) ? ids : [ids];
-        const year = parseInt(this.selectedYear);
+        const year = parseInt(this.selectedYear, 10);
         const promises = arr.map(id => window.firestoreDb.delete('soil', year, String(id)));
         Promise.allSettled(promises).then(results => {
             const failed = results.filter(r => r.status === 'rejected');
@@ -493,7 +506,7 @@ class SoilSampleManager extends window.BaseSampleManager {
     firebaseBatchSync() {
         if (!window.firestoreDb?.isEnabled()) return;
         const snapshot = [...this.sampleLogs]; // 레이스 컨디션 방지: 현재 시점 스냅샷
-        window.firestoreDb.batchSave('soil', parseInt(this.selectedYear), snapshot)
+        window.firestoreDb.batchSave('soil', parseInt(this.selectedYear, 10), snapshot)
             .then(() => this.log('Firebase 전체 동기화 완료:', snapshot.length, '건'))
             .catch(err => {
                 (window.logger?.error || console.error)('Firebase 전체 동기화 실패:', err);
@@ -505,7 +518,7 @@ class SoilSampleManager extends window.BaseSampleManager {
     // Override: deleteSample (soil-specific: inline Firebase delete)
     // ========================================
 
-    async deleteSample(id, receptionNumber) {
+    async deleteSample(id, receptionNumber = null) {
         const beforeCount = this.sampleLogs.length;
         this.sampleLogs = this.sampleLogs.filter(log => String(log.id) !== String(id));
         const deleted = beforeCount - this.sampleLogs.length;
@@ -776,9 +789,6 @@ class SoilSampleManager extends window.BaseSampleManager {
         const safeCropName = escapeHTML(firstCrop.name);
         const parcelCategory = parcel.category || '';
         const parcelPurpose = parcel.purpose || '';
-        const formatArea = this.formatArea || window.SampleUtils?.formatArea || ((v) => v);
-        const formatAreaWithUnit = this.formatAreaWithUnit || window.SampleUtils?.formatAreaWithUnit || ((v) => v);
-
         card.innerHTML = sanitizeHTML(`
             <div class="parcel-card-header">
                 <h4>필지 ${parcelNumber}</h4>
@@ -854,16 +864,7 @@ class SoilSampleManager extends window.BaseSampleManager {
                         <span>+</span> 추가 작물
                     </button>
                     <div class="crops-area-container" id="cropsArea-${parcel.id}">
-                        ${parcel.crops.slice(1).map((crop, idx) => {
-                            const safeCropNameCard = escapeHTML(crop.name);
-                            return `
-                                <div class="crop-area-item" data-index="${idx + 1}">
-                                    <span class="crop-name">${safeCropNameCard}</span>
-                                    <span class="crop-area">${formatAreaWithUnit(crop.area, crop.unit || 'm2')}</span>
-                                    <button type="button" class="remove-crop-area">&times;</button>
-                                </div>
-                            `;
-                        }).join('')}
+                        ${this._renderAdditionalCrops(parcel)}
                     </div>
                 </div>
                 <div class="parcel-right-column">
@@ -881,40 +882,7 @@ class SoilSampleManager extends window.BaseSampleManager {
                             <button type="button" class="btn-add-sub-lot-icon" data-id="${parcel.id}" title="하위 필지 추가">+</button>
                         </div>
                         <div class="sub-lots-container" id="subLots-${parcel.id}">
-                            ${parcel.subLots.map((subLot, idx) => {
-                                const number = `${parcelNumber}-${idx + 1}`;
-                                const lotAddress = typeof subLot === 'string' ? subLot : subLot.lotAddress;
-                                const crops = typeof subLot === 'string' ? [] : (subLot.crops || []);
-                                const subLotCropsId = 'subLotCrops-' + parcel.id + '-' + idx;
-                                const safeLotAddressCard = escapeHTML(lotAddress);
-                                return `
-                                    <div class="sub-lot-card">
-                                        <div class="sub-lot-card-header">
-                                            <div class="sub-lot-info">
-                                                <span class="sub-lot-number">` + number + `</span>
-                                                <span class="sub-lot-value">` + safeLotAddressCard + `</span>
-                                            </div>
-                                            <button type="button" class="remove-sub-lot" data-index="` + idx + `">&times;</button>
-                                        </div>
-                                        <div class="sub-lot-crops-list" id="` + subLotCropsId + `">
-                                            ` + crops.map((crop, cropIdx) => {
-                                                const safeCropNameSubLot = escapeHTML(crop.name);
-                                                return `
-                                                <div class="sub-lot-crop-item">
-                                                    <span class="crop-name">` + safeCropNameSubLot + `</span>
-                                                    <div class="crop-area-info">
-                                                        <span class="crop-area">` + formatArea(crop.area) + ` m²</span>
-                                                        <button type="button" class="remove-sublot-crop" data-sublot-index="` + idx + `" data-crop-index="` + cropIdx + `">&times;</button>
-                                                    </div>
-                                                </div>
-                                            `;}).join('') + `
-                                        </div>
-                                        <button type="button" class="btn-add-sublot-crop" data-parcel-id="` + parcel.id + `" data-sublot-index="` + idx + `">
-                                            + 작물 추가
-                                        </button>
-                                    </div>
-                                `;
-                            }).join('')}
+                            ${this._renderSubLots(parcel, parcelNumber)}
                         </div>
                     </div>
                 </div>
@@ -948,6 +916,62 @@ class SoilSampleManager extends window.BaseSampleManager {
         this.bindSubLotAutocomplete(parcel.id);
         this.bindAreaUnitConversion(parcel.id);
         this.bindParcelSelects(parcel.id);
+    }
+
+    _renderAdditionalCrops(parcel) {
+        const formatAreaWithUnit = this.formatAreaWithUnit || window.SampleUtils?.formatAreaWithUnit || ((v) => v);
+        return parcel.crops.slice(1).map((crop, idx) => {
+            const safeCropName = escapeHTML(crop.name);
+            return `
+                <div class="crop-area-item" data-index="${idx + 1}">
+                    <span class="crop-name">${safeCropName}</span>
+                    <span class="crop-area">${formatAreaWithUnit(crop.area, crop.unit || 'm2')}</span>
+                    <button type="button" class="remove-crop-area">&times;</button>
+                </div>
+            `;
+        }).join('');
+    }
+
+    _renderSubLotCard(parcel, subLot, idx, parcelNumber) {
+        const formatArea = this.formatArea || window.SampleUtils?.formatArea || ((v) => v);
+        const number = `${parcelNumber}-${idx + 1}`;
+        const lotAddress = typeof subLot === 'string' ? subLot : subLot.lotAddress;
+        const crops = typeof subLot === 'string' ? [] : (subLot.crops || []);
+        const subLotCropsId = `subLotCrops-${parcel.id}-${idx}`;
+        const safeLotAddress = escapeHTML(lotAddress);
+        return `
+            <div class="sub-lot-card">
+                <div class="sub-lot-card-header">
+                    <div class="sub-lot-info">
+                        <span class="sub-lot-number">${number}</span>
+                        <span class="sub-lot-value">${safeLotAddress}</span>
+                    </div>
+                    <button type="button" class="remove-sub-lot" data-index="${idx}">&times;</button>
+                </div>
+                <div class="sub-lot-crops-list" id="${subLotCropsId}">
+                    ${crops.map((crop, cropIdx) => {
+                        const safeCropName = escapeHTML(crop.name);
+                        return `
+                        <div class="sub-lot-crop-item">
+                            <span class="crop-name">${safeCropName}</span>
+                            <div class="crop-area-info">
+                                <span class="crop-area">${formatArea(crop.area)} m²</span>
+                                <button type="button" class="remove-sublot-crop" data-sublot-index="${idx}" data-crop-index="${cropIdx}">&times;</button>
+                            </div>
+                        </div>
+                    `;}).join('')}
+                </div>
+                <button type="button" class="btn-add-sublot-crop" data-parcel-id="${parcel.id}" data-sublot-index="${idx}">
+                    + 작물 추가
+                </button>
+            </div>
+        `;
+    }
+
+    _renderSubLots(parcel, parcelNumber) {
+        return parcel.subLots.map((subLot, idx) =>
+            this._renderSubLotCard(parcel, subLot, idx, parcelNumber)
+        ).join('');
     }
 
     // ========================================
@@ -1017,99 +1041,11 @@ class SoilSampleManager extends window.BaseSampleManager {
     bindLotAddressAutocomplete(parcelId) {
         const lotInput = document.querySelector(`.lot-address-input[data-id="${parcelId}"]`);
         const autocompleteList = document.getElementById(`lotAutocomplete-${parcelId}`);
-
-        if (!lotInput || !autocompleteList) return;
-
-        lotInput.addEventListener('input', (e) => {
-            const value = e.target.value.trim();
-            if (value.startsWith('봉화군') || value.startsWith('영주시') || value.startsWith('울진군')) {
-                autocompleteList.classList.remove('show');
-                this.updateParcelLotAddress(parcelId);
-                return;
-            }
-            if (value.length > 0 && typeof suggestRegionVillages === 'function') {
-                const suggestions = suggestRegionVillages(value, ['bonghwa', 'yeongju', 'uljin'], true);
-                if (suggestions.length > 0) {
-                    autocompleteList.innerHTML = '';
-                    suggestions.forEach(item => {
-                        const li = document.createElement('li');
-                        li.dataset.village = item.village || '';
-                        li.dataset.district = item.district || '';
-                        li.dataset.regionKey = item.regionKey || '';
-                        li.dataset.region = item.region || '';
-                        li.dataset.isMountain = item.isMountain || false;
-                        li.textContent = item.displayText || '';
-                        autocompleteList.appendChild(li);
-                    });
-                    autocompleteList.classList.add('show');
-                } else {
-                    autocompleteList.classList.remove('show');
-                }
-            } else {
-                autocompleteList.classList.remove('show');
-            }
-            this.updateParcelLotAddress(parcelId);
-        });
-
-        lotInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                const value = lotInput.value.trim();
-                if (value.startsWith('봉화군') || value.startsWith('영주시') || value.startsWith('울진군')) {
-                    autocompleteList.classList.remove('show');
-                    return;
-                }
-                if (typeof parseParcelAddress === 'function') {
-                    const result = parseParcelAddress(value);
-                    if (result) {
-                        if (result.isDuplicate) {
-                            this.showRegionSelectionModal(result, parcelId, lotInput);
-                        } else if (result.alternatives && result.alternatives.length > 1) {
-                            autocompleteList.innerHTML = '';
-                            result.alternatives.forEach(district => {
-                                const li = document.createElement('li');
-                                li.dataset.village = result.village || '';
-                                li.dataset.district = district || '';
-                                li.dataset.lot = result.lotNumber || '';
-                                li.dataset.regionKey = result.regionKey || '';
-                                li.textContent = `${result.region} ${district} ${result.village} ${result.lotNumber || ''}`;
-                                autocompleteList.appendChild(li);
-                            });
-                            autocompleteList.classList.add('show');
-                        } else {
-                            lotInput.value = result.fullAddress;
-                            autocompleteList.classList.remove('show');
-                            this.updateParcelLotAddress(parcelId);
-                        }
-                    }
-                }
-            }
-        });
-
-        autocompleteList.addEventListener('click', (e) => {
-            if (e.target.tagName === 'LI') {
-                const village = e.target.dataset.village;
-                const district = e.target.dataset.district;
-                const regionKey = e.target.dataset.regionKey;
-                const isMountain = e.target.dataset.isMountain === 'true';
-                const lotNumber = e.target.dataset.lot || '';
-                const LOCAL_REGIONS = { 'bonghwa': '봉화군', 'yeongju': '영주시', 'uljin': '울진군' };
-                const region = e.target.dataset.region || LOCAL_REGIONS[regionKey] || regionKey;
-                const villageWithMountain = isMountain ? `${village} 산` : village;
-                const currentValue = lotInput.value.trim();
-                const match = currentValue.match(/\d+(-\d+)?$/);
-                const extractedLotNumber = lotNumber || (match ? match[0] : '');
-                const fullAddress = extractedLotNumber
-                    ? `${region} ${district} ${villageWithMountain} ${extractedLotNumber}`
-                    : `${region} ${district} ${villageWithMountain}`;
-                lotInput.value = fullAddress;
-                autocompleteList.classList.remove('show');
-                this.updateParcelLotAddress(parcelId);
-            }
-        });
-
-        lotInput.addEventListener('blur', () => {
-            setTimeout(() => { autocompleteList.classList.remove('show'); }, 200);
+        window.AddressAutocomplete.bind(lotInput, autocompleteList, {
+            regionKeys: ['bonghwa', 'yeongju', 'uljin'],
+            onInput: () => this.updateParcelLotAddress(parcelId),
+            onSelect: () => this.updateParcelLotAddress(parcelId),
+            onShowModal: (result) => this.showRegionSelectionModal(result, parcelId, lotInput),
         });
     }
 
@@ -1120,95 +1056,9 @@ class SoilSampleManager extends window.BaseSampleManager {
     bindSubLotAutocomplete(parcelId) {
         const subLotInput = document.querySelector(`.sub-lot-input[data-id="${parcelId}"]`);
         const autocompleteList = document.getElementById(`subLotAutocomplete-${parcelId}`);
-
-        if (!subLotInput || !autocompleteList) return;
-
-        subLotInput.addEventListener('input', (e) => {
-            const value = e.target.value.trim();
-            if (value.startsWith('봉화군') || value.startsWith('영주시') || value.startsWith('울진군')) {
-                autocompleteList.classList.remove('show');
-                return;
-            }
-            if (value.length > 0 && typeof suggestRegionVillages === 'function') {
-                const suggestions = suggestRegionVillages(value, ['bonghwa', 'yeongju', 'uljin'], true);
-                if (suggestions.length > 0) {
-                    autocompleteList.innerHTML = '';
-                    suggestions.forEach(item => {
-                        const li = document.createElement('li');
-                        li.dataset.village = item.village || '';
-                        li.dataset.district = item.district || '';
-                        li.dataset.regionKey = item.regionKey || '';
-                        li.dataset.region = item.region || '';
-                        li.dataset.isMountain = item.isMountain || false;
-                        li.textContent = item.displayText || '';
-                        autocompleteList.appendChild(li);
-                    });
-                    autocompleteList.classList.add('show');
-                } else {
-                    autocompleteList.classList.remove('show');
-                }
-            } else {
-                autocompleteList.classList.remove('show');
-            }
-        });
-
-        subLotInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                const value = subLotInput.value.trim();
-                if (value.startsWith('봉화군') || value.startsWith('영주시') || value.startsWith('울진군')) {
-                    autocompleteList.classList.remove('show');
-                    return;
-                }
-                if (typeof parseParcelAddress === 'function') {
-                    const result = parseParcelAddress(value);
-                    if (result) {
-                        if (result.isDuplicate) {
-                            this.showRegionSelectionModal(result, parcelId, subLotInput);
-                        } else if (result.alternatives && result.alternatives.length > 1) {
-                            autocompleteList.innerHTML = '';
-                            result.alternatives.forEach(district => {
-                                const li = document.createElement('li');
-                                li.dataset.village = result.village || '';
-                                li.dataset.district = district || '';
-                                li.dataset.lot = result.lotNumber || '';
-                                li.dataset.regionKey = result.regionKey || '';
-                                li.textContent = `${result.region} ${district} ${result.village} ${result.lotNumber || ''}`;
-                                autocompleteList.appendChild(li);
-                            });
-                            autocompleteList.classList.add('show');
-                        } else {
-                            subLotInput.value = result.fullAddress;
-                            autocompleteList.classList.remove('show');
-                        }
-                    }
-                }
-            }
-        });
-
-        autocompleteList.addEventListener('click', (e) => {
-            if (e.target.tagName === 'LI') {
-                const village = e.target.dataset.village;
-                const district = e.target.dataset.district;
-                const regionKey = e.target.dataset.regionKey;
-                const isMountain = e.target.dataset.isMountain === 'true';
-                const lotNumber = e.target.dataset.lot || '';
-                const LOCAL_REGIONS = { 'bonghwa': '봉화군', 'yeongju': '영주시', 'uljin': '울진군' };
-                const region = e.target.dataset.region || LOCAL_REGIONS[regionKey] || regionKey;
-                const villageWithMountain = isMountain ? `${village} 산` : village;
-                const currentValue = subLotInput.value.trim();
-                const match = currentValue.match(/\d+(-\d+)?$/);
-                const extractedLotNumber = lotNumber || (match ? match[0] : '');
-                const fullAddress = extractedLotNumber
-                    ? `${region} ${district} ${villageWithMountain} ${extractedLotNumber}`
-                    : `${region} ${district} ${villageWithMountain}`;
-                subLotInput.value = fullAddress;
-                autocompleteList.classList.remove('show');
-            }
-        });
-
-        subLotInput.addEventListener('blur', () => {
-            setTimeout(() => { autocompleteList.classList.remove('show'); }, 200);
+        window.AddressAutocomplete.bind(subLotInput, autocompleteList, {
+            regionKeys: ['bonghwa', 'yeongju', 'uljin'],
+            onShowModal: (result) => this.showRegionSelectionModal(result, parcelId, subLotInput),
         });
     }
 
@@ -1510,7 +1360,7 @@ class SoilSampleManager extends window.BaseSampleManager {
                            id="crop-search-${idx}"
                            name="crop-search-${idx}"
                            placeholder="작물명 검색..."
-                           value="${crop.name}"
+                           value="${escapeHTML(crop.name)}"
                            data-index="${idx}">
                     <ul class="crop-autocomplete-list" id="autocomplete-${idx}"></ul>
                 </div>
@@ -1519,7 +1369,7 @@ class SoilSampleManager extends window.BaseSampleManager {
                            id="area-input-${idx}"
                            name="area-input-${idx}"
                            placeholder="면적"
-                           value="${crop.area}"
+                           value="${escapeHTML(String(crop.area ?? ''))}"
                            data-index="${idx}">
                     <div class="area-unit-toggle area-unit-modal-toggle"
                          id="area-unit-modal-${idx}"
@@ -2521,7 +2371,6 @@ class SoilSampleManager extends window.BaseSampleManager {
             bySubCategory[category].count++;
         });
 
-        const byPurpose = {};
         const purposeMapping = {
             '일반재배': { label: '🌾 일반재배', class: 'purpose-general' },
             '유기': { label: '♻️ 유기', class: 'purpose-organic' },
@@ -2529,6 +2378,10 @@ class SoilSampleManager extends window.BaseSampleManager {
             'GAP': { label: '✅ GAP', class: 'purpose-gap' },
             '저탄소': { label: '🌱 저탄소', class: 'purpose-lowcarbon' }
         };
+        const byPurpose = {};
+        Object.entries(purposeMapping).forEach(([key, val]) => {
+            byPurpose[key] = { count: 0, ...val };
+        });
 
         this.sampleLogs.forEach(log => {
             const purpose = log.purpose || '기타';
@@ -2593,15 +2446,114 @@ class SoilSampleManager extends window.BaseSampleManager {
     openStatisticsModal() {
         if (!this.statisticsModal) return;
         const stats = this.calculateStatistics();
-        document.getElementById('statTotalCount').textContent = stats.total;
-        document.getElementById('statCompletedCount').textContent = stats.completed;
-        document.getElementById('statPendingCount').textContent = stats.pending;
-        this.renderBarChart('statsByCategory', stats.bySubCategory, 'category');
-        this.renderBarChart('statsByPurpose', stats.byPurpose, 'purpose');
+        document.getElementById('statTotalCount').textContent = stats.total.toLocaleString();
+        document.getElementById('statCompletedCount').textContent = stats.completed.toLocaleString();
+        document.getElementById('statPendingCount').textContent = stats.pending.toLocaleString();
+        const completedRate = stats.total > 0 ? ((stats.completed / stats.total) * 100).toFixed(1) : 0;
+        const pendingRate = stats.total > 0 ? ((stats.pending / stats.total) * 100).toFixed(1) : 0;
+        const totalBadge = document.getElementById('statTotalBadge');
+        const completedRateEl = document.getElementById('statCompletedRate');
+        const pendingRateEl = document.getElementById('statPendingRate');
+        if (totalBadge) totalBadge.textContent = `${stats.total}건`;
+        if (completedRateEl) completedRateEl.textContent = `${completedRate}%`;
+        if (pendingRateEl) pendingRateEl.textContent = `${pendingRate}%`;
+        this.renderVerticalBarChart('statsByCategory', stats.bySubCategory);
+        this.renderHorizontalBarChart('statsByPurpose', stats.byPurpose);
         this.renderMonthlyChart('statsByMonth', stats.byMonth);
         this.renderQuarterlySummary('statsQuarterly', stats.byQuarter);
-        this.renderBarChart('statsByReceptionMethod', stats.byReceptionMethod, 'method');
+        this.renderMethodCards('statsByReceptionMethod', stats.byReceptionMethod);
+        const monthRange = document.getElementById('statsMonthRange');
+        if (monthRange) monthRange.textContent = `${new Date().getFullYear()}년 1월 ~ 12월`;
         this.statisticsModal.classList.remove('hidden');
+    }
+
+    renderVerticalBarChart(containerId, data) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        const entries = Object.entries(data).sort((a, b) => b[1].count - a[1].count);
+        if (entries.length === 0) {
+            container.innerHTML = sanitizeHTML('<div class="stats-empty">데이터가 없습니다</div>');
+            return;
+        }
+        const maxCount = Math.max(...entries.map(([, v]) => v.count));
+        container.innerHTML = '';
+        const barsDiv = document.createElement('div');
+        barsDiv.className = 'vertical-bars';
+        entries.forEach(([key, value]) => {
+            const heightPercent = maxCount > 0 ? (value.count / maxCount) * 100 : 0;
+            const group = document.createElement('div');
+            group.className = 'vertical-bar-group';
+            const barContainer = document.createElement('div');
+            barContainer.className = 'vertical-bar-container';
+            const bar = document.createElement('div');
+            bar.className = `vertical-bar ${value.class}`;
+            bar.style.height = `${heightPercent}%`;
+            barContainer.appendChild(bar);
+            const label = document.createElement('span');
+            label.className = 'vertical-bar-label';
+            label.textContent = value.label;
+            group.appendChild(barContainer);
+            group.appendChild(label);
+            barsDiv.appendChild(group);
+        });
+        container.appendChild(barsDiv);
+    }
+
+    renderHorizontalBarChart(containerId, data) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        const entries = Object.entries(data).sort((a, b) => b[1].count - a[1].count);
+        if (entries.length === 0) {
+            container.innerHTML = sanitizeHTML('<div class="stats-empty">데이터가 없습니다</div>');
+            return;
+        }
+        const maxCount = Math.max(...entries.map(([, v]) => v.count));
+        container.innerHTML = '';
+        entries.forEach(([key, value]) => {
+            const percent = maxCount > 0 ? (value.count / maxCount) * 100 : 0;
+            const item = document.createElement('div');
+            item.className = 'stat-bar-item';
+            const label = document.createElement('span');
+            label.className = 'stat-bar-label';
+            label.textContent = value.label;
+            const wrapper = document.createElement('div');
+            wrapper.className = 'stat-bar-wrapper';
+            const bar = document.createElement('div');
+            bar.className = `stat-bar ${value.class}`;
+            bar.style.width = `${percent}%`;
+            wrapper.appendChild(bar);
+            const val = document.createElement('span');
+            val.className = 'stat-bar-value-outside';
+            val.textContent = value.count;
+            item.appendChild(label);
+            item.appendChild(wrapper);
+            item.appendChild(val);
+            container.appendChild(item);
+        });
+    }
+
+    renderMethodCards(containerId, data) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        const entries = Object.entries(data).sort((a, b) => b[1].count - a[1].count);
+        if (entries.length === 0) {
+            container.innerHTML = sanitizeHTML('<div class="stats-empty">데이터가 없습니다</div>');
+            return;
+        }
+        container.innerHTML = '';
+        entries.forEach(([key, value]) => {
+            const card = document.createElement('div');
+            card.className = 'method-card';
+            const name = document.createElement('span');
+            name.className = 'method-card-name';
+            name.textContent = value.label;
+            const count = document.createElement('span');
+            count.className = 'method-card-count';
+            count.textContent = value.count;
+            card.appendChild(name);
+            card.appendChild(count);
+            container.appendChild(card);
+        });
     }
 
     renderBarChart(containerId, data, prefix) {
@@ -2639,32 +2591,51 @@ class SoilSampleManager extends window.BaseSampleManager {
             container.innerHTML = sanitizeHTML('<div class="stats-empty">데이터가 없습니다</div>');
             return;
         }
-        container.innerHTML = sanitizeHTML(`
-            <div class="monthly-chart">
-                <div class="monthly-bars">
-                    ${entries.map(([key, value]) => {
-                        const heightPercent = maxCount > 0 ? (value.count / maxCount) * 100 : 0;
-                        const completedPercent = value.count > 0 ? (value.completed / value.count) * 100 : 0;
-                        return `
-                            <div class="monthly-bar-group">
-                                <div class="monthly-bar-container">
-                                    <div class="monthly-bar-stack" style="height: ${heightPercent}%">
-                                        <div class="monthly-bar-completed" style="height: ${completedPercent}%" title="완료: ${value.completed}건"></div>
-                                        <div class="monthly-bar-pending" style="height: ${100 - completedPercent}%" title="미완료: ${value.pending}건"></div>
-                                    </div>
-                                    ${value.count > 0 ? `<span class="monthly-bar-value">${value.count}</span>` : ''}
-                                </div>
-                                <span class="monthly-bar-label">${value.label}</span>
-                            </div>
-                        `;
-                    }).join('')}
-                </div>
-                <div class="monthly-legend">
-                    <span class="legend-item"><span class="legend-color completed"></span> 완료</span>
-                    <span class="legend-item"><span class="legend-color pending"></span> 미완료</span>
-                </div>
-            </div>
-        `);
+        container.innerHTML = '';
+        const chart = document.createElement('div');
+        chart.className = 'monthly-chart';
+        const barsRow = document.createElement('div');
+        barsRow.className = 'monthly-bars';
+        entries.forEach(([key, value]) => {
+            const heightPercent = maxCount > 0 ? (value.count / maxCount) * 100 : 0;
+            const completedPercent = value.count > 0 ? (value.completed / value.count) * 100 : 0;
+            const group = document.createElement('div');
+            group.className = 'monthly-bar-group';
+            const barContainer = document.createElement('div');
+            barContainer.className = 'monthly-bar-container';
+            const stack = document.createElement('div');
+            stack.className = 'monthly-bar-stack';
+            stack.style.height = `${heightPercent}%`;
+            const completed = document.createElement('div');
+            completed.className = 'monthly-bar-completed';
+            completed.style.height = `${completedPercent}%`;
+            completed.title = `완료: ${value.completed}건`;
+            const pending = document.createElement('div');
+            pending.className = 'monthly-bar-pending';
+            pending.style.height = `${100 - completedPercent}%`;
+            pending.title = `미완료: ${value.pending}건`;
+            stack.appendChild(completed);
+            stack.appendChild(pending);
+            barContainer.appendChild(stack);
+            if (value.count > 0) {
+                const val = document.createElement('span');
+                val.className = 'monthly-bar-value';
+                val.textContent = value.count;
+                barContainer.appendChild(val);
+            }
+            const label = document.createElement('span');
+            label.className = 'monthly-bar-label';
+            label.textContent = value.label;
+            group.appendChild(barContainer);
+            group.appendChild(label);
+            barsRow.appendChild(group);
+        });
+        chart.appendChild(barsRow);
+        const legend = document.createElement('div');
+        legend.className = 'monthly-legend';
+        legend.innerHTML = sanitizeHTML('<span class="legend-item"><span class="legend-color completed"></span> 완료</span><span class="legend-item"><span class="legend-color pending"></span> 미완료</span>');
+        chart.appendChild(legend);
+        container.appendChild(chart);
     }
 
     renderQuarterlySummary(containerId, data) {
@@ -3624,10 +3595,15 @@ class SoilSampleManager extends window.BaseSampleManager {
                     if (log) {
                         const newCompletedStatus = !log.isComplete;
                         const receptionNumber = log.receptionNumber || '';
-                        const baseNumber = receptionNumber.split('-').slice(0, 2).join('-');
+                        // 본필지+하위필지 연동: 첫 번째 '-' 앞 숫자로 그룹핑
+                        // 503, 503-1, 503-2 → 모두 baseNumber '503'으로 같은 그룹
+                        // 성토(F접두사)와 일반 시료는 번호가 같아도 별개 그룹으로 분리
+                        const isFill = receptionNumber.startsWith('F');
+                        const baseNumber = receptionNumber.replace(/^F/, '').split('-')[0];
                         const relatedLogs = this.sampleLogs.filter(l => {
-                            const logBaseNumber = (l.receptionNumber || '').split('-').slice(0, 2).join('-');
-                            return logBaseNumber === baseNumber && baseNumber !== '';
+                            const logRec = l.receptionNumber || '';
+                            const logBase = logRec.replace(/^F/, '').split('-')[0];
+                            return logBase === baseNumber && baseNumber !== '' && logRec.startsWith('F') === isFill;
                         });
                         relatedLogs.forEach(relatedLog => {
                             relatedLog.isComplete = newCompletedStatus;
@@ -3876,17 +3852,20 @@ class SoilSampleManager extends window.BaseSampleManager {
                 if (selectedIds.length === 0) { alert('완료 처리할 항목을 선택해주세요.'); return; }
 
                 // 연관 접수번호(같은 base 번호) 포함한 실제 처리 대상 사전 계산
-                const baseNumbers = new Set(
-                    selectedIds.map(id => {
-                        const log = this.sampleLogs.find(l => String(l.id) === id);
-                        return (log?.receptionNumber || '').split('-').slice(0, 2).join('-');
-                    }).filter(Boolean)
-                );
+                // 성토(F접두사)와 일반 시료는 분리하여 그룹핑
+                const selectedGroups = selectedIds.map(id => {
+                    const log = this.sampleLogs.find(l => String(l.id) === id);
+                    const rec = log?.receptionNumber || '';
+                    return { base: rec.replace(/^F/, '').split('-')[0], isFill: rec.startsWith('F') };
+                }).filter(g => g.base);
                 const targetIds = new Set(
                     this.sampleLogs
                         .filter(log => {
-                            const base = (log.receptionNumber || '').split('-').slice(0, 2).join('-');
-                            return selectedIds.includes(String(log.id)) || (base && baseNumbers.has(base));
+                            if (selectedIds.includes(String(log.id))) return true;
+                            const rec = log.receptionNumber || '';
+                            const base = rec.replace(/^F/, '').split('-')[0];
+                            const isFill = rec.startsWith('F');
+                            return base && selectedGroups.some(g => g.base === base && g.isFill === isFill);
                         })
                         .map(log => String(log.id))
                 );

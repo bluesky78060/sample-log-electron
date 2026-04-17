@@ -13,6 +13,7 @@ import '../shared/toast.js';
 import '../shared/pagination.js';
 import '../shared/address.js';
 import '../shared/address-parser.js';
+import '../shared/autocomplete-manager.js';
 import '../shared/search-filter.js';
 import '../shared/form-validator.js';
 import '../shared/theme.js';

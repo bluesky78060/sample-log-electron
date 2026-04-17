@@ -271,7 +271,7 @@ class WaterAnalysisManager {
     async syncTestResultsToFirestore() {
         if (!window.firestoreDb?.isEnabled()) return;
         try {
-            const year = parseInt(this.selectedYear);
+            const year = parseInt(this.selectedYear, 10);
             const entries = Object.entries(this.testResults);
             if (entries.length === 0) return;
 
@@ -291,7 +291,7 @@ class WaterAnalysisManager {
     async syncTestResultsFromFirestore() {
         if (!window.firestoreDb?.isEnabled()) return;
         try {
-            const year = parseInt(this.selectedYear);
+            const year = parseInt(this.selectedYear, 10);
             const cloudData = await window.firestoreDb.getAll('waterTestResults', year);
             if (!cloudData || cloudData.length === 0) return;
 
