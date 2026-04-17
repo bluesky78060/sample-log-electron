@@ -596,9 +596,36 @@
                 </div>
             </div>
 
-            <!-- v1.7.98 -->
+            <!-- v1.8.0 -->
             <div class="version-entry">
                 <div class="version-dot latest"></div>
+                <div class="version-card">
+                    <div class="version-card-header">
+                        <div>
+                            <div class="version-meta">
+                                <span class="version-number">v1.8.0</span>
+                                <span class="version-date">2026-04-17</span>
+                            </div>
+                            <div class="version-title">코드 품질 개선 + 토양 UI 버그 수정</div>
+                        </div>
+                        <div class="badge-row">
+                            <span class="badge badge-latest">★ 최신</span>
+                            <span class="badge badge-feature">기능</span>
+                            <span class="badge badge-fix">수정</span>
+                        </div>
+                    </div>
+                    <ul class="change-list">
+                        <li><strong>단위 테스트 30개 추가</strong> — Vitest + jsdom 환경 구축, escapeHTML / formatArea / safeParseArray / smartMerge / updateRecordCount 검증</li>
+                        <li><strong>토양 일괄 완료 토글</strong> — 선택 항목이 모두 완료 시 일괄 해제, 아니면 일괄 완료 (양방향 전환)</li>
+                        <li><strong>통계 모달 닫기 버튼 위치 수정</strong> — 여분의 닫기 태그 제거로 모달 하단에 정상 배치</li>
+                        <li><strong>Phase 8 코드 품질 개선</strong> — parseInt radix 명시, generateId() 통일, deleteSample LSP 수정, safeParseArray 중복 제거, QuotaExceededError 처리, escapeHTML XSS 방어 강화</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- v1.7.98 -->
+            <div class="version-entry">
+                <div class="version-dot"></div>
                 <div class="version-card">
                     <div class="version-card-header">
                         <div>
@@ -609,7 +636,6 @@
                             <div class="version-title">잔류농약 MRL 자동 조회 + 동기화 안전 개선</div>
                         </div>
                         <div class="badge-row">
-                            <span class="badge badge-latest">★ 최신</span>
                             <span class="badge badge-feature">기능</span>
                             <span class="badge badge-fix">수정</span>
                             <span class="badge badge-security">보안</span>

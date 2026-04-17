@@ -3869,27 +3869,34 @@ class SoilSampleManager extends window.BaseSampleManager {
                         })
                         .map(log => String(log.id))
                 );
+                // 선택 대상이 모두 완료 상태면 → 일괄 해제, 아니면 → 일괄 완료
+                const allComplete = [...targetIds].every(id => {
+                    const log = this.sampleLogs.find(l => String(l.id) === id);
+                    return log?.isComplete === true;
+                });
+                const newStatus = !allComplete;
+                const actionLabel = newStatus ? '완료 처리' : '완료 해제';
+
                 const extraCount = targetIds.size - selectedIds.length;
                 const confirmMsg = extraCount > 0
-                    ? `선택한 ${selectedIds.length}건 + 연관 접수번호 ${extraCount}건 포함\n총 ${targetIds.size}건을 완료 처리하시겠습니까?`
-                    : `선택한 ${selectedIds.length}건을 완료 처리하시겠습니까?`;
+                    ? `선택한 ${selectedIds.length}건 + 연관 접수번호 ${extraCount}건 포함\n총 ${targetIds.size}건을 ${actionLabel}하시겠습니까?`
+                    : `선택한 ${selectedIds.length}건을 ${actionLabel}하시겠습니까?`;
                 if (!confirm(confirmMsg)) return;
 
                 const now = new Date().toISOString();
-                let count = 0;
                 const changedLogs = [];
                 this.sampleLogs.forEach(log => {
                     if (targetIds.has(String(log.id))) {
-                        log.isComplete = true;
+                        log.isComplete = newStatus;
                         log.updatedAt = now;
-                        count++;
                         changedLogs.push(log);
                     }
                 });
                 this.saveLogs();
                 this.firebaseSaveRecords(changedLogs);
                 this.filterAndRenderLogs();
-                this.showToast(`${count}건이 완료 처리되었습니다.`, 'success');
+                if (this.selectAllCheckbox) { this.selectAllCheckbox.checked = false; this.selectAllCheckbox.indeterminate = false; }
+                this.showToast(`${changedLogs.length}건이 ${actionLabel}되었습니다.`, 'success');
             });
         }
 
