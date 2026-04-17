@@ -21,6 +21,8 @@
     "test": "npx playwright test",
     "test:ui": "npx playwright test --ui",
     "test:report": "npx playwright show-report",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
     "sync-version": "node scripts/sync-version.js",
     "build:css": "tailwindcss -i src/styles/input.css -o src/shared/tailwind-output.css --minify",
     "watch:css": "tailwindcss -i src/styles/input.css -o src/shared/tailwind-output.css --watch",
@@ -54,10 +56,12 @@
     "concurrently": "^9.2.1",
     "electron": "39.2.6",
     "http-server": "^14.1.1",
+    "jsdom": "^29.0.2",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.19",
     "typescript": "^5.9.3",
     "vite": "^5.4.11",
+    "vitest": "^4.1.4",
     "wait-on": "^9.0.4",
     "xlsx": "^0.18.5"
   }
