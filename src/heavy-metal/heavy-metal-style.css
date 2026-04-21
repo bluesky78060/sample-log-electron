@@ -471,45 +471,34 @@
    ======================================== */
 
 .year-select-wrapper {
-    display: flex;
-    align-items: center;
-    margin-right: 1rem;
+    margin-left: auto;
+    margin-right: 0.75rem;
 }
 
-.year-select {
-    padding: 0.5rem 2rem 0.5rem 1rem;
-    font-size: 0.95rem;
-    font-weight: 600;
-    background: white;
-    color: var(--heavy-metal-primary-dark);
-    border: 2px solid var(--heavy-metal-primary);
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238B5CF6' d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 0.75rem center;
-    background-size: 12px;
+/* 연도 선택 드롭다운 - 토양과 동일한 ID 선택자 패턴 */
+select#yearSelect.year-select,
+select#listYearSelect.list-year-select {
+    background: white !important;
+    color: #2D2D2D !important;
+    border: 1px solid #E8E4DF !important;
+    padding: 0.4rem 0.8rem !important;
+    border-radius: 1.5rem !important;
+    font-size: 0.8125rem !important;
+    font-weight: 500 !important;
+    cursor: pointer !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238A8A8A' d='M6 8L2 4h8z'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 10px center !important;
+    background-size: 10px 10px !important;
+    padding-right: 1.8rem !important;
+    transition: all 0.2s ease !important;
 }
 
-.year-select:hover {
-    border-color: var(--heavy-metal-primary-dark);
-    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.2);
-}
-
-.year-select:focus {
-    outline: none;
-    border-color: var(--heavy-metal-primary-dark);
-    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
-}
-
-.year-select option {
-    background: white;
-    color: var(--heavy-metal-primary-dark);
-    padding: 0.5rem;
+select#listYearSelect.list-year-select {
+    margin-left: 0.75rem !important;
 }
 
 /* ========================================
@@ -644,30 +633,36 @@
 }
 
 /* 다크 모드 년도 선택 */
-[data-theme="dark"] .year-select {
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
-    background-color: rgba(139, 92, 246, 0.15) !important;
-    color: #c4b5fd !important;
-    border-color: rgba(139, 92, 246, 0.4) !important;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23c4b5fd' d='M2 4l4 4 4-4'/%3E%3C/svg%3E") !important;
+[data-theme="dark"] select#yearSelect.year-select,
+[data-theme="dark"] select#listYearSelect.list-year-select {
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    appearance: none !important;
+    background-color: #2a2a30 !important;
+    color: #e5e7eb !important;
+    border-color: #4b5563 !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238A8A8A' d='M6 8L2 4h8z'/%3E%3C/svg%3E") !important;
     background-repeat: no-repeat !important;
-    background-position: right 8px center !important;
+    background-position: right 10px center !important;
+    background-size: 10px 10px !important;
 }
 
-[data-theme="dark"] .year-select:hover {
-    background-color: rgba(139, 92, 246, 0.25) !important;
+[data-theme="dark"] select#yearSelect.year-select:hover,
+[data-theme="dark"] select#listYearSelect.list-year-select:hover {
+    border-color: #7C9082 !important;
+    box-shadow: none !important;
 }
 
-[data-theme="dark"] .year-select:focus {
-    border-color: #8b5cf6 !important;
-    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+[data-theme="dark"] select#yearSelect.year-select:focus,
+[data-theme="dark"] select#listYearSelect.list-year-select:focus {
+    border-color: #7C9082 !important;
+    box-shadow: 0 0 0 3px rgba(124, 144, 130, 0.2) !important;
 }
 
-[data-theme="dark"] .year-select option {
-    background-color: #1e1b2e !important;
-    color: #c4b5fd !important;
+[data-theme="dark"] select#yearSelect.year-select option,
+[data-theme="dark"] select#listYearSelect.list-year-select option {
+    background-color: #2a2a30 !important;
+    color: #e5e7eb !important;
 }
 
 /* 다크 모드 select 공통 */

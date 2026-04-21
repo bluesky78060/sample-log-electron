@@ -596,9 +596,39 @@
                 </div>
             </div>
 
-            <!-- v1.8.0 -->
+            <!-- v1.8.1 -->
             <div class="version-entry">
                 <div class="version-dot latest"></div>
+                <div class="version-card">
+                    <div class="version-card-header">
+                        <div>
+                            <div class="version-meta">
+                                <span class="version-number">v1.8.1</span>
+                                <span class="version-date">2026-04-21</span>
+                            </div>
+                            <div class="version-title">중금속 UI 통일 + 필터/통계 버그 수정</div>
+                        </div>
+                        <div class="badge-row">
+                            <span class="badge badge-latest">★ 최신</span>
+                            <span class="badge badge-fix">수정</span>
+                        </div>
+                    </div>
+                    <ul class="change-list">
+                        <li><strong>중금속 연도 드롭다운 통일</strong> — 목록/폼 뷰 모두 토양과 동일한 pill 스타일로 변경</li>
+                        <li><strong>중금속 불필요한 토스트 제거</strong> — 페이지 로드 시 "0건의 검색 결과" 표시 제거</li>
+                        <li><strong>필터 전환 시 빈 상태 겹침 수정</strong> — 완료→미완료 전환 시 이전 행이 남는 버그 (pagination.js 공통 수정)</li>
+                        <li><strong>잔류농약 통계 목적별 수정</strong> — 제출(기타)/인증(글로벌GAP) 누락 추가, 폼 옵션 순서 유지, 0건 항목도 표시</li>
+                        <li><strong>통계 막대 차트 정렬</strong> — 라벨 고정 너비(120px)로 모든 막대 시작선 통일</li>
+                        <li><strong>미완료 건수 표시</strong> — 5개 시료 타입 공통, 인라인 괄호 형식 (688건 (미완료 59건))</li>
+                        <li><strong>토양 완료 토글 그룹핑 수정</strong> — 본필지+하위필지(503, 503-1) 연동 완료/미완료 전환</li>
+                        <li><strong>수질 특정유해물질 항목 수 수정</strong> — colspan 10→11, 라벨 (10항목)→(11항목)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- v1.8.0 -->
+            <div class="version-entry">
+                <div class="version-dot"></div>
                 <div class="version-card">
                     <div class="version-card-header">
                         <div>
@@ -609,7 +639,6 @@
                             <div class="version-title">코드 품질 개선 + 토양 UI 버그 수정</div>
                         </div>
                         <div class="badge-row">
-                            <span class="badge badge-latest">★ 최신</span>
                             <span class="badge badge-feature">기능</span>
                             <span class="badge badge-fix">수정</span>
                         </div>

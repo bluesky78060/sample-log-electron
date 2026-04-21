@@ -1776,21 +1776,26 @@ class PesticideSampleManager extends window.BaseSampleManager {
         const completed = this.sampleLogs.filter(log => log.isComplete).length;
         const pending = total - completed;
 
+        // 목적(용도)별 — 폼 옵션 순서 유지, 0건도 표시
+        const purposeOrder = [
+            { key: '참고용', label: '📝 참고용', class: 'purpose-reference' },
+            { key: '제출(급식)', label: '🍽️ 제출(급식)', class: 'purpose-meal' },
+            { key: '제출(기타)', label: '📋 제출(기타)', class: 'purpose-other' },
+            { key: '인증(무농약)', label: '🍃 인증(무농약)', class: 'purpose-nopesticide' },
+            { key: '인증(유기농)', label: '♻️ 인증(유기농)', class: 'purpose-organic' },
+            { key: '인증(GAP)', label: '✅ 인증(GAP)', class: 'purpose-gap' },
+            { key: '인증(글로벌GAP)', label: '🌍 인증(글로벌GAP)', class: 'purpose-globalgap' },
+        ];
         const byPurpose = {};
-        const purposeMapping = {
-            '참고용': { label: '📝 참고용', class: 'purpose-reference' },
-            '제출(급식)': { label: '🍽️ 제출(급식)', class: 'purpose-meal' },
-            '인증(무농약)': { label: '🍃 인증(무농약)', class: 'purpose-nopesticide' },
-            '인증(유기농)': { label: '♻️ 인증(유기농)', class: 'purpose-organic' },
-            '인증(GAP)': { label: '✅ 인증(GAP)', class: 'purpose-gap' },
-            '인증(글로벌GAP)': { label: '🌍 인증(글로벌GAP)', class: 'purpose-globalgap' },
-            '기타': { label: '📦 기타', class: 'purpose-other' }
-        };
+        // 모든 항목을 폼 순서대로 초기화 (0건 포함)
+        purposeOrder.forEach(p => {
+            byPurpose[p.key] = { count: 0, label: p.label, class: p.class };
+        });
 
         this.sampleLogs.forEach(log => {
             const purpose = log.purpose || '기타';
             if (!byPurpose[purpose]) {
-                byPurpose[purpose] = { count: 0, ...purposeMapping[purpose] || { label: purpose, class: 'purpose-other' } };
+                byPurpose[purpose] = { count: 0, label: purpose, class: 'purpose-other' };
             }
             byPurpose[purpose].count++;
         });
@@ -1894,8 +1899,8 @@ class PesticideSampleManager extends window.BaseSampleManager {
         const monthRange = document.getElementById('statsMonthRange');
         if (monthRange) monthRange.textContent = `${new Date().getFullYear()}년 1월 ~ 12월`;
 
-        this.renderBarChart('statsByCategory', stats.byCategory, 'category');
-        this.renderBarChart('statsByPurpose', stats.byPurpose, 'purpose');
+        this.renderBarChart('statsByCategory', stats.byCategory, 'category', true);
+        this.renderBarChart('statsByPurpose', stats.byPurpose, 'purpose', false);
         this.renderMonthlyChart('statsByMonth', stats.byMonth);
         this.renderQuarterlySummary('statsQuarterly', stats.byQuarter);
         this.renderMethodCards('statsByReceptionMethod', stats.byReceptionMethod);
@@ -1903,11 +1908,12 @@ class PesticideSampleManager extends window.BaseSampleManager {
         statisticsModal.classList.remove('hidden');
     }
 
-    renderBarChart(containerId, data, prefix) {
+    renderBarChart(containerId, data, prefix, sortByCount = true) {
         const container = document.getElementById(containerId);
         if (!container) return;
 
-        const entries = Object.entries(data).sort((a, b) => b[1].count - a[1].count);
+        const entries = Object.entries(data);
+        if (sortByCount) entries.sort((a, b) => b[1].count - a[1].count);
 
         if (entries.length === 0) {
             container.innerHTML = sanitizeHTML('<div class="stats-empty">데이터가 없습니다</div>');

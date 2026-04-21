@@ -109,6 +109,8 @@
             const { paginationContainer, emptyState } = this.elements;
 
             if (this.data.length === 0) {
+                const { tableBody } = this.elements;
+                if (tableBody) tableBody.innerHTML = '';
                 if (emptyState) emptyState.style.display = 'flex';
                 if (paginationContainer) paginationContainer.style.display = 'none';
                 this.updatePaginationUI();

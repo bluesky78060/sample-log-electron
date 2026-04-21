@@ -1045,7 +1045,6 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
 
         this.renderLogs(filtered);
         this.updateSearchButtonState();
-        this.showToast(`${filtered.length}건의 검색 결과`, 'success');
     }
 
     updateSearchButtonState() {

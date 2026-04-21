@@ -38,19 +38,19 @@
             color: #c4b5fd !important;
         }
     </style>
-  <script type="module" crossorigin src="../assets/heavyMetal-BhP852pM.js"></script>
+  <script type="module" crossorigin src="../assets/heavyMetal-clpy7V3Z.js"></script>
   <link rel="modulepreload" crossorigin href="../assets/theme-BmPSn4YP.js">
-  <link rel="modulepreload" crossorigin href="../assets/tooltip-bo7j3Ah4.js">
+  <link rel="modulepreload" crossorigin href="../assets/tooltip-BzTrMzRx.js">
   <link rel="modulepreload" crossorigin href="../assets/xlsx-CY41JvjH.js">
   <link rel="modulepreload" crossorigin href="../assets/purify.es-A66Cw1IH.js">
-  <link rel="modulepreload" crossorigin href="../assets/excel-import-manager-BP_X95DY.js">
+  <link rel="modulepreload" crossorigin href="../assets/excel-import-manager-CwlgmLet.js">
   <link rel="modulepreload" crossorigin href="../assets/toast-CYVUzQgW.js">
   <link rel="modulepreload" crossorigin href="../assets/bonghwaData-B7YY21oY.js">
   <link rel="modulepreload" crossorigin href="../assets/storage-manager-D0riC6DW.js">
   <link rel="modulepreload" crossorigin href="../assets/firestore-db-6zAcD48n.js">
   <link rel="modulepreload" crossorigin href="../assets/cropData-D4YHZ2cy.js">
-  <link rel="stylesheet" crossorigin href="../assets/tooltip-Dh27mr68.css">
-  <link rel="stylesheet" crossorigin href="../assets/heavyMetal-C4I9lsrI.css">
+  <link rel="stylesheet" crossorigin href="../assets/tooltip-CCmcblpp.css">
+  <link rel="stylesheet" crossorigin href="../assets/heavyMetal-CSWTXxbS.css">
   <link rel="stylesheet" crossorigin href="../assets/tailwind-output-uplGniQ-.css">
 </head>
 
@@ -185,7 +185,7 @@
                                 <span class="card-icon">👤</span>
                                 <h3>의뢰인 정보</h3>
                                 <div class="year-select-wrapper">
-                                    <select id="yearSelect" class="year-select">
+                                    <select id="yearSelect" class="year-select appearance-none">
                                         <option value="2025">2025년</option>
                                         <option value="2026">2026년</option>
                                         <option value="2027">2027년</option>
@@ -461,17 +461,15 @@
         <div id="listView" class="view">
                     <div class="view-header-top">
                         <div class="header-left">
-                            <div class="year-select-wrapper">
-                                <select id="listYearSelect" class="year-select">
-                                    <option value="2025">2025년</option>
-                                    <option value="2026">2026년</option>
-                                    <option value="2027">2027년</option>
-                                    <option value="2028">2028년</option>
-                                    <option value="2029">2029년</option>
-                            <option value="2030">2030년</option>
-                        </select>
-                    </div>
-                    <h2 id="listViewTitle">2025년 토양 중금속 접수 목록</h2>
+                    <h2 id="listViewTitle">토양 중금속 접수 목록</h2>
+                    <select id="listYearSelect" class="list-year-select" title="연도 선택">
+                        <option value="2025">2025년</option>
+                        <option value="2026">2026년</option>
+                        <option value="2027">2027년</option>
+                        <option value="2028">2028년</option>
+                        <option value="2029">2029년</option>
+                        <option value="2030">2030년</option>
+                    </select>
                     <select id="completedFilter" class="purpose-filter appearance-none">
                         <option value="">전체 상태</option>
                         <option value="incomplete" selected>⬜ 미완료</option>
