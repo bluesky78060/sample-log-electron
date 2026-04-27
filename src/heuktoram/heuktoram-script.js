@@ -273,11 +273,14 @@ class HeuktoramManager {
             if (!data) return [];
             const parsed = JSON.parse(data);
             if (!Array.isArray(parsed)) return [];
-            // 접수번호 오름차순 정렬 (숫자 우선, F접두사 포함)
+            // 접수번호 오름차순 정렬 (숫자 우선, F접두사 포함, -N 접미사 포함)
             return parsed.sort((a, b) => {
                 const toNum = s => {
                     if (!s) return Infinity;
-                    const n = parseFloat(String(s).replace(/^F/i, ''));
+                    const str = String(s).replace(/^F/i, '');
+                    const match = str.match(/^(\d+(?:\.\d+)?)-(\d+)$/);
+                    if (match) return parseFloat(match[1]) + parseInt(match[2]) * 0.001;
+                    const n = parseFloat(str);
                     return isNaN(n) ? Infinity : n;
                 };
                 return toNum(a.receptionNumber) - toNum(b.receptionNumber);
@@ -322,30 +325,35 @@ class HeuktoramManager {
 
         for (const log of logsToProcess) {
             if (!log.parcels || log.parcels.length === 0) {
-                // 필지 없는 경우 기본 1행
+                // 접수번호에 '-숫자' 패턴이 있으면 하위필지로 인식 (예: 468-1)
+                const rNum = String(log.receptionNumber || '');
+                const subLotMatch = rNum.match(/^(.+)-(\d+)$/);
                 this.flatRows.push({
                     key: `${log.id}_0_0`,
                     displayNumber: log.receptionNumber,
+                    baseReceptionNumber: subLotMatch ? subLotMatch[1] : rNum,
                     log: log,
                     parcel: null,
                     parcelIdx: 0,
                     subLot: null,
                     subLotIdx: -1,
-                    isSubLot: false
+                    isSubLot: !!subLotMatch
                 });
                 continue;
             }
 
-            // 같은 필지의 2번째+ 작물은 하위필지(-1, -2, ...)로 등록
+            // 첫 번째 필지 첫 작물이 '필지', 이후 모든 항목(다른 필지 포함)은 '하위필지'
+            // 접수번호에 '-숫자' 패턴이 있으면 (예: 468-1) 전체가 하위필지
+            const hasSubLotNumber = /^.+-\d+$/.test(String(log.receptionNumber || ''));
+            let entryCounter = 0; // 접수 건 전체 카운터 (0=필지, 1+=하위필지)
             for (let pi = 0; pi < log.parcels.length; pi++) {
                 const parcel = log.parcels[pi];
                 const crops = parcel.crops || [{ name: '', area: '', code: '' }];
-                let entryCounter = 0; // 필지 내 항목 카운터 (0=필지, 1+=하위필지)
 
                 for (let ci = 0; ci < crops.length; ci++) {
                     this.flatRows.push({
                         key: `${log.id}_${pi}_c${ci}`,
-                        displayNumber: entryCounter === 0
+                        displayNumber: (hasSubLotNumber || entryCounter === 0)
                             ? log.receptionNumber
                             : `${log.receptionNumber}-${entryCounter}`,
                         log: log,
@@ -355,7 +363,7 @@ class HeuktoramManager {
                         cropIdx: ci,
                         subLot: null,
                         subLotIdx: -1,
-                        isSubLot: entryCounter > 0
+                        isSubLot: hasSubLotNumber || entryCounter > 0
                     });
                     entryCounter++;
                 }
@@ -368,7 +376,7 @@ class HeuktoramManager {
                         const sub = typeof rawSub === 'string'
                             ? { lotAddress: rawSub, crops: [] }
                             : rawSub;
-                        const subCrops = sub.crops || [{ name: '', area: '', code: '' }];
+                        const subCrops = (sub.crops && sub.crops.length > 0) ? sub.crops : [{ name: '', area: '', code: '' }];
 
                         for (let sci = 0; sci < subCrops.length; sci++) {
                             this.flatRows.push({
@@ -715,9 +723,14 @@ class HeuktoramManager {
         const editedRow = this.flatRows.find(r => r.key === key);
         if (!editedRow) return;
 
-        const siblingRows = this.flatRows.filter(r =>
-            r.log.id === editedRow.log.id && r.key !== key
-        );
+        // 같은 log.id이거나, base 접수번호(468-1 → 468)가 같은 log도 sibling으로 처리
+        const editedBase = String(editedRow.log.receptionNumber || '').replace(/-\d+$/, '');
+        const siblingRows = this.flatRows.filter(r => {
+            if (r.key === key) return false;
+            if (r.log.id === editedRow.log.id) return true;
+            const rBase = String(r.log.receptionNumber || '').replace(/-\d+$/, '');
+            return editedBase && rBase === editedBase;
+        });
         for (const sibling of siblingRows) {
             if (!this.testResults[sibling.key]) {
                 this.testResults[sibling.key] = {};
@@ -1274,7 +1287,7 @@ class HeuktoramManager {
             };
             dataRow[6] = usageLabels[usageCode] || '일반적인토양검정-0';
             dataRow[7] = this.getBeforeAfter(usageCode);
-            dataRow[8] = row.log.receptionNumber || '';
+            dataRow[8] = row.baseReceptionNumber || String(row.log.receptionNumber || '').replace(/-\d+$/, '') || '';
             dataRow[9] = lotParsed.sido;
             dataRow[10] = lotParsed.sigungu;
             dataRow[11] = lotParsed.eupmyeondong;

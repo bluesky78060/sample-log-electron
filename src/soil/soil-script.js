@@ -2720,14 +2720,14 @@ class SoilSampleManager extends window.BaseSampleManager {
         return Array.from(checkedBoxes).map(cb => cb.dataset.id);
     }
 
-    selectByName(name) {
+    selectByName(farmerKey) {
         const rowCheckboxes = this.tableBody.querySelectorAll('.row-checkbox');
         const targetCheckboxes = [];
 
         rowCheckboxes.forEach(cb => {
             const tr = cb.closest('tr');
             const nameCell = tr?.querySelector('.col-name');
-            if (nameCell && nameCell.dataset.name === name) {
+            if (nameCell && nameCell.dataset.farmerKey === farmerKey) {
                 targetCheckboxes.push(cb);
             }
         });
@@ -3171,8 +3171,9 @@ class SoilSampleManager extends window.BaseSampleManager {
             const tdName = document.createElement('td');
             tdName.className = 'col-name sticky-col';
             tdName.dataset.name = row.name;
+            tdName.dataset.farmerKey = `${row.name}|${row.phoneNumber || ''}`;
             tdName.textContent = row.name;
-            tdName.title = `"${row.name}" 클릭하면 같은 이름 일괄 선택`;
+            tdName.title = `"${row.name}" 클릭하면 같은 이름+전화번호 일괄 선택`;
             tr.appendChild(tdName);
 
             // 우편번호
@@ -3697,8 +3698,8 @@ class SoilSampleManager extends window.BaseSampleManager {
         if (this.tableBody) {
             this.tableBody.addEventListener('click', (e) => {
                 const nameCell = e.target.closest('.col-name');
-                if (nameCell && nameCell.dataset.name) {
-                    this.selectByName(nameCell.dataset.name);
+                if (nameCell && nameCell.dataset.farmerKey) {
+                    this.selectByName(nameCell.dataset.farmerKey);
                 }
             });
         }

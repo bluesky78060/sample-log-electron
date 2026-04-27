@@ -95,8 +95,9 @@
             this.data = data;
             this.totalPages = Math.ceil(this.data.length / this.itemsPerPage) || 1;
 
+            // 필터 변경 등으로 데이터가 줄면 항상 1페이지부터 시작
             if (this.currentPage > this.totalPages) {
-                this.currentPage = this.totalPages;
+                this.currentPage = 1;
             }
 
             this.render();
