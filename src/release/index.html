@@ -596,9 +596,42 @@
                 </div>
             </div>
 
-            <!-- v1.8.3 -->
+            <!-- v1.9.0 -->
             <div class="version-entry">
                 <div class="version-dot latest"></div>
+                <div class="version-card">
+                    <div class="version-card-header">
+                        <div>
+                            <div class="version-meta">
+                                <span class="version-number">v1.9.0</span>
+                                <span class="version-date">2026-04-27</span>
+                            </div>
+                            <div class="version-title">흙토람 결과 엑셀 가져오기 모달</div>
+                        </div>
+                        <div class="badge-row">
+                            <span class="badge badge-latest">★ 최신</span>
+                            <span class="badge badge-feature">신규</span>
+                        </div>
+                    </div>
+                    <ul class="change-list">
+                        <li><strong>엑셀 파일 업로드 모드</strong> — .xlsx/.xls 드래그앤드롭, 시트 자동 분리, 헤더 행 위치 지정, 첫 5행 미리보기</li>
+                        <li><strong>텍스트 붙여넣기 모드</strong> — 모드 토글로 양 방식 모두 제공</li>
+                        <li><strong>매칭 키 + 흙토람 필드 매핑 UI</strong> — 시료번호로 자동 매칭, 미매핑 항목은 저장 제외</li>
+                        <li><strong>자동 매핑 추정</strong> — pH·EC·유기물·치환성K/Ca/Mg 등 30+ 헤더 패턴 인식, 부분 일치 fallback</li>
+                        <li><strong>실시간 미리보기</strong> — ✅매칭/⚠️미매칭/🔵충돌/⚠️범위초과 통계 + 셀 단위 변경 표시</li>
+                        <li><strong>본필지 → 하위필지 자동 동기화</strong> — 같은 접수번호의 -1, -2 필지에 결과 자동 반영</li>
+                        <li><strong>충돌 정책 4가지</strong> — 미리보기 확인/항상 덮어쓰기/빈 칸만 채우기/기존값 유지</li>
+                        <li><strong>소수점 자리수 지정</strong> — 필드별 0~3자리 자동 반올림, 흙토람 표준 default 적용</li>
+                        <li><strong>날짜·숫자 자동 보존</strong> — cellDates로 ISO 변환, IEEE 754 정밀도 유지</li>
+                        <li><strong>미매칭 행 CSV 다운로드</strong> — UTF-8 BOM 포함 Excel 한글 인식</li>
+                        <li><strong>안전성 개선</strong> — 50MB 파일 hard limit, XSS 보호, 매칭 키 중복 경고, 모드 격리</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- v1.8.3 -->
+            <div class="version-entry">
+                <div class="version-dot"></div>
                 <div class="version-card">
                     <div class="version-card-header">
                         <div>
@@ -609,7 +642,6 @@
                             <div class="version-title">흙토람 소스 파일 누락 핫픽스</div>
                         </div>
                         <div class="badge-row">
-                            <span class="badge badge-latest">★ 최신</span>
                             <span class="badge badge-fix">수정</span>
                         </div>
                     </div>

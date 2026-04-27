@@ -100,12 +100,68 @@ class HeuktoramManager {
         this.bindEvents();
         this.loadData();
         this.render();
+        this.setupResultImporter();
 
         // 테마 초기화
         if (typeof ThemeManager !== 'undefined') {
             ThemeManager.init();
             this.setupThemeToggle();
         }
+    }
+
+    /**
+     * 엑셀 결과 가져오기 모달 (Phase 1 — 텍스트 붙여넣기) 연결
+     * 설계: docs-internal/HEUKTORAM_RESULT_EXCEL_IMPORT_MODAL_DESIGN.md
+     */
+    setupResultImporter() {
+        if (!window.HeuktoramResultImporter) return;
+
+        const fieldLabels = {
+            pH: 'pH', organicMatter: '유기물', availableP: '유효인산',
+            exK: '치환성칼륨(K)', exCa: '치환성칼슘(Ca)', exMg: '치환성마그네슘(Mg)',
+            silica: '유효규산', ec: 'EC', limeReq: '석회요구량', cec: 'CEC',
+        };
+
+        // 흙토람 결과값 소수점 자리수 default (사용자가 모달에서 변경 가능)
+        // 0 = 정수 (반올림), 1/2/3 = 해당 소수점 자리수까지
+        const fieldDecimals = {
+            pH: 1,             // 5.3, 6.7
+            organicMatter: 0,  // 29 g/kg (정수)
+            availableP: 0,     // 234 mg/kg (정수)
+            exK: 2,            // 0.45 cmolc/kg
+            exCa: 2,           // 4.20 cmolc/kg
+            exMg: 2,           // 1.05 cmolc/kg
+            silica: 0,         // 132 mg/kg (정수)
+            ec: 2,             // 0.25 dS/m
+            limeReq: 0,        // 350 kg/10a (정수)
+            cec: 0,            // 13 cmolc/kg (정수)
+        };
+
+        // 모달 매핑 UI에서 제외할 필드
+        // - testDate: 도구바의 "토양검정일" 일괄적용을 사용
+        // - NO3N/NH4N/usageCode/soiling/clay: 흙토람 결과 입력 대상 외
+        const IMPORTER_EXCLUDED_FIELDS = new Set(['testDate', 'NO3N', 'NH4N', 'usageCode', 'soiling', 'clay']);
+        const importerFields = this.resultFields.filter(f => !IMPORTER_EXCLUDED_FIELDS.has(f));
+
+        this.resultImporter = new window.HeuktoramResultImporter({
+            resultFields: importerFields,
+            fieldLabels,
+            fieldDecimals,
+            fieldRanges: this.fieldRanges,
+            getFlatRows:    () => this.flatRows,
+            getTestResults: () => this.testResults,
+            applyResult:    (rowKey, field, value) => {
+                if (!this.testResults[rowKey]) this.testResults[rowKey] = {};
+                this.testResults[rowKey][field] = value;
+            },
+            syncToSiblings: (rowKey, field, value) => this.syncToSiblings(rowKey, field, value),
+            saveTestResults: () => this.saveTestResults(),
+            rerender: () => {
+                this.render();
+                this.validateAllRanges();
+            },
+        });
+        this.resultImporter.init();
     }
 
     cacheElements() {
