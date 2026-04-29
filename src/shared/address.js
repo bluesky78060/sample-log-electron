@@ -63,7 +63,11 @@ class AddressManager {
      * 주소 검색 모달 열기
      */
     openSearch() {
-        if (typeof kakao === 'undefined' || typeof kakao.Postcode === 'undefined') {
+        // CDN(postcode.v2.js)은 window.daum.Postcode로 등록.
+        // 새 SDK에서는 window.kakao.Postcode일 수 있어 둘 다 시도.
+        const Postcode = (typeof window.kakao !== 'undefined' && window.kakao.Postcode)
+            || (typeof window.daum !== 'undefined' && window.daum.Postcode);
+        if (!Postcode) {
             alert('주소 검색 서비스를 불러오는 중입니다. 잠시 후 다시 시도해주세요.');
             return;
         }
@@ -78,8 +82,8 @@ class AddressManager {
             this.container.innerHTML = '';
         }
 
-        // Daum Postcode 임베드
-        new kakao.Postcode({
+        // Daum/Kakao Postcode 임베드
+        new Postcode({
             oncomplete: (data) => this.onAddressSelected(data)
         }).embed(this.container);
     }

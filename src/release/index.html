@@ -596,9 +596,34 @@
                 </div>
             </div>
 
-            <!-- v1.9.0 -->
+            <!-- v1.9.1 -->
             <div class="version-entry">
                 <div class="version-dot latest"></div>
+                <div class="version-card">
+                    <div class="version-card-header">
+                        <div>
+                            <div class="version-meta">
+                                <span class="version-number">v1.9.1</span>
+                                <span class="version-date">2026-04-29</span>
+                            </div>
+                            <div class="version-title">주소 검색 버그 핫픽스</div>
+                        </div>
+                        <div class="badge-row">
+                            <span class="badge badge-latest">★ 최신</span>
+                            <span class="badge badge-fix">수정</span>
+                        </div>
+                    </div>
+                    <ul class="change-list">
+                        <li><strong>주소 검색 모달이 안 열리던 문제 수정</strong> — v1.7.55 이후 누적된 버그. CDN postcode.v2.js는 window.daum.Postcode를 등록하지만 코드는 window.kakao만 참조 → "주소 검색 서비스를 불러오는 중" alert만 표시되고 모달이 안 열렸음</li>
+                        <li><strong>kakao/daum 양방향 호환</strong> — window.kakao?.Postcode || window.daum?.Postcode로 양쪽 SDK 모두 자동 인식</li>
+                        <li><strong>영향 범위</strong> — 토양·수질·퇴비·중금속·잔류농약 5개 시료 페이지의 시료 등록·수정 모달 모두 정상화</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- v1.9.0 -->
+            <div class="version-entry">
+                <div class="version-dot"></div>
                 <div class="version-card">
                     <div class="version-card-header">
                         <div>
@@ -609,7 +634,6 @@
                             <div class="version-title">흙토람 결과 엑셀 가져오기 모달</div>
                         </div>
                         <div class="badge-row">
-                            <span class="badge badge-latest">★ 최신</span>
                             <span class="badge badge-feature">신규</span>
                         </div>
                     </div>
