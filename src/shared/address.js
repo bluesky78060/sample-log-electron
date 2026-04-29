@@ -48,9 +48,23 @@ class AddressManager {
             }
         }
 
-        // 주소 검색 버튼 클릭 이벤트
+        // 주소 검색 버튼 클릭 이벤트 (직접 + 위임 fallback)
+        // searchBtn이 init 시점에 DOM에 있으면 직접 등록.
+        // 동적 재생성·hidden 영역 등으로 누락될 수 있으니 document 위임도 함께 등록.
         if (this.searchBtn) {
             this.searchBtn.addEventListener('click', () => this.openSearch());
+        }
+        if (!this._delegateBound) {
+            this._delegateBound = true;
+            const expectedBtn = this.searchBtn;
+            const expectedId = (expectedBtn && expectedBtn.id) || 'searchAddressBtn';
+            document.addEventListener('click', (e) => {
+                const t = e.target && e.target.closest ? e.target.closest('#' + expectedId) : null;
+                if (!t) return;
+                // 직접 listener와 중복 트리거 방지: 이미 모달이 보이면 무시
+                if (this.modal && !this.modal.classList.contains('hidden')) return;
+                this.openSearch();
+            });
         }
 
         // 상세 주소 입력 시 전체 주소 업데이트

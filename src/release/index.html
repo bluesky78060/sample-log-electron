@@ -596,9 +596,34 @@
                 </div>
             </div>
 
-            <!-- v1.9.1 -->
+            <!-- v1.9.2 -->
             <div class="version-entry">
                 <div class="version-dot latest"></div>
+                <div class="version-card">
+                    <div class="version-card-header">
+                        <div>
+                            <div class="version-meta">
+                                <span class="version-number">v1.9.2</span>
+                                <span class="version-date">2026-04-29</span>
+                            </div>
+                            <div class="version-title">주소 검색 추가 핫픽스 (퇴액비·잔류농약·중금속)</div>
+                        </div>
+                        <div class="badge-row">
+                            <span class="badge badge-latest">★ 최신</span>
+                            <span class="badge badge-fix">수정</span>
+                        </div>
+                    </div>
+                    <ul class="change-list">
+                        <li><strong>퇴액비·잔류농약·중금속 페이지 주소 검색 정상화</strong> — v1.9.1에서 토양·수질만 작동하던 문제 해결. AddressManager init 시점에 button DOM이 누락되는 케이스에서 click listener가 등록 안 됐음</li>
+                        <li><strong>document 이벤트 위임 fallback</strong> — searchAddressBtn click을 document에 위임하여 button이 동적 재생성·hidden 영역에서 처음 등장해도 안정 동작</li>
+                        <li><strong>중복 트리거 방지</strong> — 직접 listener와 위임 listener가 동시 발동하지 않도록 modal hidden 검사 가드</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- v1.9.1 -->
+            <div class="version-entry">
+                <div class="version-dot"></div>
                 <div class="version-card">
                     <div class="version-card-header">
                         <div>
@@ -609,7 +634,6 @@
                             <div class="version-title">주소 검색 버그 핫픽스</div>
                         </div>
                         <div class="badge-row">
-                            <span class="badge badge-latest">★ 최신</span>
                             <span class="badge badge-fix">수정</span>
                         </div>
                     </div>
