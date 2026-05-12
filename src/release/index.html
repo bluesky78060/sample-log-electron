@@ -596,9 +596,34 @@
                 </div>
             </div>
 
-            <!-- v1.9.2 -->
+            <!-- v1.9.3 -->
             <div class="version-entry">
                 <div class="version-dot latest"></div>
+                <div class="version-card">
+                    <div class="version-card-header">
+                        <div>
+                            <div class="version-meta">
+                                <span class="version-number">v1.9.3</span>
+                                <span class="version-date">2026-05-12</span>
+                            </div>
+                            <div class="version-title">연도 드롭다운 + 토양 수정 접수번호 핫픽스</div>
+                        </div>
+                        <div class="badge-row">
+                            <span class="badge badge-latest">★ 최신</span>
+                            <span class="badge badge-fix">수정</span>
+                        </div>
+                    </div>
+                    <ul class="change-list">
+                        <li><strong>등록/수정 후 연도 드롭다운이 2025로 되돌아가던 문제 수정 (5개 시료)</strong> — <code>&lt;select id="yearSelect"&gt;</code>가 <code>&lt;form&gt;</code> 내부에 있어 <code>form.reset()</code>이 첫 옵션(2025)으로 리셋하던 버그. <code>resetForm()</code>에서 <code>form.reset()</code> 직후 <code>selectedYear</code>로 복원. 토양/수질/퇴액비/잔류농약/중금속 5종 모두 일괄 패치.</li>
+                        <li><strong>토양 수정 시 접수번호가 최신번호로 변경되던 문제 수정</strong> — 수정 모드에서 <strong>구분(논/밭/과수/시설/성토)</strong>을 변경하면 change 이벤트가 <code>generateNextReceptionNumber()</code>를 호출해 원본 접수번호를 덮어쓰던 버그. <code>editingLogId</code>/<code>editingGroupId</code> 가드 추가로 수정 모드에서는 원본 접수번호 유지.</li>
+                        <li><strong>저장소 정리</strong> — 자동 생성 메타파일(<code>docs/.bkit-memory.json</code>, <code>docs/.pdca-status.json</code>) 추적 해제 및 <code>.gitignore</code> 등록.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- v1.9.2 -->
+            <div class="version-entry">
+                <div class="version-dot"></div>
                 <div class="version-card">
                     <div class="version-card-header">
                         <div>
@@ -609,7 +634,6 @@
                             <div class="version-title">주소 검색 추가 핫픽스 (퇴액비·잔류농약·중금속)</div>
                         </div>
                         <div class="badge-row">
-                            <span class="badge badge-latest">★ 최신</span>
                             <span class="badge badge-fix">수정</span>
                         </div>
                     </div>
