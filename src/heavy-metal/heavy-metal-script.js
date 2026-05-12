@@ -464,6 +464,8 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
     // ========================================
     resetForm() {
         this.form?.reset();
+        // yearSelect 복원: form.reset()이 yearSelect를 첫 옵션(2025)으로 되돌리므로 복원
+        { const _yearSelect = document.getElementById('yearSelect'); if (_yearSelect && this.selectedYear) _yearSelect.value = this.selectedYear; }
         this.editingId = null;
 
         const navSubmitBtn = document.getElementById('navSubmitBtn');

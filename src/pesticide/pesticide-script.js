@@ -895,6 +895,8 @@ class PesticideSampleManager extends window.BaseSampleManager {
         this.saveLogs();
         this.filterAndRenderLogs();
         this.form.reset();
+        // yearSelect 복원: form.reset()이 yearSelect를 첫 옵션(2025)으로 되돌리므로 복원
+        { const _yearSelect = document.getElementById('yearSelect'); if (_yearSelect && this.selectedYear) _yearSelect.value = this.selectedYear; }
         this.dateInput.valueAsDate = new Date();
 
         // 주소 필드 초기화
@@ -1043,6 +1045,8 @@ class PesticideSampleManager extends window.BaseSampleManager {
     resetForm() {
         this.editingId = null;
         this.form.reset();
+        // yearSelect 복원: form.reset()이 yearSelect를 첫 옵션(2025)으로 되돌리므로 복원
+        { const _yearSelect = document.getElementById('yearSelect'); if (_yearSelect && this.selectedYear) _yearSelect.value = this.selectedYear; }
         this.dateInput.valueAsDate = new Date();
 
         // 주소 필드 초기화
@@ -1067,6 +1071,8 @@ class PesticideSampleManager extends window.BaseSampleManager {
         }
 
         this.form.reset();
+        // yearSelect 복원: form.reset()이 yearSelect를 첫 옵션(2025)으로 되돌리므로 복원
+        { const _yearSelect = document.getElementById('yearSelect'); if (_yearSelect && this.selectedYear) _yearSelect.value = this.selectedYear; }
         const subCatSelect = document.getElementById('subCategory');
         if (subCatSelect) {
             subCatSelect.disabled = false;
@@ -2927,6 +2933,8 @@ class PesticideSampleManager extends window.BaseSampleManager {
                 const date = document.getElementById('date')?.value;
 
                 this.form.reset();
+                // yearSelect 복원: form.reset()이 yearSelect를 첫 옵션(2025)으로 되돌리므로 복원
+                { const _yearSelect = document.getElementById('yearSelect'); if (_yearSelect && this.selectedYear) _yearSelect.value = this.selectedYear; }
 
                 setTimeout(() => {
                     if (receptionNumber) {
