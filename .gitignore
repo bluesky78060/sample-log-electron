@@ -98,3 +98,8 @@ firebase-auth.json
 
 # 네트워크 접근 제어 설정 (내부 IP 정보)
 **/network-config.js
+.gstack/
+
+# bkit/pdca 메타데이터 (자동 생성, 추적 제외)
+docs/.bkit-memory.json
+docs/.pdca-status.json
