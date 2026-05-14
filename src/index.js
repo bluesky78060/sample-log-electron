@@ -8,6 +8,56 @@ const path = require('node:path');
 const fs = require('node:fs');
 const { autoUpdater } = require('electron-updater');
 
+/**
+ * 최소 .env 로더 (dotenv 의존성 없이 동작)
+ * - 프로젝트 루트의 ".env" 파일을 읽어 process.env에 주입
+ * - 이미 정의된 환경 변수는 덮어쓰지 않음
+ * - 파일이 없으면 조용히 무시
+ * - 값 후행 공백 trim, 양끝 따옴표 벗김 (이스케이프 미지원)
+ */
+(function loadDotEnv() {
+    const envPath = path.join(__dirname, '..', '.env');
+    if (!fs.existsSync(envPath)) return;
+    try {
+        const lines = fs.readFileSync(envPath, 'utf8').split(/\r?\n/);
+        for (const line of lines) {
+            if (!line || line.trim().startsWith('#')) continue;
+            const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_.]*)\s*=\s*(.*)\s*$/);
+            if (!m) continue;
+            const [, key, raw] = m;
+            let value = raw.trim();
+            if ((value.startsWith('"') && value.endsWith('"')) ||
+                (value.startsWith("'") && value.endsWith("'"))) {
+                value = value.slice(1, -1);
+            }
+            if (!(key in process.env)) process.env[key] = value;
+        }
+    } catch (e) {
+        console.warn('[env] .env 로드 실패:', e.message);
+    }
+})();
+
+// JUSO 입력 sanitize 상수
+// SAMPL-1-47 H-2: defense-in-depth 의도적 중복.
+//   shared 카운터파트: src/shared/juso-service.js (sanitizeKeyword)
+//   양쪽 sync 필수 — SQL_RESERVED/BAD_CHARS 변경 시 두 파일 동시에 수정할 것
+//   main이 신뢰 경계 (renderer 우회 가능성 차단)
+const JUSO_SQL_RESERVED = ['OR', 'SELECT', 'INSERT', 'DELETE', 'UPDATE', 'CREATE', 'DROP', 'EXEC', 'UNION', 'FETCH', 'DECLARE', 'TRUNCATE'];
+const JUSO_BAD_CHARS = /[<>=%]/;
+// SAMPL-1-47 L-2: 정규식 사전 컴파일 (호출당 12회 RegExp 생성 방지)
+const JUSO_SQL_PATTERNS = JUSO_SQL_RESERVED.map(w => ({ word: w, re: new RegExp(`\\b${w}\\b`, 'i') }));
+function sanitizeJusoKeyword(q) {
+    const s = String(q || '').trim();
+    if (!s) return { ok: false, error: '검색어를 입력해 주세요.' };
+    if (s.length > 80) return { ok: false, error: '검색어가 너무 깁니다 (최대 80자).' };
+    if (JUSO_BAD_CHARS.test(s)) return { ok: false, error: '<, >, =, % 문자는 사용할 수 없습니다.' };
+    for (const { word, re } of JUSO_SQL_PATTERNS) {
+        if (re.test(s)) return { ok: false, error: `"${word}" 같은 예약어는 사용할 수 없습니다.` };
+    }
+    return { ok: true, value: s };
+}
+const EXT_API_MAX_CALLS_PER_SEC = 5;
+
 // 자동 업데이트 설정
 autoUpdater.logger = console;
 autoUpdater.autoDownload = true;
@@ -50,10 +100,11 @@ const DOCS_DIR = (() => {
 const ipcRateLimiter = (() => {
     const callCounts = new Map();
     const WINDOW_MS = 1000;  // 1초 윈도우
-    const MAX_CALLS = 30;    // 초당 최대 30회
+    const DEFAULT_MAX_CALLS = 30;    // 초당 최대 30회 (기본값)
 
     return {
-        check(channel) {
+        // SAMPL-1-47 H-1: 채널별로 maxCalls override 가능 (외부 API 등 보수적 제한)
+        check(channel, maxCalls = DEFAULT_MAX_CALLS) {
             const now = Date.now();
             const key = channel;
             const entry = callCounts.get(key);
@@ -64,8 +115,8 @@ const ipcRateLimiter = (() => {
             }
 
             entry.count++;
-            if (entry.count > MAX_CALLS) {
-                console.warn(`[Rate Limit] ${channel}: ${entry.count}회/초 초과`);
+            if (entry.count > maxCalls) {
+                console.warn(`[Rate Limit] ${channel}: ${entry.count}회/초 초과 (limit=${maxCalls})`);
                 return false;
             }
             return true;
@@ -373,15 +424,15 @@ app.whenReady().then(() => {
           // Phase 4 현대화 완료:
           // - script-src: CDN → npm 번들 전환 완료 (Tailwind, SheetJS, DOMPurify, Firebase)
           //   unsafe-inline 제거 완료 (인라인 스크립트 → ES Modules)
-          //   Kakao Postcode CDN만 유지 (npm 패키지 없음)
+          //   SAMPL-1-47: Kakao Postcode CDN 제거 (juso API 자체 모달로 전환)
           // - style-src: Tailwind CDN → 빌드 타임 CSS 전환 완료
           //   unsafe-inline 유지: JS에서 element.style.* 직접 조작 광범위하게 사용
-          "script-src 'self' file: https://t1.kakaocdn.net https://t1.daumcdn.net; " +
+          "script-src 'self' file:; " +
           "style-src 'self' 'unsafe-inline' file: https://fonts.googleapis.com; " +
           "font-src 'self' file: https://fonts.gstatic.com; " +
-          "connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.ipify.org https://openapi.foodsafetykorea.go.kr; " +
+          "connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.ipify.org https://openapi.foodsafetykorea.go.kr https://business.juso.go.kr; " +
           "img-src 'self' file: data:; " +
-          "frame-src 'self' https://t1.kakaocdn.net https://postcode.map.kakao.com https://*.kakaocdn.net https://t1.daumcdn.net https://postcode.map.daum.net https://*.daumcdn.net; " +  // Kakao 우편번호 API iframe (전환기간 중 기존 도메인 유지)
+          "frame-src 'self'; " +  // SAMPL-1-47: Kakao 우편번호 iframe 도메인 제거
           "object-src 'none'; " +  // Flash, Java 등 플러그인 차단
           "base-uri 'self'; " +     // <base> 태그 제한
           "form-action 'self'; " +   // 폼 제출 대상 제한
@@ -1044,13 +1095,110 @@ ipcMain.handle('select-auth-file', async () => {
     }
 });
 
+// 행정안전부 도로명주소 검색 (main process → file:// Origin CORS 우회)
+// 보안: confmKey는 main의 process.env.JUSO_API_KEY에서 직접 참조 (렌더러 노출 없음)
+ipcMain.handle('juso:search', async (_event, payload) => {
+    if (!ipcRateLimiter.check('juso:search', EXT_API_MAX_CALLS_PER_SEC)) {
+        return { ok: false, error: '요청이 너무 빈번합니다. 잠시 후 다시 시도하세요.' };
+    }
+    if (!payload || typeof payload !== 'object') {
+        return { ok: false, error: '유효하지 않은 요청입니다.' };
+    }
+    const { keyword, page = 1, size = 10 } = payload;
+    const chk = sanitizeJusoKeyword(keyword);
+    if (!chk.ok) return { ok: false, error: chk.error };
+
+    const pageNum = Math.max(1, Math.min(100, Number(page) || 1));
+    const sizeNum = Math.max(1, Math.min(50, Number(size) || 10));
+
+    const apiKey = process.env.JUSO_API_KEY || process.env.JUSO_KEY;
+    if (!apiKey) {
+        return { ok: false, error: 'JUSO_API_KEY가 설정되지 않았습니다. .env 파일을 확인하세요.' };
+    }
+
+    const https = require('node:https');
+    const params = new URLSearchParams({
+        confmKey: apiKey,
+        currentPage: String(pageNum),
+        countPerPage: String(sizeNum),
+        keyword: chk.value,
+        resultType: 'json',
+        hstryYn: 'N'
+    });
+    const url = `https://business.juso.go.kr/addrlink/addrLinkApi.do?${params.toString()}`;
+    const MAX_RESPONSE_SIZE = 256 * 1024; // 256KB
+
+    return new Promise((resolve) => {
+        // Buffer 누적: 청크 경계 UTF-8 다중바이트(한글 3B) 잘림 방어
+        const chunks = [];
+        let totalSize = 0;
+        let aborted = false;
+        let timeout = null;
+        const finish = (result) => {
+            if (aborted) return;
+            aborted = true;
+            if (timeout) clearTimeout(timeout);
+            resolve(result);
+        };
+        const req = https.get(url, (res) => {
+            const status = res.statusCode || 0;
+            if (status < 200 || status >= 300) {
+                req.destroy();
+                return finish({ ok: false, error: `JUSO HTTP ${status} 오류 (점검 중이거나 API 키를 확인하세요).` });
+            }
+            res.on('data', (chunk) => {
+                if (aborted) return;
+                chunks.push(chunk);
+                totalSize += chunk.length;
+                if (totalSize > MAX_RESPONSE_SIZE) {
+                    req.destroy();
+                    finish({ ok: false, error: 'JUSO 응답이 너무 큽니다.' });
+                }
+            });
+            res.on('end', () => {
+                if (aborted) return;
+                try {
+                    const data = Buffer.concat(chunks).toString('utf8');
+                    const json = JSON.parse(data);
+                    const results = json?.results;
+                    if (!results) return finish({ ok: false, error: 'JUSO 응답 형식 오류' });
+                    const common = results.common || {};
+                    if (common.errorCode && common.errorCode !== '0') {
+                        return finish({ ok: false, error: `JUSO ${common.errorCode}: ${common.errorMessage || ''}`.trim() });
+                    }
+                    const items = Array.isArray(results.juso) ? results.juso : [];
+                    finish({
+                        ok: true,
+                        total: Number(common.totalCount || items.length || 0),
+                        page: Number(common.currentPage || pageNum),
+                        size: Number(common.countPerPage || sizeNum),
+                        items
+                    });
+                } catch {
+                    finish({ ok: false, error: 'JUSO 응답 파싱 오류' });
+                }
+            });
+        });
+        timeout = setTimeout(() => { req.destroy(); finish({ ok: false, error: 'JUSO 호출 시간 초과 (8초).' }); }, 8000);
+        req.on('error', (err) => {
+            console.error('[juso:search] 네트워크 오류:', err?.message);
+            finish({ ok: false, error: 'JUSO 네트워크 오류' });
+        });
+    });
+});
+
 // VWORLD 지번 지오코딩 (main process → Origin 헤더 없음, 도메인 제한 우회)
-ipcMain.handle('vworld-geocode', async (event, { address, apiKey }) => {
-    // M-1: 입력 검증
+// 보안: apiKey는 main process의 process.env.VWORLD_API_KEY에서 직접 참조 (렌더러 노출 없음)
+ipcMain.handle('vworld-geocode', async (event, { address }) => {
+    if (!ipcRateLimiter.check('vworld-geocode', EXT_API_MAX_CALLS_PER_SEC)) {
+        return null;
+    }
     if (typeof address !== 'string' || address.length === 0 || address.length > 200) {
         return null;
     }
-    if (typeof apiKey !== 'string' || apiKey.length === 0 || apiKey.length > 100) {
+    const apiKey = process.env.VWORLD_API_KEY || process.env.VWORLD_KEY;
+    if (!apiKey) {
+        console.error('[vworld-geocode] VWORLD_API_KEY가 설정되지 않았습니다.');
         return null;
     }
 
@@ -1058,28 +1206,43 @@ ipcMain.handle('vworld-geocode', async (event, { address, apiKey }) => {
     const url = `https://api.vworld.kr/req/address?service=address&request=getCoord&version=2.0&crs=epsg:4326&address=${encodeURIComponent(address)}&refine=true&simple=false&format=json&type=parcel&key=${apiKey}`;
     const MAX_RESPONSE_SIZE = 100 * 1024; // 100KB
     return new Promise((resolve) => {
+        // Buffer 누적: 청크 경계 UTF-8 다중바이트 잘림 방어 (한글 응답 안전)
+        const chunks = [];
+        let totalSize = 0;
+        let aborted = false;
+        let timeout = null;
+        const finish = (value) => {
+            if (aborted) return;
+            aborted = true;
+            if (timeout) clearTimeout(timeout);
+            resolve(value);
+        };
         const req = https.get(url, (res) => {
-            let data = '';
+            const status = res.statusCode || 0;
+            if (status < 200 || status >= 300) {
+                req.destroy();
+                return finish(null);
+            }
             res.on('data', chunk => {
-                data += chunk;
-                // M-1: 응답 크기 제한
-                if (data.length > MAX_RESPONSE_SIZE) {
+                if (aborted) return;
+                chunks.push(chunk);
+                totalSize += chunk.length;
+                if (totalSize > MAX_RESPONSE_SIZE) {
                     req.destroy();
-                    resolve(null);
+                    finish(null);
                 }
             });
             res.on('end', () => {
-                clearTimeout(timeout);
+                if (aborted) return;
                 try {
+                    const data = Buffer.concat(chunks).toString('utf8');
                     const json = JSON.parse(data);
                     const ok = json?.response?.status === 'OK';
-                    resolve(ok);
-                } catch {
-                    resolve(null);
-                }
+                    finish(ok);
+                } catch { finish(null); }
             });
         });
-        const timeout = setTimeout(() => { req.destroy(); resolve(null); }, 8000);
-        req.on('error', () => { clearTimeout(timeout); resolve(null); });
+        timeout = setTimeout(() => { req.destroy(); finish(null); }, 8000);
+        req.on('error', () => { finish(null); });
     });
 });

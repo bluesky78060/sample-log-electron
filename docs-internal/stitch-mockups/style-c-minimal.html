@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+
+<html lang="ko"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-tertiary-container": "#00422e",
+                    "surface-container": "#e5eeff",
+                    "tertiary": "#006c4e",
+                    "outline": "#6c7a71",
+                    "inverse-on-surface": "#eaf1ff",
+                    "on-error": "#ffffff",
+                    "surface-container-highest": "#d9e3f4",
+                    "error": "#ba1a1a",
+                    "tertiary-fixed": "#80f9c8",
+                    "on-tertiary-fixed-variant": "#00513a",
+                    "error-container": "#ffdad6",
+                    "tertiary-fixed-dim": "#62dcad",
+                    "inverse-surface": "#27313e",
+                    "inverse-primary": "#68dba9",
+                    "on-surface-variant": "#3c4a42",
+                    "primary-fixed-dim": "#68dba9",
+                    "primary": "#006c4a",
+                    "on-secondary-container": "#00714d",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-dim": "#d1dbec",
+                    "on-tertiary": "#ffffff",
+                    "on-primary-container": "#00422c",
+                    "on-secondary-fixed": "#002113",
+                    "on-primary-fixed": "#002114",
+                    "on-secondary": "#ffffff",
+                    "on-background": "#121c28",
+                    "surface-container-low": "#eef4ff",
+                    "primary-fixed": "#85f8c4",
+                    "outline-variant": "#bbcabf",
+                    "surface-bright": "#f8f9ff",
+                    "on-error-container": "#93000a",
+                    "secondary-fixed": "#6ffbbe",
+                    "background": "#f8f9ff",
+                    "surface": "#f8f9ff",
+                    "on-secondary-fixed-variant": "#005236",
+                    "on-primary": "#ffffff",
+                    "surface-tint": "#006c4a",
+                    "secondary-fixed-dim": "#4edea3",
+                    "surface-container-high": "#dfe9fa",
+                    "on-primary-fixed-variant": "#005137",
+                    "on-tertiary-fixed": "#002115",
+                    "surface-variant": "#d9e3f4",
+                    "on-surface": "#121c28",
+                    "primary-container": "#3fb687",
+                    "secondary-container": "#6cf8bb",
+                    "tertiary-container": "#37b78a",
+                    "secondary": "#006c49"
+            },
+            "borderRadius": {
+                    "DEFAULT": "1rem",
+                    "lg": "2rem",
+                    "xl": "3rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Manrope"],
+                    "body": ["Manrope"],
+                    "label": ["Manrope"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Manrope', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e5eeff; border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-surface min-h-screen flex items-center justify-center p-6">
+<!-- Modal Container (880px Width) -->
+<div class="w-full max-w-[880px] bg-surface-container-lowest rounded-DEFAULT shadow-[0_24px_48px_-12px_rgba(0,108,74,0.08)] overflow-hidden">
+<!-- Header -->
+<header class="flex justify-between items-center px-10 py-8">
+<h1 class="text-on-surface font-headline font-bold text-xl tracking-tight">토양 접수 통계</h1>
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-low transition-colors group">
+<span class="material-symbols-outlined text-outline group-hover:text-on-surface" data-icon="close">close</span>
+</button>
+</header>
+<!-- Top Summary Section -->
+<div class="px-10 pb-8">
+<div class="flex items-center gap-6 mb-4">
+<div class="flex items-center gap-2">
+<span class="text-label font-label text-[10px] font-semibold tracking-widest text-outline-variant uppercase">총 접수</span>
+<span class="text-on-surface font-headline font-extrabold text-2xl">709</span>
+</div>
+<div class="h-4 w-[1px] bg-outline-variant opacity-20"></div>
+<div class="flex items-center gap-2">
+<span class="text-label font-label text-[10px] font-semibold tracking-widest text-outline-variant uppercase">완료</span>
+<span class="text-primary font-headline font-extrabold text-2xl">648</span>
+</div>
+<div class="h-4 w-[1px] bg-outline-variant opacity-20"></div>
+<div class="flex items-center gap-2">
+<span class="text-label font-label text-[10px] font-semibold tracking-widest text-outline-variant uppercase">미완료</span>
+<span class="text-on-surface-variant font-headline font-extrabold text-2xl">61</span>
+</div>
+<div class="ml-auto text-primary font-headline font-bold text-lg">91.4%</div>
+</div>
+<!-- Global Progress Bar -->
+<div class="w-full h-1.5 bg-surface-container-low rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full" style="width: 91.4%"></div>
+</div>
+</div>
+<!-- Main Body (60/40) -->
+<div class="grid grid-cols-1 md:grid-cols-5 px-10 pb-12 gap-12">
+<!-- Left Column: Monthly Trends (60%) -->
+<div class="md:col-span-3">
+<div class="flex flex-col h-full">
+<span class="text-label font-label text-[10px] font-bold tracking-widest text-outline-variant uppercase mb-8">월별 접수 추이</span>
+<div class="flex-grow flex items-end justify-between gap-4 h-[300px] border-b border-outline-variant/10 pb-2">
+<!-- 1월 -->
+<div class="flex flex-col items-center flex-1 gap-4">
+<div class="w-full flex flex-col justify-end gap-1 group relative">
+<div class="w-full bg-surface-container-low rounded-t-lg transition-all duration-300 group-hover:opacity-80" style="height: 120px;">
+<div class="w-full bg-primary rounded-t-lg" style="height: 105px;"></div>
+</div>
+<div class="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-inverse-surface text-inverse-on-surface text-[10px] px-2 py-1 rounded">164건</div>
+</div>
+<span class="text-label font-label text-xs font-semibold text-outline">1월</span>
+</div>
+<!-- 2월 -->
+<div class="flex flex-col items-center flex-1 gap-4">
+<div class="w-full flex flex-col justify-end gap-1 group relative">
+<div class="w-full bg-surface-container-low rounded-t-lg transition-all duration-300 group-hover:opacity-80" style="height: 180px;">
+<div class="w-full bg-primary rounded-t-lg" style="height: 160px;"></div>
+</div>
+<div class="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-inverse-surface text-inverse-on-surface text-[10px] px-2 py-1 rounded">210건</div>
+</div>
+<span class="text-label font-label text-xs font-semibold text-outline">2월</span>
+</div>
+<!-- 3월 -->
+<div class="flex flex-col items-center flex-1 gap-4">
+<div class="w-full flex flex-col justify-end gap-1 group relative">
+<div class="w-full bg-surface-container-low rounded-t-lg transition-all duration-300 group-hover:opacity-80" style="height: 240px;">
+<div class="w-full bg-primary rounded-t-lg" style="height: 220px;"></div>
+</div>
+<div class="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-inverse-surface text-inverse-on-surface text-[10px] px-2 py-1 rounded">285건</div>
+</div>
+<span class="text-label font-label text-xs font-semibold text-outline">3월</span>
+</div>
+<!-- 4월 -->
+<div class="flex flex-col items-center flex-1 gap-4">
+<div class="w-full flex flex-col justify-end gap-1 group relative">
+<div class="w-full bg-surface-container-low rounded-t-lg transition-all duration-300 group-hover:opacity-80" style="height: 60px;">
+<div class="w-full bg-primary rounded-t-lg" style="height: 45px;"></div>
+</div>
+<div class="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-inverse-surface text-inverse-on-surface text-[10px] px-2 py-1 rounded">50건</div>
+</div>
+<span class="text-label font-label text-xs font-semibold text-outline">4월</span>
+</div>
+</div>
+<div class="flex gap-6 mt-8">
+<div class="flex items-center gap-2">
+<div class="w-2.5 h-2.5 rounded-full bg-primary"></div>
+<span class="text-label font-label text-[10px] text-outline font-semibold tracking-wide uppercase">완료</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-2.5 h-2.5 rounded-full bg-surface-container-low"></div>
+<span class="text-label font-label text-[10px] text-outline font-semibold tracking-wide uppercase">미완료</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column: Specific Breakdowns (40%) -->
+<div class="md:col-span-2 flex flex-col gap-10">
+<!-- Section: 구분별 -->
+<div class="space-y-6">
+<span class="text-label font-label text-[10px] font-bold tracking-widest text-outline-variant uppercase">구분별 접수 현황</span>
+<div class="space-y-4">
+<!-- 밭 -->
+<div class="space-y-1.5">
+<div class="flex justify-between text-[11px] font-semibold">
+<span class="text-on-surface">밭</span>
+<span class="text-outline">408</span>
+</div>
+<div class="w-full h-1 bg-surface-container-low rounded-full overflow-hidden">
+<div class="h-full bg-primary-container rounded-full" style="width: 57%"></div>
+</div>
+</div>
+<!-- 과수 -->
+<div class="space-y-1.5">
+<div class="flex justify-between text-[11px] font-semibold">
+<span class="text-on-surface">과수</span>
+<span class="text-outline">121</span>
+</div>
+<div class="w-full h-1 bg-surface-container-low rounded-full overflow-hidden">
+<div class="h-full bg-secondary-fixed-dim rounded-full" style="width: 17%"></div>
+</div>
+</div>
+<!-- 시설 -->
+<div class="space-y-1.5">
+<div class="flex justify-between text-[11px] font-semibold">
+<span class="text-on-surface">시설</span>
+<span class="text-outline">87</span>
+</div>
+<div class="w-full h-1 bg-surface-container-low rounded-full overflow-hidden">
+<div class="h-full bg-tertiary-fixed-dim rounded-full" style="width: 12%"></div>
+</div>
+</div>
+<!-- 임야 -->
+<div class="space-y-1.5">
+<div class="flex justify-between text-[11px] font-semibold">
+<span class="text-on-surface">임야</span>
+<span class="text-outline">47</span>
+</div>
+<div class="w-full h-1 bg-surface-container-low rounded-full overflow-hidden">
+<div class="h-full bg-outline-variant/30 rounded-full" style="width: 7%"></div>
+</div>
+</div>
+<!-- 논 -->
+<div class="space-y-1.5">
+<div class="flex justify-between text-[11px] font-semibold">
+<span class="text-on-surface">논</span>
+<span class="text-outline">46</span>
+</div>
+<div class="w-full h-1 bg-surface-container-low rounded-full overflow-hidden">
+<div class="h-full bg-outline-variant/20 rounded-full" style="width: 7%"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Section: 목적별 -->
+<div class="space-y-6">
+<span class="text-label font-label text-[10px] font-bold tracking-widest text-outline-variant uppercase">목적별 접수 현황</span>
+<div class="space-y-4">
+<!-- 무농약 -->
+<div class="space-y-1.5">
+<div class="flex justify-between text-[11px] font-semibold">
+<span class="text-on-surface">무농약</span>
+<span class="text-outline">309</span>
+</div>
+<div class="w-full h-1 bg-surface-container-low rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full opacity-60" style="width: 44%"></div>
+</div>
+</div>
+<!-- 일반재배 -->
+<div class="space-y-1.5">
+<div class="flex justify-between text-[11px] font-semibold">
+<span class="text-on-surface">일반재배</span>
+<span class="text-outline">292</span>
+</div>
+<div class="w-full h-1 bg-surface-container-low rounded-full overflow-hidden">
+<div class="h-full bg-secondary-container rounded-full" style="width: 41%"></div>
+</div>
+</div>
+<!-- 유기 -->
+<div class="space-y-1.5">
+<div class="flex justify-between text-[11px] font-semibold">
+<span class="text-on-surface">유기</span>
+<span class="text-outline">103</span>
+</div>
+<div class="w-full h-1 bg-surface-container-low rounded-full overflow-hidden">
+<div class="h-full bg-primary-fixed-dim rounded-full" style="width: 14%"></div>
+</div>
+</div>
+<!-- GAP -->
+<div class="space-y-1.5">
+<div class="flex justify-between text-[11px] font-semibold">
+<span class="text-on-surface">GAP</span>
+<span class="text-outline">5</span>
+</div>
+<div class="w-full h-1 bg-surface-container-low rounded-full overflow-hidden">
+<div class="h-full bg-outline-variant/20 rounded-full" style="width: 1%"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Footer -->
+<footer class="px-10 py-6 bg-surface-container-low/30 flex justify-end">
+<button class="px-6 py-2.5 text-sm font-bold text-primary hover:bg-surface-container-low rounded-full transition-all duration-200">
+                닫기
+            </button>
+</footer>
+</div>
+</body></html>

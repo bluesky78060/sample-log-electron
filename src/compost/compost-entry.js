@@ -14,6 +14,7 @@ import '../shared/pagination.js';
 import '../shared/address.js';
 import '../shared/address-parser.js';
 import '../shared/autocomplete-manager.js';
+import '../shared/juso-service.js';
 import '../shared/search-filter.js';
 import '../shared/form-validator.js';
 import '../shared/theme.js';
@@ -29,7 +30,7 @@ import '../shared/BaseSampleManager.js';
 import '../shared/excel-import-manager.js';
 
 // Data
-import '../bonghwaData.js';
+// 정적 시·군 데이터 제거 - 자동완성은 juso API 단독
 
 // Main script
 import './compost-script.js';

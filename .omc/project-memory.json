@@ -1,0 +1,526 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1778756392444,
+  "projectRoot": "/Users/leechanhee/sample-log-electron",
+  "techStack": {
+    "languages": [
+      {
+        "name": "JavaScript/TypeScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "package.json"
+        ]
+      }
+    ],
+    "frameworks": [
+      {
+        "name": "@playwright/test",
+        "version": "1.57.0",
+        "category": "testing"
+      },
+      {
+        "name": "vite",
+        "version": "5.4.11",
+        "category": "build"
+      },
+      {
+        "name": "vitest",
+        "version": "4.1.4",
+        "category": "testing"
+      }
+    ],
+    "packageManager": "npm",
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": "npm run build",
+    "testCommand": "npm test",
+    "lintCommand": "npm run lint",
+    "devCommand": "npm run dev",
+    "scripts": {
+      "dev": "vite src --port 3000",
+      "dev:electron": "concurrently -k \"vite src --port 3000\" \"wait-on http://localhost:3000 && electron-forge start -- --dev\"",
+      "dev:build": "vite build src",
+      "preview": "vite preview src",
+      "start": "electron-forge start",
+      "start:dev": "DEV_MODE=1 electron-forge start",
+      "package": "npm run build && electron-forge package",
+      "make": "npm run build && electron-forge make",
+      "build": "npm run build:css && npm run sync-version && npx vite build",
+      "publish": "electron-forge publish",
+      "lint": "echo \"No linting configured\"",
+      "typecheck": "tsc --noEmit",
+      "typecheck:watch": "tsc --noEmit --watch",
+      "test": "npx playwright test",
+      "test:ui": "npx playwright test --ui",
+      "test:report": "npx playwright show-report",
+      "test:unit": "vitest run",
+      "test:unit:watch": "vitest",
+      "sync-version": "node scripts/sync-version.js",
+      "build:css": "tailwindcss -i src/styles/input.css -o src/shared/tailwind-output.css --minify",
+      "watch:css": "tailwindcss -i src/styles/input.css -o src/shared/tailwind-output.css --watch",
+      "sync": "npm run build"
+    }
+  },
+  "conventions": {
+    "namingStyle": null,
+    "importStyle": null,
+    "testPattern": null,
+    "fileOrganization": null
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [
+      "assets",
+      "docs",
+      "scripts",
+      "src",
+      "tests"
+    ],
+    "gitBranches": null
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "assets": {
+      "path": "assets",
+      "purpose": "Static assets",
+      "fileCount": 6,
+      "lastAccessed": 1778756392434,
+      "keyFiles": [
+        "icon-1024.png",
+        "icon-512.png",
+        "icon-transparent.png",
+        "icon.icns",
+        "icon.ico"
+      ]
+    },
+    "docs": {
+      "path": "docs",
+      "purpose": "Documentation",
+      "fileCount": 3,
+      "lastAccessed": 1778756392436,
+      "keyFiles": [
+        "index.html"
+      ]
+    },
+    "docs-internal": {
+      "path": "docs-internal",
+      "purpose": null,
+      "fileCount": 39,
+      "lastAccessed": 1778756392437,
+      "keyFiles": [
+        "ADDRESS_PARSING_FIX.md",
+        "ANALYSIS_RESULT_FEATURE.md",
+        "APP_PLANNER_GUIDE.md",
+        "CSP_TEST_GUIDE.md",
+        "DASHBOARD_FEATURE_SPEC.md"
+      ]
+    },
+    "label-print": {
+      "path": "label-print",
+      "purpose": null,
+      "fileCount": 3,
+      "lastAccessed": 1778756392438,
+      "keyFiles": [
+        "index.html",
+        "label-app.js",
+        "label-print.css"
+      ]
+    },
+    "out": {
+      "path": "out",
+      "purpose": "Build output",
+      "fileCount": 1,
+      "lastAccessed": 1778756392438,
+      "keyFiles": []
+    },
+    "playwright-report": {
+      "path": "playwright-report",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1778756392439,
+      "keyFiles": [
+        "index.html"
+      ]
+    },
+    "scripts": {
+      "path": "scripts",
+      "purpose": "Build/utility scripts",
+      "fileCount": 9,
+      "lastAccessed": 1778756392440,
+      "keyFiles": [
+        "build-pesticide-name-map.py",
+        "convert-excel.js",
+        "migrate-console-logs.js",
+        "pesticide-manual-overrides.json",
+        "pesticide-map-report.txt"
+      ]
+    },
+    "src": {
+      "path": "src",
+      "purpose": "Source code",
+      "fileCount": 10,
+      "lastAccessed": 1778756392440,
+      "keyFiles": [
+        "app-update.yml",
+        "cropData.js",
+        "cropData.js.bak",
+        "index.css",
+        "index.html"
+      ]
+    },
+    "test-results": {
+      "path": "test-results",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1778756392440,
+      "keyFiles": []
+    },
+    "tests": {
+      "path": "tests",
+      "purpose": "Test files",
+      "fileCount": 1,
+      "lastAccessed": 1778756392440,
+      "keyFiles": []
+    },
+    "docs/assets": {
+      "path": "docs/assets",
+      "purpose": "Static assets",
+      "fileCount": 49,
+      "lastAccessed": 1778756392441,
+      "keyFiles": [
+        "01-main-B3zZEJFf.png",
+        "02-soil-register-BNO4h-w1.png",
+        "04-soil-list-yYze5Z4c.png"
+      ]
+    },
+    "src/assets": {
+      "path": "src/assets",
+      "purpose": "Static assets",
+      "fileCount": 0,
+      "lastAccessed": 1778756392442,
+      "keyFiles": []
+    },
+    "src/dist": {
+      "path": "src/dist",
+      "purpose": "Distribution/build output",
+      "fileCount": 1,
+      "lastAccessed": 1778756392443,
+      "keyFiles": [
+        "index.html"
+      ]
+    },
+    "tests/docs": {
+      "path": "tests/docs",
+      "purpose": "Documentation",
+      "fileCount": 1,
+      "lastAccessed": 1778756392444,
+      "keyFiles": []
+    }
+  },
+  "hotPaths": [
+    {
+      "path": "src/soil/soil-script.js",
+      "accessCount": 104,
+      "lastAccessed": 1778758719800,
+      "type": "directory"
+    },
+    {
+      "path": "src/heuktoram/heuktoram-script.js",
+      "accessCount": 53,
+      "lastAccessed": 1777546161376,
+      "type": "file"
+    },
+    {
+      "path": "src/compost/compost-script.js",
+      "accessCount": 39,
+      "lastAccessed": 1778758702254,
+      "type": "directory"
+    },
+    {
+      "path": "src/shared/BaseSampleManager.js",
+      "accessCount": 36,
+      "lastAccessed": 1778758345987,
+      "type": "directory"
+    },
+    {
+      "path": "src/pesticide/pesticide-script.js",
+      "accessCount": 34,
+      "lastAccessed": 1778758919839,
+      "type": "directory"
+    },
+    {
+      "path": "src/style.css",
+      "accessCount": 32,
+      "lastAccessed": 1777287727901,
+      "type": "file"
+    },
+    {
+      "path": "src/water/water-script.js",
+      "accessCount": 32,
+      "lastAccessed": 1778758701025,
+      "type": "directory"
+    },
+    {
+      "path": "src",
+      "accessCount": 30,
+      "lastAccessed": 1776404204500,
+      "type": "directory"
+    },
+    {
+      "path": "src/heuktoram/heuktoram-result-importer.js",
+      "accessCount": 27,
+      "lastAccessed": 1777545020282,
+      "type": "file"
+    },
+    {
+      "path": "src/heavy-metal/heavy-metal-script.js",
+      "accessCount": 27,
+      "lastAccessed": 1778758701573,
+      "type": "directory"
+    },
+    {
+      "path": "src/shared/address.js",
+      "accessCount": 17,
+      "lastAccessed": 1778758141072,
+      "type": "directory"
+    },
+    {
+      "path": "src/release/index.html",
+      "accessCount": 14,
+      "lastAccessed": 1778573624672,
+      "type": "directory"
+    },
+    {
+      "path": "src/shared/autocomplete-manager.js",
+      "accessCount": 14,
+      "lastAccessed": 1778675334450,
+      "type": "file"
+    },
+    {
+      "path": "src/soil/index.html",
+      "accessCount": 14,
+      "lastAccessed": 1778757816371,
+      "type": "file"
+    },
+    {
+      "path": "package.json",
+      "accessCount": 13,
+      "lastAccessed": 1778573604864,
+      "type": "file"
+    },
+    {
+      "path": "src/pesticide/index.html",
+      "accessCount": 11,
+      "lastAccessed": 1778758800600,
+      "type": "directory"
+    },
+    {
+      "path": "CLAUDE.md",
+      "accessCount": 10,
+      "lastAccessed": 1777278042038,
+      "type": "file"
+    },
+    {
+      "path": "src/shared/constants.js",
+      "accessCount": 10,
+      "lastAccessed": 1778758690841,
+      "type": "directory"
+    },
+    {
+      "path": "src/water/index.html",
+      "accessCount": 8,
+      "lastAccessed": 1778757839171,
+      "type": "directory"
+    },
+    {
+      "path": "src/heavy-metal/index.html",
+      "accessCount": 7,
+      "lastAccessed": 1778757840945,
+      "type": "directory"
+    },
+    {
+      "path": "src/compost/index.html",
+      "accessCount": 7,
+      "lastAccessed": 1778757842951,
+      "type": "file"
+    },
+    {
+      "path": "src/pesticide/pesticide-entry.js",
+      "accessCount": 7,
+      "lastAccessed": 1778758823759,
+      "type": "file"
+    },
+    {
+      "path": "src/water/water-entry.js",
+      "accessCount": 6,
+      "lastAccessed": 1778755647001,
+      "type": "file"
+    },
+    {
+      "path": "src/compost/compost-entry.js",
+      "accessCount": 6,
+      "lastAccessed": 1778755649700,
+      "type": "file"
+    },
+    {
+      "path": "src/heavy-metal/heavy-metal-entry.js",
+      "accessCount": 6,
+      "lastAccessed": 1778755651900,
+      "type": "file"
+    },
+    {
+      "path": "src/soil/soil-entry.js",
+      "accessCount": 5,
+      "lastAccessed": 1778755644383,
+      "type": "file"
+    },
+    {
+      "path": "src/heuktoram/index.html",
+      "accessCount": 4,
+      "lastAccessed": 1777289546285,
+      "type": "file"
+    },
+    {
+      "path": "src/heuktoram/heuktoram-entry.js",
+      "accessCount": 4,
+      "lastAccessed": 1778755673641,
+      "type": "file"
+    },
+    {
+      "path": "",
+      "accessCount": 3,
+      "lastAccessed": 1776403091153,
+      "type": "directory"
+    },
+    {
+      "path": "src/shared",
+      "accessCount": 3,
+      "lastAccessed": 1776403556733,
+      "type": "directory"
+    },
+    {
+      "path": "src/shared/utils.js",
+      "accessCount": 3,
+      "lastAccessed": 1776405967858,
+      "type": "file"
+    },
+    {
+      "path": "tests/e2e/soil-form.spec.js",
+      "accessCount": 3,
+      "lastAccessed": 1776678419834,
+      "type": "file"
+    },
+    {
+      "path": "src/shared/sanitize.js",
+      "accessCount": 3,
+      "lastAccessed": 1777276764420,
+      "type": "file"
+    },
+    {
+      "path": "src/soil",
+      "accessCount": 2,
+      "lastAccessed": 1776341488808,
+      "type": "directory"
+    },
+    {
+      "path": "src/compost",
+      "accessCount": 2,
+      "lastAccessed": 1776341553114,
+      "type": "directory"
+    },
+    {
+      "path": "tests/unit/setup.js",
+      "accessCount": 2,
+      "lastAccessed": 1776406077560,
+      "type": "file"
+    },
+    {
+      "path": "tests/unit/sanitize.test.js",
+      "accessCount": 2,
+      "lastAccessed": 1776406083094,
+      "type": "file"
+    },
+    {
+      "path": ".claude/hooks/ticket-reminder.sh",
+      "accessCount": 2,
+      "lastAccessed": 1777278003299,
+      "type": "file"
+    },
+    {
+      "path": "src/shared/storage-manager.js",
+      "accessCount": 2,
+      "lastAccessed": 1778758347600,
+      "type": "file"
+    },
+    {
+      "path": "src/soil/soil-style.css",
+      "accessCount": 1,
+      "lastAccessed": 1776337896997,
+      "type": "file"
+    },
+    {
+      "path": "src/water",
+      "accessCount": 1,
+      "lastAccessed": 1776341341018,
+      "type": "directory"
+    },
+    {
+      "path": "src/heavy-metal",
+      "accessCount": 1,
+      "lastAccessed": 1776341342460,
+      "type": "directory"
+    },
+    {
+      "path": "src/pesticide",
+      "accessCount": 1,
+      "lastAccessed": 1776341343255,
+      "type": "directory"
+    },
+    {
+      "path": "src/main-entry.js",
+      "accessCount": 1,
+      "lastAccessed": 1776401767084,
+      "type": "directory"
+    },
+    {
+      "path": "vite.config.js",
+      "accessCount": 1,
+      "lastAccessed": 1776405766389,
+      "type": "file"
+    },
+    {
+      "path": "vitest.config.js",
+      "accessCount": 1,
+      "lastAccessed": 1776405896317,
+      "type": "file"
+    },
+    {
+      "path": "tests/unit/utils.test.js",
+      "accessCount": 1,
+      "lastAccessed": 1776406004796,
+      "type": "file"
+    },
+    {
+      "path": "tests/unit/base-manager.test.js",
+      "accessCount": 1,
+      "lastAccessed": 1776406033086,
+      "type": "file"
+    },
+    {
+      "path": "src/shared/excel-import-manager.js",
+      "accessCount": 1,
+      "lastAccessed": 1777286296209,
+      "type": "file"
+    },
+    {
+      "path": "docs-internal/HEUKTORAM_RESULT_EXCEL_IMPORT_MODAL_DESIGN.md",
+      "accessCount": 1,
+      "lastAccessed": 1777286522338,
+      "type": "file"
+    }
+  ],
+  "userDirectives": []
+}

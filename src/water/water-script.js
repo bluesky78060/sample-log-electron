@@ -752,7 +752,7 @@ class WaterSampleManager extends window.BaseSampleManager {
     bindLocationAutocomplete(input, autocompleteList) {
         // regionNames: 경북 전체 지역명 배열로 전체 주소 스킵 조건 처리
         window.AddressAutocomplete.bind(input, autocompleteList, {
-            regionKeys: null,
+            regionKeys: ['bonghwa', 'yeongju', 'uljin'],
             regionNames: typeof GYEONGBUK_REGION_NAMES !== 'undefined' ? GYEONGBUK_REGION_NAMES : null,
         });
     }

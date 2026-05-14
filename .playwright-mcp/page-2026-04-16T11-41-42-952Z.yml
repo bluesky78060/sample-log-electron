@@ -1,0 +1,59 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - button "동기화" [ref=e4] [cursor=pointer]:
+      - img [ref=e5]
+      - generic [ref=e10]: 동기화
+    - link "설정" [ref=e11] [cursor=pointer]:
+      - /url: settings/index.html
+      - img [ref=e12]
+      - generic: 설정
+    - link "릴리즈 노트" [ref=e15] [cursor=pointer]:
+      - /url: release/index.html
+      - img [ref=e16]
+      - generic: 릴리즈 노트
+    - link "설명서" [ref=e20] [cursor=pointer]:
+      - /url: manual/index.html
+      - img [ref=e21]
+      - generic: 설명서
+    - generic [ref=e24]:
+      - img [ref=e25]
+      - button "다크 모드로 전환" [ref=e28] [cursor=pointer]
+      - img [ref=e29]
+  - generic [ref=e31]:
+    - generic [ref=e32]:
+      - heading "시료 접수 대장" [level=1] [ref=e33]
+      - paragraph [ref=e34]: 분석할 시료 종류를 선택해주세요
+    - generic [ref=e35]:
+      - link "토양 토양 논, 밭, 과수, 시설 토양 분석 ● 사용 가능" [ref=e36] [cursor=pointer]:
+        - /url: soil/index.html
+        - img "토양" [ref=e37]
+        - generic [ref=e38]: 토양
+        - generic [ref=e39]: 논, 밭, 과수, 시설 토양 분석
+        - generic [ref=e40]: ● 사용 가능
+      - link "수질분석 수질분석 지하수, 지표수 수질 분석 ● 사용 가능" [ref=e41] [cursor=pointer]:
+        - /url: water/index.html
+        - img "수질분석" [ref=e42]
+        - generic [ref=e43]: 수질분석
+        - generic [ref=e44]: 지하수, 지표수 수질 분석
+        - generic [ref=e45]: ● 사용 가능
+      - link "잔류농약 잔류농약 농산물 잔류농약 분석 ● 사용 가능" [ref=e46] [cursor=pointer]:
+        - /url: pesticide/index.html
+        - img "잔류농약" [ref=e47]
+        - generic [ref=e48]: 잔류농약
+        - generic [ref=e49]: 농산물 잔류농약 분석
+        - generic [ref=e50]: ● 사용 가능
+      - link "가축분뇨퇴비 가축분뇨퇴비 퇴비, 액비 부숙도 검사 ● 사용 가능" [ref=e51] [cursor=pointer]:
+        - /url: compost/index.html
+        - img "가축분뇨퇴비" [ref=e52]
+        - generic [ref=e53]: 가축분뇨퇴비
+        - generic [ref=e54]: 퇴비, 액비 부숙도 검사
+        - generic [ref=e55]: ● 사용 가능
+      - link "토양 중금속 토양 중금속 토양 중금속 분석 ● 사용 가능" [ref=e56] [cursor=pointer]:
+        - /url: heavy-metal/index.html
+        - img "토양 중금속" [ref=e57]
+        - generic [ref=e58]: 토양 중금속
+        - generic [ref=e59]: 토양 중금속 분석
+        - generic [ref=e60]: ● 사용 가능
+    - generic [ref=e61]:
+      - paragraph [ref=e62]: 봉화군농업기술센터 안전성분석센터
+      - paragraph [ref=e63]: v1.7.99

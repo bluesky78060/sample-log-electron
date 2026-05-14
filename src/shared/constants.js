@@ -26,7 +26,7 @@ const DEBUG = (() => {
 /**
  * 앱 버전
  */
-const APP_VERSION = '1.9.3';
+const APP_VERSION = '1.10.0';
 
 /**
  * 페이지네이션 관련 상수
@@ -59,14 +59,15 @@ const AUTOCOMPLETE = {
     MIN_INPUT_LENGTH: 1
 };
 
+// LOCAL_REGIONS 제거됨 - 자동완성은 juso API(전국 데이터) 기반으로 동작
+
 /**
- * 관할 지역명 (자동완성에서 공통 사용)
+ * 시도 제거 패턴 (목록/내보내기 표시용)
+ * SAMPL-1-48: SAMPL-1-46 정적 데이터 제거 시 누락되어 5개 시료 스크립트에서 ReferenceError 발생 → 복원
+ * 자동완성과 무관. 단순 표시 단계에서 광역시·도 prefix 제거 용도.
  */
-const LOCAL_REGIONS = {
-    bonghwa: '봉화군',
-    yeongju: '영주시',
-    uljin: '울진군'
-};
+const SIDO_PATTERN = /^(서울|부산|대구|인천|광주|대전|울산|세종|경기|강원|충북|충남|전북|전남|경북|경남|제주|경기도|강원도|강원특별자치도|충청북도|충청남도|전라북도|전북특별자치도|전라남도|경상북도|경상남도|제주도|제주특별자치도)\s*/;
+window.SIDO_PATTERN = SIDO_PATTERN;
 
 /**
  * 저장소 관련 상수
@@ -165,7 +166,6 @@ window.APP_CONSTANTS = {
     PAGINATION,
     TIMER,
     AUTOCOMPLETE,
-    LOCAL_REGIONS,
     STORAGE,
     FILE,
     VALIDATION,
@@ -183,7 +183,6 @@ window.APP_VERSION = APP_VERSION;
 window.PAGINATION = PAGINATION;
 window.TIMER = TIMER;
 window.AUTOCOMPLETE = AUTOCOMPLETE;
-window.LOCAL_REGIONS = LOCAL_REGIONS;
 window.STORAGE = STORAGE;
 window.FILE = FILE;
 window.VALIDATION = VALIDATION;

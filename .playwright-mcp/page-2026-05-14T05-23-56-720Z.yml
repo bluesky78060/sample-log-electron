@@ -1,0 +1,46 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - button "동기화" [ref=e4] [cursor=pointer]:
+      - img [ref=e5]
+      - generic [ref=e10]: 동기화
+    - link "설정" [ref=e11] [cursor=pointer]:
+      - /url: settings/index.html
+      - img [ref=e12]
+      - generic: 설정
+    - link "릴리즈 노트" [ref=e15] [cursor=pointer]:
+      - /url: release/index.html
+      - img [ref=e16]
+      - generic: 릴리즈 노트
+    - link "설명서" [ref=e20] [cursor=pointer]:
+      - /url: manual/index.html
+      - img [ref=e21]
+      - generic: 설명서
+    - generic [ref=e24]:
+      - img [ref=e25]
+      - button "다크 모드로 전환" [ref=e28] [cursor=pointer]
+      - img [ref=e29]
+  - generic [ref=e31]:
+    - generic [ref=e32]:
+      - heading "토양 시료 접수 대장" [level=1] [ref=e33]
+      - paragraph [ref=e34]: 분석할 메뉴를 선택해주세요
+    - generic [ref=e35]:
+      - link "토양 토양 논, 밭, 과수, 시설 토양 분석 (흙토람 결과 가져오기 포함) ● 사용 가능" [ref=e36] [cursor=pointer]:
+        - /url: soil/index.html
+        - img "토양" [ref=e37]
+        - generic [ref=e38]: 토양
+        - generic [ref=e39]:
+          - text: 논, 밭, 과수, 시설 토양 분석
+          - text: (흙토람 결과 가져오기 포함)
+        - generic [ref=e40]: ● 사용 가능
+      - complementary "토양 시료 통계" [ref=e41]:
+        - generic [ref=e42]:
+          - generic [ref=e43]: 토양 통계
+          - generic [ref=e44]: 2026년
+        - generic [ref=e45]:
+          - text: 아직 등록된 토양 시료가 없습니다.
+          - strong [ref=e46]: 토양
+          - text: 카드를 눌러 시료를 등록하면
+          - text: 여기에 통계가 표시됩니다.
+    - generic [ref=e47]:
+      - paragraph [ref=e48]: 봉화군농업기술센터 안전성분석센터
+      - paragraph [ref=e49]: v1.0.6

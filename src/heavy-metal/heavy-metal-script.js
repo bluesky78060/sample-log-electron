@@ -1569,7 +1569,7 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
         const samplingLocationInput = document.getElementById('samplingLocation');
         const samplingLocationAutocomplete = document.getElementById('samplingLocationAutocomplete');
         window.AddressAutocomplete.bind(samplingLocationInput, samplingLocationAutocomplete, {
-            regionKeys: null,
+            regionKeys: ['bonghwa', 'yeongju', 'uljin'],
             regionNames: this.GYEONGBUK_REGION_NAMES || null,
         });
     }

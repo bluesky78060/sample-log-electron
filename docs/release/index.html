@@ -596,9 +596,39 @@
                 </div>
             </div>
 
-            <!-- v1.9.3 -->
+            <!-- v1.10.0 -->
             <div class="version-entry">
                 <div class="version-dot latest"></div>
+                <div class="version-card">
+                    <div class="version-card-header">
+                        <div>
+                            <div class="version-meta">
+                                <span class="version-number">v1.10.0</span>
+                                <span class="version-date">2026-05-14</span>
+                            </div>
+                            <div class="version-title">도로명 주소 검색 juso API 마이그레이션 + 보안 강화</div>
+                        </div>
+                        <div class="badge-row">
+                            <span class="badge badge-latest">★ 최신</span>
+                            <span class="badge badge-security">🔒 보안</span>
+                            <span class="badge badge-fix">수정</span>
+                        </div>
+                    </div>
+                    <ul class="change-list">
+                        <li><strong>도로명 주소 검색 Kakao Postcode → 행정안전부 juso API 자체 모달로 전환</strong> — 외부 CDN(<code>t1.kakaocdn.net</code>) 의존성 완전 제거. 검색 입력 + 결과 리스트 + 페이지네이션 + 키보드(↑↓Enter) + 다크모드 자체 구현. juso 응답을 Kakao 형식으로 매핑하는 어댑터로 기존 호출처 변경 없이 호환.</li>
+                        <li><strong>CSP(Content Security Policy) 축소</strong> — <code>script-src</code>/<code>frame-src</code>에서 카카오·다음 도메인 6개 제거 (<code>t1.kakaocdn.net</code>, <code>t1.daumcdn.net</code>, <code>postcode.map.kakao.com</code>, <code>postcode.map.daum.net</code>, <code>*.kakaocdn.net</code>, <code>*.daumcdn.net</code>). 공격 표면 감소.</li>
+                        <li><strong>jQuery 1.12.4 unload deprecation 경고 해소 + Quirks Mode 경고 해소</strong> — Kakao iframe 의존성 제거의 부수 효과.</li>
+                        <li><strong>수질·잔류농약·중금속·퇴액비 "데이터 로드 실패" 핫픽스</strong> — SAMPL-1-46에서 누락된 <code>SIDO_PATTERN</code> 정규식 상수를 <code>constants.js</code>에 복원. <code>ReferenceError: SIDO_PATTERN is not defined</code>로 인한 목록 렌더링 실패 해결.</li>
+                        <li><strong>잔류농약 잔존 <code>LOCAL_REGIONS</code> 참조 정리</strong> — SAMPL-1-46 cleanup 미완료분 정리로 잠재 TypeError 차단.</li>
+                        <li><strong>main process Rate Limiter 시그니처 개선</strong> — <code>ipcRateLimiter.check(channel, maxCalls)</code>로 채널별 한도 override 가능. 외부 API(juso/vworld)는 초당 5회로 보수적 제한.</li>
+                        <li><strong>sanitizeJusoKeyword 정규식 사전 컴파일</strong> — SQL 예약어 검증 호출당 RegExp 12회 생성 제거.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- v1.9.3 -->
+            <div class="version-entry">
+                <div class="version-dot"></div>
                 <div class="version-card">
                     <div class="version-card-header">
                         <div>
@@ -609,7 +639,6 @@
                             <div class="version-title">연도 드롭다운 + 토양 수정 접수번호 핫픽스</div>
                         </div>
                         <div class="badge-row">
-                            <span class="badge badge-latest">★ 최신</span>
                             <span class="badge badge-fix">수정</span>
                         </div>
                     </div>

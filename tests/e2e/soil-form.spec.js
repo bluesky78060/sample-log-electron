@@ -51,15 +51,14 @@ test.describe('토양 시료 접수', () => {
             await expect(page.locator('.parcel-card')).toHaveCount(initialCount + 1);
         });
 
-        test('필지별 구분 라디오 버튼 존재 확인', async ({ page }) => {
-            await expect(page.locator('.parcel-category-radios').first()).toBeVisible();
+        test('필지별 구분 드롭다운 존재 확인', async ({ page }) => {
+            await expect(page.locator('.parcel-category-select').first()).toBeVisible();
         });
 
-        test('필지별 구분 라디오 버튼 선택 가능', async ({ page }) => {
-            const radioLabel = page.locator('.parcel-category-label').filter({ hasText: '논' }).first();
-            await radioLabel.click();
-            const radio = radioLabel.locator('input[type="radio"]');
-            await expect(radio).toBeChecked();
+        test('필지별 구분 드롭다운 선택 가능', async ({ page }) => {
+            const select = page.locator('.parcel-category-select').first();
+            await select.selectOption('논');
+            await expect(select).toHaveValue('논');
         });
     });
 

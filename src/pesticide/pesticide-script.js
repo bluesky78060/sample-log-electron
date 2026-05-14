@@ -621,7 +621,8 @@ class PesticideSampleManager extends window.BaseSampleManager {
                 const isMountain = e.target.dataset.isMountain === 'true';
 
                 const villageWithMountain = isMountain ? `${village} 산` : village;
-                const region = e.target.dataset.region || window.LOCAL_REGIONS[regionKey] || regionKey;
+                // SAMPL-1-48: window.LOCAL_REGIONS는 SAMPL-1-46에서 제거됨. 안전 fallback만 유지
+                const region = e.target.dataset.region || regionKey;
                 const fullAddress = `${region} ${district} ${villageWithMountain}`;
                 const currentValue = addressInput.value.trim();
                 const match = currentValue.match(/\d+(-\d+)?$/);
@@ -752,7 +753,8 @@ class PesticideSampleManager extends window.BaseSampleManager {
                 const isMountain = e.target.dataset.isMountain === 'true';
 
                 const villageWithMountain = isMountain ? `${village} 산` : village;
-                const region = e.target.dataset.region || window.LOCAL_REGIONS[regionKey] || regionKey;
+                // SAMPL-1-48: window.LOCAL_REGIONS는 SAMPL-1-46에서 제거됨. 안전 fallback만 유지
+                const region = e.target.dataset.region || regionKey;
                 const fullAddress = `${region} ${district} ${villageWithMountain}`;
                 const currentValue = this.producerAddressInput.value.trim();
                 const numberMatch = currentValue.match(/\d+(-\d+)?$/);

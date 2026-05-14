@@ -719,7 +719,28 @@ class HeuktoramManager {
         if (!this.testResults[key]) {
             this.testResults[key] = {};
         }
-        const sanitized = value.slice(0, window.SampleConstants?.VALIDATION?.MAX_CELL_INPUT_LENGTH ?? 200);
+        let sanitized = value.slice(0, window.SampleConstants?.VALIDATION?.MAX_CELL_INPUT_LENGTH ?? 200);
+
+        // 최소값 미만/음수 입력 시 min으로 자동 보정
+        const range = this.fieldRanges[field];
+        if (range && sanitized.trim() !== '') {
+            const num = parseFloat(sanitized);
+            if (!isNaN(num) && num < range.min) {
+                const original = num;
+                sanitized = String(range.min);
+                const rowIdx = this.flatRows.findIndex(r => r.key === key);
+                const colIdx = this.resultFields.indexOf(field);
+                const cell = this.tableBody?.querySelector(`td[data-row="${rowIdx}"][data-col="${colIdx}"]`);
+                if (cell && cell.textContent !== sanitized) {
+                    cell.textContent = sanitized;
+                }
+                const unitText = range.unit ? ` ${range.unit}` : '';
+                if (window.showToast) {
+                    window.showToast(`ℹ️ ${range.label}: ${original}${unitText} → 최소값 ${range.min}${unitText}으로 보정됨`, 'info');
+                }
+            }
+        }
+
         this.testResults[key][field] = sanitized;
         this.syncToSiblings(key, field, sanitized);
         this.saveTestResults();

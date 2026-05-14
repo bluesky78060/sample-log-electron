@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+
+<html lang="ko"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>토양 접수 통계 - Digital Agronomist</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;family=Noto+Sans+KR:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-container-lowest": "#ffffff",
+                      "surface-dim": "#dbdad5",
+                      "on-secondary-container": "#785800",
+                      "primary": "#506226",
+                      "primary-fixed-dim": "#b9cf86",
+                      "on-surface-variant": "#45483c",
+                      "inverse-surface": "#30312e",
+                      "inverse-primary": "#b9cf86",
+                      "tertiary-fixed-dim": "#f6be39",
+                      "error-container": "#ffdad6",
+                      "tertiary-fixed": "#ffdfa0",
+                      "on-tertiary-fixed-variant": "#5c4300",
+                      "error": "#ba1a1a",
+                      "surface-container-highest": "#e3e3de",
+                      "on-error": "#ffffff",
+                      "inverse-on-surface": "#f2f1ec",
+                      "outline": "#76786b",
+                      "tertiary": "#765700",
+                      "surface-container": "#efeee9",
+                      "on-tertiary-container": "#fffbff",
+                      "secondary": "#795900",
+                      "tertiary-container": "#956e00",
+                      "secondary-container": "#fed174",
+                      "primary-container": "#687c3c",
+                      "on-surface": "#1b1c19",
+                      "on-primary-fixed-variant": "#3b4d12",
+                      "on-tertiary-fixed": "#261a00",
+                      "surface-variant": "#e3e3de",
+                      "surface-container-high": "#e9e8e3",
+                      "surface-tint": "#526528",
+                      "secondary-fixed-dim": "#ecc165",
+                      "on-primary": "#ffffff",
+                      "on-secondary-fixed-variant": "#5c4300",
+                      "surface": "#faf9f4",
+                      "background": "#faf9f4",
+                      "secondary-fixed": "#ffdfa0",
+                      "outline-variant": "#c6c8b8",
+                      "surface-bright": "#faf9f4",
+                      "on-error-container": "#93000a",
+                      "surface-container-low": "#f5f4ef",
+                      "primary-fixed": "#d4eca0",
+                      "on-secondary": "#ffffff",
+                      "on-background": "#1b1c19",
+                      "on-primary-fixed": "#141f00",
+                      "on-secondary-fixed": "#261a00",
+                      "on-primary-container": "#fbffe6",
+                      "on-tertiary": "#ffffff"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "fontFamily": {
+                      "headline": ["Manrope", "Noto Sans KR"],
+                      "body": ["Inter", "Noto Sans KR"],
+                      "label": ["Inter", "Noto Sans KR"]
+              }
+            },
+          },
+        }
+      </script>
+<style>
+        .soil-grid {
+            background-image: radial-gradient(circle, #c6c8b8 1px, transparent 1px);
+            background-size: 24px 24px;
+            opacity: 0.2;
+        }
+        .glass-tooltip {
+            background: rgba(250, 249, 244, 0.8);
+            backdrop-filter: blur(12px);
+        }
+        body {
+            font-family: 'Inter', 'Noto Sans KR', sans-serif;
+            background-color: #f0f0eb;
+        }
+      </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+<!-- Modal Container -->
+<div class="w-full max-w-[850px] bg-surface rounded-xl overflow-hidden shadow-[0px_12px_32px_rgba(27,28,25,0.08)] flex flex-col relative">
+<!-- TopAppBar (Shared Component Logic) -->
+<header class="flex justify-between items-center w-full px-6 py-4 bg-stone-50 dark:bg-stone-950">
+<h1 class="text-lg font-bold text-stone-900 dark:text-stone-100 font-headline">토양 접수 통계</h1>
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-stone-100 dark:hover:bg-stone-800 transition-all scale-98 text-stone-500">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+</header>
+<!-- Main Content Area -->
+<main class="p-8 space-y-8 overflow-y-auto max-h-[870px]">
+<!-- Hero Completion Card -->
+<section class="bg-surface-container-low rounded-xl p-8 relative overflow-hidden">
+<div class="absolute inset-0 soil-grid pointer-events-none"></div>
+<div class="relative z-10 flex flex-col items-center">
+<div class="flex items-end justify-center gap-12 mb-6">
+<div class="text-center">
+<span class="block text-[0.7rem] font-bold text-on-surface-variant uppercase tracking-wider mb-1 font-label">전체</span>
+<span class="text-2xl font-extrabold text-on-surface font-headline">709<small class="text-sm font-medium ml-0.5">건</small></span>
+</div>
+<div class="text-center pb-2">
+<span class="text-6xl font-extrabold text-primary font-headline tracking-tighter">91.4%</span>
+<span class="block text-[0.75rem] font-semibold text-primary/80 mt-1 font-label">종합 진행률</span>
+</div>
+<div class="flex gap-8">
+<div class="text-center">
+<span class="block text-[0.7rem] font-bold text-on-surface-variant uppercase tracking-wider mb-1 font-label">완료</span>
+<span class="text-2xl font-extrabold text-primary font-headline">648<small class="text-sm font-medium ml-0.5">건</small></span>
+</div>
+<div class="text-center">
+<span class="block text-[0.7rem] font-bold text-on-surface-variant uppercase tracking-wider mb-1 font-label">미완료</span>
+<span class="text-2xl font-extrabold text-secondary font-headline">61<small class="text-sm font-medium ml-0.5">건</small></span>
+</div>
+</div>
+</div>
+<!-- Large Progress Bar -->
+<div class="w-full h-4 bg-surface-container-highest rounded-full overflow-hidden flex">
+<div class="h-full bg-primary rounded-full transition-all duration-1000" style="width: 91.4%;"></div>
+</div>
+</div>
+</section>
+<!-- Middle Section: Horizontal Stats -->
+<div class="grid grid-cols-2 gap-8">
+<!-- Left Column: Type Stats -->
+<section class="space-y-4">
+<h3 class="text-sm font-bold text-on-surface-variant border-l-4 border-tertiary pl-3 py-0.5 font-headline">구분별 통계</h3>
+<div class="bg-surface-container-low/50 rounded-xl p-5 space-y-4">
+<!-- Bar Item: 밭 -->
+<div class="space-y-1.5">
+<div class="flex justify-between items-center text-xs font-semibold">
+<span class="text-on-surface">밭</span>
+<span class="text-on-surface-variant">408건 (57.5%)</span>
+</div>
+<div class="w-full h-2.5 bg-surface-container-highest rounded-full">
+<div class="h-full bg-tertiary rounded-full" style="width: 57.5%;"></div>
+</div>
+</div>
+<!-- Bar Item: 과수 -->
+<div class="space-y-1.5">
+<div class="flex justify-between items-center text-xs font-semibold">
+<span class="text-on-surface">과수</span>
+<span class="text-on-surface-variant">121건 (17.1%)</span>
+</div>
+<div class="w-full h-2.5 bg-surface-container-highest rounded-full">
+<div class="h-full bg-secondary-container text-on-secondary-container rounded-full" style="width: 17.1%;"></div>
+</div>
+</div>
+<!-- Bar Item: 시설 -->
+<div class="space-y-1.5">
+<div class="flex justify-between items-center text-xs font-semibold">
+<span class="text-on-surface">시설</span>
+<span class="text-on-surface-variant">87건 (12.3%)</span>
+</div>
+<div class="w-full h-2.5 bg-surface-container-highest rounded-full">
+<div class="h-full bg-secondary-fixed-dim rounded-full" style="width: 12.3%;"></div>
+</div>
+</div>
+<!-- Bar Item: 임야 -->
+<div class="space-y-1.5">
+<div class="flex justify-between items-center text-xs font-semibold">
+<span class="text-on-surface">임야</span>
+<span class="text-on-surface-variant">47건 (6.6%)</span>
+</div>
+<div class="w-full h-2.5 bg-surface-container-highest rounded-full">
+<div class="h-full bg-outline-variant rounded-full" style="width: 6.6%;"></div>
+</div>
+</div>
+<!-- Bar Item: 논 -->
+<div class="space-y-1.5">
+<div class="flex justify-between items-center text-xs font-semibold">
+<span class="text-on-surface">논</span>
+<span class="text-on-surface-variant">46건 (6.5%)</span>
+</div>
+<div class="w-full h-2.5 bg-surface-container-highest rounded-full">
+<div class="h-full bg-surface-dim rounded-full" style="width: 6.5%;"></div>
+</div>
+</div>
+</div>
+</section>
+<!-- Right Column: Purpose Stats -->
+<section class="space-y-4">
+<h3 class="text-sm font-bold text-on-surface-variant border-l-4 border-secondary pl-3 py-0.5 font-headline">목적별 통계</h3>
+<div class="bg-surface-container-low/50 rounded-xl p-5 space-y-4">
+<!-- Bar Item: 무농약 -->
+<div class="space-y-1.5">
+<div class="flex justify-between items-center text-xs font-semibold">
+<span class="text-on-surface">무농약</span>
+<span class="text-on-surface-variant">309건 (43.6%)</span>
+</div>
+<div class="w-full h-2.5 bg-surface-container-highest rounded-full">
+<div class="h-full bg-secondary rounded-full" style="width: 43.6%;"></div>
+</div>
+</div>
+<!-- Bar Item: 일반재배 -->
+<div class="space-y-1.5">
+<div class="flex justify-between items-center text-xs font-semibold">
+<span class="text-on-surface">일반재배</span>
+<span class="text-on-surface-variant">292건 (41.2%)</span>
+</div>
+<div class="w-full h-2.5 bg-surface-container-highest rounded-full">
+<div class="h-full bg-tertiary-fixed-dim rounded-full" style="width: 41.2%;"></div>
+</div>
+</div>
+<!-- Bar Item: 유기 -->
+<div class="space-y-1.5">
+<div class="flex justify-between items-center text-xs font-semibold">
+<span class="text-on-surface">유기</span>
+<span class="text-on-surface-variant">103건 (14.5%)</span>
+</div>
+<div class="w-full h-2.5 bg-surface-container-highest rounded-full">
+<div class="h-full bg-primary-fixed-dim rounded-full" style="width: 14.5%;"></div>
+</div>
+</div>
+<!-- Bar Item: GAP -->
+<div class="space-y-1.5">
+<div class="flex justify-between items-center text-xs font-semibold">
+<span class="text-on-surface">GAP</span>
+<span class="text-on-surface-variant">5건 (0.7%)</span>
+</div>
+<div class="w-full h-2.5 bg-surface-container-highest rounded-full">
+<div class="h-full bg-surface-dim rounded-full" style="width: 5%;"></div>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Bottom Section: Monthly Receipt Trends -->
+<section class="space-y-4">
+<div class="flex justify-between items-end">
+<h3 class="text-sm font-bold text-on-surface-variant border-l-4 border-primary pl-3 py-0.5 font-headline">월별 접수 현황</h3>
+<div class="flex gap-4 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+                            완료
+                        </div>
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+                            미완료
+                        </div>
+</div>
+</div>
+<div class="bg-surface-container-low/50 rounded-xl p-8 h-64 flex items-end justify-around relative">
+<!-- Subtle Grid Background -->
+<div class="absolute inset-x-8 inset-y-8 flex flex-col justify-between pointer-events-none">
+<div class="w-full border-t border-outline-variant/10"></div>
+<div class="w-full border-t border-outline-variant/10"></div>
+<div class="w-full border-t border-outline-variant/10"></div>
+<div class="w-full border-t border-outline-variant/10"></div>
+<div class="w-full border-t border-outline-variant/10"></div>
+</div>
+<!-- Jan -->
+<div class="relative z-10 flex flex-col items-center group">
+<div class="flex items-end gap-1 mb-2 h-40">
+<div class="w-6 bg-primary rounded-t-sm" style="height: 12%;"></div> <!-- Approx 35/300 scaled -->
+<div class="w-6 bg-secondary rounded-t-sm" style="height: 2%;"></div> <!-- Approx 4/300 scaled -->
+</div>
+<span class="text-xs font-bold text-on-surface-variant font-label">1월</span>
+<div class="absolute -top-6 opacity-0 group-hover:opacity-100 transition-opacity bg-on-surface text-surface text-[10px] px-2 py-1 rounded-sm whitespace-nowrap">총 39건</div>
+</div>
+<!-- Feb -->
+<div class="relative z-10 flex flex-col items-center group">
+<div class="flex items-end gap-1 mb-2 h-40">
+<div class="w-6 bg-primary rounded-t-sm" style="height: 44%;"></div> <!-- Approx 132/300 scaled -->
+<div class="w-6 bg-secondary rounded-t-sm" style="height: 6%;"></div> <!-- Approx 16/300 scaled -->
+</div>
+<span class="text-xs font-bold text-on-surface-variant font-label">2월</span>
+<div class="absolute -top-6 opacity-0 group-hover:opacity-100 transition-opacity bg-on-surface text-surface text-[10px] px-2 py-1 rounded-sm whitespace-nowrap">총 148건</div>
+</div>
+<!-- Mar -->
+<div class="relative z-10 flex flex-col items-center group">
+<div class="flex items-end gap-1 mb-2 h-40">
+<div class="w-6 bg-primary rounded-t-sm" style="height: 90%;"></div> <!-- Approx 270/300 scaled -->
+<div class="w-6 bg-secondary rounded-t-sm" style="height: 10%;"></div> <!-- Approx 23/300 scaled -->
+</div>
+<span class="text-xs font-bold text-on-surface-variant font-label">3월</span>
+<div class="absolute -top-6 opacity-0 group-hover:opacity-100 transition-opacity bg-on-surface text-surface text-[10px] px-2 py-1 rounded-sm whitespace-nowrap">총 293건</div>
+</div>
+<!-- Apr -->
+<div class="relative z-10 flex flex-col items-center group">
+<div class="flex items-end gap-1 mb-2 h-40">
+<div class="w-6 bg-primary rounded-t-sm" style="height: 68%;"></div> <!-- Approx 205/300 scaled -->
+<div class="w-6 bg-secondary rounded-t-sm" style="height: 6%;"></div> <!-- Approx 18/300 scaled -->
+</div>
+<span class="text-xs font-bold text-on-surface-variant font-label">4월</span>
+<div class="absolute -top-6 opacity-0 group-hover:opacity-100 transition-opacity bg-on-surface text-surface text-[10px] px-2 py-1 rounded-sm whitespace-nowrap">총 223건</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="flex justify-end items-center gap-3 w-full px-8 py-6 bg-stone-50 dark:bg-stone-950 border-t border-stone-200/10">
+<button class="px-6 py-2.5 rounded-full border border-outline text-on-surface-variant text-sm font-semibold hover:bg-stone-100 transition-colors">
+                닫기
+            </button>
+<button class="px-6 py-2.5 rounded-full bg-primary text-on-primary text-sm font-semibold flex items-center gap-2 hover:bg-primary-container transition-all scale-98">
+<span class="material-symbols-outlined text-[18px]" data-icon="download">download</span>
+                엑셀 내보내기
+            </button>
+</footer>
+</div>
+</body></html>

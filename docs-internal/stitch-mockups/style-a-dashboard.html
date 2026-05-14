@@ -1,0 +1,313 @@
+<html><head><meta charset="utf-8"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&amp;family=Plus+Jakarta+Sans:wght@400;500;600&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+                "tertiary": "#5d5e62",
+                "primary-container": "#10b981",
+                "secondary-fixed": "#eae1da",
+                "on-error-container": "#93000a",
+                "on-primary-container": "#00422b",
+                "tertiary-fixed-dim": "#c6c6ca",
+                "surface-bright": "#f9f9f8",
+                "outline-variant": "#bbcabf",
+                "surface-dim": "#dadad9",
+                "on-primary-fixed-variant": "#005236",
+                "surface-container-high": "#e8e8e7",
+                "on-primary-fixed": "#002113",
+                "inverse-surface": "#2f3130",
+                "secondary": "#645d58",
+                "on-secondary": "#ffffff",
+                "on-surface-variant": "#3c4a42",
+                "on-primary": "#ffffff",
+                "inverse-primary": "#4edea3",
+                "tertiary-container": "#a2a2a6",
+                "inverse-on-surface": "#f1f1f0",
+                "on-secondary-fixed-variant": "#4b4641",
+                "tertiary-fixed": "#e2e2e6",
+                "surface-variant": "#e2e2e2",
+                "on-tertiary-fixed": "#1a1c1f",
+                "error-container": "#ffdad6",
+                "primary-fixed-dim": "#4edea3",
+                "secondary-fixed-dim": "#cec5bf",
+                "outline": "#6c7a71",
+                "on-surface": "#1a1c1c",
+                "on-secondary-fixed": "#1f1b17",
+                "background": "#f9f9f8",
+                "on-secondary-container": "#6a635e",
+                "surface-container-highest": "#e2e2e2",
+                "surface-container-lowest": "#ffffff",
+                "primary-fixed": "#6ffbbe",
+                "surface-tint": "#006c49",
+                "surface-container-low": "#f3f4f3",
+                "on-tertiary-fixed-variant": "#45474a",
+                "secondary-container": "#eae1da",
+                "primary": "#006c49",
+                "on-tertiary-container": "#37393c",
+                "on-error": "#ffffff",
+                "surface": "#f9f9f8",
+                "on-tertiary": "#ffffff",
+                "error": "#ba1a1a",
+                "on-background": "#1a1c1c",
+                "surface-container": "#eeeeed"
+        },
+        "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.5rem",
+                "xl": "0.75rem",
+                "full": "9999px"
+        },
+        "fontFamily": {
+                "headline": ["Manrope"],
+                "body": ["Plus Jakarta Sans"],
+                "label": ["Plus Jakarta Sans"]
+        }
+      },
+    },
+  }
+</script>
+<style>
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  }
+  .progress-ring__circle {
+    transition: stroke-dashoffset 0.35s;
+    transform: rotate(-90deg);
+    transform-origin: 50% 50%;
+  }
+</style>
+</head><body class="bg-surface font-body text-on-surface min-h-screen flex items-center justify-center p-6">
+<!-- Modal Overlay (Visual simulation) -->
+<div class="fixed inset-0 bg-on-surface/20 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+<!-- Modal Container -->
+<div class="bg-surface-container-lowest w-full max-w-[900px] rounded-xl shadow-2xl flex flex-col overflow-hidden max-h-[921px]">
+<!-- TopAppBar Navigation Hook (Shared Component Integration) -->
+<header class="flex justify-between items-center w-full px-8 py-6 bg-surface-container-lowest">
+<div class="flex flex-col">
+<h1 class="font-headline text-2xl font-extrabold text-on-surface tracking-tight">토양 접수 통계</h1>
+<p class="text-on-surface-variant text-sm font-medium">Digital Greenhouse Analysis</p>
+</div>
+<button class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-on-surface">close</span>
+</button>
+</header>
+<!-- Scrollable Content -->
+<div class="flex-1 overflow-y-auto px-8 pb-8 space-y-8">
+<!-- Top Section: Stats Bento Grid -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+<!-- Total Receipt -->
+<div class="bg-surface-container-low p-6 rounded-xl flex flex-col justify-between">
+<div class="flex items-center gap-2 mb-4">
+<div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-sm">inventory_2</span>
+</div>
+<span class="text-sm font-semibold text-on-surface-variant">전체 접수</span>
+</div>
+<div class="flex items-baseline gap-1">
+<span class="font-headline text-4xl font-extrabold text-on-surface">709</span>
+<span class="text-on-surface-variant font-medium">건</span>
+</div>
+</div>
+<!-- Completed -->
+<div class="bg-surface-container-low p-6 rounded-xl flex flex-col justify-between">
+<div class="flex items-center gap-2 mb-4">
+<div class="w-8 h-8 rounded-lg bg-primary-container/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary-container text-sm">check_circle</span>
+</div>
+<span class="text-sm font-semibold text-on-surface-variant">완료</span>
+</div>
+<div class="flex items-baseline gap-1">
+<span class="font-headline text-4xl font-extrabold text-on-primary-container">648</span>
+<span class="text-on-surface-variant font-medium">건</span>
+</div>
+</div>
+<!-- Incomplete -->
+<div class="bg-surface-container-low p-6 rounded-xl flex flex-col justify-between">
+<div class="flex items-center gap-2 mb-4">
+<div class="w-8 h-8 rounded-lg bg-secondary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-on-secondary-container text-sm">pending</span>
+</div>
+<span class="text-sm font-semibold text-on-surface-variant">미완료</span>
+</div>
+<div class="flex items-baseline gap-1">
+<span class="font-headline text-4xl font-extrabold text-on-secondary-container">61</span>
+<span class="text-on-surface-variant font-medium">건</span>
+</div>
+</div>
+<!-- Completion Ring -->
+<div class="bg-primary bg-gradient-to-br from-primary to-primary-container p-6 rounded-xl flex flex-col items-center justify-center text-on-primary relative overflow-hidden">
+<div class="relative w-24 h-24 flex items-center justify-center">
+<!-- Ring Background -->
+<svg class="absolute w-full h-full" viewbox="0 0 100 100">
+<circle class="text-white/20" cx="50" cy="50" fill="transparent" r="40" stroke="currentColor" stroke-width="8"></circle>
+<circle class="text-white progress-ring__circle" cx="50" cy="50" fill="transparent" r="40" stroke="currentColor" stroke-dasharray="251.2" stroke-dashoffset="21.6" stroke-linecap="round" stroke-width="8"></circle>
+</svg>
+<span class="font-headline font-bold text-xl">91.4%</span>
+</div>
+<span class="mt-2 text-xs font-bold uppercase tracking-widest opacity-90">완료율</span>
+</div>
+</div>
+<!-- Middle Section: Donut Charts -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Usage Stats (Donut) -->
+<div class="bg-surface-container-lowest border border-outline-variant/10 p-6 rounded-xl">
+<h3 class="font-bold text-on-surface mb-6 flex items-center gap-2">
+<span class="w-1.5 h-6 bg-primary rounded-full"></span>
+              용도별 통계
+            </h3>
+<div class="flex items-center justify-around">
+<div class="relative w-36 h-36">
+<!-- Simple SVG Donut Mockup -->
+<svg class="w-full h-full transform -rotate-90" viewbox="0 0 100 100">
+<circle cx="50" cy="50" fill="transparent" r="40" stroke="#10B981" stroke-dasharray="58 100" stroke-width="12"></circle>
+<circle cx="50" cy="50" fill="transparent" r="40" stroke="#6ffbbe" stroke-dasharray="17 100" stroke-dashoffset="-58" stroke-width="12"></circle>
+<circle cx="50" cy="50" fill="transparent" r="40" stroke="#00422b" stroke-dasharray="12 100" stroke-dashoffset="-75" stroke-width="12"></circle>
+<circle cx="50" cy="50" fill="transparent" r="40" stroke="#eae1da" stroke-dasharray="7 100" stroke-dashoffset="-87" stroke-width="12"></circle>
+<circle cx="50" cy="50" fill="transparent" r="40" stroke="#bbcabf" stroke-dasharray="6 100" stroke-dashoffset="-94" stroke-width="12"></circle>
+</svg>
+</div>
+<div class="space-y-2">
+<div class="flex items-center gap-3 text-xs">
+<div class="w-2.5 h-2.5 rounded-full bg-primary-container"></div>
+<span class="w-12 text-on-surface-variant">밭</span>
+<span class="font-bold text-on-surface">408</span>
+</div>
+<div class="flex items-center gap-3 text-xs">
+<div class="w-2.5 h-2.5 rounded-full bg-primary-fixed"></div>
+<span class="w-12 text-on-surface-variant">과수</span>
+<span class="font-bold text-on-surface">121</span>
+</div>
+<div class="flex items-center gap-3 text-xs">
+<div class="w-2.5 h-2.5 rounded-full bg-on-primary-container"></div>
+<span class="w-12 text-on-surface-variant">시설</span>
+<span class="font-bold text-on-surface">87</span>
+</div>
+<div class="flex items-center gap-3 text-xs">
+<div class="w-2.5 h-2.5 rounded-full bg-secondary-fixed"></div>
+<span class="w-12 text-on-surface-variant">임야</span>
+<span class="font-bold text-on-surface">47</span>
+</div>
+<div class="flex items-center gap-3 text-xs">
+<div class="w-2.5 h-2.5 rounded-full bg-outline-variant"></div>
+<span class="w-12 text-on-surface-variant">논</span>
+<span class="font-bold text-on-surface">46</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Purpose Stats (Donut) -->
+<div class="bg-surface-container-lowest border border-outline-variant/10 p-6 rounded-xl">
+<h3 class="font-bold text-on-surface mb-6 flex items-center gap-2">
+<span class="w-1.5 h-6 bg-secondary rounded-full"></span>
+              목적별 통계
+            </h3>
+<div class="flex items-center justify-around">
+<div class="relative w-36 h-36">
+<svg class="w-full h-full transform -rotate-90" viewbox="0 0 100 100">
+<circle cx="50" cy="50" fill="transparent" r="40" stroke="#006c49" stroke-dasharray="44 100" stroke-width="12"></circle>
+<circle cx="50" cy="50" fill="transparent" r="40" stroke="#10B981" stroke-dasharray="41 100" stroke-dashoffset="-44" stroke-width="12"></circle>
+<circle cx="50" cy="50" fill="transparent" r="40" stroke="#eae1da" stroke-dasharray="14 100" stroke-dashoffset="-85" stroke-width="12"></circle>
+<circle cx="50" cy="50" fill="transparent" r="40" stroke="#3c4a42" stroke-dasharray="1 100" stroke-dashoffset="-99" stroke-width="12"></circle>
+</svg>
+</div>
+<div class="space-y-2">
+<div class="flex items-center gap-3 text-xs">
+<div class="w-2.5 h-2.5 rounded-full bg-primary"></div>
+<span class="w-16 text-on-surface-variant">무농약</span>
+<span class="font-bold text-on-surface">309</span>
+</div>
+<div class="flex items-center gap-3 text-xs">
+<div class="w-2.5 h-2.5 rounded-full bg-primary-container"></div>
+<span class="w-16 text-on-surface-variant">일반재배</span>
+<span class="font-bold text-on-surface">292</span>
+</div>
+<div class="flex items-center gap-3 text-xs">
+<div class="w-2.5 h-2.5 rounded-full bg-secondary-fixed"></div>
+<span class="w-16 text-on-surface-variant">유기</span>
+<span class="font-bold text-on-surface">103</span>
+</div>
+<div class="flex items-center gap-3 text-xs">
+<div class="w-2.5 h-2.5 rounded-full bg-on-surface-variant"></div>
+<span class="w-16 text-on-surface-variant">GAP</span>
+<span class="font-bold text-on-surface">5</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Section: Area Chart -->
+<div class="bg-surface-container-low p-8 rounded-xl relative">
+<div class="flex justify-between items-end mb-8">
+<div>
+<h3 class="font-bold text-on-surface text-lg">월별 접수 현황</h3>
+<p class="text-xs text-on-surface-variant mt-1">Status trends for the last 4 months</p>
+</div>
+<div class="flex gap-4">
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 rounded-sm bg-primary"></div>
+<span class="text-xs font-semibold text-on-surface-variant">완료</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 rounded-sm bg-secondary-fixed"></div>
+<span class="text-xs font-semibold text-on-surface-variant">미완료</span>
+</div>
+</div>
+</div>
+<!-- SVG Area Chart Mockup -->
+<div class="w-full h-48 relative">
+<svg class="w-full h-full overflow-visible" preserveaspectratio="none" viewbox="0 0 800 200">
+<!-- Grid Lines -->
+<line class="text-outline-variant/10" stroke="currentColor" stroke-width="1" x1="0" x2="800" y1="0" y2="0"></line>
+<line class="text-outline-variant/10" stroke="currentColor" stroke-width="1" x1="0" x2="800" y1="50" y2="50"></line>
+<line class="text-outline-variant/10" stroke="currentColor" stroke-width="1" x1="0" x2="800" y1="100" y2="100"></line>
+<line class="text-outline-variant/10" stroke="currentColor" stroke-width="1" x1="0" x2="800" y1="150" y2="150"></line>
+<!-- Gradients -->
+<defs>
+<lineargradient id="areaGradientPrimary" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#10B981" stop-opacity="0.3"></stop>
+<stop offset="100%" stop-color="#10B981" stop-opacity="0"></stop>
+</lineargradient>
+<lineargradient id="areaGradientSecondary" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#645d58" stop-opacity="0.2"></stop>
+<stop offset="100%" stop-color="#645d58" stop-opacity="0"></stop>
+</lineargradient>
+</defs>
+<!-- Incomplete Stack (Back) -->
+<path d="M0 170 L266 100 L533 50 L800 80 L800 200 L0 200 Z" fill="url(#areaGradientSecondary)"></path>
+<path d="M0 170 L266 100 L533 50 L800 80" fill="none" stroke="#645d58" stroke-dasharray="4 4" stroke-width="2"></path>
+<!-- Completed Stack (Front) -->
+<!-- Points based on data relative scaling (approximate for visualization) -->
+<!-- Jan: 39, Feb: 148, Mar: 293, Apr: 223 -->
+<path d="M0 185 L266 130 L533 40 L800 70 L800 200 L0 200 Z" fill="url(#areaGradientPrimary)"></path>
+<path d="M0 185 L266 130 L533 40 L800 70" fill="none" stroke="#006c49" stroke-width="3"></path>
+<!-- Data Points -->
+<circle cx="0" cy="185" fill="#006c49" r="4"></circle>
+<circle cx="266" cy="130" fill="#006c49" r="4"></circle>
+<circle cx="533" cy="40" fill="#006c49" r="4"></circle>
+<circle cx="800" cy="70" fill="#006c49" r="4"></circle>
+</svg>
+<!-- X-Axis Labels -->
+<div class="flex justify-between mt-4 px-1 text-[10px] font-bold text-on-surface-variant uppercase tracking-tighter">
+<span>1월 (39)</span>
+<span>2월 (148)</span>
+<span>3월 (293)</span>
+<span>4월 (223)</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Footer Actions -->
+<footer class="px-8 py-6 bg-surface-container-lowest border-t border-outline-variant/10 flex justify-end">
+<button class="px-8 py-3 bg-primary text-on-primary font-bold rounded-xl hover:shadow-lg transition-all active:scale-95 text-sm">
+          닫기
+        </button>
+</footer>
+</div>
+</div>
+
+```</body></html>

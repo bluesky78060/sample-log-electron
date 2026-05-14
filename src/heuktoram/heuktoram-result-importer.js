@@ -799,9 +799,19 @@
 
                     // 소수점 자리수 적용 (숫자가 아니면 원본 유지)
                     const decimals = this._state.fieldDecimals[field];
-                    const value = (typeof decimals === 'number')
+                    let value = (typeof decimals === 'number')
                         ? this._formatValue(trimmed, decimals)
                         : trimmed;
+
+                    // 최소값 미만/음수 입력 시 min으로 자동 보정
+                    let clampedFrom = null;
+                    if (value !== '' && ranges[field]) {
+                        const num = Number(value);
+                        if (!Number.isNaN(num) && num < ranges[field].min) {
+                            clampedFrom = num;
+                            value = String(ranges[field].min);
+                        }
+                    }
 
                     const oldValue = (testResults[target.key] || {})[field] ?? '';
                     const hasConflict = (oldValue !== '' && oldValue != null && String(oldValue) !== value);
@@ -814,9 +824,12 @@
                     }
 
                     let rangeWarning = null;
-                    if (value !== '' && ranges[field]) {
+                    if (clampedFrom !== null) {
+                        rangeWarning = `${ranges[field].label}: ${clampedFrom}${ranges[field].unit || ''} → 최소값 ${ranges[field].min}으로 보정`;
+                        result.stats.rangeWarnings++;
+                    } else if (value !== '' && ranges[field]) {
                         const num = Number(value);
-                        if (!Number.isNaN(num) && (num < ranges[field].min || num > ranges[field].max)) {
+                        if (!Number.isNaN(num) && num > ranges[field].max) {
                             rangeWarning = `${ranges[field].label}: ${num}${ranges[field].unit || ''} (범위 ${ranges[field].min}~${ranges[field].max})`;
                             result.stats.rangeWarnings++;
                         }
