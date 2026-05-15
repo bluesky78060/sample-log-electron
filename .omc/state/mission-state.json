@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-05-14T11:42:46.036Z",
+  "updatedAt": "2026-05-15T05:14:59.414Z",
   "missions": [
     {
       "id": "session:d53d5246-913a-43f9-ac24-6b938987851a:none",
@@ -7,15 +7,15 @@
       "name": "none",
       "objective": "Session mission",
       "createdAt": "2026-05-13T12:07:00.380Z",
-      "updatedAt": "2026-05-14T11:42:46.036Z",
+      "updatedAt": "2026-05-15T05:14:59.414Z",
       "status": "done",
-      "workerCount": 9,
+      "workerCount": 10,
       "taskCounts": {
-        "total": 9,
+        "total": 10,
         "pending": 0,
         "blocked": 0,
         "inProgress": 0,
-        "completed": 9,
+        "completed": 10,
         "failed": 0
       },
       "agents": [
@@ -27,7 +27,7 @@
           "currentStep": null,
           "latestUpdate": "completed",
           "completedSummary": null,
-          "updatedAt": "2026-05-14T11:42:46.036Z"
+          "updatedAt": "2026-05-14T12:13:30.058Z"
         },
         {
           "name": "code-reviewer:ab44787",
@@ -108,48 +108,50 @@
           "latestUpdate": "completed",
           "completedSummary": null,
           "updatedAt": "2026-05-14T11:41:16.904Z"
+        },
+        {
+          "name": "code-reviewer:abfa93c",
+          "role": "code-reviewer",
+          "ownership": "abfa93cbc662920c7",
+          "status": "done",
+          "currentStep": null,
+          "latestUpdate": "completed",
+          "completedSummary": null,
+          "updatedAt": "2026-05-15T05:14:59.414Z"
         }
       ],
       "timeline": [
         {
-          "id": "session-stop:a1b768939b2e49335:2026-05-14T11:27:47.947Z",
-          "at": "2026-05-14T11:27:47.947Z",
-          "kind": "completion",
-          "agent": "code-reviewer:a1b7689",
-          "detail": "completed",
-          "sourceKey": "session-stop:a1b768939b2e49335"
-        },
-        {
-          "id": "session-stop:ab3099502844470c7:2026-05-14T11:29:50.002Z",
-          "at": "2026-05-14T11:29:50.002Z",
+          "id": "session-stop:a1dd8776fdcea54b2:2026-05-14T12:08:44.223Z",
+          "at": "2026-05-14T12:08:44.223Z",
           "kind": "completion",
           "agent": "code-reviewer:a5dbd3b",
           "detail": "completed",
-          "sourceKey": "session-stop:ab3099502844470c7"
+          "sourceKey": "session-stop:a1dd8776fdcea54b2"
         },
         {
-          "id": "session-start:a96a6a0188e5f9c61:2026-05-14T11:38:00.341Z",
-          "at": "2026-05-14T11:38:00.341Z",
+          "id": "session-stop:a29742a7ce11ef449:2026-05-14T12:13:30.058Z",
+          "at": "2026-05-14T12:13:30.058Z",
+          "kind": "completion",
+          "agent": "code-reviewer:a5dbd3b",
+          "detail": "completed",
+          "sourceKey": "session-stop:a29742a7ce11ef449"
+        },
+        {
+          "id": "session-start:abfa93cbc662920c7:2026-05-15T05:12:48.530Z",
+          "at": "2026-05-15T05:12:48.530Z",
           "kind": "update",
-          "agent": "code-reviewer:a96a6a0",
-          "detail": "started code-reviewer:a96a6a0",
-          "sourceKey": "session-start:a96a6a0188e5f9c61"
+          "agent": "code-reviewer:abfa93c",
+          "detail": "started code-reviewer:abfa93c",
+          "sourceKey": "session-start:abfa93cbc662920c7"
         },
         {
-          "id": "session-stop:a96a6a0188e5f9c61:2026-05-14T11:41:16.904Z",
-          "at": "2026-05-14T11:41:16.904Z",
+          "id": "session-stop:abfa93cbc662920c7:2026-05-15T05:14:59.414Z",
+          "at": "2026-05-15T05:14:59.414Z",
           "kind": "completion",
-          "agent": "code-reviewer:a96a6a0",
+          "agent": "code-reviewer:abfa93c",
           "detail": "completed",
-          "sourceKey": "session-stop:a96a6a0188e5f9c61"
-        },
-        {
-          "id": "session-stop:afbcce8d1b63561b7:2026-05-14T11:42:46.036Z",
-          "at": "2026-05-14T11:42:46.036Z",
-          "kind": "completion",
-          "agent": "code-reviewer:a5dbd3b",
-          "detail": "completed",
-          "sourceKey": "session-stop:afbcce8d1b63561b7"
+          "sourceKey": "session-stop:abfa93cbc662920c7"
         }
       ]
     }

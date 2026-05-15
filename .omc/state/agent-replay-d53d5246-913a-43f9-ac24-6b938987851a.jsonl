@@ -28,3 +28,7 @@
 {"t":0,"agent":"a96a6a0","agent_type":"code-reviewer","event":"agent_start","parent_mode":"none"}
 {"t":0,"agent":"a96a6a0","agent_type":"code-reviewer","event":"agent_stop","success":true,"duration_ms":196563}
 {"t":0,"agent":"afbcce8","agent_type":"unknown","event":"agent_stop","success":true}
+{"t":0,"agent":"a1dd877","agent_type":"unknown","event":"agent_stop","success":true}
+{"t":0,"agent":"a29742a","agent_type":"unknown","event":"agent_stop","success":true}
+{"t":0,"agent":"abfa93c","agent_type":"code-reviewer","event":"agent_start","parent_mode":"none"}
+{"t":0,"agent":"abfa93c","agent_type":"code-reviewer","event":"agent_stop","success":true,"duration_ms":130884}

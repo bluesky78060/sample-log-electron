@@ -8,7 +8,9 @@ module.exports = {
     name: 'sample-log',
     executableName: 'sample-log',
     appBundleId: 'com.samplelog.app',
-    extraResource: ['./app-update.yml'],
+    // SAMPL-1-49: .env를 packaged 앱의 resources/ 디렉토리에 동봉 (process.resourcesPath/.env로 접근)
+    // GitHub Actions가 빌드 직전 secrets → .env 생성. 로컬 빌드 시에도 .env 존재 가정.
+    extraResource: ['./app-update.yml', './.env'],
     icon: path.resolve(__dirname, 'assets', 'icon'),
   },
   rebuildConfig: {},
