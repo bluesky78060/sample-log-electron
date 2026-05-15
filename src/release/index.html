@@ -596,9 +596,33 @@
                 </div>
             </div>
 
-            <!-- v1.10.1 -->
+            <!-- v1.10.2 -->
             <div class="version-entry">
                 <div class="version-dot latest"></div>
+                <div class="version-card">
+                    <div class="version-card-header">
+                        <div>
+                            <div class="version-meta">
+                                <span class="version-number">v1.10.2</span>
+                                <span class="version-date">2026-05-15</span>
+                            </div>
+                            <div class="version-title">GitHub Actions checkout 실패 핫픽스 + v1.10.1 빌드 재실행</div>
+                        </div>
+                        <div class="badge-row">
+                            <span class="badge badge-latest">★ 최신</span>
+                            <span class="badge badge-fix">수정</span>
+                        </div>
+                    </div>
+                    <ul class="change-list">
+                        <li><strong>GitHub Actions 빌드 실패 해결</strong> — <code>.claude/worktrees/sad-darwin</code>이 embedded git repo로 추적되어 <code>actions/checkout@v4</code>의 submodule 처리 시 <code>.gitmodules</code> 부재로 exit 128. 추적 해제 + <code>.gitignore</code> 추가.</li>
+                        <li><strong>v1.10.1 빌드 동봉 .env 적용 보장</strong> — JUSO_API_KEY secret 등록 이전 빌드된 v1.10.1 release를 v1.10.2로 재발행.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- v1.10.1 -->
+            <div class="version-entry">
+                <div class="version-dot"></div>
                 <div class="version-card">
                     <div class="version-card-header">
                         <div>
@@ -609,7 +633,6 @@
                             <div class="version-title">배포 Electron의 JUSO_API_KEY 미인식 핫픽스</div>
                         </div>
                         <div class="badge-row">
-                            <span class="badge badge-latest">★ 최신</span>
                             <span class="badge badge-fix">수정</span>
                         </div>
                     </div>

@@ -289,9 +289,15 @@
     },
     {
       "path": "src/release/index.html",
-      "accessCount": 15,
-      "lastAccessed": 1778821910836,
+      "accessCount": 16,
+      "lastAccessed": 1778822687834,
       "type": "directory"
+    },
+    {
+      "path": "package.json",
+      "accessCount": 15,
+      "lastAccessed": 1778822675893,
+      "type": "file"
     },
     {
       "path": "src/shared/autocomplete-manager.js",
@@ -303,12 +309,6 @@
       "path": "src/soil/index.html",
       "accessCount": 14,
       "lastAccessed": 1778757816371,
-      "type": "file"
-    },
-    {
-      "path": "package.json",
-      "accessCount": 14,
-      "lastAccessed": 1778821897026,
       "type": "file"
     },
     {
