@@ -347,6 +347,7 @@ class BaseSampleManager {
                 const receptionNumberInput = document.getElementById('receptionNumber');
                 if (receptionNumberInput && nextNumber) {
                     receptionNumberInput.value = nextNumber;
+                    receptionNumberInput.dataset.baseNumber = nextNumber;
                 }
             }
 

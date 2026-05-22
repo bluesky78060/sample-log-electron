@@ -51,6 +51,9 @@ class PesticideSampleManager extends window.BaseSampleManager {
         // Request items
         this.requestItemCounter = 1;
 
+        // 그룹 묶음 수정용 (같은 접수로 만든 N개 행 추적)
+        this.editingGroupIds = [];
+
         // Parcel system (legacy compat - pesticide doesn't use parcels actively)
         this.parcels = [];
         this.parcelIdCounter = 0;
@@ -805,24 +808,64 @@ class PesticideSampleManager extends window.BaseSampleManager {
     submitForm() {
         const formData = new FormData(this.form);
 
-        // 수정 모드인 경우
+        // 수정 모드인 경우 (그룹 멤버 전체 삭제+재생성)
         if (this.editingId) {
-            const logIndex = this.sampleLogs.findIndex(l => l.id === this.editingId);
-            if (logIndex === -1) {
+            const editingLog = this.sampleLogs.find(l => String(l.id) === String(this.editingId));
+            if (!editingLog) {
                 this.showToast('수정할 데이터를 찾을 수 없습니다.', 'error');
                 return;
             }
 
-            const existingLog = this.sampleLogs[logIndex];
             const requestItems = this.getRequestItems();
-            const firstItem = requestItems[0] || { producerAddress: '', cropName: '' };
-            const applicantType = formData.get('applicantType') || '개인';
+            if (requestItems.length === 0) {
+                this.showToast('최소 하나의 의뢰 항목을 입력해주세요.', 'error');
+                return;
+            }
 
-            const updatedLog = {
-                ...existingLog,
-                receptionNumber: formData.get('receptionNumber'),
+            const applicantType = formData.get('applicantType') || '개인';
+            const oldMembers = (this.editingGroupIds && this.editingGroupIds.length > 0)
+                ? this.sampleLogs.filter(l => this.editingGroupIds.includes(String(l.id)))
+                : [editingLog];
+
+            // 사용자가 의뢰 항목을 줄인 경우(빈 항목 또는 명시적 삭제) 확인 다이얼로그
+            if (requestItems.length < oldMembers.length) {
+                const removeCount = oldMembers.length - requestItems.length;
+                if (!confirm(`기존 ${oldMembers.length}건 중 ${removeCount}건이 삭제됩니다. 계속하시겠습니까?`)) {
+                    return;
+                }
+            }
+            const oldById = new Map(oldMembers.map(m => [String(m.id), m]));
+            const groupId = editingLog.groupId || oldMembers[0]?.groupId || crypto.randomUUID();
+
+            // 접수번호 파싱
+            const receptionRaw = (formData.get('receptionNumber') || '').toString().trim();
+            const receptionNumbers = receptionRaw.split(',').map(n => n.trim()).filter(n => n);
+            const safeBaseParsed = parseInt(receptionNumbers[0], 10);
+            const safeBase = !isNaN(safeBaseParsed) ? safeBaseParsed : (parseInt(this.generateNextReceptionNumber(), 10) || 1);
+
+            // 정렬 (Firestore 삭제와 재생성 양쪽에서 재사용)
+            const oldOrdered = oldMembers.slice().sort((a, b) => {
+                const na = parseInt(a.receptionNumber, 10) || 0;
+                const nb = parseInt(b.receptionNumber, 10) || 0;
+                return na - nb;
+            });
+
+            // 기존 그룹 멤버 로컬에서 제거
+            this.sampleLogs = this.sampleLogs.filter(l => !oldById.has(String(l.id)));
+            const newSlotCount = requestItems.length;
+            if (window.firestoreDb?.isEnabled?.() && oldOrdered.length > newSlotCount) {
+                const year = parseInt(this.selectedYear, 10);
+                for (let i = newSlotCount; i < oldOrdered.length; i++) {
+                    const rid = String(oldOrdered[i].id);
+                    window.firestoreDb.delete('pesticide', year, rid).catch(err => {
+                        (window.logger?.error || console.error)('Firestore 그룹 멤버 삭제 실패:', err);
+                    });
+                }
+            }
+
+            const commonData = {
                 date: formData.get('date'),
-                applicantType: applicantType,
+                applicantType,
                 birthDate: applicantType === '개인' ? formData.get('birthDate') : '',
                 corpNumber: applicantType === '법인' ? formData.get('corpNumber') : '',
                 name: formData.get('name'),
@@ -835,13 +878,29 @@ class PesticideSampleManager extends window.BaseSampleManager {
                 purpose: formData.get('purpose'),
                 receptionMethod: formData.get('receptionMethod') || '-',
                 note: formData.get('note') || '',
-                producerName: formData.get('producerName') || '',
-                producerAddress: firstItem.producerAddress,
-                requestContent: firstItem.cropName,
-                updatedAt: new Date().toISOString()
+                producerName: formData.get('producerName') || ''
             };
 
-            this.sampleLogs[logIndex] = updatedLog;
+            const nowIso = new Date().toISOString();
+            requestItems.forEach((item, idx) => {
+                // 빈 항목이 있어 DOM 인덱스와 결과 배열 인덱스가 다를 수 있으므로,
+                // oldOrdered와 매핑할 때 item.index(DOM 순서)를 우선 사용
+                const prev = oldOrdered[item.index] || oldOrdered[idx];
+                const newLog = {
+                    ...commonData,
+                    id: prev?.id || crypto.randomUUID(),
+                    groupId,
+                    receptionNumber: receptionNumbers[idx] || String(safeBase + idx),
+                    producerAddress: item.producerAddress,
+                    requestContent: item.cropName,
+                    isComplete: prev?.isComplete || false,
+                    testResult: prev?.testResult ?? '',
+                    createdAt: prev?.createdAt || nowIso,
+                    updatedAt: nowIso
+                };
+                this.sampleLogs.push(newLog);
+            });
+
             this.saveLogs();
             this.filterAndRenderLogs();
             this.cancelEditMode();
@@ -861,12 +920,15 @@ class PesticideSampleManager extends window.BaseSampleManager {
         const baseReceptionNumber = parseInt(formData.get('receptionNumber'), 10);
         const createdLogs = [];
         const applicantType = formData.get('applicantType') || '개인';
+        // 동일 폼 제출로 생성된 N개 행을 그룹으로 묶기 위한 식별자
+        const groupId = crypto.randomUUID();
 
         requestItems.forEach((item, idx) => {
             const itemReceptionNumber = String(baseReceptionNumber + idx);
 
             const newLog = {
                 id: crypto.randomUUID(),
+                groupId,
                 receptionNumber: itemReceptionNumber,
                 date: formData.get('date'),
                 applicantType: applicantType,
@@ -929,6 +991,35 @@ class PesticideSampleManager extends window.BaseSampleManager {
     // Override: 샘플 편집
     // ========================================
 
+    // ========================================
+    // 동일 접수 그룹 멤버 조회
+    //  - 신규: groupId 일치
+    //  - 레거시: createdAt + name + phoneNumber + date 휴리스틱 매칭
+    //  반환: receptionNumber 오름차순
+    // ========================================
+    getGroupMembers(log) {
+        if (!log) return [];
+        const matchByGroupId = log.groupId
+            ? this.sampleLogs.filter(l => l.groupId && l.groupId === log.groupId)
+            : [];
+        let members = matchByGroupId;
+        if (members.length === 0) {
+            members = this.sampleLogs.filter(l =>
+                l.createdAt && l.createdAt === log.createdAt &&
+                (l.name || '') === (log.name || '') &&
+                (l.phoneNumber || '') === (log.phoneNumber || '') &&
+                (l.date || '') === (log.date || '')
+            );
+        }
+        if (members.length === 0) members = [log];
+        members.sort((a, b) => {
+            const na = parseInt(a.receptionNumber, 10) || 0;
+            const nb = parseInt(b.receptionNumber, 10) || 0;
+            return na - nb;
+        });
+        return members;
+    }
+
     editSample(id) {
         const logItem = this.sampleLogs.find(l => String(l.id) === id);
         if (logItem) {
@@ -937,9 +1028,16 @@ class PesticideSampleManager extends window.BaseSampleManager {
     }
 
     populateFormForEdit(log) {
+        const groupMembers = this.getGroupMembers(log);
         this.editingId = log.id;
+        this.editingGroupIds = groupMembers.map(m => String(m.id));
 
-        this.receptionNumberInput.value = log.receptionNumber || '';
+        // 그룹 멤버가 2개 이상이면 모든 접수번호를 표시
+        const receptionNumbersStr = groupMembers
+            .map(m => m.receptionNumber || '')
+            .filter(v => v)
+            .join(', ');
+        this.receptionNumberInput.value = receptionNumbersStr || (log.receptionNumber || '');
         this.dateInput.value = log.date || '';
         document.getElementById('name').value = log.name || '';
         document.getElementById('phoneNumber').value = log.phoneNumber || '';
@@ -1013,15 +1111,30 @@ class PesticideSampleManager extends window.BaseSampleManager {
             producerNameInput.value = log.producerName || '';
         }
 
-        // 의뢰 항목 초기화 후 데이터 채우기
+        // 의뢰 항목 초기화 후 그룹 멤버 모두 채우기
         this.resetRequestItems();
-        const firstRequestItem = this.requestItemsList?.querySelector('.request-item');
-        if (firstRequestItem) {
-            const addressInput = firstRequestItem.querySelector('.request-producer-address');
-            const cropInput = firstRequestItem.querySelector('.request-crop-name');
-            if (addressInput) addressInput.value = log.producerAddress || '';
-            if (cropInput) cropInput.value = log.requestContent || '';
+        const groupMembersForForm = (this.editingGroupIds && this.editingGroupIds.length > 1)
+            ? this.sampleLogs
+                .filter(l => this.editingGroupIds.includes(String(l.id)))
+                .sort((a, b) => {
+                    const na = parseInt(a.receptionNumber, 10) || 0;
+                    const nb = parseInt(b.receptionNumber, 10) || 0;
+                    return na - nb;
+                })
+            : [log];
+        // 필요한 개수만큼 추가 항목 생성 (첫 항목은 이미 존재)
+        for (let i = 1; i < groupMembersForForm.length; i++) {
+            this.addRequestItem();
         }
+        const requestItemEls = this.requestItemsList?.querySelectorAll('.request-item') || [];
+        groupMembersForForm.forEach((member, idx) => {
+            const itemEl = requestItemEls[idx];
+            if (!itemEl) return;
+            const addressInput = itemEl.querySelector('.request-producer-address');
+            const cropInput = itemEl.querySelector('.request-crop-name');
+            if (addressInput) addressInput.value = member.producerAddress || '';
+            if (cropInput) cropInput.value = member.requestContent || '';
+        });
 
         // 네비게이션 바 버튼 변경
         if (this.navSubmitBtn) {
@@ -1046,6 +1159,7 @@ class PesticideSampleManager extends window.BaseSampleManager {
 
     resetForm() {
         this.editingId = null;
+        this.editingGroupIds = [];
         this.form.reset();
         // yearSelect 복원: form.reset()이 yearSelect를 첫 옵션(2025)으로 되돌리므로 복원
         { const _yearSelect = document.getElementById('yearSelect'); if (_yearSelect && this.selectedYear) _yearSelect.value = this.selectedYear; }
@@ -1066,6 +1180,7 @@ class PesticideSampleManager extends window.BaseSampleManager {
 
     cancelEditMode() {
         this.editingId = null;
+        this.editingGroupIds = [];
 
         if (this.navSubmitBtn) {
             this.navSubmitBtn.title = '접수 등록';
@@ -2497,22 +2612,31 @@ class PesticideSampleManager extends window.BaseSampleManager {
                 }
             }
 
-            // 삭제 버튼
+            // 삭제 버튼 (같은 그룹 멤버 모두 삭제)
             const deleteBtn = e.target.closest('.btn-delete');
             if (deleteBtn) {
                 const id = deleteBtn.dataset.id;
-                if (confirm('정말 삭제하시겠습니까?')) {
-                    this.sampleLogs = this.sampleLogs.filter(item => String(item.id) !== String(id));
+                const target = this.sampleLogs.find(l => String(l.id) === String(id));
+                const members = target ? this.getGroupMembers(target) : [];
+                const memberIds = new Set(members.map(m => String(m.id)));
+                const confirmMsg = members.length > 1
+                    ? `같은 접수로 등록된 ${members.length}건이 함께 삭제됩니다. 정말 삭제하시겠습니까?`
+                    : '정말 삭제하시겠습니까?';
+                if (confirm(confirmMsg)) {
+                    this.sampleLogs = this.sampleLogs.filter(item => !memberIds.has(String(item.id)));
                     this.saveLogs();
                     this.filterAndRenderLogs();
-                    this.showToast('삭제되었습니다.', 'success');
+                    this.showToast(members.length > 1 ? `${members.length}건 삭제되었습니다.` : '삭제되었습니다.', 'success');
 
                     if (window.firestoreDb?.isEnabled()) {
-                        window.firestoreDb.delete('pesticide', parseInt(this.selectedYear, 10), String(id))
-                            .catch(err => (window.logger?.error || console.error)('Firebase 삭제 실패:', err));
+                        const year = parseInt(this.selectedYear, 10);
+                        memberIds.forEach(mid => {
+                            window.firestoreDb.delete('pesticide', year, mid)
+                                .catch(err => (window.logger?.error || console.error)('Firebase 삭제 실패:', err));
+                        });
                     }
 
-                    if (this.editingId === id) {
+                    if (this.editingId && memberIds.has(String(this.editingId))) {
                         this.cancelEditMode();
                     }
                 }

@@ -596,9 +596,37 @@
                 </div>
             </div>
 
-            <!-- v1.10.2 -->
+            <!-- v1.11.0 -->
             <div class="version-entry">
                 <div class="version-dot latest"></div>
+                <div class="version-card">
+                    <div class="version-card-header">
+                        <div>
+                            <div class="version-meta">
+                                <span class="version-number">v1.11.0</span>
+                                <span class="version-date">2026-05-22</span>
+                            </div>
+                            <div class="version-title">수질·잔류농약 그룹 묶음 수정 + 수질 자동부여/하이픈 + 설명서 floating 버튼</div>
+                        </div>
+                        <div class="badge-row">
+                            <span class="badge badge-latest">★ 최신</span>
+                            <span class="badge badge-feature">기능</span>
+                            <span class="badge badge-fix">수정</span>
+                        </div>
+                    </div>
+                    <ul class="change-list">
+                        <li><strong>수질 다중 시료 그룹 묶음 수정</strong> — 한 번에 채취장소 N개로 접수한 시료를 수정 클릭 시 폼에 N개 채취장소가 모두 펼쳐져 함께 수정 가능. 그룹 식별자(groupId) 도입, 레거시 데이터는 createdAt+name+phoneNumber+date 자동 그룹화. Firestore 명시 삭제로 잔류 데이터 방지.</li>
+                        <li><strong>잔류농약 그룹 묶음 수정·삭제</strong> — 의뢰 항목 여러 개로 등록한 시료를 수정 시 모든 의뢰 항목이 폼에 펼쳐짐. 삭제 시 같은 접수의 N건이 함께 삭제됨(N건 안내 confirm). 검사완료/판정 데이터는 행별 보존.</li>
+                        <li><strong>수질 연락처 자동 하이픈</strong> — 숫자만 입력하면 010-0000-0000 형식으로 자동 변환 + 커서 위치 보존.</li>
+                        <li><strong>수질 접수번호 자동부여 안정화</strong> — 페이지 로드 시 base 번호 동기화, 사용자 수동 입력값 우선, NaN 전파 차단 3단 폴백.</li>
+                        <li><strong>설명서 메인 돌아가기 버튼 floating</strong> — 설명서 페이지 좌상단에 항상 보이는 fixed 버튼 추가(반응형/인쇄 시 자동 숨김).</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- v1.10.2 -->
+            <div class="version-entry">
+                <div class="version-dot"></div>
                 <div class="version-card">
                     <div class="version-card-header">
                         <div>
@@ -609,7 +637,6 @@
                             <div class="version-title">GitHub Actions checkout 실패 핫픽스 + v1.10.1 빌드 재실행</div>
                         </div>
                         <div class="badge-row">
-                            <span class="badge badge-latest">★ 최신</span>
                             <span class="badge badge-fix">수정</span>
                         </div>
                     </div>

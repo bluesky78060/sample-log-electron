@@ -359,8 +359,15 @@ class WaterSampleManager extends window.BaseSampleManager {
         const samplingNotes = this.getAllSamplingNotes();
 
         // 접수번호 파싱 (예: "1, 2, 3" -> [1, 2, 3])
-        const receptionNumberStr = formData.get('receptionNumber') || this.generateNextReceptionNumber();
+        const rawReceptionNumber = (formData.get('receptionNumber') || '').toString().trim();
+        const generatedNumber = this.generateNextReceptionNumber();
+        const receptionNumberStr = rawReceptionNumber || generatedNumber;
         const receptionNumbers = receptionNumberStr.split(',').map(n => n.trim()).filter(n => n);
+        // 폴백 기준값 (사용자가 빈/잘못된 값을 넣었을 때 NaN 방지)
+        const fallbackBase = parseInt(receptionNumbers[0], 10);
+        const safeBase = !isNaN(fallbackBase)
+            ? fallbackBase
+            : (parseInt(generatedNumber, 10) || 1);
 
         // 공통 데이터 (신청자 정보)
         const applicantType = formData.get('applicantType') || '개인';
@@ -386,13 +393,15 @@ class WaterSampleManager extends window.BaseSampleManager {
             updatedAt: new Date().toISOString()
         };
 
-        // 채취장소별로 개별 행 생성
+        // 채취장소별로 개별 행 생성 (동일 그룹 식별을 위한 groupId 부여)
+        const groupId = this.generateId();
         const newLogs = [];
         for (let i = 0; i < samplingLocations.length; i++) {
             const data = {
                 ...commonData,
                 id: this.generateId(),
-                receptionNumber: receptionNumbers[i] || String(parseInt(receptionNumbers[0]) + i),
+                groupId,
+                receptionNumber: receptionNumbers[i] || String(safeBase + i),
                 sampleName: sampleNames[i] || formData.get('sampleName') || '지하수',
                 sampleCount: '1',
                 samplingLocation: samplingLocations[i] || '',
@@ -426,14 +435,51 @@ class WaterSampleManager extends window.BaseSampleManager {
     // ========================================
     // 오버라이드: 샘플 수정
     // ========================================
+    // ========================================
+    // 동일 접수 그룹 멤버 조회
+    //  - 신규: groupId 일치
+    //  - 레거시: createdAt + name + phoneNumber + date 휴리스틱 매칭
+    //  반환: receptionNumber 오름차순
+    // ========================================
+    getGroupMembers(log) {
+        if (!log) return [];
+        const matchByGroupId = log.groupId
+            ? this.sampleLogs.filter(l => l.groupId && l.groupId === log.groupId)
+            : [];
+        let members = matchByGroupId;
+        if (members.length === 0) {
+            members = this.sampleLogs.filter(l =>
+                l.createdAt && l.createdAt === log.createdAt &&
+                (l.name || '') === (log.name || '') &&
+                (l.phoneNumber || '') === (log.phoneNumber || '') &&
+                (l.date || '') === (log.date || '')
+            );
+        }
+        if (members.length === 0) members = [log];
+        members.sort((a, b) => {
+            const na = parseInt(a.receptionNumber, 10) || 0;
+            const nb = parseInt(b.receptionNumber, 10) || 0;
+            return na - nb;
+        });
+        return members;
+    }
+
     editSample(id) {
         const log = this.sampleLogs.find(l => String(l.id) === String(id));
         if (!log) return;
 
+        const groupMembers = this.getGroupMembers(log);
         this.editingId = id;
+        this.editingGroupIds = groupMembers.map(m => String(m.id));
 
         try {
-            if (this.receptionNumberInput) this.receptionNumberInput.value = log.receptionNumber || '';
+            const receptionNumbersStr = groupMembers.map(m => m.receptionNumber || '').filter(v => v).join(', ');
+            if (this.receptionNumberInput) {
+                this.receptionNumberInput.value = receptionNumbersStr || (log.receptionNumber || '');
+                this.receptionNumberInput.dataset.baseNumber = String(
+                    parseInt((groupMembers[0]?.receptionNumber || log.receptionNumber || ''), 10) || ''
+                );
+            }
             if (this.dateInput) this.dateInput.value = log.date || '';
 
             const nameEl = document.getElementById('name');
@@ -459,7 +505,7 @@ class WaterSampleManager extends window.BaseSampleManager {
                 }
             }
             if (sampleNameEl) sampleNameEl.value = log.sampleName || '';
-            if (sampleCountEl) sampleCountEl.value = log.sampleCount || 1;
+            if (sampleCountEl) sampleCountEl.value = String(groupMembers.length || log.sampleCount || 1);
             if (noteEl) noteEl.value = log.note || '';
 
             // 법인여부/생년월일/법인번호 설정
@@ -479,21 +525,27 @@ class WaterSampleManager extends window.BaseSampleManager {
                 }
             }
 
-            // 채취장소 및 주작목 설정
-            const crops = log.samplingCrops || [];
-            const notesForRows = log.samplingNotes || [log.sampleNote || ''];
-            // 기존 데이터 호환: 개별 시료명 배열이 없으면 공통 sampleName으로 채움
-            const sampleNamesForRows = log.sampleNamesPerRow && Array.isArray(log.sampleNamesPerRow)
-                ? log.sampleNamesPerRow
-                : [];
-            if (log.samplingLocations && Array.isArray(log.samplingLocations)) {
-                // 개별 시료명이 없으면 공통 sampleName을 각 위치에 반복 적용
-                const names = log.samplingLocations.map((_, i) => sampleNamesForRows[i] || log.sampleName || '지하수');
-                this.setSamplingLocations(log.samplingLocations, crops, names, notesForRows);
-            } else if (log.samplingLocation) {
-                const locations = log.samplingLocation.split(',').map(s => s.trim());
-                const names = locations.map((_, i) => sampleNamesForRows[i] || log.sampleName || '지하수');
+            // 채취장소·주작목·비고: 그룹 멤버가 2개 이상이면 멤버별 한 줄씩 펼침
+            if (groupMembers.length > 1) {
+                const locations = groupMembers.map(m => m.samplingLocation || '');
+                const crops = groupMembers.map(m => m.mainCrop || '');
+                const names = groupMembers.map(m => m.sampleName || log.sampleName || '지하수');
+                const notesForRows = groupMembers.map(m => m.sampleNote || '');
                 this.setSamplingLocations(locations, crops, names, notesForRows);
+            } else {
+                const crops = log.samplingCrops || (log.mainCrop ? [log.mainCrop] : []);
+                const notesForRows = log.samplingNotes || [log.sampleNote || ''];
+                const sampleNamesForRows = log.sampleNamesPerRow && Array.isArray(log.sampleNamesPerRow)
+                    ? log.sampleNamesPerRow
+                    : [];
+                if (log.samplingLocations && Array.isArray(log.samplingLocations)) {
+                    const names = log.samplingLocations.map((_, i) => sampleNamesForRows[i] || log.sampleName || '지하수');
+                    this.setSamplingLocations(log.samplingLocations, crops, names, notesForRows);
+                } else if (log.samplingLocation) {
+                    const locations = log.samplingLocation.split(',').map(s => s.trim());
+                    const names = locations.map((_, i) => sampleNamesForRows[i] || log.sampleName || '지하수');
+                    this.setSamplingLocations(locations, crops, names, notesForRows);
+                }
             }
 
             // 통보방법 선택
@@ -504,12 +556,14 @@ class WaterSampleManager extends window.BaseSampleManager {
             }
             if (this.receptionMethodInput) this.receptionMethodInput.value = log.receptionMethod || '';
 
-            // 목적 선택
-            const purposeRadio = document.querySelector(`input[name="purpose"][value="${log.purpose}"]`);
+            // 목적 선택 (사용자 저장 데이터를 selector에 직접 삽입하지 않도록 value 비교)
+            const purposeRadio = Array.from(document.querySelectorAll('input[name="purpose"]'))
+                .find(r => r.value === (log.purpose || ''));
             if (purposeRadio) purposeRadio.checked = true;
 
             // 검사항목 선택
-            const testItemsRadio = document.querySelector(`input[name="testItems"][value="${log.testItems}"]`);
+            const testItemsRadio = Array.from(document.querySelectorAll('input[name="testItems"]'))
+                .find(r => r.value === (log.testItems || ''));
             if (testItemsRadio) {
                 testItemsRadio.checked = true;
                 if (log.testItems === '생활용수') {
@@ -590,6 +644,7 @@ class WaterSampleManager extends window.BaseSampleManager {
 
         // 수정 모드 해제
         this.editingId = null;
+        this.editingGroupIds = [];
 
         if (this.navSubmitBtn) {
             this.navSubmitBtn.title = '접수 등록';
@@ -603,6 +658,17 @@ class WaterSampleManager extends window.BaseSampleManager {
     setupReceptionMethod() {
         // water는 setupTypeSpecificEvents에서 직접 처리
         // base class의 .method-btn 대신 .reception-method-btn 사용
+    }
+
+    // ========================================
+    // 오버라이드: 연락처 자동 하이픈 포맷팅
+    // (base의 window.formatPhoneNumber 의존을 SampleUtils 경로로 대체)
+    // ========================================
+    setupPhoneFormatting() {
+        const phoneInput = document.getElementById('phoneNumber');
+        if (phoneInput && window.SampleUtils?.setupPhoneNumberInput) {
+            window.SampleUtils.setupPhoneNumberInput(phoneInput);
+        }
     }
 
     // ========================================
@@ -687,10 +753,16 @@ class WaterSampleManager extends window.BaseSampleManager {
 
     updateReceptionNumberRange(count) {
         count = Math.max(1, parseInt(count, 10) || 1);
-        const baseNumber = parseInt(
-            this.receptionNumberInput.dataset.baseNumber || this.receptionNumberInput.value.split(',')[0].trim(),
-            10
-        );
+        // 사용자 입력값(value) 우선, 없으면 dataset.baseNumber 폴백
+        const currentFirst = this.receptionNumberInput.value.split(',')[0].trim();
+        const parsedFromValue = parseInt(currentFirst, 10);
+        let baseNumber = !isNaN(parsedFromValue)
+            ? parsedFromValue
+            : parseInt(this.receptionNumberInput.dataset.baseNumber, 10);
+        if (isNaN(baseNumber)) {
+            baseNumber = parseInt(this.generateNextReceptionNumber(), 10) || 1;
+        }
+        this.receptionNumberInput.dataset.baseNumber = String(baseNumber);
 
         if (count === 1) {
             this.receptionNumberInput.value = String(baseNumber);
@@ -759,55 +831,108 @@ class WaterSampleManager extends window.BaseSampleManager {
 
     // ========================================
     // 샘플 수정 (updateSample)
+    //  - 그룹 멤버(이전에 한 번의 접수로 만들어진 N개 행) 전체를 새 입력값으로 재생성
+    //  - 기존 createdAt/isComplete/testResult 등 행별 보존 필드는 매칭하여 유지
     // ========================================
     updateSample() {
         const formData = new FormData(this.form);
         const log = this.sampleLogs.find(l => l.id === this.editingId);
+        if (!log) return;
+
         const samplingLocations = this.getAllSamplingLocations();
         const samplingCrops = this.getAllSamplingCrops();
         const sampleNames = this.getAllSampleNames();
         const samplingNotes = this.getAllSamplingNotes();
 
-        if (log) {
-            log.receptionNumber = formData.get('receptionNumber');
-            log.date = formData.get('date');
-            const applicantType = formData.get('applicantType') || '개인';
-            log.applicantType = applicantType;
-            log.birthDate = applicantType === '개인' ? formData.get('birthDate') : '';
-            log.corpNumber = applicantType === '법인' ? formData.get('corpNumber') : '';
-            log.name = formData.get('name');
-            log.phoneNumber = formData.get('phoneNumber');
-            log.address = formData.get('address');
-            log.addressPostcode = formData.get('addressPostcode');
-            log.addressRoad = formData.get('addressRoad');
-            log.addressDetail = formData.get('addressDetail');
-            log.receptionMethod = formData.get('receptionMethod');
-            log.sampleName = sampleNames[0] || formData.get('sampleName') || '지하수';
-            log.sampleCount = formData.get('sampleCount');
-            log.samplingLocations = samplingLocations;
-            log.samplingLocation = samplingLocations.join(', ');
-            log.samplingCrops = samplingCrops;
-            log.mainCrop = samplingCrops.filter(c => c).join(', ');
-            log.samplingNotes = samplingNotes;
-            log.sampleNote = samplingNotes.filter(n => n).join(', ');
-            log.purpose = formData.get('purpose');
-            log.testItems = formData.get('testItems');
-            log.note = formData.get('note');
-            log.updatedAt = new Date().toISOString();
+        // 접수번호 파싱 (쉼표로 N개)
+        const receptionRaw = (formData.get('receptionNumber') || '').toString().trim();
+        const receptionNumbers = receptionRaw.split(',').map(n => n.trim()).filter(n => n);
+        const safeBaseParsed = parseInt(receptionNumbers[0], 10);
+        const safeBase = !isNaN(safeBaseParsed) ? safeBaseParsed : (parseInt(this.generateNextReceptionNumber(), 10) || 1);
 
-            this.saveLogs();
-            this.showToast('수정이 완료되었습니다.', 'success');
-            this.resetForm();
-            this.receptionNumberInput.value = this.generateNextReceptionNumber();
-            this.editingId = null;
+        const oldMembers = this.editingGroupIds && this.editingGroupIds.length > 0
+            ? this.sampleLogs.filter(l => this.editingGroupIds.includes(String(l.id)))
+            : [log];
+        const oldById = new Map(oldMembers.map(m => [String(m.id), m]));
+        const groupId = log.groupId || oldMembers[0]?.groupId || this.generateId();
 
-            if (this.navSubmitBtn) {
-                this.navSubmitBtn.title = '접수 등록';
-                this.navSubmitBtn.classList.remove('btn-edit-mode');
+        const applicantType = formData.get('applicantType') || '개인';
+        const commonData = {
+            sampleType: '물',
+            date: formData.get('date'),
+            applicantType,
+            birthDate: applicantType === '개인' ? formData.get('birthDate') : '',
+            corpNumber: applicantType === '법인' ? formData.get('corpNumber') : '',
+            name: formData.get('name'),
+            phoneNumber: formData.get('phoneNumber'),
+            address: formData.get('address'),
+            addressPostcode: formData.get('addressPostcode'),
+            addressRoad: formData.get('addressRoad'),
+            addressDetail: formData.get('addressDetail'),
+            receptionMethod: formData.get('receptionMethod'),
+            purpose: formData.get('purpose'),
+            testItems: formData.get('testItems'),
+            note: formData.get('note')
+        };
+
+        // 기존 그룹 멤버 정렬(receptionNumber 오름차순) - Firestore 삭제 및 새 행 재생성 양쪽에서 재사용
+        const oldOrdered = oldMembers.slice().sort((a, b) => {
+            const na = parseInt(a.receptionNumber, 10) || 0;
+            const nb = parseInt(b.receptionNumber, 10) || 0;
+            return na - nb;
+        });
+
+        // 기존 그룹 멤버 제거 (로컬). Firestore 측 잔류 방지를 위해 시료수 축소분은 명시 삭제
+        this.sampleLogs = this.sampleLogs.filter(l => !oldById.has(String(l.id)));
+        const newSlotCount = samplingLocations.length;
+        if (window.firestoreDb?.isEnabled?.() && oldOrdered.length > newSlotCount) {
+            const year = parseInt(this.selectedYear, 10);
+            for (let i = newSlotCount; i < oldOrdered.length; i++) {
+                const rid = String(oldOrdered[i].id);
+                window.firestoreDb.delete(this.moduleKey, year, rid).catch(err => {
+                    (window.logger?.error || console.error)('Firestore 그룹 멤버 삭제 실패:', err);
+                });
             }
-
-            this.switchView('list');
         }
+
+        // 새 입력값으로 N개 행 재생성 (행별 createdAt/완료여부/판정 보존: index 매칭 후 잔여 슬롯은 새로 생성)
+        const nowIso = new Date().toISOString();
+        for (let i = 0; i < samplingLocations.length; i++) {
+            const prev = oldOrdered[i];
+            const data = {
+                ...commonData,
+                id: prev?.id || this.generateId(),
+                groupId,
+                receptionNumber: receptionNumbers[i] || String(safeBase + i),
+                sampleName: sampleNames[i] || formData.get('sampleName') || '지하수',
+                sampleCount: '1',
+                samplingLocation: samplingLocations[i] || '',
+                mainCrop: samplingCrops[i] || '',
+                sampleNote: samplingNotes[i] || '',
+                isComplete: prev?.isComplete || false,
+                testResult: prev?.testResult || '',
+                createdAt: prev?.createdAt || nowIso,
+                updatedAt: nowIso
+            };
+            this.sampleLogs.push(data);
+        }
+
+        this.saveLogs();
+        if (typeof this.filterAndRenderLogs === 'function') {
+            this.filterAndRenderLogs();
+        }
+        this.showToast('수정이 완료되었습니다.', 'success');
+        this.resetForm();
+        this.receptionNumberInput.value = this.generateNextReceptionNumber();
+        this.editingId = null;
+        this.editingGroupIds = [];
+
+        if (this.navSubmitBtn) {
+            this.navSubmitBtn.title = '접수 등록';
+            this.navSubmitBtn.classList.remove('btn-edit-mode');
+        }
+
+        this.switchView('list');
     }
 
     // ========================================
