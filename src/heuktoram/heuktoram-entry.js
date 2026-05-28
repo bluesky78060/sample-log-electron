@@ -1,6 +1,8 @@
 // npm packages
 import * as XLSX from 'xlsx-js-style';
+import JSZip from 'jszip';
 window.XLSX = XLSX;
+window.JSZip = JSZip;
 
 // Shared modules
 import '../shared/sanitize.js';
