@@ -6,10 +6,6 @@ on:
       - 'v*'
   workflow_dispatch:
 
-# upload-artifact@v5 / action-gh-release@v2의 Node20 런타임 deprecation 대응 (Node24 강제)
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   build:
     runs-on: windows-latest
@@ -72,14 +68,14 @@ jobs:
         shell: pwsh
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: windows-installer
           path: out/make/**/*
 
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             out/make/squirrel.windows/x64/*.exe
