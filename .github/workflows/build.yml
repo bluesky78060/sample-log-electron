@@ -6,6 +6,10 @@ on:
       - 'v*'
   workflow_dispatch:
 
+# upload-artifact@v5 / action-gh-release@v2의 Node20 런타임 deprecation 대응 (Node24 강제)
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build:
     runs-on: windows-latest
