@@ -1,0 +1,28 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - img [ref=e6]
+    - generic [ref=e9]:
+      - heading "설정 접근 확인" [level=3] [ref=e10]
+      - paragraph [ref=e11]: 설정 페이지에 접근하려면 암호화 비밀번호를 입력해주세요.
+    - generic [ref=e12]:
+      - generic [ref=e13]: 비밀번호 규칙
+      - generic [ref=e14]: • 8~64자 길이
+      - generic [ref=e15]: • 소문자 포함 (필수)
+      - generic [ref=e16]: • 숫자 포함 (필수)
+      - generic [ref=e17]: • 특수문자 포함 (필수)
+      - generic [ref=e18]: • 대문자 포함 (권장)
+    - generic [ref=e19]:
+      - generic [ref=e20]: 비밀번호 강도
+      - generic [ref=e21]: "-"
+    - generic [ref=e23]:
+      - generic [ref=e24]: 비밀번호
+      - generic [ref=e25]:
+        - textbox "비밀번호를 입력하세요" [ref=e26]
+        - button "비밀번호 표시/숨기기" [ref=e27] [cursor=pointer]:
+          - img [ref=e28]
+    - generic [ref=e31]:
+      - button "돌아가기" [ref=e32] [cursor=pointer]
+      - button "확인" [disabled] [ref=e33] [cursor=pointer]
+  - generic:
+    - generic:
+      - paragraph

@@ -30,8 +30,7 @@ jobs:
         run: |
           @"
           window.NETWORK_CONFIG = {
-              ALLOWED_GATEWAY: '${{ secrets.ALLOWED_GATEWAY }}',
-              VWORLD_API_KEY: '${{ secrets.VWORLD_API_KEY }}'
+              ALLOWED_GATEWAY: '${{ secrets.ALLOWED_GATEWAY }}'
           };
           "@ | Out-File -FilePath "src/shared/network-config.js" -Encoding utf8
         shell: pwsh

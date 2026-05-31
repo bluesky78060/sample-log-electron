@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastScanned": 1778756392444,
+  "lastScanned": 1779966266825,
   "projectRoot": "/Users/leechanhee/sample-log-electron",
   "techStack": {
     "languages": [
@@ -87,7 +87,7 @@
       "path": "assets",
       "purpose": "Static assets",
       "fileCount": 6,
-      "lastAccessed": 1778756392434,
+      "lastAccessed": 1779966266761,
       "keyFiles": [
         "icon-1024.png",
         "icon-512.png",
@@ -100,7 +100,7 @@
       "path": "docs",
       "purpose": "Documentation",
       "fileCount": 3,
-      "lastAccessed": 1778756392436,
+      "lastAccessed": 1779966266816,
       "keyFiles": [
         "index.html"
       ]
@@ -109,7 +109,7 @@
       "path": "docs-internal",
       "purpose": null,
       "fileCount": 39,
-      "lastAccessed": 1778756392437,
+      "lastAccessed": 1779966266818,
       "keyFiles": [
         "ADDRESS_PARSING_FIX.md",
         "ANALYSIS_RESULT_FEATURE.md",
@@ -122,7 +122,7 @@
       "path": "label-print",
       "purpose": null,
       "fileCount": 3,
-      "lastAccessed": 1778756392438,
+      "lastAccessed": 1779966266820,
       "keyFiles": [
         "index.html",
         "label-app.js",
@@ -133,14 +133,14 @@
       "path": "out",
       "purpose": "Build output",
       "fileCount": 1,
-      "lastAccessed": 1778756392438,
+      "lastAccessed": 1779966266820,
       "keyFiles": []
     },
     "playwright-report": {
       "path": "playwright-report",
       "purpose": null,
       "fileCount": 1,
-      "lastAccessed": 1778756392439,
+      "lastAccessed": 1779966266821,
       "keyFiles": [
         "index.html"
       ]
@@ -149,7 +149,7 @@
       "path": "scripts",
       "purpose": "Build/utility scripts",
       "fileCount": 9,
-      "lastAccessed": 1778756392440,
+      "lastAccessed": 1779966266821,
       "keyFiles": [
         "build-pesticide-name-map.py",
         "convert-excel.js",
@@ -162,7 +162,7 @@
       "path": "src",
       "purpose": "Source code",
       "fileCount": 10,
-      "lastAccessed": 1778756392440,
+      "lastAccessed": 1779966266823,
       "keyFiles": [
         "app-update.yml",
         "cropData.js",
@@ -175,21 +175,21 @@
       "path": "test-results",
       "purpose": null,
       "fileCount": 1,
-      "lastAccessed": 1778756392440,
+      "lastAccessed": 1779966266823,
       "keyFiles": []
     },
     "tests": {
       "path": "tests",
       "purpose": "Test files",
       "fileCount": 1,
-      "lastAccessed": 1778756392440,
+      "lastAccessed": 1779966266823,
       "keyFiles": []
     },
     "docs/assets": {
       "path": "docs/assets",
       "purpose": "Static assets",
       "fileCount": 49,
-      "lastAccessed": 1778756392441,
+      "lastAccessed": 1779966266823,
       "keyFiles": [
         "01-main-B3zZEJFf.png",
         "02-soil-register-BNO4h-w1.png",
@@ -200,14 +200,14 @@
       "path": "src/assets",
       "purpose": "Static assets",
       "fileCount": 0,
-      "lastAccessed": 1778756392442,
+      "lastAccessed": 1779966266825,
       "keyFiles": []
     },
     "src/dist": {
       "path": "src/dist",
       "purpose": "Distribution/build output",
       "fileCount": 1,
-      "lastAccessed": 1778756392443,
+      "lastAccessed": 1779966266825,
       "keyFiles": [
         "index.html"
       ]
@@ -216,21 +216,45 @@
       "path": "tests/docs",
       "purpose": "Documentation",
       "fileCount": 1,
-      "lastAccessed": 1778756392444,
+      "lastAccessed": 1779966266825,
       "keyFiles": []
     }
   },
   "hotPaths": [
     {
       "path": "src/soil/soil-script.js",
-      "accessCount": 104,
-      "lastAccessed": 1778758719800,
+      "accessCount": 117,
+      "lastAccessed": 1780218658235,
+      "type": "directory"
+    },
+    {
+      "path": "src/water/water-script.js",
+      "accessCount": 78,
+      "lastAccessed": 1779436917702,
+      "type": "directory"
+    },
+    {
+      "path": "src/shared/BaseSampleManager.js",
+      "accessCount": 65,
+      "lastAccessed": 1780218444185,
       "type": "directory"
     },
     {
       "path": "src/heuktoram/heuktoram-script.js",
-      "accessCount": 53,
-      "lastAccessed": 1777546161376,
+      "accessCount": 54,
+      "lastAccessed": 1779971936002,
+      "type": "file"
+    },
+    {
+      "path": "src/pesticide/pesticide-script.js",
+      "accessCount": 51,
+      "lastAccessed": 1780218687944,
+      "type": "directory"
+    },
+    {
+      "path": "src/style.css",
+      "accessCount": 41,
+      "lastAccessed": 1779790620419,
       "type": "file"
     },
     {
@@ -240,27 +264,9 @@
       "type": "directory"
     },
     {
-      "path": "src/shared/BaseSampleManager.js",
-      "accessCount": 36,
-      "lastAccessed": 1778758345987,
-      "type": "directory"
-    },
-    {
-      "path": "src/pesticide/pesticide-script.js",
+      "path": "src/release/index.html",
       "accessCount": 34,
-      "lastAccessed": 1778758919839,
-      "type": "directory"
-    },
-    {
-      "path": "src/style.css",
-      "accessCount": 32,
-      "lastAccessed": 1777287727901,
-      "type": "file"
-    },
-    {
-      "path": "src/water/water-script.js",
-      "accessCount": 32,
-      "lastAccessed": 1778758701025,
+      "lastAccessed": 1780219996172,
       "type": "directory"
     },
     {
@@ -282,27 +288,21 @@
       "type": "directory"
     },
     {
+      "path": "package.json",
+      "accessCount": 25,
+      "lastAccessed": 1780219951664,
+      "type": "file"
+    },
+    {
       "path": "src/shared/address.js",
       "accessCount": 17,
       "lastAccessed": 1778758141072,
       "type": "directory"
     },
     {
-      "path": "src/release/index.html",
-      "accessCount": 16,
-      "lastAccessed": 1778822687834,
-      "type": "directory"
-    },
-    {
-      "path": "package.json",
-      "accessCount": 15,
-      "lastAccessed": 1778822675893,
-      "type": "file"
-    },
-    {
       "path": "src/shared/autocomplete-manager.js",
-      "accessCount": 14,
-      "lastAccessed": 1778675334450,
+      "accessCount": 15,
+      "lastAccessed": 1779790356797,
       "type": "file"
     },
     {
@@ -331,21 +331,21 @@
     },
     {
       "path": "src/water/index.html",
-      "accessCount": 8,
-      "lastAccessed": 1778757839171,
+      "accessCount": 10,
+      "lastAccessed": 1779793611877,
       "type": "directory"
+    },
+    {
+      "path": "src/compost/index.html",
+      "accessCount": 8,
+      "lastAccessed": 1779790390072,
+      "type": "file"
     },
     {
       "path": "src/heavy-metal/index.html",
       "accessCount": 7,
       "lastAccessed": 1778757840945,
       "type": "directory"
-    },
-    {
-      "path": "src/compost/index.html",
-      "accessCount": 7,
-      "lastAccessed": 1778757842951,
-      "type": "file"
     },
     {
       "path": "src/pesticide/pesticide-entry.js",
@@ -355,8 +355,8 @@
     },
     {
       "path": "src/water/water-entry.js",
-      "accessCount": 6,
-      "lastAccessed": 1778755647001,
+      "accessCount": 7,
+      "lastAccessed": 1779436017680,
       "type": "file"
     },
     {
@@ -372,6 +372,24 @@
       "type": "file"
     },
     {
+      "path": "src/heuktoram/heuktoram-entry.js",
+      "accessCount": 6,
+      "lastAccessed": 1779971926253,
+      "type": "file"
+    },
+    {
+      "path": "src/shared/excel-import-manager.js",
+      "accessCount": 6,
+      "lastAccessed": 1780218382371,
+      "type": "file"
+    },
+    {
+      "path": "src/shared/sanitize.js",
+      "accessCount": 6,
+      "lastAccessed": 1780219159718,
+      "type": "file"
+    },
+    {
       "path": "src/soil/soil-entry.js",
       "accessCount": 5,
       "lastAccessed": 1778755644383,
@@ -384,9 +402,15 @@
       "type": "file"
     },
     {
-      "path": "src/heuktoram/heuktoram-entry.js",
+      "path": "src/shared/utils.js",
       "accessCount": 4,
-      "lastAccessed": 1778755673641,
+      "lastAccessed": 1779435965631,
+      "type": "file"
+    },
+    {
+      "path": "src/shared/storage-manager.js",
+      "accessCount": 4,
+      "lastAccessed": 1780218265361,
       "type": "file"
     },
     {
@@ -402,21 +426,9 @@
       "type": "directory"
     },
     {
-      "path": "src/shared/utils.js",
-      "accessCount": 3,
-      "lastAccessed": 1776405967858,
-      "type": "file"
-    },
-    {
       "path": "tests/e2e/soil-form.spec.js",
       "accessCount": 3,
       "lastAccessed": 1776678419834,
-      "type": "file"
-    },
-    {
-      "path": "src/shared/sanitize.js",
-      "accessCount": 3,
-      "lastAccessed": 1777276764420,
       "type": "file"
     },
     {
@@ -447,12 +459,6 @@
       "path": ".claude/hooks/ticket-reminder.sh",
       "accessCount": 2,
       "lastAccessed": 1777278003299,
-      "type": "file"
-    },
-    {
-      "path": "src/shared/storage-manager.js",
-      "accessCount": 2,
-      "lastAccessed": 1778758347600,
       "type": "file"
     },
     {
@@ -507,12 +513,6 @@
       "path": "tests/unit/base-manager.test.js",
       "accessCount": 1,
       "lastAccessed": 1776406033086,
-      "type": "file"
-    },
-    {
-      "path": "src/shared/excel-import-manager.js",
-      "accessCount": 1,
-      "lastAccessed": 1777286296209,
       "type": "file"
     },
     {

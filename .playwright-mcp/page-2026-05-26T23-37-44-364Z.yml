@@ -1,0 +1,201 @@
+- generic [ref=e2]:
+  - link "← 메인으로 돌아가기" [ref=e3] [cursor=pointer]:
+    - /url: ../index.html
+  - heading "⚙️ 설정" [level=1] [ref=e4]
+  - generic [ref=e5]:
+    - heading "🔐 Firebase 인증 파일 ● 미등록" [level=2] [ref=e6]:
+      - generic [ref=e7]: 🔐
+      - text: Firebase 인증 파일
+      - generic [ref=e8]: ● 미등록
+    - generic [ref=e9]: "<strong>인증 파일이란?</strong><br>Firebase 접근을 위한 인증 파일을 업로드하면 자동으로 설정됩니다.<br><small style=\"color: #64748b;\">(웹 환경: 설정이 브라우저에 저장됩니다)</small>"
+    - generic [ref=e11]:
+      - generic [ref=e12]: 📁
+      - paragraph [ref=e13]: 인증 파일을 선택하거나 드래그해서 놓으세요
+      - button "파일 선택" [ref=e14] [cursor=pointer]
+    - button "연결 테스트" [ref=e16] [cursor=pointer]
+    - paragraph [ref=e17]: 인증 파일이 없다면 관리자에게 문의하거나, 아래 수동 설정을 펼쳐서 직접 입력하세요.
+    - heading "☁️ 수동 설정 ● 미연결 ▼ 펼치기" [level=3] [ref=e19] [cursor=pointer]:
+      - generic [ref=e20]: ☁️
+      - text: 수동 설정
+      - generic [ref=e21]: ● 미연결
+      - generic [ref=e22]: ▼ 펼치기
+  - generic [ref=e23]:
+    - heading "🏢 기관명 설정" [level=2] [ref=e24]:
+      - generic [ref=e25]: 🏢
+      - text: 기관명 설정
+    - generic [ref=e26]:
+      - generic [ref=e27]: 기관명 (메인 페이지 하단에 표시)
+      - textbox "기관명 (메인 페이지 하단에 표시)" [ref=e28]:
+        - /placeholder: 봉화군농업기술센터 안전성분석센터
+        - text: 봉화군농업기술센터 안전성분석센터
+    - generic [ref=e29]:
+      - button "저장" [ref=e30] [cursor=pointer]
+      - button "기본값 복원" [ref=e31] [cursor=pointer]
+    - paragraph [ref=e32]: 메인 페이지 하단과 각 시료 페이지에 표시되는 기관명을 변경할 수 있습니다.
+  - generic [ref=e33]:
+    - heading "🗺️ 기본 시·도 설정" [level=2] [ref=e34]:
+      - generic [ref=e35]: 🗺️
+      - text: 기본 시·도 설정
+    - generic [ref=e36]:
+      - generic [ref=e37]: 기본 시·도 (필지 주소 검증 기준)
+      - combobox "기본 시·도 (필지 주소 검증 기준)" [ref=e38]:
+        - option "선택 안 함 (시·도 없는 주소는 검증 건너뜀)" [selected]
+        - option "서울특별시"
+        - option "부산광역시"
+        - option "대구광역시"
+        - option "인천광역시"
+        - option "광주광역시"
+        - option "대전광역시"
+        - option "울산광역시"
+        - option "세종특별자치시"
+        - option "경기도"
+        - option "강원특별자치도"
+        - option "충청북도"
+        - option "충청남도"
+        - option "전북특별자치도"
+        - option "전라남도"
+        - option "경상북도"
+        - option "경상남도"
+        - option "제주특별자치도"
+    - button "저장" [ref=e40] [cursor=pointer]
+    - paragraph [ref=e41]: 필지 주소를 시·도 없이 "리+지번"으로 입력했을 때, VWORLD 검증에 사용할 기관 소재 시·도입니다. 자동완성으로 선택한 주소는 해당 주소의 시·도를 우선 사용합니다. "선택 안 함"이면 시·도가 없는 주소는 오검증을 막기 위해 검증을 건너뜁니다.
+  - generic [ref=e42]:
+    - heading "🌐 네트워크 접근 제어 ● 확인 중" [level=2] [ref=e43]:
+      - generic [ref=e44]: 🌐
+      - text: 네트워크 접근 제어
+      - generic [ref=e45]: ● 확인 중
+    - generic [ref=e46]:
+      - strong [ref=e47]: 네트워크 접근 제어란?
+      - text: Electron 앱에서는 항상 접근이 허용되며, 웹 환경에서는 설정된 게이트웨이 서브넷에서만 Firebase 데이터에 접근할 수 있습니다.
+    - generic [ref=e49]:
+      - generic [ref=e50]:
+        - text: "환경:"
+        - strong [ref=e51]: 웹 브라우저
+      - generic [ref=e52]:
+        - text: "허용된 게이트웨이:"
+        - strong [ref=e53]: 111.21.101.254
+      - generic [ref=e54]:
+        - text: "현재 공인 IP:"
+        - strong [ref=e55]: 확인 중...
+      - generic [ref=e56]:
+        - text: "접근 상태:"
+        - strong [ref=e57]: 확인 중...
+    - button "네트워크 상태 확인" [ref=e59] [cursor=pointer]
+    - generic [ref=e60]:
+      - strong [ref=e61]: "게이트웨이 변경 방법:"
+      - code [ref=e62]: src/shared/network-config.js
+      - text: 파일에서
+      - code [ref=e63]: ALLOWED_GATEWAY
+      - text: 값을 수정하세요.
+  - generic [ref=e64]:
+    - heading "📤 데이터 마이그레이션" [level=2] [ref=e65]:
+      - generic [ref=e66]: 📤
+      - text: 데이터 마이그레이션
+    - generic [ref=e67]:
+      - strong [ref=e68]: "주의:"
+      - text: 마이그레이션은 현재 컴퓨터의 localStorage 데이터를 Firebase로 업로드합니다. 기존 클라우드 데이터가 있으면 덮어쓰기됩니다.
+    - generic [ref=e69]:
+      - generic [ref=e70]:
+        - generic [ref=e71]:
+          - generic [ref=e72]: 🌱
+          - generic [ref=e73]:
+            - generic [ref=e74]: 토양
+            - generic [ref=e75]: "1건 (2026년: 1건)"
+        - button "마이그레이션" [ref=e76] [cursor=pointer]
+      - generic [ref=e77]:
+        - generic [ref=e78]:
+          - generic [ref=e79]: 💧
+          - generic [ref=e80]:
+            - generic [ref=e81]: 수질분석
+            - generic [ref=e82]: 0건
+        - button "마이그레이션" [disabled] [ref=e83]
+      - generic [ref=e84]:
+        - generic [ref=e85]:
+          - generic [ref=e86]: 🧪
+          - generic [ref=e87]:
+            - generic [ref=e88]: 잔류농약
+            - generic [ref=e89]: "1건 (2026년: 1건)"
+        - button "마이그레이션" [ref=e90] [cursor=pointer]
+      - generic [ref=e91]:
+        - generic [ref=e92]:
+          - generic [ref=e93]: 🐄
+          - generic [ref=e94]:
+            - generic [ref=e95]: 가축분뇨퇴비
+            - generic [ref=e96]: 0건
+        - button "마이그레이션" [disabled] [ref=e97]
+      - generic [ref=e98]:
+        - generic [ref=e99]:
+          - generic [ref=e100]: ⚗️
+          - generic [ref=e101]:
+            - generic [ref=e102]: 토양 중금속
+            - generic [ref=e103]: 0건
+        - button "마이그레이션" [disabled] [ref=e104]
+    - button "🔄 전체 마이그레이션" [disabled] [ref=e106]
+  - generic [ref=e107]:
+    - heading "💾 로컬 데이터 관리" [level=2] [ref=e108]:
+      - generic [ref=e109]: 💾
+      - text: 로컬 데이터 관리
+    - button "📥 전체 데이터 내보내기" [ref=e111] [cursor=pointer]
+  - generic [ref=e112]:
+    - heading "🗑️ 캐시 관리" [level=2] [ref=e113]:
+      - generic [ref=e114]: 🗑️
+      - text: 캐시 관리
+    - generic [ref=e115]:
+      - strong [ref=e116]: "자동 캐시 정리:"
+      - text: 매주 금요일에 자동으로 시료 데이터 캐시가 삭제됩니다.
+      - text: 삭제 후 앱 시작 시 Firebase에서 데이터를 다시 불러옵니다. 설정 및 Firebase 연결 정보는 유지됩니다.
+    - generic [ref=e118]:
+      - generic [ref=e119]:
+        - text: "캐시된 데이터:"
+        - strong [ref=e120]: 2건
+      - generic [ref=e121]:
+        - text: "캐시 크기:"
+        - strong [ref=e122]: 0.00 MB
+      - generic [ref=e123]:
+        - text: "마지막 정리:"
+        - strong [ref=e124]: 없음
+    - generic [ref=e125]:
+      - button "🗑️ 지금 캐시 삭제" [ref=e126] [cursor=pointer]
+      - button "🔄 상태 새로고침" [ref=e127] [cursor=pointer]
+    - paragraph [ref=e128]: 캐시를 삭제하면 다음 앱 실행 시 Firebase에서 데이터를 다시 불러옵니다.
+  - generic [ref=e129]:
+    - heading "🧪 식품안전나라 MRL API" [level=2] [ref=e130]:
+      - generic [ref=e131]: 🧪
+      - text: 식품안전나라 MRL API
+    - generic [ref=e132]:
+      - strong [ref=e133]: 잔류농약 분석결과 입력 시 작물별 잔류허용기준(MRL)을 자동 조회
+      - text: 하기 위한 API 설정입니다.
+      - generic [ref=e134]:
+        - text: "키 발급:"
+        - link "openapi.foodsafetykorea.go.kr" [ref=e135] [cursor=pointer]:
+          - /url: https://openapi.foodsafetykorea.go.kr/
+        - text: → 회원가입 → OpenAPI 이용신청 →
+        - strong [ref=e136]: 식품별 농약잔류허용기준 (I1050)
+        - text: 서비스 신청
+    - generic [ref=e137]:
+      - generic [ref=e138]: API 인증키
+      - generic [ref=e139]:
+        - textbox "API 인증키" [ref=e140]:
+          - /placeholder: 식품안전나라 OpenAPI 인증키 입력
+        - button "👁" [ref=e141] [cursor=pointer]
+        - button "저장" [ref=e142] [cursor=pointer]
+      - paragraph [ref=e143]: 저장된 키는 로컬(localStorage)에만 보관되며 외부로 전송되지 않습니다.
+    - generic [ref=e145]:
+      - generic [ref=e146]:
+        - text: "연결 상태:"
+        - strong [ref=e147]: API 키 미설정
+      - generic [ref=e148]:
+        - text: "캐시된 MRL 레코드:"
+        - strong [ref=e149]: 없음
+      - generic [ref=e150]:
+        - text: "마지막 동기화:"
+        - strong [ref=e151]: 한 번도 동기화되지 않음
+      - generic [ref=e152]:
+        - text: "캐시 상태:"
+        - strong [ref=e153]: 없음
+    - generic [ref=e154]:
+      - button "🔄 지금 동기화" [ref=e155] [cursor=pointer]
+      - button "🔌 연결 테스트" [ref=e156] [cursor=pointer]
+      - button "🗑️ MRL 캐시 삭제" [ref=e157] [cursor=pointer]
+    - generic [ref=e160]: 0 / 0
+    - paragraph [ref=e161]: 캐시는 7일간 유효하며, 약 18,000건의 MRL 기준 데이터를 포함합니다 (~2MB). 오프라인에서도 조회 가능합니다.

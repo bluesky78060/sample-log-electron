@@ -107,3 +107,6 @@ firebase-auth.json
 # bkit/pdca 메타데이터 (자동 생성, 추적 제외)
 docs/.bkit-memory.json
 docs/.pdca-status.json
+
+# 구 빌드 잔재 (vite outDir=../docs 사용, src/dist는 불필요·키 노출 위험)
+src/dist/

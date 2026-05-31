@@ -1,7 +1,7 @@
 {
   "name": "sample-log",
   "productName": "시료접수대장",
-  "version": "1.13.0",
+  "version": "1.14.0",
   "description": "My Electron application description",
   "main": "src/index.js",
   "scripts": {
@@ -33,7 +33,7 @@
   "author": "leechanhee",
   "license": "MIT",
   "dependencies": {
-    "dompurify": "^3.3.1",
+    "dompurify": "^3.4.7",
     "electron-squirrel-startup": "^1.0.1",
     "electron-updater": "^6.6.2",
     "firebase": "^12.7.0",
@@ -66,5 +66,8 @@
     "vitest": "^4.1.4",
     "wait-on": "^9.0.4",
     "xlsx": "^0.18.5"
+  },
+  "overrides": {
+    "protobufjs": "^7.6.1"
   }
 }

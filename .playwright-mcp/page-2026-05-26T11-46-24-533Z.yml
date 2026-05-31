@@ -1,0 +1,194 @@
+- generic [ref=e1]:
+  - navigation [ref=e2]:
+    - link "arrow_back" [ref=e3] [cursor=pointer]:
+      - /url: ../index.html
+      - generic [ref=e4]: arrow_back
+    - generic [ref=e6] [cursor=pointer]:
+      - generic [ref=e7]: 🌱
+      - generic [ref=e8]: 토양
+      - generic [ref=e9]: ▼
+    - generic [ref=e10]:
+      - button "edit_note 접수" [ref=e11] [cursor=pointer]:
+        - generic [ref=e12]: edit_note
+        - generic: 접수
+      - button "table_rows 목록" [ref=e13] [cursor=pointer]:
+        - generic [ref=e14]: table_rows
+        - generic: 목록
+    - generic [ref=e16]:
+      - button "refresh 초기화" [ref=e17] [cursor=pointer]:
+        - generic [ref=e18]: refresh
+        - generic: 초기화
+      - button "check_circle 등록" [active] [ref=e19] [cursor=pointer]:
+        - generic [ref=e20]: check_circle
+        - generic: 등록
+    - generic [ref=e21]:
+      - button "download 내보내기" [ref=e22] [cursor=pointer]:
+        - generic [ref=e23]: download
+        - generic: 내보내기
+      - button "save 저장" [ref=e24] [cursor=pointer]:
+        - generic [ref=e25]: save
+        - generic: 저장
+      - generic "JSON 불러오기" [ref=e26] [cursor=pointer]:
+        - generic [ref=e27]: folder_open
+        - generic: 불러오기
+      - button "file_download 서식" [ref=e28] [cursor=pointer]:
+        - generic [ref=e29]: file_download
+        - generic: 서식
+      - generic "엑셀 가져오기" [ref=e30] [cursor=pointer]:
+        - generic [ref=e31]: upload
+        - generic: 가져오기
+      - button "agriculture 흙토람" [ref=e32] [cursor=pointer]:
+        - generic [ref=e33]: agriculture
+        - generic: 흙토람
+    - generic [ref=e35]:
+      - generic "자동저장" [ref=e36] [cursor=pointer]:
+        - checkbox
+      - button "folder" [ref=e38] [cursor=pointer]:
+        - generic [ref=e39]: folder
+    - generic [ref=e43]:
+      - generic [ref=e45]: light_mode
+      - button "다크 모드로 전환" [ref=e46] [cursor=pointer]
+      - generic [ref=e48]: dark_mode
+  - main [ref=e49]:
+    - text: 📍
+    - generic [ref=e179]:
+      - generic [ref=e180]:
+        - generic [ref=e181]:
+          - heading "토양 접수 목록" [level=2] [ref=e182]
+          - combobox [ref=e183] [cursor=pointer]:
+            - option "2025년"
+            - option "2026년" [selected]
+            - option "2027년"
+            - option "2028년"
+            - option "2029년"
+            - option "2030년"
+          - combobox [ref=e184] [cursor=pointer]:
+            - option "전체 용도" [selected]
+            - option "🌾 일반재배"
+            - option "♻️ 유기"
+            - option "🍃 무농약"
+            - option "✅ GAP"
+            - option "🌱 저탄소"
+          - combobox [ref=e185] [cursor=pointer]:
+            - option "전체 상태"
+            - option "⬜ 미완료" [selected]
+            - option "✅ 완료"
+          - generic [ref=e186]: 1건 (미완료 1건)
+        - generic [ref=e187]:
+          - button "👁️ 전체 보기" [ref=e189] [cursor=pointer]:
+            - generic [ref=e190]: 👁️
+            - generic [ref=e191]: 전체 보기
+          - button "📊 통계" [ref=e192] [cursor=pointer]
+          - button "🏷️ 라벨 인쇄" [ref=e193] [cursor=pointer]
+          - button "✅ 일괄 완료" [ref=e194] [cursor=pointer]
+          - button "🗑️ 선택 삭제" [ref=e195] [cursor=pointer]
+          - button "📮 발송일자" [ref=e196] [cursor=pointer]
+          - button "🔍 검색" [ref=e197] [cursor=pointer]
+      - generic [ref=e198]:
+        - table [ref=e199]:
+          - rowgroup [ref=e200]:
+            - row "전체 선택 완료 접수번호 접수일자 구분 목적(용도) 성명 주소 필지 주소 기타주소 작물명 면적 전화번호 수령 방법 비고 발송일자 관리" [ref=e201]:
+              - columnheader "전체 선택" [ref=e202]:
+                - checkbox "전체 선택" [ref=e203] [cursor=pointer]
+              - columnheader "완료" [ref=e204]
+              - columnheader "접수번호" [ref=e205]
+              - columnheader "접수일자" [ref=e206]
+              - columnheader "구분" [ref=e207]
+              - columnheader "목적(용도)" [ref=e208]
+              - columnheader "성명" [ref=e209] [cursor=pointer]
+              - columnheader "주소" [ref=e210]
+              - columnheader "필지 주소" [ref=e211]
+              - columnheader "기타주소" [ref=e212]
+              - columnheader "작물명" [ref=e213]
+              - columnheader "면적" [ref=e214]
+              - columnheader "전화번호" [ref=e215]
+              - columnheader "수령 방법" [ref=e216]
+              - columnheader "비고" [ref=e217]
+              - columnheader "발송일자" [ref=e218]
+              - columnheader "관리" [ref=e219]
+          - rowgroup [ref=e220]:
+            - row "완료 1 2026-05-26 - 일반재배 홍길동 - 경상북도 봉화군 봉화읍 내성리 1 - - - 010-1234-5678 - - - 수정 삭제" [ref=e221]:
+              - cell [ref=e222]:
+                - checkbox [ref=e223] [cursor=pointer]
+              - cell "완료" [ref=e224]:
+                - button "완료" [ref=e225] [cursor=pointer]
+              - cell "1" [ref=e226]
+              - cell "2026-05-26" [ref=e227]
+              - cell "-" [ref=e228]
+              - cell "일반재배" [ref=e229]
+              - cell "홍길동" [ref=e230] [cursor=pointer]
+              - cell "-" [ref=e231]
+              - cell "경상북도 봉화군 봉화읍 내성리 1" [ref=e232]
+              - cell "-" [ref=e233]
+              - cell "-" [ref=e234]
+              - cell "-" [ref=e235]
+              - cell "010-1234-5678" [ref=e236]
+              - cell "-" [ref=e237]
+              - cell "-" [ref=e238]:
+                - generic [ref=e239]: "-"
+              - cell "-" [ref=e240]
+              - cell "수정 삭제" [ref=e241]:
+                - generic [ref=e242]:
+                  - button "수정" [ref=e243] [cursor=pointer]
+                  - button "삭제" [ref=e244] [cursor=pointer]
+        - generic [ref=e245]:
+          - generic [ref=e246]:
+            - generic [ref=e247]: 1건 중 1-1
+            - combobox [ref=e248] [cursor=pointer]:
+              - option "50건"
+              - option "100건" [selected]
+              - option "200건"
+              - option "500건"
+          - generic [ref=e249]:
+            - button "«" [disabled] [ref=e250]
+            - button "‹" [disabled] [ref=e251]
+            - button "›" [disabled] [ref=e252]
+            - button "»" [disabled] [ref=e253]
+  - generic [ref=e256]:
+    - generic [ref=e257]:
+      - heading "📋 등록 결과" [level=3] [ref=e258]
+      - button "×" [ref=e259] [cursor=pointer]
+    - table [ref=e262]:
+      - rowgroup [ref=e263]:
+        - row "접수번호 1" [ref=e264]:
+          - rowheader "접수번호" [ref=e265]
+          - cell "1" [ref=e266]
+        - row "접수일자 2026-05-26" [ref=e267]:
+          - rowheader "접수일자" [ref=e268]
+          - cell "2026-05-26" [ref=e269]
+        - row "성명 홍길동" [ref=e270]:
+          - rowheader "성명" [ref=e271]
+          - cell "홍길동" [ref=e272]
+        - row "전화번호 010-1234-5678" [ref=e273]:
+          - rowheader "전화번호" [ref=e274]
+          - cell "010-1234-5678" [ref=e275]
+        - row "주소 -" [ref=e276]:
+          - rowheader "주소" [ref=e277]
+          - cell "-" [ref=e278]
+        - row "구분 -" [ref=e279]:
+          - rowheader "구분" [ref=e280]
+          - cell "-" [ref=e281]
+        - row "목적 (용도) 일반재배" [ref=e282]:
+          - rowheader "목적 (용도)" [ref=e283]
+          - cell "일반재배" [ref=e284]
+        - row "수령 방법 -" [ref=e285]:
+          - rowheader "수령 방법" [ref=e286]
+          - cell "-" [ref=e287]
+        - row "비고 -" [ref=e288]:
+          - rowheader "비고" [ref=e289]
+          - cell "-" [ref=e290]
+        - 'row "필지 정보 필지 1 경상북도 봉화군 봉화읍 내성리 1 기타주소: - 작물 정보 없음" [ref=e291]':
+          - rowheader "필지 정보" [ref=e292]
+          - 'cell "필지 1 경상북도 봉화군 봉화읍 내성리 1 기타주소: - 작물 정보 없음" [ref=e293]':
+            - generic [ref=e295]:
+              - generic [ref=e296]: 필지 1
+              - generic [ref=e297]: 경상북도 봉화군 봉화읍 내성리 1
+              - generic [ref=e298]: "기타주소: -"
+              - text: 작물 정보 없음
+    - generic [ref=e300]: ⚠ 주소 검증을 수행할 수 없습니다 (API 키 또는 네트워크 확인)
+    - generic [ref=e301]:
+      - button "닫기" [ref=e302] [cursor=pointer]
+      - button "엑셀로 내보내기" [ref=e303] [cursor=pointer]
+  - generic [ref=e305]:
+    - generic [ref=e306]: ✓
+    - generic [ref=e307]: 1건의 시료가 접수되었습니다.

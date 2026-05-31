@@ -2959,8 +2959,8 @@ class SoilSampleManager extends window.BaseSampleManager {
             regionOptions.innerHTML = sanitizeHTML(parseResult.locations.map((location, index) => `
                 <div class="region-option" data-index="${index}">
                     <div class="region-option-content">
-                        <div class="region-option-title">${location.fullAddress}</div>
-                        <div class="region-option-subtitle">${location.region} ${location.district}</div>
+                        <div class="region-option-title">${escapeHTML(location.fullAddress)}</div>
+                        <div class="region-option-subtitle">${escapeHTML(location.region)} ${escapeHTML(location.district)}</div>
                     </div>
                     <div class="region-option-icon">→</div>
                 </div>
@@ -4473,8 +4473,6 @@ class SoilSampleManager extends window.BaseSampleManager {
     async validateParcelAddress(lotAddress) {
         if (!lotAddress || lotAddress === '-') return null;
         if (!navigator.onLine) return null;
-        const apiKey = window.NETWORK_CONFIG?.VWORLD_API_KEY;
-        if (!apiKey) return null;
 
         // 시·도 결정 (전국 기관용 — 봉화군/경상북도 가정 제거)
         //  1) 주소에 시·도가 이미 있으면(자동완성 선택 시 JUSO siNm 포함) 약어를 정식명으로 펼쳐 사용
@@ -4505,29 +4503,19 @@ class SoilSampleManager extends window.BaseSampleManager {
             fullAddress = `${defaultSido} ${lotAddress}`;
         }
 
-        // Electron: main process IPC 경유 (Origin 헤더 없음 → 도메인 제한 우회)
+        // Electron: main process IPC (apiKey는 main의 process.env에서 직접 사용 → 렌더러 노출 없음)
         if (window.electronAPI?.vworldGeocode) {
             try {
-                return await window.electronAPI.vworldGeocode(fullAddress, apiKey);
+                return await window.electronAPI.vworldGeocode(fullAddress);
             } catch {
                 return null;
             }
         }
 
-        // 웹 환경: 직접 fetch (등록된 도메인에서만 작동)
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000);
-        try {
-            const url = `https://api.vworld.kr/req/address?service=address&request=getCoord&version=2.0&crs=epsg:4326&address=${encodeURIComponent(fullAddress)}&refine=true&simple=false&format=json&type=parcel&key=${apiKey}`;
-            const res = await fetch(url, { signal: controller.signal });
-            if (!res.ok) return null;
-            const data = await res.json();
-            return data?.response?.status === 'OK';
-        } catch {
-            return null;
-        } finally {
-            clearTimeout(timeoutId);
-        }
+        // 웹 환경: VWORLD API 키를 렌더러/번들에 노출하지 않기 위해 직접 fetch 경로를 제거함.
+        // 좌표 기반 필지 검증은 Electron(IPC, main 프로세스 process.env)에서만 수행하며,
+        // 웹 환경에서는 검증을 생략한다(null). 웹에서 검증이 필요하면 서버 프록시를 도입할 것.
+        return null;
     }
 
     async validateAndMarkLogs(logs) {
