@@ -32,6 +32,8 @@ class BaseSampleManager {
         this.itemsPerPage = 100;
         this.totalPages = 1;
         this.isCloudSyncing = false;
+        this._cloudSyncFailed = false;       // L2: 클라우드 동기화 실패 상태 (중복 토스트 방지)
+        this._retryCloudSyncHandler = null;  // L2: online 복귀 재시도 리스너 참조
         this.cloudSyncPromise = null;  // Promise-based lock
         this.listViewStale = true;  // PER-5: 목록 뷰 리렌더 필요 여부
         this._firebaseCache = new Map();  // PER-9: 연도별 Firebase 데이터 캐시 { data, timestamp }
@@ -239,11 +241,22 @@ class BaseSampleManager {
             throw e;
         }
 
-        // Firebase 백그라운드 동기화 (fire-and-forget — Quota 초과 시에도 UI 블로킹 없음)
+        // Firebase 백그라운드 동기화 (UI 비블로킹 — 실패 시 토스트 + online 재시도)
+        // 주의: batchSave는 실패 시 throw가 아닌 false 반환 → 반환값 검사 필수
         if (window.firestoreDb?.isEnabled()) {
             window.firestoreDb.batchSave(this.moduleKey, parseInt(this.selectedYear, 10), this.sampleLogs)
-                .then(() => this.log('Firebase 동기화 완료:', this.sampleLogs.length, '건'))
-                .catch(err => (window.logger?.error || console.error)('Firebase 동기화 실패:', err));
+                .then(ok => {
+                    if (ok) {
+                        this._cloudSyncFailed = false;
+                        this.log('Firebase 동기화 완료:', this.sampleLogs.length, '건');
+                    } else {
+                        this._handleCloudSyncFailure();
+                    }
+                })
+                .catch(err => {
+                    (window.logger?.error || console.error)('Firebase 동기화 실패:', err);
+                    this._handleCloudSyncFailure();
+                });
         }
 
         // 자동 저장 트리거
@@ -270,11 +283,39 @@ class BaseSampleManager {
         this.filterAndRenderLogs();
         this.showToast('삭제되었습니다.', 'success');
 
-        // Firebase 삭제 (백그라운드)
+        // Firebase 삭제 (백그라운드 — 실패 시 다음 병합에서 항목이 부활할 수 있으므로 사용자에게 알림)
         if (window.firestoreDb?.isEnabled()) {
             window.firestoreDb.delete(this.moduleKey, parseInt(this.selectedYear, 10), String(id))
-                .then(() => this.log('Firebase 삭제 완료:', id))
-                .catch(err => (window.logger?.error || console.error)('Firebase 삭제 실패:', err));
+                .then(ok => {
+                    if (ok) this.log('Firebase 삭제 완료:', id);
+                    else this._handleCloudSyncFailure();
+                })
+                .catch(err => {
+                    (window.logger?.error || console.error)('Firebase 삭제 실패:', err);
+                    this._handleCloudSyncFailure();
+                });
+        }
+    }
+
+    /**
+     * L2: 클라우드 동기화 실패 처리 — 사용자 알림 + 온라인 복귀 시 1회 자동 재시도
+     * batchSave/delete는 실패 시 false를 반환하므로 호출부에서 이 메서드를 호출한다.
+     */
+    _handleCloudSyncFailure() {
+        if (this._cloudSyncFailed) return;  // 이미 알림/재시도 대기 중이면 중복 방지
+        this._cloudSyncFailed = true;
+        this.showToast(
+            '클라우드 동기화 실패 — 데이터는 이 컴퓨터에 저장되어 있습니다. 온라인 연결 시 자동 재시도합니다.',
+            'error'
+        );
+        if (!this._retryCloudSyncHandler) {
+            this._retryCloudSyncHandler = () => {
+                this._retryCloudSyncHandler = null;
+                this._cloudSyncFailed = false;
+                this.log('🔁 온라인 복귀 — 클라우드 동기화 재시도');
+                this.saveLogs();  // localStorage 재기록은 멱등, batchSave 재시도가 목적
+            };
+            window.addEventListener('online', this._retryCloudSyncHandler, { once: true });
         }
     }
 
