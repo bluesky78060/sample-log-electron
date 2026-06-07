@@ -146,13 +146,48 @@ function smartMerge(localData, cloudData) {
     return { data: merged, hasChanges, updated, added, deleted };
 }
 
+/**
+ * 클라우드 로드 시 안전 병합 — smartMerge 결과에 로컬 전용(미업로드) 항목 목록을 추가로 반환
+ * loadYearData의 무병합 덮어쓰기(데이터 유실)를 대체하기 위한 함수
+ * @param {Array} localData - 로컬 데이터 배열
+ * @param {Array} cloudData - 클라우드 데이터 배열
+ * @returns {Object} { data, hasChanges, updated, added, deleted, localOnly }
+ *   localOnly: 클라우드에 없어서 재업로드가 필요한 로컬 항목 배열
+ */
+function mergeCloudData(localData, cloudData) {
+    const result = smartMerge(localData, cloudData);
+
+    const cloudIds = new Set();
+    (cloudData || []).forEach(item => {
+        const id = getItemId(item);
+        if (id) cloudIds.add(id);
+    });
+
+    const localOnly = result.data.filter(item => {
+        const id = getItemId(item);
+        return id && !cloudIds.has(id);
+    });
+
+    return { ...result, localOnly };
+}
+
 // ========================================
 // 전역 내보내기
 // ========================================
 
-window.SyncUtils = {
+const SyncUtilsAPI = {
     smartMerge,
+    mergeCloudData,
     getTimestamp,
     normalizeId,
     getItemId
 };
+
+// 브라우저: window 전역 노출 (기존 패턴 유지)
+if (typeof window !== 'undefined') {
+    window.SyncUtils = SyncUtilsAPI;
+}
+// Node (단위 테스트): CommonJS export
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = SyncUtilsAPI;
+}
