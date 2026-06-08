@@ -488,37 +488,23 @@ class CompostSampleManager extends window.BaseSampleManager {
             animalType = this.animalTypeOtherInput.value || '기타';
         }
 
-        // 법인여부
-        const applicantType = formData.get('applicantType') || '개인';
-
         if (this.editingId) {
             // === 수정 모드 ===
             const log = this.sampleLogs.find(l => l.id === this.editingId);
             if (log) {
-                log.receptionNumber = formData.get('receptionNumber');
-                log.date = formData.get('date');
-                log.applicantType = applicantType;
-                log.birthDate = applicantType === '개인' ? formData.get('birthDate') : '';
-                log.corpNumber = applicantType === '법인' ? formData.get('corpNumber') : '';
-                log.farmName = formData.get('farmName');
-                log.name = formData.get('name');
-                log.phoneNumber = formData.get('phoneNumber');
-                log.address = formData.get('address');
-                log.addressPostcode = formData.get('addressPostcode');
-                log.addressRoad = formData.get('addressRoad');
-                log.addressDetail = formData.get('addressDetail');
-                log.farmAddress = formData.get('farmAddressFull');
-                log.farmArea = this.parseFormattedNumber(formData.get('farmArea') || '');
-                log.farmAreaUnit = formData.get('farmAreaUnit') || 'm2';
-                log.sampleType = formData.get('sampleType');
-                log.animalType = animalType;
-                log.productionDate = formData.get('productionDate');
-                log.sampleCount = formData.get('sampleCount') || '1';
-                log.rawMaterials = formData.get('rawMaterials');
-                log.purpose = formData.get('purpose');
-                log.receptionMethod = formData.get('receptionMethod');
-                log.note = formData.get('note');
-                log.updatedAt = new Date().toISOString();
+                Object.assign(log, this.collectCommonFormData(formData), {
+                    receptionNumber: formData.get('receptionNumber'),
+                    farmName: formData.get('farmName'),
+                    farmAddress: formData.get('farmAddressFull'),
+                    farmArea: this.parseFormattedNumber(formData.get('farmArea') || ''),
+                    farmAreaUnit: formData.get('farmAreaUnit') || 'm2',
+                    sampleType: formData.get('sampleType'),
+                    animalType: animalType,
+                    productionDate: formData.get('productionDate'),
+                    sampleCount: formData.get('sampleCount') || '1',
+                    rawMaterials: formData.get('rawMaterials'),
+                    updatedAt: new Date().toISOString()
+                });
 
                 this.saveLogs();
                 this.showToast('수정이 완료되었습니다.', 'success');
@@ -539,18 +525,9 @@ class CompostSampleManager extends window.BaseSampleManager {
             // === 신규 등록 모드 ===
             const data = {
                 id: this.generateId(),
+                ...this.collectCommonFormData(formData),
                 receptionNumber: formData.get('receptionNumber'),
-                date: formData.get('date'),
-                applicantType: applicantType,
-                birthDate: applicantType === '개인' ? formData.get('birthDate') : '',
-                corpNumber: applicantType === '법인' ? formData.get('corpNumber') : '',
                 farmName: formData.get('farmName'),
-                name: formData.get('name'),
-                phoneNumber: formData.get('phoneNumber'),
-                address: formData.get('address'),
-                addressPostcode: formData.get('addressPostcode'),
-                addressRoad: formData.get('addressRoad'),
-                addressDetail: formData.get('addressDetail'),
                 farmAddress: formData.get('farmAddressFull'),
                 farmArea: this.parseFormattedNumber(formData.get('farmArea') || ''),
                 farmAreaUnit: formData.get('farmAreaUnit') || 'm2',
@@ -559,9 +536,6 @@ class CompostSampleManager extends window.BaseSampleManager {
                 productionDate: formData.get('productionDate'),
                 sampleCount: formData.get('sampleCount') || '1',
                 rawMaterials: formData.get('rawMaterials'),
-                purpose: formData.get('purpose'),
-                receptionMethod: formData.get('receptionMethod'),
-                note: formData.get('note'),
                 isComplete: false,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString()

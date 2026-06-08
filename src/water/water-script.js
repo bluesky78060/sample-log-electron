@@ -344,24 +344,11 @@ class WaterSampleManager extends window.BaseSampleManager {
             : (parseInt(generatedNumber, 10) || 1);
 
         // 공통 데이터 (신청자 정보)
-        const applicantType = formData.get('applicantType') || '개인';
         const commonData = {
+            ...this.collectCommonFormData(formData),
             sampleType: '물',
-            date: formData.get('date'),
-            applicantType: applicantType,
-            birthDate: applicantType === '개인' ? formData.get('birthDate') : '',
-            corpNumber: applicantType === '법인' ? formData.get('corpNumber') : '',
-            name: formData.get('name'),
-            phoneNumber: formData.get('phoneNumber'),
-            address: formData.get('address'),
-            addressPostcode: formData.get('addressPostcode'),
-            addressRoad: formData.get('addressRoad'),
-            addressDetail: formData.get('addressDetail'),
-            receptionMethod: formData.get('receptionMethod'),
             sampleName: formData.get('sampleName'),
-            purpose: formData.get('purpose'),
             testItems: formData.get('testItems'),
-            note: formData.get('note'),
             isComplete: false,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
@@ -732,23 +719,10 @@ class WaterSampleManager extends window.BaseSampleManager {
         const oldById = new Map(oldMembers.map(m => [String(m.id), m]));
         const groupId = log.groupId || oldMembers[0]?.groupId || this.generateId();
 
-        const applicantType = formData.get('applicantType') || '개인';
         const commonData = {
+            ...this.collectCommonFormData(formData),
             sampleType: '물',
-            date: formData.get('date'),
-            applicantType,
-            birthDate: applicantType === '개인' ? formData.get('birthDate') : '',
-            corpNumber: applicantType === '법인' ? formData.get('corpNumber') : '',
-            name: formData.get('name'),
-            phoneNumber: formData.get('phoneNumber'),
-            address: formData.get('address'),
-            addressPostcode: formData.get('addressPostcode'),
-            addressRoad: formData.get('addressRoad'),
-            addressDetail: formData.get('addressDetail'),
-            receptionMethod: formData.get('receptionMethod'),
-            purpose: formData.get('purpose'),
-            testItems: formData.get('testItems'),
-            note: formData.get('note')
+            testItems: formData.get('testItems')
         };
 
         // 기존 그룹 멤버 정렬(receptionNumber 오름차순) - Firestore 삭제 및 새 행 재생성 양쪽에서 재사용

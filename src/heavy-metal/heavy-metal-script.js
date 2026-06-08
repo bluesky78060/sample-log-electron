@@ -289,32 +289,24 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
         if (selectedItems.length === 0) { showToast('분석의뢰 항목을 1개 이상 선택해주세요.', 'error'); return; }
         if (!selectedPurpose) { showToast('목적(용도)을 선택해주세요.', 'error'); return; }
 
-        const applicantTypeSelect = document.getElementById('applicantType');
-        const applicantType = applicantTypeSelect?.value || '개인';
         const today = new Date().toISOString().split('T')[0];
 
+        // 공통 입력 필드는 Base collectCommonFormData로 수집 (L1 Phase 3 P3-A)
+        // date/name/phoneNumber는 heavy-metal 고유 동작(기본값 today, trim)을 보존하기 위해 오버라이드
+        const formData = new FormData(this.form);
         const data = {
             id: this.editingId || this.generateId(),
+            ...this.collectCommonFormData(formData),
             receptionNumber: document.getElementById('receptionNumber')?.value || this.generateNextReceptionNumber(),
             date: document.getElementById('date')?.value || today,
             name: name,
             phoneNumber: phoneNumber,
-            applicantType: applicantType,
-            birthDate: applicantType === '개인' ? (document.getElementById('birthDate')?.value || '') : '',
-            corpNumber: applicantType === '법인' ? (document.getElementById('corpNumber')?.value || '') : '',
-            addressPostcode: document.getElementById('addressPostcode')?.value || '',
-            addressRoad: document.getElementById('addressRoad')?.value || '',
-            addressDetail: document.getElementById('addressDetail')?.value || '',
-            address: document.getElementById('address')?.value || '',
             samplingLocation: samplingLocation,
             cropName: cropName,
             treeAge: document.getElementById('treeAge')?.value || '',
             samplingDate: samplingDate,
             sampleCount: document.getElementById('sampleCount')?.value || 1,
             analysisItems: selectedItems,
-            purpose: selectedPurpose,
-            receptionMethod: document.getElementById('receptionMethod')?.value || '',
-            note: document.getElementById('note')?.value || '',
             isComplete: this.editingId ? (this.sampleLogs.find(l => l.id === this.editingId)?.isComplete || false) : false,
             createdAt: this.editingId ? (this.sampleLogs.find(l => l.id === this.editingId)?.createdAt || new Date().toISOString()) : new Date().toISOString(),
             updatedAt: new Date().toISOString()

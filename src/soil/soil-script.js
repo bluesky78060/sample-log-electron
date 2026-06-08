@@ -1588,17 +1588,9 @@ class SoilSampleManager extends window.BaseSampleManager {
                 : parseInt(baseReceptionNumber, 10) || 1;
 
             const commonData = {
-                date: formData.get('date'),
-                name: formData.get('name'),
-                phoneNumber: formData.get('phoneNumber'),
-                address: formData.get('address'),
-                addressPostcode: this.addressPostcode?.value || '',
-                addressRoad: this.addressRoad?.value || '',
-                addressDetail: this.addressDetail?.value || '',
+                ...this.collectCommonFormData(formData),
                 subCategory: formData.get('subCategory') || '-',
-                purpose: formData.get('purpose'),
                 receptionMethod: formData.get('receptionMethod') || '-',
-                note: formData.get('note') || '',
                 updatedAt: new Date().toISOString()
             };
 
@@ -1724,18 +1716,11 @@ class SoilSampleManager extends window.BaseSampleManager {
 
             const updatedLog = {
                 ...existingLog,
+                ...this.collectCommonFormData(formData),
                 receptionNumber: formData.get('receptionNumber'),
-                date: formData.get('date'),
-                name: formData.get('name'),
-                phoneNumber: formData.get('phoneNumber'),
-                address: formData.get('address'),
-                addressPostcode: this.addressPostcode?.value || '',
-                addressRoad: this.addressRoad?.value || '',
-                addressDetail: this.addressDetail?.value || '',
                 subCategory: effectiveSubCategory,
                 purpose: effectivePurpose,
                 receptionMethod: formData.get('receptionMethod') || '-',
-                note: formData.get('note') || '',
                 parcels: validParcels.map(p => ({
                     id: p.id || crypto.randomUUID(),
                     lotAddress: p.lotAddress,
@@ -1804,17 +1789,9 @@ class SoilSampleManager extends window.BaseSampleManager {
         }
 
         const commonData = {
-            date: formData.get('date'),
-            name: formData.get('name'),
-            phoneNumber: formData.get('phoneNumber'),
-            address: formData.get('address'),
-            addressPostcode: this.addressPostcode?.value || '',
-            addressRoad: this.addressRoad?.value || '',
-            addressDetail: this.addressDetail?.value || '',
+            ...this.collectCommonFormData(formData),
             subCategory: formData.get('subCategory') || '-',
-            purpose: formData.get('purpose'),
             receptionMethod: formData.get('receptionMethod') || '-',
-            note: formData.get('note') || '',
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
         };

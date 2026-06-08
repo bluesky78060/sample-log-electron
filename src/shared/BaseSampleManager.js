@@ -1145,6 +1145,37 @@ class BaseSampleManager {
     }
 
     /**
+     * 폼 공통 입력 필드 수집 (4타입 FormData 공유) — submitForm/updateSample의 commonData 리터럴 중복 흡수
+     * 반환: 10개 교집합(date/name/phoneNumber/주소4/purpose/receptionMethod/note) + 법인3(조건부).
+     * createdAt/updatedAt/isComplete/타입고유필드는 호출부 책임(신규/수정 정책이 다름).
+     * soil은 applicantType 요소가 없으므로 법인3 자동 스킵.
+     * @param {FormData} formData
+     * @returns {Object}
+     */
+    collectCommonFormData(formData) {
+        const data = {
+            date: formData.get('date'),
+            name: formData.get('name'),
+            phoneNumber: formData.get('phoneNumber'),
+            address: formData.get('address'),
+            addressPostcode: formData.get('addressPostcode'),
+            addressRoad: formData.get('addressRoad'),
+            addressDetail: formData.get('addressDetail'),
+            purpose: formData.get('purpose'),
+            receptionMethod: formData.get('receptionMethod'),
+            note: formData.get('note')
+        };
+        // 법인/개인 구분 — applicantType 요소가 있는 타입만 (soil 자동 스킵)
+        if (this.applicantTypeSelect || document.getElementById('applicantType')) {
+            const applicantType = formData.get('applicantType') || '개인';
+            data.applicantType = applicantType;
+            data.birthDate = applicantType === '개인' ? formData.get('birthDate') : '';
+            data.corpNumber = applicantType === '법인' ? formData.get('corpNumber') : '';
+        }
+        return data;
+    }
+
+    /**
      * 라벨 인쇄 페이지로 선택 레코드 전달 (5타입 공유)
      * label-print 페이지는 [{name, address, postalCode}] 배열만 수용한다.
      * 주소 매핑 2변형(분리필드 vs address 재파싱)은 getLabelAddressParts 훅으로 흡수.

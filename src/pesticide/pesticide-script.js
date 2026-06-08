@@ -803,7 +803,6 @@ class PesticideSampleManager extends window.BaseSampleManager {
                 return;
             }
 
-            const applicantType = formData.get('applicantType') || '개인';
             const oldMembers = (this.editingGroupIds && this.editingGroupIds.length > 0)
                 ? this.sampleLogs.filter(l => this.editingGroupIds.includes(String(l.id)))
                 : [editingLog];
@@ -845,20 +844,9 @@ class PesticideSampleManager extends window.BaseSampleManager {
             }
 
             const commonData = {
-                date: formData.get('date'),
-                applicantType,
-                birthDate: applicantType === '개인' ? formData.get('birthDate') : '',
-                corpNumber: applicantType === '법인' ? formData.get('corpNumber') : '',
-                name: formData.get('name'),
-                phoneNumber: formData.get('phoneNumber'),
-                address: formData.get('address'),
-                addressPostcode: formData.get('addressPostcode') || '',
-                addressRoad: formData.get('addressRoad') || '',
-                addressDetail: formData.get('addressDetail') || '',
+                ...this.collectCommonFormData(formData),
                 subCategory: formData.get('subCategory') || '-',
-                purpose: formData.get('purpose'),
                 receptionMethod: formData.get('receptionMethod') || '-',
-                note: formData.get('note') || '',
                 producerName: formData.get('producerName') || ''
             };
 
@@ -900,7 +888,6 @@ class PesticideSampleManager extends window.BaseSampleManager {
 
         const baseReceptionNumber = parseInt(formData.get('receptionNumber'), 10);
         const createdLogs = [];
-        const applicantType = formData.get('applicantType') || '개인';
         // 동일 폼 제출로 생성된 N개 행을 그룹으로 묶기 위한 식별자
         const groupId = crypto.randomUUID();
 
@@ -909,22 +896,11 @@ class PesticideSampleManager extends window.BaseSampleManager {
 
             const newLog = {
                 id: crypto.randomUUID(),
+                ...this.collectCommonFormData(formData),
                 groupId,
                 receptionNumber: itemReceptionNumber,
-                date: formData.get('date'),
-                applicantType: applicantType,
-                birthDate: applicantType === '개인' ? formData.get('birthDate') : '',
-                corpNumber: applicantType === '법인' ? formData.get('corpNumber') : '',
-                name: formData.get('name'),
-                phoneNumber: formData.get('phoneNumber'),
-                address: formData.get('address'),
-                addressPostcode: formData.get('addressPostcode') || '',
-                addressRoad: formData.get('addressRoad') || '',
-                addressDetail: formData.get('addressDetail') || '',
                 subCategory: formData.get('subCategory') || '-',
-                purpose: formData.get('purpose'),
                 receptionMethod: formData.get('receptionMethod') || '-',
-                note: formData.get('note') || '',
                 producerName: formData.get('producerName') || '',
                 producerAddress: item.producerAddress,
                 requestContent: item.cropName,
