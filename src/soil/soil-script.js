@@ -1696,6 +1696,16 @@ class SoilSampleManager extends window.BaseSampleManager {
             // localStorage 먼저(ID 할당 보장) + Firebase 삭제분 제거/새 레코드 저장 — persistRecords (L1 Phase 3 P3-C)
             const newIds = new Set(newLogs.map(l => l.id));
             const removedIds = oldGroupLogs.filter(l => !newIds.has(l.id)).map(l => l.id);
+
+            // SAMPL-1-82: 빈 필지주소/빈 작물명이 필터(validParcels·validCrops)되면 해당 멤버가
+            // removedIds에 포함돼 조용히 삭제된다. 삭제 전 사용자에게 확인 — 취소 시 원본 복원.
+            if (removedIds.length > 0 &&
+                !confirm(`기존 ${oldGroupLogs.length}건 중 ${removedIds.length}건이 삭제됩니다. (빈 필지 주소 또는 빈 작물명이 있으면 해당 항목이 제외됩니다.) 계속하시겠습니까?`)) {
+                this.sampleLogs = this.sampleLogs.filter(l => l.groupId !== groupId);  // 방금 추가한 새 레코드 제거
+                this.sampleLogs.push(...oldGroupLogs);                                 // 원본 그룹 복원
+                this.filterAndRenderLogs();
+                return;
+            }
             this.persistRecords(newLogs, removedIds);
             this.filterAndRenderLogs();
             this.validateAndMarkLogs(newLogs).catch(err => // 그룹 수정 후 재검증 (백그라운드)

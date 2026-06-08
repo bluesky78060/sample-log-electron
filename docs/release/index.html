@@ -598,9 +598,34 @@
         <!-- 타임라인 -->
         <div class="timeline">
 
-            <!-- v1.15.2 -->
+            <!-- v1.15.3 -->
             <div class="version-entry">
                 <div class="version-dot latest"></div>
+                <div class="version-card">
+                    <div class="version-card-header">
+                        <div>
+                            <div class="version-meta">
+                                <span class="version-number">v1.15.3</span>
+                                <span class="version-date">2026-06-08</span>
+                            </div>
+                            <div class="version-title">토양·잔류농약 그룹 수정 시 항목 삭제 안전장치 추가 (수질과 동일 부류 점검·보완)</div>
+                        </div>
+                        <div class="badge-row">
+                            <span class="badge badge-latest">★ 최신</span>
+                            <span class="badge badge-fix">버그수정</span>
+                        </div>
+                    </div>
+                    <ul class="change-list">
+                        <li><strong>토양 그룹(여러 필지) 수정 시 항목 보호</strong> — 필지 주소나 작물명이 비어 있는 항목이 포함된 그룹을 수정할 때 해당 항목이 조용히 사라질 수 있었습니다. 이제 삭제되는 항목이 있으면 <strong>확인 창으로 먼저 안내</strong>하여 실수로 사라지지 않도록 했습니다.</li>
+                        <li><strong>잔류농약 그룹 수정 시 정확한 항목 삭제</strong> — 의뢰 항목 중간이 비어 있는 경우 엉뚱한 항목이 삭제될 수 있던 문제를 바로잡았습니다.</li>
+                        <li>지난 수질 데이터 수정(v1.15.1·v1.15.2)과 동일한 부류의 문제가 다른 시료 타입에도 있는지 전수 점검하여 보완했습니다. (퇴비·중금속은 단일 항목 구조라 해당 없음)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- v1.15.2 -->
+            <div class="version-entry">
+                <div class="version-dot"></div>
                 <div class="version-card">
                     <div class="version-card-header">
                         <div>
@@ -611,7 +636,6 @@
                             <div class="version-title">수질 그룹(채취장소 여러 곳) 수정 시 일부 항목이 사라지던 문제 수정</div>
                         </div>
                         <div class="badge-row">
-                            <span class="badge badge-latest">★ 최신</span>
                             <span class="badge badge-fix">버그수정</span>
                         </div>
                     </div>

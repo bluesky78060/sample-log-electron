@@ -807,15 +807,28 @@ class PesticideSampleManager extends window.BaseSampleManager {
                 ? this.sampleLogs.filter(l => this.editingGroupIds.includes(String(l.id)))
                 : [editingLog];
 
-            // 사용자가 의뢰 항목을 줄인 경우(빈 항목 또는 명시적 삭제) 확인 다이얼로그
-            if (requestItems.length < oldMembers.length) {
-                const removeCount = oldMembers.length - requestItems.length;
-                if (!confirm(`기존 ${oldMembers.length}건 중 ${removeCount}건이 삭제됩니다. 계속하시겠습니까?`)) {
-                    return;
-                }
-            }
             const oldById = new Map(oldMembers.map(m => [String(m.id), m]));
             const groupId = editingLog.groupId || oldMembers[0]?.groupId || crypto.randomUUID();
+
+            // 정렬 (Firestore 삭제와 재생성, 확인 다이얼로그에서 재사용)
+            const oldOrdered = oldMembers.slice().sort((a, b) => {
+                const na = parseInt(a.receptionNumber, 10) || 0;
+                const nb = parseInt(b.receptionNumber, 10) || 0;
+                return na - nb;
+            });
+
+            // SAMPL-1-82: 실제로 재사용되지 않는(삭제될) 멤버 기준으로 확인 — count가 아닌 id 차집합.
+            // (count 기준은 item.index 매핑상 개수는 유지되나 특정 멤버가 미재사용되는 경우를 놓침)
+            const reusedIds = new Set();
+            requestItems.forEach((item, idx) => {
+                const prev = oldOrdered[item.index] || oldOrdered[idx];
+                if (prev) reusedIds.add(String(prev.id));
+            });
+            const prospectiveRemoved = oldOrdered.filter(o => !reusedIds.has(String(o.id)));
+            if (prospectiveRemoved.length > 0 &&
+                !confirm(`기존 ${oldMembers.length}건 중 ${prospectiveRemoved.length}건이 삭제됩니다. 계속하시겠습니까?`)) {
+                return;
+            }
 
             // 접수번호 파싱
             const receptionRaw = (formData.get('receptionNumber') || '').toString().trim();
@@ -823,18 +836,8 @@ class PesticideSampleManager extends window.BaseSampleManager {
             const safeBaseParsed = parseInt(receptionNumbers[0], 10);
             const safeBase = !isNaN(safeBaseParsed) ? safeBaseParsed : (parseInt(this.generateNextReceptionNumber(), 10) || 1);
 
-            // 정렬 (Firestore 삭제와 재생성 양쪽에서 재사용)
-            const oldOrdered = oldMembers.slice().sort((a, b) => {
-                const na = parseInt(a.receptionNumber, 10) || 0;
-                const nb = parseInt(b.receptionNumber, 10) || 0;
-                return na - nb;
-            });
-
             // 기존 그룹 멤버 로컬에서 제거
             this.sampleLogs = this.sampleLogs.filter(l => !oldById.has(String(l.id)));
-            const newSlotCount = requestItems.length;
-            // 축소된 그룹 멤버(잔여 슬롯) ID 수집 — persistRecords가 this.moduleKey로 개별 삭제 처리 (L1 Phase 3 P3-C)
-            const removedIds = oldOrdered.slice(newSlotCount).map(o => String(o.id));
 
             const commonData = {
                 ...this.collectCommonFormData(formData),
@@ -844,6 +847,7 @@ class PesticideSampleManager extends window.BaseSampleManager {
             };
 
             const nowIso = new Date().toISOString();
+            const newIds = new Set();  // SAMPL-1-82: 재사용된 기존 멤버 id 추적
             requestItems.forEach((item, idx) => {
                 // 빈 항목이 있어 DOM 인덱스와 결과 배열 인덱스가 다를 수 있으므로,
                 // oldOrdered와 매핑할 때 item.index(DOM 순서)를 우선 사용
@@ -860,8 +864,16 @@ class PesticideSampleManager extends window.BaseSampleManager {
                     createdAt: prev?.createdAt || nowIso,
                     updatedAt: nowIso
                 };
+                newIds.add(String(newLog.id));
                 this.sampleLogs.push(newLog);
             });
+
+            // SAMPL-1-82: 재사용되지 않은 기존 멤버 id만 삭제.
+            // slice(newSlotCount)는 중간 빈 행이 있으면 item.index로 재사용된(살아남을) 멤버 id를
+            // 삭제 대상에 잘못 포함시켜 클라우드에서 엉뚱한 멤버를 지운다 → id 집합 차집합으로 정정.
+            const removedIds = oldOrdered
+                .filter(o => !newIds.has(String(o.id)))
+                .map(o => String(o.id));
 
             this.persistRecords([], removedIds);
             this.filterAndRenderLogs();
