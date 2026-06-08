@@ -991,6 +991,35 @@ class BaseSampleManager {
     }
 
     // ========================================
+    // 동일 접수 그룹 멤버 조회 (water/pesticide 공유)
+    //  - 신규: groupId 일치
+    //  - 레거시: createdAt + name + phoneNumber + date 휴리스틱 매칭
+    //  반환: receptionNumber 오름차순
+    // ========================================
+    getGroupMembers(log) {
+        if (!log) return [];
+        const matchByGroupId = log.groupId
+            ? this.sampleLogs.filter(l => l.groupId && l.groupId === log.groupId)
+            : [];
+        let members = matchByGroupId;
+        if (members.length === 0) {
+            members = this.sampleLogs.filter(l =>
+                l.createdAt && l.createdAt === log.createdAt &&
+                (l.name || '') === (log.name || '') &&
+                (l.phoneNumber || '') === (log.phoneNumber || '') &&
+                (l.date || '') === (log.date || '')
+            );
+        }
+        if (members.length === 0) members = [log];
+        members.sort((a, b) => {
+            const na = parseInt(a.receptionNumber, 10) || 0;
+            const nb = parseInt(b.receptionNumber, 10) || 0;
+            return na - nb;
+        });
+        return members;
+    }
+
+    // ========================================
     // 추상 메서드 (서브클래스에서 구현 필요)
     // ========================================
 
