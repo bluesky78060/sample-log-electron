@@ -1166,8 +1166,11 @@ class BaseSampleManager {
      * @param {Object} log
      */
     populateCommonFields(log) {
-        if (this.receptionNumberInput) this.receptionNumberInput.value = log.receptionNumber || '';
-        if (this.dateInput) this.dateInput.value = log.date || '';
+        // heavy-metal처럼 this 캐시가 없는 타입은 getElementById로 폴백
+        const recEl = this.receptionNumberInput || document.getElementById('receptionNumber');
+        const dateEl = this.dateInput || document.getElementById('date');
+        if (recEl) recEl.value = log.receptionNumber || '';
+        if (dateEl) dateEl.value = log.date || '';
 
         const nameEl = document.getElementById('name');
         const phoneEl = document.getElementById('phoneNumber');
@@ -1238,9 +1241,10 @@ class BaseSampleManager {
      * 편집 모드 UI 진입: navSubmitBtn '수정 완료' 표시 + 폼 뷰 전환
      */
     enterEditModeUI() {
-        if (this.navSubmitBtn) {
-            this.navSubmitBtn.title = '수정 완료';
-            this.navSubmitBtn.classList.add('btn-edit-mode');
+        const navSubmitBtn = this.navSubmitBtn || document.getElementById('navSubmitBtn');
+        if (navSubmitBtn) {
+            navSubmitBtn.title = '수정 완료';
+            navSubmitBtn.classList.add('btn-edit-mode');
         }
         this.switchToEditFormView();
     }

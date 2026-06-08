@@ -340,35 +340,13 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
     // ========================================
     // 오버라이드: 편집 (ID 기반)
     // ========================================
-    editSample(id) {
-        const log = this.sampleLogs.find(l => String(l.id) === String(id));
-        if (!log) return;
-
-        this.editingId = id;
-
-        // 폼에 데이터 채우기
-        document.getElementById('receptionNumber').value = log.receptionNumber || '';
-        document.getElementById('date').value = log.date || '';
-        document.getElementById('name').value = log.name || '';
-        document.getElementById('phoneNumber').value = log.phoneNumber || '';
-
-        const addressPostcode = document.getElementById('addressPostcode');
-        const addressRoad = document.getElementById('addressRoad');
-        const addressDetail = document.getElementById('addressDetail');
-        const addressHidden = document.getElementById('address');
-        if (addressPostcode) addressPostcode.value = log.addressPostcode || '';
-        if (addressRoad) addressRoad.value = log.addressRoad || '';
-        if (addressDetail) addressDetail.value = log.addressDetail || '';
-        if (addressHidden) addressHidden.value = log.address || '';
-        // 레거시 데이터 호환: addressRoad 필드가 없고 address만 있는 경우
-        this.applyLegacyAddress(log);
-
+    // Override: 타입 고유 편집 필드 (채취정보/분석항목/목적/수령방법 selected)
+    populateTypeSpecificFields(log) {
         document.getElementById('samplingLocation').value = log.samplingLocation || '';
         document.getElementById('cropName').value = log.cropName || '';
         document.getElementById('treeAge').value = log.treeAge || '';
         document.getElementById('samplingDate').value = log.samplingDate || '';
         document.getElementById('sampleCount').value = log.sampleCount || 1;
-        document.getElementById('note').value = log.note || '';
 
         // 분석항목 체크
         document.querySelectorAll('input[name="analysisItems"]').forEach(cb => {
@@ -381,48 +359,10 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
             radio.checked = radio.value === log.purpose;
         });
 
-        // 수령방법 선택
-        const receptionMethodBtns = document.querySelectorAll('.reception-method-btn');
-        receptionMethodBtns.forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.method === log.receptionMethod);
+        // 수령방법 'selected' 클래스 (Base populateReceptionMethod가 'active'·input 처리)
+        document.querySelectorAll('.reception-method-btn').forEach(btn => {
             btn.classList.toggle('selected', btn.dataset.method === log.receptionMethod);
         });
-        const receptionMethodInput = document.getElementById('receptionMethod');
-        if (receptionMethodInput) receptionMethodInput.value = log.receptionMethod || '';
-
-        // 법인여부/생년월일/법인번호 설정
-        const applicantType = log.applicantType || '개인';
-        const applicantTypeSelect = document.getElementById('applicantType');
-        const birthDateField = document.getElementById('birthDateField');
-        const corpNumberField = document.getElementById('corpNumberField');
-        const birthDateInput = document.getElementById('birthDate');
-        const corpNumberInput = document.getElementById('corpNumber');
-
-        if (applicantTypeSelect) {
-            applicantTypeSelect.value = applicantType;
-            if (applicantType === '법인') {
-                if (birthDateField) birthDateField.classList.add('hidden');
-                if (corpNumberField) corpNumberField.classList.remove('hidden');
-                if (corpNumberInput) corpNumberInput.value = log.corpNumber || '';
-                if (birthDateInput) birthDateInput.value = '';
-            } else {
-                if (birthDateField) birthDateField.classList.remove('hidden');
-                if (corpNumberField) corpNumberField.classList.add('hidden');
-                if (birthDateInput) birthDateInput.value = log.birthDate || '';
-                if (corpNumberInput) corpNumberInput.value = '';
-            }
-        }
-
-        // 네비게이션 바 버튼 텍스트/스타일 변경
-        const navSubmitBtn = document.getElementById('navSubmitBtn');
-        if (navSubmitBtn) {
-            navSubmitBtn.title = '수정 완료';
-            navSubmitBtn.classList.add('btn-edit-mode');
-        }
-
-        // 폼 뷰로 전환
-        this.switchView('form');
-        this.showToast('수정 모드입니다.', 'warning');
     }
 
     // ========================================
