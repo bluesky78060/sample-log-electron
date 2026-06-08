@@ -114,12 +114,8 @@ test.describe('폼 제출 통합 테스트', () => {
             await page.click('[data-view="list"]');
             await page.waitForSelector('#listView');
 
-            // 등록된 데이터 확인
-            const tableBody = page.locator('#logTableBody');
-            const hasData = await tableBody.locator('tr').count() > 0;
-            if (hasData) {
-                await expect(tableBody).toContainText('테스트농장');
-            }
+            // 등록된 데이터 확인 (무조건 단언 — 0행이어도 통과하던 약한 단언 제거)
+            await expect(page.locator('#logTableBody')).toContainText('테스트농장');
         });
     });
 
