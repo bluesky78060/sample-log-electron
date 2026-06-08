@@ -17,15 +17,14 @@ const { test, expect } = require('@playwright/test');
  *                 sampleType 기본값 '가축분퇴비'로 충족
  *  - heavy-metal: samplingLocation, cropName, samplingDate(today), analysisItems(구리 체크),
  *                 purpose(radio 첫 클릭), receptionMethod 버튼(우편)
- *                 navResetBtn → confirm('...') 다이얼로그 — page.dialog 허용 필요
  *  - pesticide:   의뢰항목(.request-crop-name 첫 행 입력), purpose select(참고용),
  *                 receptionMethod 버튼(우편)
  *
- * 리셋 동작 차이:
- *  - soil:       navResetBtn → resetFormKeepReceptionInfo() → name 유지(비워지지 않음)
+ * 리셋 동작 차이 (소스 검증 완료 — Phase 0 리뷰 반영):
+ *  - soil:       navResetBtn → resetFormKeepReceptionInfo() → form.reset() 포함이라 name 비워짐 (접수번호/날짜만 복원)
  *  - water:      navResetBtn → confirm() → resetForm() — confirm 허용 시 name 비워짐
- *  - compost:    navResetBtn → 직접 resetForm() — name 비워짐
- *  - heavy-metal:navResetBtn → confirm() → resetForm() — confirm 허용 시 name 비워짐
+ *  - compost:    navResetBtn → confirm() → resetForm() (compost-script.js:905-908) — name 비워짐
+ *  - heavy-metal:navResetBtn → confirm 없이 resetForm() 직접 (heavy-metal-script.js:1139) — name 비워짐
  *  - pesticide:  navResetBtn → form.reset() 직접 — name 비워짐
  *
  * water/pesticide submitForm 차이:
@@ -41,7 +40,6 @@ const TYPES = [
         storageKey: (year) => `soilSampleLogs_${year}`,
         // navResetBtn → resetFormKeepReceptionInfo() → form.reset() 포함하므로 name 비워짐
         // (접수번호/날짜는 유지, name은 form.reset()으로 비워짐)
-        nameCleared: true,
         needsConfirm: false,
         fillRequired: async (page) => {
             // 필지 주소 (input 이벤트 필요 — this.parcels 업데이트)
@@ -68,7 +66,6 @@ const TYPES = [
         label: '수질분석',
         storageKey: (year) => `waterSampleLogs_${year}`,
         // navResetBtn → confirm() → resetForm() → name 비워짐
-        nameCleared: true,
         needsConfirm: true,
         fillRequired: async (page) => {
             // receptionMethod hidden input — required
@@ -87,7 +84,6 @@ const TYPES = [
         label: '퇴비',
         storageKey: (year) => `compostSampleLogs_${year}`,
         // navResetBtn → confirm() → resetForm() → name 비워짐
-        nameCleared: true,
         needsConfirm: true,
         fillRequired: async (page) => {
             await page.fill('#farmName', '스모크농장');
@@ -102,9 +98,8 @@ const TYPES = [
         path: '/heavy-metal/',
         label: '중금속',
         storageKey: (year) => `heavyMetalSampleLogs_${year}`,
-        // navResetBtn → confirm() → resetForm() → name 비워짐
-        nameCleared: true,
-        needsConfirm: true,
+        // navResetBtn → confirm 없이 resetForm() 직접 호출 → name 비워짐
+        needsConfirm: false,
         fillRequired: async (page) => {
             await page.fill('#samplingLocation', '봉화군 내성리');
             await page.fill('#cropName', '벼');
@@ -124,7 +119,6 @@ const TYPES = [
         label: '잔류농약',
         storageKey: (year) => `pesticideSampleLogs_${year}`,
         // navResetBtn → form.reset() 직접 — name 비워짐
-        nameCleared: true,
         needsConfirm: false,
         fillRequired: async (page) => {
             // 의뢰항목 첫 행 (.request-crop-name)
@@ -250,14 +244,8 @@ for (const t of TYPES) {
             await page.click('#navResetBtn');
             await page.waitForTimeout(200);
 
-            if (t.nameCleared) {
-                // 대부분 타입: resetForm() → form.reset() → name 비워짐
-                await expect(page.locator('#name')).toHaveValue('');
-            } else {
-                // soil: resetFormKeepReceptionInfo() → name 유지 (현재 동작 고정)
-                // 이것이 의도된 UX — 리팩토링 후에도 이 동작이 유지되어야 함
-                await expect(page.locator('#name')).not.toHaveValue('');
-            }
+            // 5개 타입 모두 리셋 시 name이 비워진다 (소스 검증 완료 — soil도 form.reset() 포함)
+            await expect(page.locator('#name')).toHaveValue('');
         });
 
     });
