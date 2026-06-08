@@ -635,25 +635,13 @@ class CompostSampleManager extends window.BaseSampleManager {
     // Override: 폼 초기화
     // ========================================
 
-    resetForm() {
-        // 접수번호와 접수일자 값 저장
-        const receptionNumber = this.receptionNumberInput?.value;
-        const date = this.dateInput?.value;
+    // Override: 리셋 시 접수일자 보존 (Base 골격 사용)
+    shouldPreserveDateOnReset() {
+        return true;
+    }
 
-        this.form.reset();
-        // yearSelect 복원: form.reset()이 yearSelect를 첫 옵션(2025)으로 되돌리므로 복원
-        { const _yearSelect = document.getElementById('yearSelect'); if (_yearSelect && this.selectedYear) _yearSelect.value = this.selectedYear; }
-
-        // 접수번호와 접수일자 복원
-        if (receptionNumber) {
-            this.receptionNumberInput.value = receptionNumber;
-        }
-        if (date) {
-            this.dateInput.value = date;
-        } else {
-            this.dateInput.valueAsDate = new Date();
-        }
-
+    // Override: 리셋 후 타입 고유 초기화 (통보방법/법인/시료종류/축종/면적단위)
+    onAfterFormReset() {
         // 통보방법 초기화
         this.receptionMethodBtns.forEach(b => b.classList.remove('active'));
         this.receptionMethodInput.value = '';
@@ -689,19 +677,6 @@ class CompostSampleManager extends window.BaseSampleManager {
         }
         if (this.farmAreaUnitInput) {
             this.farmAreaUnitInput.value = 'm2';
-        }
-
-        // 접수번호 갱신
-        const nextNumber = this.generateNextReceptionNumber();
-        this.receptionNumberInput.value = nextNumber;
-
-        // 수정 모드 해제
-        this.editingId = null;
-
-        // 제출 버튼 스타일 복원
-        if (this.navSubmitBtn) {
-            this.navSubmitBtn.title = '접수 등록';
-            this.navSubmitBtn.classList.remove('btn-edit-mode');
         }
     }
 

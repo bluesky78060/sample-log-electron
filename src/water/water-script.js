@@ -488,23 +488,13 @@ class WaterSampleManager extends window.BaseSampleManager {
     // ========================================
     // 오버라이드: 폼 초기화
     // ========================================
-    resetForm() {
-        const receptionNumber = this.receptionNumberInput?.value;
-        const date = this.dateInput?.value;
+    // Override: 리셋 시 접수일자 보존 (Base 골격 사용)
+    shouldPreserveDateOnReset() {
+        return true;
+    }
 
-        this.form.reset();
-        // yearSelect 복원: form.reset()이 yearSelect를 첫 옵션(2025)으로 되돌리므로 복원
-        { const _yearSelect = document.getElementById('yearSelect'); if (_yearSelect && this.selectedYear) _yearSelect.value = this.selectedYear; }
-
-        if (receptionNumber) {
-            this.receptionNumberInput.value = receptionNumber;
-        }
-        if (date) {
-            this.dateInput.value = date;
-        } else {
-            this.dateInput.valueAsDate = new Date();
-        }
-
+    // Override: 리셋 후 타입 고유 초기화 (통보방법/법인/검사항목/채취장소)
+    onAfterFormReset() {
         this.receptionMethodBtns.forEach(b => b.classList.remove('active'));
         this.receptionMethodInput.value = '';
 
@@ -534,19 +524,8 @@ class WaterSampleManager extends window.BaseSampleManager {
         if (firstCropInput) firstCropInput.value = '';
         if (firstNoteInput) firstNoteInput.value = '';
 
-        // 접수번호 갱신
-        const nextNumber = this.generateNextReceptionNumber();
-        this.receptionNumberInput.value = nextNumber;
-        this.receptionNumberInput.dataset.baseNumber = nextNumber;
-
-        // 수정 모드 해제
-        this.editingId = null;
-        this.editingGroupIds = [];
-
-        if (this.navSubmitBtn) {
-            this.navSubmitBtn.title = '접수 등록';
-            this.navSubmitBtn.classList.remove('btn-edit-mode');
-        }
+        // 접수번호 baseNumber 동기화 (Base가 receptionNumber 값은 이미 갱신)
+        this.receptionNumberInput.dataset.baseNumber = this.receptionNumberInput.value;
     }
 
     // ========================================

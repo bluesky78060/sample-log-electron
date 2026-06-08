@@ -368,26 +368,12 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
     // ========================================
     // 오버라이드: 폼 초기화
     // ========================================
-    resetForm() {
-        this.form?.reset();
-        // yearSelect 복원: form.reset()이 yearSelect를 첫 옵션(2025)으로 되돌리므로 복원
-        { const _yearSelect = document.getElementById('yearSelect'); if (_yearSelect && this.selectedYear) _yearSelect.value = this.selectedYear; }
-        this.editingId = null;
-
-        const navSubmitBtn = document.getElementById('navSubmitBtn');
-        if (navSubmitBtn) {
-            navSubmitBtn.title = '접수 등록';
-            navSubmitBtn.classList.remove('btn-edit-mode');
-        }
-
-        const today = new Date().toISOString().split('T')[0];
-        const dateInput = document.getElementById('date');
+    // Override: 리셋 후 타입 고유 초기화 (채취일/수령방법/법인/분석항목/인증안내)
+    // 공통 골격(form.reset/yearSelect/편집해제/navSubmitBtn/날짜/접수번호)은 Base.resetForm
+    onAfterFormReset() {
+        // 채취일자도 오늘로
         const samplingDateInput = document.getElementById('samplingDate');
-        if (dateInput) dateInput.value = today;
-        if (samplingDateInput) samplingDateInput.value = today;
-
-        const receptionNumberInput = document.getElementById('receptionNumber');
-        if (receptionNumberInput) receptionNumberInput.value = this.generateNextReceptionNumber();
+        if (samplingDateInput) samplingDateInput.value = new Date().toISOString().split('T')[0];
 
         // 수령 방법 선택 초기화
         document.querySelectorAll('.reception-method-btn').forEach(btn => btn.classList.remove('active', 'selected'));

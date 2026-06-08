@@ -1957,18 +1957,14 @@ class SoilSampleManager extends window.BaseSampleManager {
         this.populateFormForEdit(logItem);
     }
 
+    // 편집 취소 = Base resetForm (공통 골격 + onAfterFormReset)
     cancelEditMode() {
-        this.editingId = null;
-        this.editingGroupIds = [];
+        this.resetForm();
+    }
 
-        if (this.navSubmitBtn) {
-            this.navSubmitBtn.title = '접수 등록';
-            this.navSubmitBtn.classList.remove('btn-edit-mode');
-        }
-
-        this.form.reset();
-        // yearSelect 복원: form.reset()이 yearSelect를 첫 옵션(2025)으로 되돌리므로 복원
-        { const _yearSelect = document.getElementById('yearSelect'); if (_yearSelect && this.selectedYear) _yearSelect.value = this.selectedYear; }
+    // Override: 리셋 후 타입 고유 초기화 (구분 옵션 재주입/주소/필지)
+    // 공통 골격(form.reset/yearSelect/편집해제/navSubmitBtn/날짜/접수번호)은 Base.resetForm
+    onAfterFormReset() {
         const subCatSelect = document.getElementById('subCategory');
         if (subCatSelect) {
             subCatSelect.disabled = false;
@@ -1983,7 +1979,6 @@ class SoilSampleManager extends window.BaseSampleManager {
             `);
             subCatSelect.value = '';
         }
-        if (this.dateInput) this.dateInput.valueAsDate = new Date();
 
         if (this.addressPostcode) this.addressPostcode.value = '';
         if (this.addressRoad) this.addressRoad.value = '';
@@ -1994,12 +1989,6 @@ class SoilSampleManager extends window.BaseSampleManager {
         this.parcelIdCounter = 0;
         if (this.parcelsContainer) this.parcelsContainer.innerHTML = '';
         this.addParcel();
-
-        this.receptionNumberInput.value = this.generateNextReceptionNumber();
-    }
-
-    resetForm() {
-        this.cancelEditMode();
     }
 
     // Override: 편집 시 폼 뷰 전환 (직접 DOM 토글 + 스크롤, 토스트 없음)

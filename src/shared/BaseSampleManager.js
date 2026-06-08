@@ -1259,12 +1259,51 @@ class BaseSampleManager {
     }
 
     /**
-     * 폼 초기화
-     * @abstract
+     * 폼 초기화 — Template Method
+     * form.reset() → yearSelect 복원 → 편집상태 해제 → navSubmitBtn 복원
+     * → 날짜(오늘/보존) → 접수번호 재생성 → onAfterFormReset() 훅
      */
     resetForm() {
-        throw new Error('resetForm must be implemented by subclass');
+        // 날짜 보존 정책(water/compost): form.reset() 전에 현재 값을 저장
+        const dateEl = this.dateInput || document.getElementById('date');
+        const savedDate = (this.shouldPreserveDateOnReset() && dateEl) ? dateEl.value : null;
+
+        if (this.form) this.form.reset();
+        // yearSelect 복원: form.reset()이 yearSelect를 첫 옵션으로 되돌리므로 복원
+        const yearSelect = document.getElementById('yearSelect');
+        if (yearSelect && this.selectedYear) yearSelect.value = this.selectedYear;
+
+        // 편집 상태 해제
+        this.editingId = null;
+        this.editingGroupIds = [];
+
+        // navSubmitBtn 복원
+        const navSubmitBtn = this.navSubmitBtn || document.getElementById('navSubmitBtn');
+        if (navSubmitBtn) {
+            navSubmitBtn.title = '접수 등록';
+            navSubmitBtn.classList.remove('btn-edit-mode');
+        }
+
+        // 날짜: 보존값이 있으면 복원, 없으면 오늘
+        if (dateEl) {
+            if (savedDate) dateEl.value = savedDate;
+            else dateEl.valueAsDate = new Date();
+        }
+
+        // 접수번호 재생성
+        const recEl = this.receptionNumberInput || document.getElementById('receptionNumber');
+        if (recEl) recEl.value = this.generateNextReceptionNumber();
+
+        this.onAfterFormReset();
     }
+
+    /** 리셋 시 접수일자 보존 여부 훅 (water/compost: true → 현재 날짜 유지) */
+    shouldPreserveDateOnReset() {
+        return false;
+    }
+
+    /** 리셋 후 타입 고유 초기화 훅 (기본 no-op) */
+    onAfterFormReset() {}
 
     /**
      * 테이블 행 빌드 (PaginationManager에서 호출)

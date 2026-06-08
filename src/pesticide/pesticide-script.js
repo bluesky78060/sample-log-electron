@@ -1060,14 +1060,9 @@ class PesticideSampleManager extends window.BaseSampleManager {
     // Override: 폼 초기화
     // ========================================
 
-    resetForm() {
-        this.editingId = null;
-        this.editingGroupIds = [];
-        this.form.reset();
-        // yearSelect 복원: form.reset()이 yearSelect를 첫 옵션(2025)으로 되돌리므로 복원
-        { const _yearSelect = document.getElementById('yearSelect'); if (_yearSelect && this.selectedYear) _yearSelect.value = this.selectedYear; }
-        this.dateInput.valueAsDate = new Date();
-
+    // Override: 리셋 후 타입 고유 초기화 (주소/의뢰항목)
+    // 공통 골격(form.reset/yearSelect/편집해제/navSubmitBtn/날짜/접수번호)은 Base.resetForm
+    onAfterFormReset() {
         // 주소 필드 초기화
         if (this.addressPostcode) this.addressPostcode.value = '';
         if (this.addressRoad) this.addressRoad.value = '';
@@ -1076,35 +1071,17 @@ class PesticideSampleManager extends window.BaseSampleManager {
 
         // 의뢰 항목 초기화
         this.resetRequestItems();
-
-        // 다음 접수번호 자동 생성
-        this.receptionNumberInput.value = this.generateNextReceptionNumber();
     }
 
+    // 편집 취소: Base resetForm(공통 골격 + onAfterFormReset) + 구분/필지 정리
     cancelEditMode() {
-        this.editingId = null;
-        this.editingGroupIds = [];
+        this.resetForm();
 
-        if (this.navSubmitBtn) {
-            this.navSubmitBtn.title = '접수 등록';
-            this.navSubmitBtn.classList.remove('btn-edit-mode');
-        }
-
-        this.form.reset();
-        // yearSelect 복원: form.reset()이 yearSelect를 첫 옵션(2025)으로 되돌리므로 복원
-        { const _yearSelect = document.getElementById('yearSelect'); if (_yearSelect && this.selectedYear) _yearSelect.value = this.selectedYear; }
         const subCatSelect = document.getElementById('subCategory');
         if (subCatSelect) {
             subCatSelect.disabled = false;
             subCatSelect.value = '';
         }
-        this.dateInput.valueAsDate = new Date();
-
-        // 주소 필드 초기화
-        this.addressPostcode.value = '';
-        this.addressRoad.value = '';
-        this.addressDetail.value = '';
-        this.addressHidden.value = '';
 
         // 필지 초기화
         this.parcels = [];
@@ -1112,12 +1089,6 @@ class PesticideSampleManager extends window.BaseSampleManager {
         if (this.parcelsContainer) {
             this.parcelsContainer.innerHTML = '';
         }
-
-        // 의뢰 항목 초기화
-        this.resetRequestItems();
-
-        // 다음 접수번호 자동 생성
-        this.receptionNumberInput.value = this.generateNextReceptionNumber();
     }
 
     // ========================================
