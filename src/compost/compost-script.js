@@ -582,43 +582,10 @@ class CompostSampleManager extends window.BaseSampleManager {
     // Override: 샘플 편집
     // ========================================
 
-    editSample(id) {
-        const log = this.sampleLogs.find(l => String(l.id) === id);
-        if (!log) return;
-
-        this.editingId = id;
-
-        // 폼에 데이터 채우기
-        this.receptionNumberInput.value = log.receptionNumber || '';
-        this.dateInput.value = log.date || '';
-
-        // 법인여부/생년월일/법인번호 설정
-        const applicantType = log.applicantType || '개인';
-        if (this.applicantTypeSelect) {
-            this.applicantTypeSelect.value = applicantType;
-            if (applicantType === '법인') {
-                this.birthDateField.classList.add('hidden');
-                this.corpNumberField.classList.remove('hidden');
-                if (this.corpNumberInput) this.corpNumberInput.value = log.corpNumber || '';
-                if (this.birthDateInput) this.birthDateInput.value = '';
-            } else {
-                this.birthDateField.classList.remove('hidden');
-                this.corpNumberField.classList.add('hidden');
-                if (this.birthDateInput) this.birthDateInput.value = log.birthDate || '';
-                if (this.corpNumberInput) this.corpNumberInput.value = '';
-            }
-        }
-
-        // 의뢰자 정보
+    // Override: 타입 고유 편집 필드 (의뢰자 농장명/농장정보/축종/시료종류/생산정보/목적)
+    populateTypeSpecificFields(log) {
+        // 의뢰자 농장명
         document.getElementById('farmName').value = log.farmName || '';
-        document.getElementById('name').value = log.name || '';
-        document.getElementById('phoneNumber').value = log.phoneNumber || '';
-        this.addressPostcode.value = log.addressPostcode || '';
-        this.addressRoad.value = log.addressRoad || '';
-        this.addressDetail.value = log.addressDetail || '';
-        this.addressHidden.value = log.address || '';
-        // 레거시 데이터 호환: addressRoad 필드가 없고 address만 있는 경우
-        this.applyLegacyAddress(log);
 
         // 농장 정보
         if (this.farmAddressFullInput) {
@@ -662,22 +629,6 @@ class CompostSampleManager extends window.BaseSampleManager {
         document.getElementById('sampleCount').value = log.sampleCount || 1;
         document.getElementById('rawMaterials').value = log.rawMaterials || '';
         document.getElementById('purpose').value = log.purpose || '';
-        document.getElementById('note').value = log.note || '';
-
-        // 통보방법 선택
-        this.receptionMethodBtns.forEach(b => {
-            b.classList.toggle('active', b.dataset.method === log.receptionMethod);
-        });
-        this.receptionMethodInput.value = log.receptionMethod || '';
-
-        this.switchView('form');
-        this.showToast('수정 모드입니다. 변경 후 등록 버튼을 클릭하세요.', 'warning');
-
-        // 제출 버튼 스타일 변경 (수정 모드 표시)
-        if (this.navSubmitBtn) {
-            this.navSubmitBtn.title = '수정 완료';
-            this.navSubmitBtn.classList.add('btn-edit-mode');
-        }
     }
 
     // ========================================
