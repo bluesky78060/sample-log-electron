@@ -49,7 +49,7 @@ class SoilSampleManager extends window.BaseSampleManager {
         this.isFullView = false;
         this.autoSaveFileHandle = null;
         this.regionSelectionModalData = null;
-        this.editingLogId = null;
+        // editingId / editingGroupIds 는 Base 생성자에서 초기화 (편집 상태 표준화)
         this.pendingMailDateIds = [];
 
         // Pagination state (soil uses its own pagination, NOT PaginationManager)
@@ -534,7 +534,7 @@ class SoilSampleManager extends window.BaseSampleManager {
         this.firebaseDeleteRecords(id);
 
         // 삭제한 항목이 수정 중이던 항목이면 수정 모드 취소
-        if (String(this.editingLogId) === String(id)) {
+        if (String(this.editingId) === String(id)) {
             this.cancelEditMode();
         }
 
@@ -568,7 +568,7 @@ class SoilSampleManager extends window.BaseSampleManager {
         this.firebaseDeleteRecords(deleteIds);
 
         // 수정 중이던 항목이 삭제 그룹에 포함되면 수정 모드 취소
-        if (deleteIds.map(String).includes(String(this.editingLogId))) {
+        if (deleteIds.map(String).includes(String(this.editingId))) {
             this.cancelEditMode();
         }
 
@@ -1580,7 +1580,7 @@ class SoilSampleManager extends window.BaseSampleManager {
         const formData = new FormData(this.form);
 
         // 그룹 수정 모드인 경우
-        if (this.editingGroupId) {
+        if (this.editingGroupIds && this.editingGroupIds.length > 0) {
             const baseReceptionNumber = formData.get('receptionNumber');
             const isFillNumber = baseReceptionNumber.startsWith('F');
             const baseNumber = isFillNumber
@@ -1602,8 +1602,11 @@ class SoilSampleManager extends window.BaseSampleManager {
                 updatedAt: new Date().toISOString()
             };
 
-            const oldGroupLogs = this.editingGroupLogs;
-            const groupId = this.editingGroupId;
+            // editingGroupIds(순서 보존) 기준으로 기존 그룹 레코드 복원 — id/createdAt 위치 매핑 유지
+            const oldGroupLogs = this.editingGroupIds
+                .map(eid => this.sampleLogs.find(l => String(l.id) === String(eid)))
+                .filter(Boolean);
+            const groupId = oldGroupLogs[0]?.groupId;
 
             // 기존 그룹 레코드 모두 제거
             this.sampleLogs = this.sampleLogs.filter(l => l.groupId !== groupId);
@@ -1705,8 +1708,8 @@ class SoilSampleManager extends window.BaseSampleManager {
         }
 
         // 수정 모드인 경우
-        if (this.editingLogId) {
-            const logIndex = this.sampleLogs.findIndex(l => l.id === this.editingLogId);
+        if (this.editingId) {
+            const logIndex = this.sampleLogs.findIndex(l => l.id === this.editingId);
             if (logIndex === -1) {
                 this.showToast('수정할 데이터를 찾을 수 없습니다.', 'error');
                 return;
@@ -1955,9 +1958,8 @@ class SoilSampleManager extends window.BaseSampleManager {
     }
 
     cancelEditMode() {
-        this.editingLogId = null;
-        this.editingGroupId = null;
-        this.editingGroupLogs = null;
+        this.editingId = null;
+        this.editingGroupIds = [];
 
         if (this.navSubmitBtn) {
             this.navSubmitBtn.title = '접수 등록';
@@ -2001,7 +2003,8 @@ class SoilSampleManager extends window.BaseSampleManager {
     }
 
     populateFormForEdit(log) {
-        this.editingLogId = log.id;
+        this.editingId = log.id;
+        this.editingGroupIds = [];
 
         this.receptionNumberInput.value = log.receptionNumber || '';
         if (this.dateInput) this.dateInput.value = log.date || '';
@@ -2099,10 +2102,9 @@ class SoilSampleManager extends window.BaseSampleManager {
     populateFormForGroupEdit(groupLogs) {
         const firstLog = groupLogs[0];
 
-        // 그룹 수정 모드 플래그
-        this.editingLogId = null;
-        this.editingGroupId = firstLog.groupId;
-        this.editingGroupLogs = groupLogs;
+        // 그룹 수정 모드 플래그 (editingGroupIds: 순서 보존 — submitForm에서 id/createdAt 위치 매핑)
+        this.editingId = null;
+        this.editingGroupIds = groupLogs.map(l => String(l.id));
 
         // 접수번호 (기본번호만, 서브넘버 -1,-2 제외)
         const baseRecNum = (firstLog.receptionNumber || '').split('-')[0];
@@ -3393,7 +3395,7 @@ class SoilSampleManager extends window.BaseSampleManager {
         if (this.subCategorySelect) {
             this.subCategorySelect.addEventListener('change', (e) => {
                 const isFill = e.target.value === '성토';
-                if (this.receptionNumberInput && !this.editingLogId && !this.editingGroupId) {
+                if (this.receptionNumberInput && !this.editingId && !(this.editingGroupIds && this.editingGroupIds.length)) {
                     this.receptionNumberInput.value = isFill
                         ? this.generateNextFillReceptionNumber()
                         : this.generateNextReceptionNumber();
@@ -3865,7 +3867,7 @@ class SoilSampleManager extends window.BaseSampleManager {
                 this.firebaseDeleteRecords(selectedIds);
                 this.filterAndRenderLogs();
                 if (this.selectAllCheckbox) { this.selectAllCheckbox.checked = false; this.selectAllCheckbox.indeterminate = false; }
-                if (selectedIds.map(String).includes(String(this.editingLogId))) this.cancelEditMode();
+                if (selectedIds.map(String).includes(String(this.editingId))) this.cancelEditMode();
                 this.showToast(`${selectedIds.length}건이 삭제되었습니다.`, 'success');
             });
         }

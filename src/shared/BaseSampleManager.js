@@ -28,6 +28,8 @@ class BaseSampleManager {
         this.sampleLogs = [];
         this.selectedYear = new Date().getFullYear().toString();
         this.editingId = null;
+        // 그룹 묶음 수정용 멤버 ID 목록 (단건 편집 시 빈 배열) — water/pesticide/soil 공통
+        this.editingGroupIds = [];
         // 검색 필터 상태 (서브클래스가 자체 기본값으로 덮어쓸 수 있음)
         this.currentSearchFilter = {
             dateFrom: '', dateTo: '', name: '',
