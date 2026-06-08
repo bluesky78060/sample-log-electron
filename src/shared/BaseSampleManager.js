@@ -1057,12 +1057,14 @@ class BaseSampleManager {
     }
 
     /**
-     * 렌더링 전 데이터 가공 (soil/pesticide: flattenLogsForTable)
+     * 렌더 전 데이터 가공 — 기본: 접수번호 숫자 오름차순 정렬
+     * (soil/pesticide는 flattenLogsForTable 오버라이드 유지)
      * @param {Array} logs - 원본 데이터
      * @returns {Array} 가공된 데이터
      */
     prepareDataForRender(logs) {
-        return logs;
+        return [...logs].sort((a, b) =>
+            (parseInt(a.receptionNumber, 10) || 0) - (parseInt(b.receptionNumber, 10) || 0));
     }
 
     /**

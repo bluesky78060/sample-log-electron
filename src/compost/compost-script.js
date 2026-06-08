@@ -170,18 +170,6 @@ class CompostSampleManager extends window.BaseSampleManager {
     }
 
     // ========================================
-    // Override: 렌더링 전 데이터 정렬 (접수번호 오름차순)
-    // ========================================
-
-    prepareDataForRender(logs) {
-        return [...logs].sort((a, b) => {
-            const numA = parseInt(a.receptionNumber, 10) || 0;
-            const numB = parseInt(b.receptionNumber, 10) || 0;
-            return numA - numB;
-        });
-    }
-
-    // ========================================
     // Override: 뷰 전환 (listViewStale 지원)
     // ========================================
 

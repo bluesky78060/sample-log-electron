@@ -111,17 +111,6 @@ class WaterSampleManager extends window.BaseSampleManager {
     }
 
     // ========================================
-    // 오버라이드: 렌더링 전 데이터 정렬 (접수번호 오름차순)
-    // ========================================
-    prepareDataForRender(logs) {
-        return [...logs].sort((a, b) => {
-            const numA = parseInt(a.receptionNumber, 10) || 0;
-            const numB = parseInt(b.receptionNumber, 10) || 0;
-            return numA - numB;
-        });
-    }
-
-    // ========================================
     // 오버라이드: 테이블 행 빌드
     // ========================================
     buildTableRow(item, index) {
