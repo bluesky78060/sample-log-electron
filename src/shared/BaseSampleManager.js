@@ -1074,17 +1074,23 @@ class BaseSampleManager {
     }
 
     /**
-     * 공통 completed 필드 마이그레이션
+     * 레거시 완료 필드 마이그레이션: completed/isCompleted → isComplete 통합
+     * (구 Base의 completed 체계는 5개 타입 전부가 폐기 — isComplete가 현행)
      * @param {Array} logs - 데이터
      * @returns {Array} 마이그레이션된 데이터
      */
     migrateCompletedField(logs) {
         if (!Array.isArray(logs)) return logs;
         return logs.map(log => {
-            if (log.completed === undefined) {
-                return { ...log, completed: false };
+            const migrated = { ...log };
+            if (migrated.isComplete === undefined) {
+                if (migrated.completed !== undefined) migrated.isComplete = !!migrated.completed;
+                else if (migrated.isCompleted !== undefined) migrated.isComplete = !!migrated.isCompleted;
+                else migrated.isComplete = false;
             }
-            return log;
+            delete migrated.completed;
+            delete migrated.isCompleted;
+            return migrated;
         });
     }
 

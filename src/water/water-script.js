@@ -111,21 +111,6 @@ class WaterSampleManager extends window.BaseSampleManager {
     }
 
     // ========================================
-    // 오버라이드: 완료 필드 마이그레이션 (isComplete 사용)
-    // ========================================
-    migrateCompletedField(logs) {
-        if (!Array.isArray(logs)) return logs;
-        return logs.map(log => {
-            if (log.completed !== undefined || log.isCompleted !== undefined) {
-                log.isComplete = log.isComplete || log.isCompleted || log.completed || false;
-                delete log.completed;
-                delete log.isCompleted;
-            }
-            return log;
-        });
-    }
-
-    // ========================================
     // 오버라이드: 렌더링 전 데이터 정렬 (접수번호 오름차순)
     // ========================================
     prepareDataForRender(logs) {

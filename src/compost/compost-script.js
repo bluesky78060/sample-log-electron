@@ -170,25 +170,6 @@ class CompostSampleManager extends window.BaseSampleManager {
     }
 
     // ========================================
-    // Override: completed 필드 마이그레이션 (compost는 isComplete 사용)
-    // ========================================
-
-    migrateCompletedField(logs) {
-        if (!Array.isArray(logs)) return logs;
-        return logs.map(log => {
-            if (log.completed !== undefined || log.isCompleted !== undefined) {
-                log.isComplete = log.isComplete || log.isCompleted || log.completed || false;
-                delete log.completed;
-                delete log.isCompleted;
-            }
-            if (log.isComplete === undefined) {
-                log.isComplete = false;
-            }
-            return log;
-        });
-    }
-
-    // ========================================
     // Override: 렌더링 전 데이터 정렬 (접수번호 오름차순)
     // ========================================
 
