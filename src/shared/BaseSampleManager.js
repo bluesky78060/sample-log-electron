@@ -248,12 +248,7 @@ class BaseSampleManager {
             window.firestoreDb.batchSave(this.moduleKey, parseInt(this.selectedYear, 10), this.sampleLogs)
                 .then(ok => {
                     if (ok) {
-                        this._cloudSyncFailed = false;
-                        // 성공 시 대기 중인 online 재시도 리스너 정리 (상태 머신 대칭)
-                        if (this._retryCloudSyncHandler) {
-                            window.removeEventListener('online', this._retryCloudSyncHandler);
-                            this._retryCloudSyncHandler = null;
-                        }
+                        this._clearCloudSyncFailure();
                         this.log('Firebase 동기화 완료:', this.sampleLogs.length, '건');
                     } else {
                         this._handleCloudSyncFailure();
@@ -319,9 +314,29 @@ class BaseSampleManager {
                 this._retryCloudSyncHandler = null;
                 this._cloudSyncFailed = false;
                 this.log('🔁 온라인 복귀 — 클라우드 동기화 재시도');
-                this.saveLogs();  // localStorage 재기록은 멱등, batchSave 재시도가 목적
+                this._retryCloudSyncAction();
             };
             window.addEventListener('online', this._retryCloudSyncHandler, { once: true });
+        }
+    }
+
+    /**
+     * L2: online 복귀 시 실행할 재시도 동작 — 서브클래스 오버라이드 지점
+     * (기본: saveLogs가 전체 batchSave를 수행. soil처럼 saveLogs가 로컬 전용인
+     *  서브클래스는 클라우드 동기화 메서드로 오버라이드할 것)
+     */
+    _retryCloudSyncAction() {
+        this.saveLogs();
+    }
+
+    /**
+     * L2: 동기화 성공 시 실패 상태 해제 — 플래그 리셋 + 대기 중 재시도 리스너 정리
+     */
+    _clearCloudSyncFailure() {
+        this._cloudSyncFailed = false;
+        if (this._retryCloudSyncHandler) {
+            window.removeEventListener('online', this._retryCloudSyncHandler);
+            this._retryCloudSyncHandler = null;
         }
     }
 
