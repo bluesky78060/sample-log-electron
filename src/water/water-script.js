@@ -643,6 +643,14 @@ class WaterSampleManager extends window.BaseSampleManager {
         return Array.from(inputs).map(input => input.value.trim()).filter(v => v);
     }
 
+    // SAMPL-1-81: 행(슬롯) 기준 per-row 읽기 (빈 값 미필터) — updateSample의 멤버 삭제 판정용.
+    // getAllSamplingLocations()는 빈 값을 필터링하므로 그룹 수정 시 행 수 산정에 쓰면
+    // 빈 채취장소 멤버가 removedIds에 잘못 포함되어 영구 삭제된다.
+    getAllSamplingLocationRows() {
+        const inputs = this.samplingLocationsList.querySelectorAll('.sampling-location-input');
+        return Array.from(inputs).map(input => input.value.trim());
+    }
+
     getAllSamplingCrops() {
         const inputs = this.samplingLocationsList.querySelectorAll('.sampling-crop-input');
         return Array.from(inputs).map(input => input.value.trim());
@@ -663,7 +671,9 @@ class WaterSampleManager extends window.BaseSampleManager {
         if (!Array.isArray(crops)) crops = [crops];
         if (!Array.isArray(sampleNames)) sampleNames = [sampleNames];
         if (!Array.isArray(notes)) notes = [notes];
-        locations = locations.filter(l => l);
+        // SAMPL-1-81: 빈 채취장소를 필터링하지 않는다 — 그룹 멤버 수만큼 행을 만들어
+        // (1) 빈 채취장소 멤버가 행 없이 사라져 updateSample에서 삭제되는 것 방지,
+        // (2) crops/sampleNames/notes와 인덱스 정렬 유지 (필터 시 어긋남).
 
         const count = Math.max(1, locations.length);
         this.updateSamplingLocations(count);
@@ -702,7 +712,9 @@ class WaterSampleManager extends window.BaseSampleManager {
         const log = this.sampleLogs.find(l => l.id === this.editingId);
         if (!log) return;
 
-        const samplingLocations = this.getAllSamplingLocations();
+        // SAMPL-1-81: 행(슬롯) 기준으로 읽어야 빈 채취장소 멤버가 삭제되지 않고,
+        // crops/sampleNames/notes와 인덱스가 정렬된다.
+        const samplingLocations = this.getAllSamplingLocationRows();
         const samplingCrops = this.getAllSamplingCrops();
         const sampleNames = this.getAllSampleNames();
         const samplingNotes = this.getAllSamplingNotes();
