@@ -11,41 +11,59 @@ test.describe('폼 제출 통합 테스트', () => {
             await page.goto('/soil/');
             await page.waitForLoadState('networkidle');
 
+            // localStorage 초기화 후 재진입
+            await page.evaluate(() => localStorage.clear());
+            await page.reload();
+            await page.waitForLoadState('networkidle');
+
             // 필수 정보 입력
             await page.fill('#name', '테스트농가');
             await page.fill('#phoneNumber', '010-1234-5678');
 
-            // 필지 정보 입력
+            // 필지 정보 입력 (input 이벤트 필요 — this.parcels 업데이트)
             const lotAddressInput = page.locator('.lot-address-input').first();
             await lotAddressInput.fill('내성리 123');
+            await lotAddressInput.dispatchEvent('input');
 
             const cropInput = page.locator('.crop-direct-input').first();
             await cropInput.fill('고추');
+            await cropInput.dispatchEvent('input');
 
             const areaInput = page.locator('.area-direct-input').first();
             await areaInput.fill('500');
+            await areaInput.dispatchEvent('input');
+
+            // 토양 필수 required 필드: purpose select, receptionMethod hidden input
+            await page.selectOption('#purpose', '일반재배');
+            await page.click('.reception-method-btn[data-method="우편"]');
 
             // 등록 버튼 클릭
             await page.click('#navSubmitBtn');
-
-            // 등록 결과 모달 또는 토스트 확인
-            // 모달이 표시되거나 목록에 데이터가 추가되었는지 확인
             await page.waitForTimeout(500);
+
+            // 결과 모달이 표시되면 닫기 (모달이 목록 버튼 클릭을 가로막음)
+            const resultModal = page.locator('#registrationResultModal');
+            const isModalVisible = await resultModal.isVisible({ timeout: 2000 }).catch(() => false);
+            if (isModalVisible) {
+                await page.click('#closeResultBtn');
+                await page.waitForTimeout(300);
+            }
 
             // 목록으로 이동하여 데이터 확인
             await page.click('[data-view="list"]');
             await page.waitForSelector('#listView');
 
-            // 등록된 데이터가 테이블에 있는지 확인 (빈 상태가 아님)
-            const emptyState = page.locator('#emptyState');
-            const tableBody = page.locator('#logTableBody');
-
-            // 빈 상태이거나 테이블에 데이터가 있는지 확인
-            const hasData = await tableBody.locator('tr').count() > 0;
-            if (hasData) {
-                // 등록된 이름이 테이블에 있는지 확인
-                await expect(tableBody).toContainText('테스트농가');
+            // 완료 필터가 "미완료"로 기본 설정될 수 있으므로 전체 상태로 변경
+            const completedFilter = page.locator('#completedFilter');
+            if (await completedFilter.isVisible({ timeout: 1000 }).catch(() => false)) {
+                await completedFilter.selectOption('');
+                await page.waitForTimeout(200);
             }
+
+            // 무조건 단언 — 등록이 실제로 된 경우 테이블에 이름이 있어야 한다
+            // (조건부 if(hasData) 단언을 제거: 0행이어도 통과하는 약한 단언이었음)
+            const tableBody = page.locator('#logTableBody');
+            await expect(tableBody).toContainText('테스트농가');
         });
 
         test('폼 초기화 기능', async ({ page }) => {
