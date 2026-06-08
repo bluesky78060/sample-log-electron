@@ -374,8 +374,13 @@ class BaseSampleManager {
                         if (merged.localOnly.length > 0 && window.firestoreDb?.isEnabled()) {
                             window.firestoreDb.batchSave(this.moduleKey, parseInt(year, 10), merged.localOnly)
                                 .then(ok => {
-                                    if (ok) this.log(`☁️ 로컬 전용 ${merged.localOnly.length}건 클라우드 업로드 완료`);
-                                    else this._handleCloudSyncFailure();
+                                    if (ok) {
+                                        this.log(`☁️ 로컬 전용 ${merged.localOnly.length}건 클라우드 업로드 완료`);
+                                        // M-1: 캐시 무효화 — TTL 창 내 stale 캐시로 인한 반복 재업로드 방지
+                                        this._firebaseCache.delete(year);
+                                    } else {
+                                        this._handleCloudSyncFailure();
+                                    }
                                 })
                                 .catch(() => this._handleCloudSyncFailure());
                         }
