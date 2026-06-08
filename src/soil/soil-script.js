@@ -516,6 +516,17 @@ class SoilSampleManager extends window.BaseSampleManager {
         this.firebaseBatchSync(); // 클라우드 전체 동기화
     }
 
+    /**
+     * persistRecords 오버라이드 — soil saveLogs는 로컬 전용이므로 Firebase 개별 동기화 (L1 Phase 3 P3-C)
+     * @param {Array} newLogs - 신규/갱신 레코드 (개별 set)
+     * @param {Array<string>} removedIds - 삭제할 레코드 ID (개별 delete)
+     */
+    persistRecords(newLogs = [], removedIds = []) {
+        this.saveLogs();                                          // 로컬(멱등)
+        if (removedIds.length) this.firebaseDeleteRecords(removedIds);
+        if (newLogs.length) this.firebaseSaveRecords(newLogs);
+    }
+
     // ========================================
     // Override: deleteSample (soil-specific: inline Firebase delete)
     // ========================================
@@ -1682,13 +1693,10 @@ class SoilSampleManager extends window.BaseSampleManager {
                 delete log.addressVerified; // 주소 편집 시 검증 초기화
                 this.sampleLogs.push(log);
             });
-            this.saveLogs(); // localStorage 먼저 (ID 할당 보장)
-
-            // Firebase: 삭제된 레코드 제거 + 새 레코드 저장
+            // localStorage 먼저(ID 할당 보장) + Firebase 삭제분 제거/새 레코드 저장 — persistRecords (L1 Phase 3 P3-C)
             const newIds = new Set(newLogs.map(l => l.id));
             const removedIds = oldGroupLogs.filter(l => !newIds.has(l.id)).map(l => l.id);
-            if (removedIds.length > 0) this.firebaseDeleteRecords(removedIds);
-            this.firebaseSaveRecords(newLogs);
+            this.persistRecords(newLogs, removedIds);
             this.filterAndRenderLogs();
             this.validateAndMarkLogs(newLogs).catch(err => // 그룹 수정 후 재검증 (백그라운드)
                 (window.logger?.error || console.error)('VWORLD 재검증 오류:', err)
@@ -1743,8 +1751,7 @@ class SoilSampleManager extends window.BaseSampleManager {
 
             delete updatedLog.addressVerified; // 주소 편집 시 검증 초기화
             this.sampleLogs[logIndex] = updatedLog;
-            this.saveLogs();
-            this.firebaseSaveRecords(updatedLog); // Firebase 개별 저장
+            this.persistRecords([updatedLog]); // localStorage + Firebase 개별 저장 (L1 Phase 3 P3-C)
             this.filterAndRenderLogs();
             this.validateAndMarkLogs([updatedLog]).catch(err => // 편집 후 재검증 (백그라운드)
                 (window.logger?.error || console.error)('VWORLD 재검증 오류:', err)
@@ -1868,8 +1875,7 @@ class SoilSampleManager extends window.BaseSampleManager {
         });
 
         newLogs.forEach(log => this.sampleLogs.push(log));
-        this.saveLogs();
-        this.firebaseSaveRecords(newLogs); // Firebase 개별 저장
+        this.persistRecords(newLogs); // localStorage + Firebase 개별 저장 (L1 Phase 3 P3-C)
         this.filterAndRenderLogs();
         this.form.reset();
         // yearSelect 복원: form.reset()이 yearSelect를 첫 옵션(2025)으로 되돌리므로 복원
