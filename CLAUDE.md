@@ -50,6 +50,7 @@ npm run build          # Tailwind + sync-version + Vite → docs/
 npm run package        # 현재 OS용 패키지
 npm run make           # 설치 파일 (Win: exe, Mac: zip)
 npm test               # Playwright E2E (docs/ 대상)
+npm run test:unit      # vitest 단위 테스트 (tests/unit/)
 ```
 
 자세한 스크립트는 `package.json` 참조.
@@ -76,14 +77,18 @@ IPC 채널 전체 목록은 `src/preload.js` 참조.
 
 ```text
 src/
-├── index.js, preload.js, index.html, main-entry.js
-├── shared/               # 공통 모듈 (~26개, window.* 전역 노출)
+├── index.js, preload.js, index.html, main-entry.js, cropData.js
+├── shared/               # 공통 모듈 (31개, window.* 전역 노출)
 ├── styles/               # Tailwind input, 테마
 ├── {soil,water,compost,heavy-metal,pesticide}/   # 5개 시료 타입 (동일 패턴)
+├── {water,compost,heavy-metal,pesticide}-analysis/  # 분석결과 입력/조회 페이지 4종
+├── heuktoram/            # 흙토람 시비처방 연동 페이지
 └── {settings,label-print,manual,release}/        # 기타 페이지
 
-docs/                     # GitHub Pages 배포용 (Vite 빌드 결과)
+docs/                     # GitHub Pages 배포용 (Vite 빌드 결과 — 직접 수정 금지, 빌드로만 갱신)
+docs-internal/            # 내부 문서 (설계 스펙/플랜/분석 보고서 — 배포 안 됨)
 tests/e2e/                # Playwright (docs/ 대상)
+tests/unit/               # vitest 단위 테스트
 ```
 
 ### Sample Type Page Pattern
@@ -97,7 +102,7 @@ tests/e2e/                # Playwright (docs/ 대상)
 └── {type}-style.css
 ```
 
-각 스크립트 필수 상수:
+각 스크립트 필수 상수 (타입에 따라 파일 상단 `const` 또는 `BaseSampleManager` 생성자 옵션으로 전달 — water/heavy-metal은 생성자 옵션 방식):
 
 ```javascript
 const SAMPLE_TYPE = '토양';
@@ -122,7 +127,7 @@ const AUTO_SAVE_FILE = 'soil-autosave.json';
 | `sanitize.js`              | XSS 방지, HTML/JSON 새니타이징                 |
 | `path-security.js`         | 경로 검증, traversal 공격 방지                 |
 
-기타: `toast`, `tooltip`, `theme`, `logger`, `pagination`, `cache-manager`, `utils`, `search-filter`, `form-validator`, `sync-utils`, `auth-file`, `address(-parser)`, `network-config/access`, `main-init`, `firebase-config`.
+기타: `toast`, `tooltip`, `theme`, `logger`, `pagination`, `cache-manager`, `utils`, `search-filter`, `form-validator`, `sync-utils`, `auth-file`, `address(-parser)`, `autocomplete-manager`(주소 자동완성), `juso-service`(JUSO API), `mrl-api`(농약 MRL 조회), `pesticide-data`/`pesticide-name-map`(농약 데이터), `network-config/access`, `main-init`, `firebase-config`.
 
 ### Data Storage Strategy
 
@@ -182,3 +187,5 @@ Windows(windows-latest) + Node 20에서 `npm run make` → GitHub Release 자동
 ### 테스트 프로젝트
 
 `sample-log-electron-test`는 `test_` 접두사 Firestore 컬렉션 사용. 암호화 파일은 독립 관리.
+
+> ⚠️ **테스트 프로젝트는 TypeScript로 마이그레이션됨** (2026-06 확인, `src/shared/*.ts`). 메인→테스트 동기화는 `.js` 파일 복사가 아니라 **의미 단위 TS 포팅**으로 수행한다 (선례: SAMPL-1-77). 암호화 모듈(`encryption-manager.ts`, `crypto-utils.ts`, `secure-storage.ts`)과 `COLLECTION_PREFIX = 'test_'`는 절대 덮어쓰지 말 것.
