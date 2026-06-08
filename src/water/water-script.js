@@ -418,6 +418,10 @@ class WaterSampleManager extends window.BaseSampleManager {
         this.editingGroupIds = groupMembers.map(m => String(m.id));
 
         try {
+            // 공통 필드(날짜/성명/전화/주소+레거시/법인토글/통보방법/비고) — Base
+            this.populateCommonFields(log);
+
+            // 그룹 멤버 접수번호 합치기 (공통이 채운 단건 접수번호를 덮어씀)
             const receptionNumbersStr = groupMembers.map(m => m.receptionNumber || '').filter(v => v).join(', ');
             if (this.receptionNumberInput) {
                 this.receptionNumberInput.value = receptionNumbersStr || (log.receptionNumber || '');
@@ -425,42 +429,11 @@ class WaterSampleManager extends window.BaseSampleManager {
                     parseInt((groupMembers[0]?.receptionNumber || log.receptionNumber || ''), 10) || ''
                 );
             }
-            if (this.dateInput) this.dateInput.value = log.date || '';
 
-            const nameEl = document.getElementById('name');
-            const phoneEl = document.getElementById('phoneNumber');
             const sampleNameEl = document.getElementById('sampleName');
             const sampleCountEl = document.getElementById('sampleCount');
-            const noteEl = document.getElementById('note');
-
-            if (nameEl) nameEl.value = log.name || '';
-            if (phoneEl) phoneEl.value = log.phoneNumber || '';
-            if (this.addressPostcode) this.addressPostcode.value = log.addressPostcode || '';
-            if (this.addressRoad) this.addressRoad.value = log.addressRoad || '';
-            if (this.addressDetail) this.addressDetail.value = log.addressDetail || '';
-            if (this.addressHidden) this.addressHidden.value = log.address || '';
-            // 레거시 데이터 호환: addressRoad 필드가 없고 address만 있는 경우
-            this.applyLegacyAddress(log);
             if (sampleNameEl) sampleNameEl.value = log.sampleName || '';
             if (sampleCountEl) sampleCountEl.value = String(groupMembers.length || log.sampleCount || 1);
-            if (noteEl) noteEl.value = log.note || '';
-
-            // 법인여부/생년월일/법인번호 설정
-            const applicantType = log.applicantType || '개인';
-            if (this.applicantTypeSelect) {
-                this.applicantTypeSelect.value = applicantType;
-                if (applicantType === '법인') {
-                    this.birthDateField.classList.add('hidden');
-                    this.corpNumberField.classList.remove('hidden');
-                    if (this.corpNumberInput) this.corpNumberInput.value = log.corpNumber || '';
-                    if (this.birthDateInput) this.birthDateInput.value = '';
-                } else {
-                    this.birthDateField.classList.remove('hidden');
-                    this.corpNumberField.classList.add('hidden');
-                    if (this.birthDateInput) this.birthDateInput.value = log.birthDate || '';
-                    if (this.corpNumberInput) this.corpNumberInput.value = '';
-                }
-            }
 
             // 채취장소·주작목·비고: 그룹 멤버가 2개 이상이면 멤버별 한 줄씩 펼침
             if (groupMembers.length > 1) {
@@ -485,14 +458,6 @@ class WaterSampleManager extends window.BaseSampleManager {
                 }
             }
 
-            // 통보방법 선택
-            if (this.receptionMethodBtns) {
-                this.receptionMethodBtns.forEach(b => {
-                    b.classList.toggle('active', b.dataset.method === log.receptionMethod);
-                });
-            }
-            if (this.receptionMethodInput) this.receptionMethodInput.value = log.receptionMethod || '';
-
             // 목적 선택 (사용자 저장 데이터를 selector에 직접 삽입하지 않도록 value 비교)
             const purposeRadio = Array.from(document.querySelectorAll('input[name="purpose"]'))
                 .find(r => r.value === (log.purpose || ''));
@@ -512,13 +477,8 @@ class WaterSampleManager extends window.BaseSampleManager {
                 }
             }
 
-            this.switchView('form');
-            this.showToast('수정 모드입니다. 변경 후 등록 버튼을 클릭하세요.', 'warning');
-
-            if (this.navSubmitBtn) {
-                this.navSubmitBtn.title = '수정 완료';
-                this.navSubmitBtn.classList.add('btn-edit-mode');
-            }
+            // 편집 모드 UI 진입 (navSubmitBtn + switchView('form') + 안내 토스트) — Base
+            this.enterEditModeUI();
         } catch (error) {
             (window.logger?.error || console.error)('editSample 에러:', error);
             this.showToast('수정 모드 전환 중 오류가 발생했습니다.', 'error');
