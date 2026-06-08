@@ -735,15 +735,8 @@ class WaterSampleManager extends window.BaseSampleManager {
         // 기존 그룹 멤버 제거 (로컬). Firestore 측 잔류 방지를 위해 시료수 축소분은 명시 삭제
         this.sampleLogs = this.sampleLogs.filter(l => !oldById.has(String(l.id)));
         const newSlotCount = samplingLocations.length;
-        if (window.firestoreDb?.isEnabled?.() && oldOrdered.length > newSlotCount) {
-            const year = parseInt(this.selectedYear, 10);
-            for (let i = newSlotCount; i < oldOrdered.length; i++) {
-                const rid = String(oldOrdered[i].id);
-                window.firestoreDb.delete(this.moduleKey, year, rid).catch(err => {
-                    (window.logger?.error || console.error)('Firestore 그룹 멤버 삭제 실패:', err);
-                });
-            }
-        }
+        // 축소된 그룹 멤버(잔여 슬롯) ID 수집 — persistRecords가 개별 삭제 처리 (L1 Phase 3 P3-C)
+        const removedIds = oldOrdered.slice(newSlotCount).map(o => String(o.id));
 
         // 새 입력값으로 N개 행 재생성 (행별 createdAt/완료여부/판정 보존: index 매칭 후 잔여 슬롯은 새로 생성)
         const nowIso = new Date().toISOString();
@@ -767,7 +760,7 @@ class WaterSampleManager extends window.BaseSampleManager {
             this.sampleLogs.push(data);
         }
 
-        this.saveLogs();
+        this.persistRecords([], removedIds);
         if (typeof this.filterAndRenderLogs === 'function') {
             this.filterAndRenderLogs();
         }

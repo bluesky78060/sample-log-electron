@@ -833,15 +833,8 @@ class PesticideSampleManager extends window.BaseSampleManager {
             // 기존 그룹 멤버 로컬에서 제거
             this.sampleLogs = this.sampleLogs.filter(l => !oldById.has(String(l.id)));
             const newSlotCount = requestItems.length;
-            if (window.firestoreDb?.isEnabled?.() && oldOrdered.length > newSlotCount) {
-                const year = parseInt(this.selectedYear, 10);
-                for (let i = newSlotCount; i < oldOrdered.length; i++) {
-                    const rid = String(oldOrdered[i].id);
-                    window.firestoreDb.delete('pesticide', year, rid).catch(err => {
-                        (window.logger?.error || console.error)('Firestore 그룹 멤버 삭제 실패:', err);
-                    });
-                }
-            }
+            // 축소된 그룹 멤버(잔여 슬롯) ID 수집 — persistRecords가 this.moduleKey로 개별 삭제 처리 (L1 Phase 3 P3-C)
+            const removedIds = oldOrdered.slice(newSlotCount).map(o => String(o.id));
 
             const commonData = {
                 ...this.collectCommonFormData(formData),
@@ -870,7 +863,7 @@ class PesticideSampleManager extends window.BaseSampleManager {
                 this.sampleLogs.push(newLog);
             });
 
-            this.saveLogs();
+            this.persistRecords([], removedIds);
             this.filterAndRenderLogs();
             this.cancelEditMode();
             this.showToast('수정이 완료되었습니다.', 'success');
@@ -913,7 +906,7 @@ class PesticideSampleManager extends window.BaseSampleManager {
             createdLogs.push(newLog);
         });
 
-        this.saveLogs();
+        this.persistRecords(createdLogs);
         this.filterAndRenderLogs();
         this.form.reset();
         // yearSelect 복원: form.reset()이 yearSelect를 첫 옵션(2025)으로 되돌리므로 복원

@@ -1176,6 +1176,26 @@ class BaseSampleManager {
     }
 
     /**
+     * 레코드 저장 + 클라우드 동기화 전략 훅 (submitForm 공유)
+     * 기본: saveLogs()가 전체 batchSave를 수행(water/compost/heavy-metal).
+     * 축소된 그룹 멤버(removedIds)는 개별 delete로 정리(water updateSample/pesticide 그룹수정 패턴 흡수).
+     * soil은 saveLogs가 로컬 전용이므로 firebaseSaveRecords/firebaseDeleteRecords로 오버라이드.
+     * @param {Array} newLogs - 신규/갱신 레코드 (기본 구현에서는 saveLogs가 batch 처리하므로 미사용)
+     * @param {Array<string>} removedIds - 삭제할 레코드 ID
+     */
+    persistRecords(newLogs = [], removedIds = []) {
+        this.saveLogs();
+        if (removedIds.length && window.firestoreDb?.isEnabled?.()) {
+            const year = parseInt(this.selectedYear, 10);
+            removedIds.forEach(id => window.firestoreDb.delete(this.moduleKey, year, String(id))
+                .catch(err => {
+                    (window.logger?.error || console.error)('Firestore 그룹 멤버 삭제 실패:', err);
+                    this._handleCloudSyncFailure?.();
+                }));
+        }
+    }
+
+    /**
      * 라벨 인쇄 페이지로 선택 레코드 전달 (5타입 공유)
      * label-print 페이지는 [{name, address, postalCode}] 배열만 수용한다.
      * 주소 매핑 2변형(분리필드 vs address 재파싱)은 getLabelAddressParts 훅으로 흡수.
