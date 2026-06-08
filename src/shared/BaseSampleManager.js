@@ -243,11 +243,17 @@ class BaseSampleManager {
 
         // Firebase 백그라운드 동기화 (UI 비블로킹 — 실패 시 토스트 + online 재시도)
         // 주의: batchSave는 실패 시 throw가 아닌 false 반환 → 반환값 검사 필수
-        if (window.firestoreDb?.isEnabled()) {
+        // 빈 배열은 batchSave가 false를 반환하므로 호출 생략
+        if (window.firestoreDb?.isEnabled() && this.sampleLogs.length > 0) {
             window.firestoreDb.batchSave(this.moduleKey, parseInt(this.selectedYear, 10), this.sampleLogs)
                 .then(ok => {
                     if (ok) {
                         this._cloudSyncFailed = false;
+                        // 성공 시 대기 중인 online 재시도 리스너 정리 (상태 머신 대칭)
+                        if (this._retryCloudSyncHandler) {
+                            window.removeEventListener('online', this._retryCloudSyncHandler);
+                            this._retryCloudSyncHandler = null;
+                        }
                         this.log('Firebase 동기화 완료:', this.sampleLogs.length, '건');
                     } else {
                         this._handleCloudSyncFailure();
