@@ -366,16 +366,26 @@ class BaseSampleManager {
                     const cacheEntry = this._firebaseCache.get(year);
                     const cacheValid = cacheEntry && (Date.now() - cacheEntry.timestamp < this._firebaseCacheTTL);
                     this.log(cacheValid ? ` Firebase 캐시 사용 (${year}년)` : ` Firebase에서 데이터 로드 시작`);
-                    const firebaseLogs = cacheValid ? cacheEntry.data : await this.loadFromFirebase(year);
+                    // SAMPL-1-80: firebaseLogs와 함께 fromCache(읽기 신뢰도)도 확보
+                    let firebaseLogs, fromCache;
+                    if (cacheValid) {
+                        firebaseLogs = cacheEntry.data;
+                        fromCache = cacheEntry.fromCache === true;  // 캐시된 응답의 원래 신뢰도 보존
+                    } else {
+                        const res = await this.loadFromFirebase(year);
+                        firebaseLogs = res.data;
+                        fromCache = res.fromCache === true;
+                    }
 
                     if (firebaseLogs && firebaseLogs.length > 0) {
-                        this.log(` Firebase 데이터:`, firebaseLogs.length, '건');
+                        this.log(` Firebase 데이터:`, firebaseLogs.length, '건', `(fromCache=${fromCache})`);
 
                         // L2-P0: 무병합 덮어쓰기 금지 — 미업로드 로컬 항목(syncedAt 없음) 보존
+                        // SAMPL-1-80: fromCache(불완전 가능) 읽기에서는 cross-device 삭제를 보류
                         const localLogs = this.safeParseArray(yearStorageKey);
                         const merged = window.SyncUtils?.mergeCloudData
-                            ? window.SyncUtils.mergeCloudData(localLogs, firebaseLogs)
-                            : { data: this.smartMerge(localLogs, firebaseLogs), localOnly: [] };
+                            ? window.SyncUtils.mergeCloudData(localLogs, firebaseLogs, { fromCache })
+                            : { data: this.smartMerge(localLogs, firebaseLogs, { allowDeletions: !fromCache }), localOnly: [] };
                         this.sampleLogs = merged.data;
 
                         // PER-9: TTL 포함 캐시 저장 (Firebase 원본 응답 기준 — 병합 결과 아님)
@@ -384,7 +394,7 @@ class BaseSampleManager {
                             if (this._firebaseCache.size >= this._firebaseCacheMax && !this._firebaseCache.has(year)) {
                                 this._firebaseCache.delete(this._firebaseCache.keys().next().value);
                             }
-                            this._firebaseCache.set(year, { data: JSON.parse(JSON.stringify(firebaseLogs)), timestamp: Date.now() });
+                            this._firebaseCache.set(year, { data: JSON.parse(JSON.stringify(firebaseLogs)), fromCache, timestamp: Date.now() });
                         }
 
                         // 병합 결과를 localStorage에 저장
@@ -488,13 +498,15 @@ class BaseSampleManager {
             this.log('☁️ 클라우드 동기화 시작');
 
             try {
-                const firebaseLogs = await this.loadFromFirebase(year);
+                // SAMPL-1-80: loadFromFirebase는 { data, fromCache } 반환
+                const { data: firebaseLogs, fromCache } = await this.loadFromFirebase(year);
 
                 if (firebaseLogs && firebaseLogs.length > 0) {
                     // Firebase fetch 중 saveLogs()가 this.sampleLogs를 변경했을 수 있으므로
                     // 스냅샷(localLogs) 대신 현재 this.sampleLogs를 로컬 기준으로 사용
                     const currentLogs = this.sampleLogs;
-                    const mergedLogs = this.smartMerge(currentLogs, firebaseLogs);
+                    // SAMPL-1-80: fromCache(불완전 가능) 읽기에서는 cross-device 삭제 보류
+                    const mergedLogs = this.smartMerge(currentLogs, firebaseLogs, { allowDeletions: !fromCache });
 
                     if (mergedLogs.length !== currentLogs.length ||
                         this.hasChanges(currentLogs, mergedLogs)) {
@@ -535,25 +547,33 @@ class BaseSampleManager {
                 firestoreDb: !!window.firestoreDb
             });
 
-            const data = await window.firestoreDb.getAll(this.moduleKey, parseInt(year, 10));
-            this.log(` Firebase 응답:`, data ? `${data.length}건` : 'null/undefined');
+            // SAMPL-1-80: fromCache 메타 포함 조회 (있으면) — 불완전 캐시 읽기 시 삭제 보류 판단용
+            let data, fromCache = false;
+            if (typeof window.firestoreDb?.getAllWithMeta === 'function') {
+                const res = await window.firestoreDb.getAllWithMeta(this.moduleKey, parseInt(year, 10));
+                data = res.documents;
+                fromCache = res.fromCache === true;
+            } else {
+                data = await window.firestoreDb.getAll(this.moduleKey, parseInt(year, 10));
+            }
+            this.log(` Firebase 응답:`, data ? `${data.length}건 (fromCache=${fromCache})` : 'null/undefined');
             this.log(` Firebase 데이터 샘플:`, data && data.length > 0 ? data[0] : 'No data');
-            return data || [];
+            return { data: data || [], fromCache };
         } catch (error) {
             console.error(`[${this.moduleName}] Firebase 로드 오류 상세:`, error);
             (window.logger?.error || console.error)('Firebase 로드 실패:', error);
-            return [];
+            return { data: [], fromCache: false };
         }
     }
 
     /**
      * 스마트 병합 - utils.js의 함수 사용
      */
-    smartMerge(localData, firebaseData) {
+    smartMerge(localData, firebaseData, options = {}) {
         if (window.SyncUtils?.smartMerge) {
             // SyncUtils.smartMerge는 { data, hasChanges, ... } 객체를 반환하므로
             // 배열 계약을 유지하기 위해 data를 언래핑한다 (객체를 그대로 쓰면 데이터 손상)
-            const result = window.SyncUtils.smartMerge(localData, firebaseData);
+            const result = window.SyncUtils.smartMerge(localData, firebaseData, options);
             return Array.isArray(result) ? result : (result?.data || []);
         }
         // 폴백: id 기준 union merge (로컬 우선 — Firebase만 반환하면 로컬 변경 유실)

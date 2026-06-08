@@ -598,9 +598,34 @@
         <!-- 타임라인 -->
         <div class="timeline">
 
-            <!-- v1.15.0 -->
+            <!-- v1.15.1 -->
             <div class="version-entry">
                 <div class="version-dot latest"></div>
+                <div class="version-card">
+                    <div class="version-card-header">
+                        <div>
+                            <div class="version-meta">
+                                <span class="version-number">v1.15.1</span>
+                                <span class="version-date">2026-06-08</span>
+                            </div>
+                            <div class="version-title">수질 등 데이터가 간헐적으로 사라지던 문제 수정</div>
+                        </div>
+                        <div class="badge-row">
+                            <span class="badge badge-latest">★ 최신</span>
+                            <span class="badge badge-fix">버그수정</span>
+                        </div>
+                    </div>
+                    <ul class="change-list">
+                        <li><strong>입력 자료가 가끔 사라지던 문제 해결</strong> — 인터넷이 불안정하거나 앱을 여러 곳에서 동시에 켰을 때, 클라우드에서 자료 목록을 <em>일부만</em> 불완전하게 읽어오는 경우가 있었습니다. 이때 프로그램이 "삭제된 자료"로 잘못 판단해 정상 자료를 지우는 일이 드물게 발생했습니다(주로 수질에서 보고됨).</li>
+                        <li><strong>안전한 동기화로 개선</strong> — 이제 클라우드 자료가 <strong>서버에서 완전하게 확인된 경우에만</strong> 삭제를 반영하고, 캐시(임시 저장본)에서 불완전하게 읽은 경우에는 로컬 자료를 그대로 보존합니다. 다른 기기에서 실제로 삭제한 자료는 다음 정상 연결 시 정확히 반영됩니다.</li>
+                        <li>5개 시료 타입 전체에 적용됩니다.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- v1.15.0 -->
+            <div class="version-entry">
+                <div class="version-dot"></div>
                 <div class="version-card">
                     <div class="version-card-header">
                         <div>
@@ -611,7 +636,6 @@
                             <div class="version-title">데이터 보호 강화 + 중금속 라벨 인쇄 버그 수정 + 내부 안정성 개선</div>
                         </div>
                         <div class="badge-row">
-                            <span class="badge badge-latest">★ 최신</span>
                             <span class="badge badge-fix">개선</span>
                         </div>
                     </div>
