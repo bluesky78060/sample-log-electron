@@ -598,9 +598,35 @@
         <!-- 타임라인 -->
         <div class="timeline">
 
-            <!-- v1.14.1 -->
+            <!-- v1.15.0 -->
             <div class="version-entry">
                 <div class="version-dot latest"></div>
+                <div class="version-card">
+                    <div class="version-card-header">
+                        <div>
+                            <div class="version-meta">
+                                <span class="version-number">v1.15.0</span>
+                                <span class="version-date">2026-06-08</span>
+                            </div>
+                            <div class="version-title">데이터 보호 강화 + 중금속 라벨 인쇄 버그 수정 + 내부 안정성 개선</div>
+                        </div>
+                        <div class="badge-row">
+                            <span class="badge badge-latest">★ 최신</span>
+                            <span class="badge badge-fix">개선</span>
+                        </div>
+                    </div>
+                    <ul class="change-list">
+                        <li><strong>오프라인 입력 자료 보호 강화</strong> — 인터넷이 끊긴 상태에서 입력한 시료 자료가 온라인 복귀 후 클라우드 자료와 합쳐지는 과정에서 사라지지 않도록 보호 로직을 개선했습니다. 미업로드 자료는 자동으로 보존·재업로드됩니다.</li>
+                        <li><strong>클라우드 동기화 실패 알림 + 자동 재시도</strong> — 저장 시 클라우드 동기화가 실패하면 안내 메시지가 표시되고, 인터넷이 다시 연결되면 자동으로 재시도합니다. (자료는 항상 이 컴퓨터에 먼저 저장되므로 안전합니다.)</li>
+                        <li><strong>중금속 라벨 인쇄 버그 수정</strong> — 토양 중금속에서 목록의 라벨 인쇄가 동작하지 않던 문제를 해결했습니다. 이제 다른 시료 타입과 동일하게 라벨 인쇄가 정상 동작합니다.</li>
+                        <li><strong>내부 코드 통합(약 600줄 정리)</strong> — 5개 시료 타입이 공유하는 등록·수정·검색·라벨 로직을 공통 모듈로 통합했습니다. 사용 방법은 이전과 완전히 동일하며, 향후 기능 추가·버그 수정의 안정성이 높아졌습니다.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- v1.14.1 -->
+            <div class="version-entry">
+                <div class="version-dot"></div>
                 <div class="version-card">
                     <div class="version-card-header">
                         <div>
@@ -611,7 +637,6 @@
                             <div class="version-title">엑셀 라이브러리 의존성 정리</div>
                         </div>
                         <div class="badge-row">
-                            <span class="badge badge-latest">★ 최신</span>
                             <span class="badge badge-fix">개선</span>
                         </div>
                     </div>
