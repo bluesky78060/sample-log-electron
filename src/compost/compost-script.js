@@ -1856,66 +1856,6 @@ class CompostSampleManager extends window.BaseSampleManager {
         });
     }
 
-    extractReceptionNumber(receptionNumber) {
-        const match = receptionNumber.match(/(\d+)$/);
-        return match ? parseInt(match[1], 10) : 0;
-    }
-
-    filterAndRenderLogs() {
-        const filtered = this.sampleLogs.filter(log => {
-            // 성명 검색
-            const matchesName = !this.currentSearchFilter.name ||
-                (log.name || '').toLowerCase().includes(this.currentSearchFilter.name);
-
-            // 접수번호 범위 검색
-            let matchesReception = true;
-            if (this.currentSearchFilter.receptionFrom || this.currentSearchFilter.receptionTo) {
-                const logNum = this.extractReceptionNumber(log.receptionNumber || '');
-                const fromNum = this.currentSearchFilter.receptionFrom ? parseInt(this.currentSearchFilter.receptionFrom, 10) : 0;
-                const toNum = this.currentSearchFilter.receptionTo ? parseInt(this.currentSearchFilter.receptionTo, 10) : Infinity;
-                if (fromNum && logNum < fromNum) matchesReception = false;
-                if (toNum !== Infinity && logNum > toNum) matchesReception = false;
-            }
-
-            // 날짜 범위 검색
-            let matchesDate = true;
-            if (this.currentSearchFilter.dateFrom || this.currentSearchFilter.dateTo) {
-                const logDate = log.date;
-                if (this.currentSearchFilter.dateFrom && logDate < this.currentSearchFilter.dateFrom) matchesDate = false;
-                if (this.currentSearchFilter.dateTo && logDate > this.currentSearchFilter.dateTo) matchesDate = false;
-            }
-
-            // 완료 상태 필터
-            let matchesCompleted = true;
-            if (this.currentSearchFilter.completed === 'completed') {
-                matchesCompleted = log.isComplete === true;
-            } else if (this.currentSearchFilter.completed === 'incomplete') {
-                matchesCompleted = !log.isComplete;
-            }
-
-            return matchesName && matchesReception && matchesDate && matchesCompleted;
-        });
-
-        this.renderLogs(filtered);
-        this.updateSearchButtonState();
-    }
-
-    updateSearchButtonState() {
-        const openSearchModalBtn = document.getElementById('openSearchModalBtn');
-        const hasFilter = this.currentSearchFilter.dateFrom || this.currentSearchFilter.dateTo ||
-            this.currentSearchFilter.name || this.currentSearchFilter.receptionFrom || this.currentSearchFilter.receptionTo ||
-            (this.currentSearchFilter.completed && this.currentSearchFilter.completed !== 'incomplete');
-        if (openSearchModalBtn) {
-            if (hasFilter) {
-                openSearchModalBtn.classList.add('has-filter');
-                openSearchModalBtn.innerHTML = sanitizeHTML('🔍 검색 중');
-            } else {
-                openSearchModalBtn.classList.remove('has-filter');
-                openSearchModalBtn.innerHTML = sanitizeHTML('🔍 검색');
-            }
-        }
-    }
-
     // ========================================
     // 엑셀 내보내기
     // ========================================

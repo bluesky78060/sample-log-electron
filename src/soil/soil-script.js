@@ -2217,114 +2217,73 @@ class SoilSampleManager extends window.BaseSampleManager {
     }
 
     // ========================================
-    // 검색/필터
+    // 검색/필터 (공통 4조건은 Base filterAndRenderLogs — soil 고유 조건만 오버라이드)
     // ========================================
 
-    extractReceptionNumber(receptionNumber) {
-        const match = receptionNumber.match(/(\d+)$/);
-        return match ? parseInt(match[1], 10) : 0;
+    // Override: 타입 고유 필터 — 필지(lot) 다단계 매칭 + 목적(purpose)
+    matchesTypeSpecificFilters(log) {
+        return this.matchesLotFilter(log) && this.matchesPurposeFilter(log);
     }
 
-    filterAndRenderLogs() {
-        const filteredLogs = this.sampleLogs.filter(log => {
-            const matchesName = !this.currentSearchFilter.name ||
-                log.name.toLowerCase().includes(this.currentSearchFilter.name);
+    matchesLotFilter(log) {
+        if (!this.currentSearchFilter.lot) return true;
 
-            let matchesReception = true;
-            if (this.currentSearchFilter.receptionFrom || this.currentSearchFilter.receptionTo) {
-                const logNum = this.extractReceptionNumber(log.receptionNumber);
-                const fromNum = this.currentSearchFilter.receptionFrom ? parseInt(this.currentSearchFilter.receptionFrom, 10) : 0;
-                const toNum = this.currentSearchFilter.receptionTo ? parseInt(this.currentSearchFilter.receptionTo, 10) : Infinity;
-                if (fromNum && logNum < fromNum) matchesReception = false;
-                if (toNum !== Infinity && logNum > toNum) matchesReception = false;
-            }
+        const searchQuery = this.currentSearchFilter.lot.trim().toLowerCase();
+        const searchTerms = searchQuery.split(/\s+/).filter(t => t);
 
-            let matchesDate = true;
-            if (this.currentSearchFilter.dateFrom || this.currentSearchFilter.dateTo) {
-                const logDate = log.date;
-                if (this.currentSearchFilter.dateFrom && logDate < this.currentSearchFilter.dateFrom) matchesDate = false;
-                if (this.currentSearchFilter.dateTo && logDate > this.currentSearchFilter.dateTo) matchesDate = false;
-            }
+        const getSubLotAddress = (subLot) => {
+            if (typeof subLot === 'string') return subLot.toLowerCase();
+            if (subLot && typeof subLot === 'object' && subLot.lotAddress) return subLot.lotAddress.toLowerCase();
+            return '';
+        };
 
-            let matchesLot = true;
-            if (this.currentSearchFilter.lot) {
-                matchesLot = false;
-                const searchQuery = this.currentSearchFilter.lot.trim().toLowerCase();
-                const searchTerms = searchQuery.split(/\s+/).filter(t => t);
+        if (!log.parcels || log.parcels.length === 0) return false;
 
-                const getSubLotAddress = (subLot) => {
-                    if (typeof subLot === 'string') return subLot.toLowerCase();
-                    if (subLot && typeof subLot === 'object' && subLot.lotAddress) return subLot.lotAddress.toLowerCase();
-                    return '';
-                };
-
-                if (log.parcels && log.parcels.length > 0) {
-                    matchesLot = log.parcels.some(parcel => {
-                        const lotAddrLower = parcel.lotAddress ? parcel.lotAddress.toLowerCase() : '';
-                        if (lotAddrLower.includes(searchQuery)) return true;
-                        if (searchTerms.every(term => lotAddrLower.includes(term))) return true;
-                        if (searchTerms.length === 1) {
-                            const term = searchTerms[0];
-                            if (parcel.subLots && parcel.subLots.length > 0) {
-                                if (parcel.subLots.some(subLot => {
-                                    const addr = getSubLotAddress(subLot);
-                                    return addr && addr.includes(term);
-                                })) return true;
-                            }
-                        }
-                        if (searchTerms.length >= 2) {
-                            const riTerm = searchTerms[0];
-                            const lotTerms = searchTerms.slice(1);
-                            const matchesRi = lotAddrLower.includes(riTerm);
-                            if (matchesRi && parcel.subLots && parcel.subLots.length > 0) {
-                                const matchesSubLots = lotTerms.every(lotTerm =>
-                                    parcel.subLots.some(subLot => {
-                                        const addr = getSubLotAddress(subLot);
-                                        return addr && addr.includes(lotTerm);
-                                    })
-                                );
-                                if (matchesSubLots) return true;
-                            }
-                        }
-                        return false;
-                    });
+        return log.parcels.some(parcel => {
+            const lotAddrLower = parcel.lotAddress ? parcel.lotAddress.toLowerCase() : '';
+            if (lotAddrLower.includes(searchQuery)) return true;
+            if (searchTerms.every(term => lotAddrLower.includes(term))) return true;
+            if (searchTerms.length === 1) {
+                const term = searchTerms[0];
+                if (parcel.subLots && parcel.subLots.length > 0) {
+                    if (parcel.subLots.some(subLot => {
+                        const addr = getSubLotAddress(subLot);
+                        return addr && addr.includes(term);
+                    })) return true;
                 }
             }
-
-            const matchesPurpose = !this.currentSearchFilter.purpose ||
-                (log.purpose || '') === this.currentSearchFilter.purpose;
-
-            let matchesCompleted = true;
-            if (this.currentSearchFilter.completed === 'completed') {
-                matchesCompleted = log.isComplete === true;
-            } else if (this.currentSearchFilter.completed === 'incomplete') {
-                matchesCompleted = !log.isComplete;
+            if (searchTerms.length >= 2) {
+                const riTerm = searchTerms[0];
+                const lotTerms = searchTerms.slice(1);
+                const matchesRi = lotAddrLower.includes(riTerm);
+                if (matchesRi && parcel.subLots && parcel.subLots.length > 0) {
+                    const matchesSubLots = lotTerms.every(lotTerm =>
+                        parcel.subLots.some(subLot => {
+                            const addr = getSubLotAddress(subLot);
+                            return addr && addr.includes(lotTerm);
+                        })
+                    );
+                    if (matchesSubLots) return true;
+                }
             }
-
-            return matchesName && matchesReception && matchesDate && matchesLot && matchesPurpose && matchesCompleted;
+            return false;
         });
-
-        this.renderLogs(filteredLogs);
-        this.updateSearchButtonState();
     }
 
-    updateSearchButtonState() {
-        const openSearchModalBtn = document.getElementById('openSearchModalBtn');
-        const purposeFilter = document.getElementById('purposeFilter');
-        const hasFilter = this.currentSearchFilter.dateFrom || this.currentSearchFilter.dateTo ||
-            this.currentSearchFilter.name || this.currentSearchFilter.receptionFrom ||
-            this.currentSearchFilter.receptionTo || this.currentSearchFilter.lot || this.currentSearchFilter.purpose ||
-            (this.currentSearchFilter.completed && this.currentSearchFilter.completed !== 'incomplete');
+    matchesPurposeFilter(log) {
+        return !this.currentSearchFilter.purpose ||
+            (log.purpose || '') === this.currentSearchFilter.purpose;
+    }
 
-        if (openSearchModalBtn) {
-            if (hasFilter) {
-                openSearchModalBtn.classList.add('has-filter');
-                openSearchModalBtn.innerHTML = sanitizeHTML('🔍 검색 중');
-            } else {
-                openSearchModalBtn.classList.remove('has-filter');
-                openSearchModalBtn.innerHTML = sanitizeHTML('🔍 검색');
-            }
-        }
+    // Override: 검색 버튼 상태 판정 키 — lot/purpose 추가
+    getFilterKeys() {
+        return [...super.getFilterKeys(), 'lot', 'purpose'];
+    }
+
+    // Override: 공통 검색 버튼 갱신 + soil 고유 purposeFilter 표시
+    updateSearchButtonState() {
+        super.updateSearchButtonState();
+        const purposeFilter = document.getElementById('purposeFilter');
         if (purposeFilter) {
             if (this.currentSearchFilter.purpose) {
                 purposeFilter.classList.add('has-filter');

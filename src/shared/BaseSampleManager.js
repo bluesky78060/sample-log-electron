@@ -28,6 +28,11 @@ class BaseSampleManager {
         this.sampleLogs = [];
         this.selectedYear = new Date().getFullYear().toString();
         this.editingId = null;
+        // 검색 필터 상태 (서브클래스가 자체 기본값으로 덮어쓸 수 있음)
+        this.currentSearchFilter = {
+            dateFrom: '', dateTo: '', name: '',
+            receptionFrom: '', receptionTo: '', completed: ''
+        };
         this.currentPage = 1;
         this.itemsPerPage = 100;
         this.totalPages = 1;
@@ -990,11 +995,92 @@ class BaseSampleManager {
     // ========================================
 
     /**
-     * 필터를 적용한 렌더링 (서브클래스에서 override)
-     * 기본 구현은 renderLogs를 직접 호출 (필터 없음)
+     * 필터를 적용한 렌더링 — 공통 4조건(성명/접수번호 범위/날짜 범위/완료 상태)
+     * + 타입 고유 필터 훅(matchesTypeSpecificFilters)
      */
     filterAndRenderLogs() {
-        this.renderLogs(this.sampleLogs);
+        const filtered = this.sampleLogs.filter(log =>
+            this.matchesNameFilter(log) &&
+            this.matchesReceptionFilter(log) &&
+            this.matchesDateFilter(log) &&
+            this.matchesCompletedFilter(log) &&
+            this.matchesTypeSpecificFilters(log)
+        );
+        this.renderLogs(filtered);
+        this.updateSearchButtonState();
+    }
+
+    /** 성명 검색 필터 */
+    matchesNameFilter(log) {
+        return !this.currentSearchFilter.name ||
+            (log.name || '').toLowerCase().includes(this.currentSearchFilter.name);
+    }
+
+    /** 접수번호 범위 필터 */
+    matchesReceptionFilter(log) {
+        if (!this.currentSearchFilter.receptionFrom && !this.currentSearchFilter.receptionTo) return true;
+        const logNum = this.extractReceptionNumber(log.receptionNumber || '');
+        const fromNum = this.currentSearchFilter.receptionFrom ? parseInt(this.currentSearchFilter.receptionFrom, 10) : 0;
+        const toNum = this.currentSearchFilter.receptionTo ? parseInt(this.currentSearchFilter.receptionTo, 10) : Infinity;
+        if (fromNum && logNum < fromNum) return false;
+        if (toNum !== Infinity && logNum > toNum) return false;
+        return true;
+    }
+
+    /** 날짜 범위 필터 */
+    matchesDateFilter(log) {
+        if (!this.currentSearchFilter.dateFrom && !this.currentSearchFilter.dateTo) return true;
+        const logDate = log.date;
+        if (this.currentSearchFilter.dateFrom && logDate < this.currentSearchFilter.dateFrom) return false;
+        if (this.currentSearchFilter.dateTo && logDate > this.currentSearchFilter.dateTo) return false;
+        return true;
+    }
+
+    /** 완료 상태 필터 */
+    matchesCompletedFilter(log) {
+        if (this.currentSearchFilter.completed === 'completed') return log.isComplete === true;
+        if (this.currentSearchFilter.completed === 'incomplete') return !log.isComplete;
+        return true;
+    }
+
+    /** 타입 고유 필터 훅 — soil이 필지(lot)/목적(purpose) 조건으로 오버라이드 */
+    matchesTypeSpecificFilters(log) {
+        return true;
+    }
+
+    /**
+     * 접수번호 문자열 끝의 숫자 추출 (필터 비교용)
+     * @param {string} receptionNumber
+     * @returns {number}
+     */
+    extractReceptionNumber(receptionNumber) {
+        const match = (receptionNumber || '').match(/(\d+)$/);
+        return match ? parseInt(match[1], 10) : 0;
+    }
+
+    /**
+     * 검색 버튼 상태 갱신 — 활성 필터 존재 시 has-filter 표시
+     * 검사할 필터 키 목록은 getFilterKeys() 훅으로 결정 (soil: lot/purpose 추가)
+     */
+    updateSearchButtonState() {
+        const f = this.currentSearchFilter;
+        const hasFilter = this.getFilterKeys().some(key => f[key]) ||
+            (f.completed && f.completed !== 'incomplete');
+        const openSearchModalBtn = document.getElementById('openSearchModalBtn');
+        if (openSearchModalBtn) {
+            if (hasFilter) {
+                openSearchModalBtn.classList.add('has-filter');
+                openSearchModalBtn.innerHTML = window.sanitizeHTML('🔍 검색 중');
+            } else {
+                openSearchModalBtn.classList.remove('has-filter');
+                openSearchModalBtn.innerHTML = window.sanitizeHTML('🔍 검색');
+            }
+        }
+    }
+
+    /** 검색 버튼 상태 판정에 쓰는 필터 키 목록 훅 (completed는 별도 판정) */
+    getFilterKeys() {
+        return ['dateFrom', 'dateTo', 'name', 'receptionFrom', 'receptionTo'];
     }
 
     /**

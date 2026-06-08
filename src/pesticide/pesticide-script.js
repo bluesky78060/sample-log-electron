@@ -1640,62 +1640,6 @@ class PesticideSampleManager extends window.BaseSampleManager {
     // 검색 필터
     // ========================================
 
-    extractReceptionNumber(receptionNumber) {
-        const match = receptionNumber.match(/(\d+)$/);
-        return match ? parseInt(match[1], 10) : 0;
-    }
-
-    filterAndRenderLogs() {
-        const filteredLogs = this.sampleLogs.filter(log => {
-            const matchesName = !this.currentSearchFilter.name ||
-                log.name.toLowerCase().includes(this.currentSearchFilter.name);
-
-            let matchesReception = true;
-            if (this.currentSearchFilter.receptionFrom || this.currentSearchFilter.receptionTo) {
-                const logNum = this.extractReceptionNumber(log.receptionNumber);
-                const fromNum = this.currentSearchFilter.receptionFrom ? parseInt(this.currentSearchFilter.receptionFrom, 10) : 0;
-                const toNum = this.currentSearchFilter.receptionTo ? parseInt(this.currentSearchFilter.receptionTo, 10) : Infinity;
-                if (fromNum && logNum < fromNum) matchesReception = false;
-                if (toNum !== Infinity && logNum > toNum) matchesReception = false;
-            }
-
-            let matchesDate = true;
-            if (this.currentSearchFilter.dateFrom || this.currentSearchFilter.dateTo) {
-                const logDate = log.date;
-                if (this.currentSearchFilter.dateFrom && logDate < this.currentSearchFilter.dateFrom) matchesDate = false;
-                if (this.currentSearchFilter.dateTo && logDate > this.currentSearchFilter.dateTo) matchesDate = false;
-            }
-
-            let matchesCompleted = true;
-            if (this.currentSearchFilter.completed === 'completed') {
-                matchesCompleted = log.isComplete === true;
-            } else if (this.currentSearchFilter.completed === 'incomplete') {
-                matchesCompleted = !log.isComplete;
-            }
-
-            return matchesName && matchesReception && matchesDate && matchesCompleted;
-        });
-
-        this.renderLogs(filteredLogs);
-        this.updateSearchButtonState();
-    }
-
-    updateSearchButtonState() {
-        const openSearchModalBtn = document.getElementById('openSearchModalBtn');
-        if (!openSearchModalBtn) return;
-
-        const hasFilter = this.currentSearchFilter.dateFrom || this.currentSearchFilter.dateTo ||
-            this.currentSearchFilter.name || this.currentSearchFilter.receptionFrom || this.currentSearchFilter.receptionTo ||
-            (this.currentSearchFilter.completed && this.currentSearchFilter.completed !== 'incomplete');
-        if (hasFilter) {
-            openSearchModalBtn.classList.add('has-filter');
-            openSearchModalBtn.innerHTML = sanitizeHTML('🔍 검색 중');
-        } else {
-            openSearchModalBtn.classList.remove('has-filter');
-            openSearchModalBtn.innerHTML = sanitizeHTML('🔍 검색');
-        }
-    }
-
     // ========================================
     // 체크박스 관리
     // ========================================
