@@ -1155,31 +1155,7 @@ class WaterSampleManager extends window.BaseSampleManager {
     // ========================================
     // 라벨 인쇄
     // ========================================
-    openLabelPrintWithData(logs) {
-        const labelData = logs.map(log => {
-            const addressParts = [];
-            if (log.addressRoad) addressParts.push(log.addressRoad);
-            if (log.addressDetail) addressParts.push(log.addressDetail);
-            const address = addressParts.join(' ');
-            return { name: log.name || '', address: address, postalCode: log.addressPostcode || '' };
-        });
-
-        // 중복 제거 (주소 기준)
-        const uniqueMap = new Map();
-        labelData.forEach(item => {
-            const key = `${item.address}|${item.postalCode}`;
-            if (!uniqueMap.has(key)) uniqueMap.set(key, item);
-        });
-        const uniqueLabelData = Array.from(uniqueMap.values());
-
-        const duplicateCount = labelData.length - uniqueLabelData.length;
-        if (duplicateCount > 0) {
-            this.showToast(`주소 중복 ${duplicateCount}건 제거됨 (총 ${uniqueLabelData.length}건)`, 'info');
-        }
-
-        localStorage.setItem('labelPrintData', JSON.stringify(uniqueLabelData));
-        window.location.href = '../label-print/index.html';
-    }
+    // openLabelPrintWithData / getLabelAddressParts(분리필드 기본) → Base 승격 (L1 Phase 3 P3-B)
 
     // ========================================
     // 우편발송일자 모달

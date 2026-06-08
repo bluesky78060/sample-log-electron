@@ -1655,36 +1655,13 @@ class PesticideSampleManager extends window.BaseSampleManager {
     // 라벨 인쇄
     // ========================================
 
-    openLabelPrintWithData(logs) {
-        const labelData = logs.map(log => {
-            const addressFull = log.address || '';
-            const zipMatch = addressFull.match(/^\((\d{5})\)\s*/);
-            const postalCode = zipMatch ? zipMatch[1] : '';
-            const address = zipMatch ? addressFull.replace(zipMatch[0], '') : addressFull;
-
-            return {
-                name: log.name || '',
-                address: address,
-                postalCode: postalCode
-            };
-        });
-
-        const uniqueMap = new Map();
-        labelData.forEach(item => {
-            const key = `${item.address}|${item.postalCode}`;
-            if (!uniqueMap.has(key)) {
-                uniqueMap.set(key, item);
-            }
-        });
-        const uniqueLabelData = Array.from(uniqueMap.values());
-
-        const duplicateCount = labelData.length - uniqueLabelData.length;
-        if (duplicateCount > 0) {
-            this.showToast(`주소 중복 ${duplicateCount}건 제거됨 (총 ${uniqueLabelData.length}건)`, 'info');
-        }
-
-        localStorage.setItem('labelPrintData', JSON.stringify(uniqueLabelData));
-        window.location.href = '../label-print/index.html';
+    // openLabelPrintWithData → Base 승격. pesticide는 address 재파싱 변형이므로 훅만 오버라이드 (L1 Phase 3 P3-B)
+    getLabelAddressParts(log) {
+        const addressFull = log.address || '';
+        const zipMatch = addressFull.match(/^\((\d{5})\)\s*/);
+        const postalCode = zipMatch ? zipMatch[1] : '';
+        const address = zipMatch ? addressFull.replace(zipMatch[0], '') : addressFull;
+        return { address: address, postalCode: postalCode };
     }
 
     // ========================================

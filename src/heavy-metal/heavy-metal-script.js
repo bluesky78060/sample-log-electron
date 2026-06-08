@@ -1262,12 +1262,9 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
                     return this.sampleLogs.find(l => String(l.id) === String(id));
                 }).filter(Boolean);
 
-                localStorage.setItem('labelPrintData', JSON.stringify({
-                    type: '중금속',
-                    data: selectedData
-                }));
-
-                window.location.href = '../label-print/index.html';
+                // Base openLabelPrintWithData로 통일 — label-print이 배열만 수용하므로
+                // 기존 {type,data} 객체 포맷은 무시되던 버그를 수정 (L1 Phase 3 P3-B)
+                this.openLabelPrintWithData(selectedData);
             });
         }
 

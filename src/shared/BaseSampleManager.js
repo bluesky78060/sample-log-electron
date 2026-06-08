@@ -1145,6 +1145,48 @@ class BaseSampleManager {
     }
 
     /**
+     * 라벨 인쇄 페이지로 선택 레코드 전달 (5타입 공유)
+     * label-print 페이지는 [{name, address, postalCode}] 배열만 수용한다.
+     * 주소 매핑 2변형(분리필드 vs address 재파싱)은 getLabelAddressParts 훅으로 흡수.
+     * @param {Array} logs - 라벨로 인쇄할 레코드 배열
+     */
+    openLabelPrintWithData(logs) {
+        const labelData = (logs || []).map(log => {
+            const { address, postalCode } = this.getLabelAddressParts(log);
+            return { name: log.name || '', address: address, postalCode: postalCode };
+        });
+
+        // 중복 제거 (주소 기준)
+        const uniqueMap = new Map();
+        labelData.forEach(item => {
+            const key = `${item.address}|${item.postalCode}`;
+            if (!uniqueMap.has(key)) uniqueMap.set(key, item);
+        });
+        const uniqueLabelData = Array.from(uniqueMap.values());
+
+        const duplicateCount = labelData.length - uniqueLabelData.length;
+        if (duplicateCount > 0) {
+            this.showToast(`주소 중복 ${duplicateCount}건 제거됨 (총 ${uniqueLabelData.length}건)`, 'info');
+        }
+
+        localStorage.setItem('labelPrintData', JSON.stringify(uniqueLabelData));
+        window.location.href = '../label-print/index.html';
+    }
+
+    /**
+     * 라벨용 주소/우편번호 추출 훅 — 기본: 분리 필드(addressRoad/addressDetail/addressPostcode) 사용
+     * (water/compost/heavy-metal 패턴). soil/pesticide는 address 재파싱으로 오버라이드.
+     * @param {Object} log
+     * @returns {{address: string, postalCode: string}}
+     */
+    getLabelAddressParts(log) {
+        const addressParts = [];
+        if (log.addressRoad) addressParts.push(log.addressRoad);
+        if (log.addressDetail) addressParts.push(log.addressDetail);
+        return { address: addressParts.join(' '), postalCode: log.addressPostcode || '' };
+    }
+
+    /**
      * 샘플 편집 — Template Method
      * find → 편집상태 세팅 → 공통 필드 → 타입 고유 필드(훅) → 편집모드 UI
      * @param {string} id
