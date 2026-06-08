@@ -1201,9 +1201,8 @@ class BaseSampleManager {
         return logs.map(log => {
             const migrated = { ...log };
             if (migrated.isComplete === undefined) {
-                if (migrated.completed !== undefined) migrated.isComplete = !!migrated.completed;
-                else if (migrated.isCompleted !== undefined) migrated.isComplete = !!migrated.isCompleted;
-                else migrated.isComplete = false;
+                // 원본 5벌의 truthy OR-체인 보존: 레거시 두 필드가 충돌 공존하는 엣지에서도 어느 쪽이든 truthy면 완료
+                migrated.isComplete = !!(migrated.completed || migrated.isCompleted);
             }
             delete migrated.completed;
             delete migrated.isCompleted;
