@@ -1145,11 +1145,113 @@ class BaseSampleManager {
     }
 
     /**
-     * 샘플 편집
-     * @abstract
+     * 샘플 편집 — Template Method
+     * find → 편집상태 세팅 → 공통 필드 → 타입 고유 필드(훅) → 편집모드 UI
+     * @param {string} id
      */
     editSample(id) {
-        throw new Error('editSample must be implemented by subclass');
+        const log = this.sampleLogs.find(l => String(l.id) === String(id));
+        if (!log) return;
+        this.editingId = log.id;
+        this.editingGroupIds = [];
+        this.populateCommonFields(log);
+        this.populateTypeSpecificFields(log);
+        this.enterEditModeUI();
+    }
+
+    /**
+     * 편집 폼 공통 필드 채우기 (5타입 공유)
+     * 접수번호/날짜/성명/전화/주소4종(+레거시파싱)/법인토글/수령방법/비고
+     * 그룹 편집의 접수번호 합치기 등은 populateTypeSpecificFields에서 덮어씀
+     * @param {Object} log
+     */
+    populateCommonFields(log) {
+        if (this.receptionNumberInput) this.receptionNumberInput.value = log.receptionNumber || '';
+        if (this.dateInput) this.dateInput.value = log.date || '';
+
+        const nameEl = document.getElementById('name');
+        const phoneEl = document.getElementById('phoneNumber');
+        if (nameEl) nameEl.value = log.name || '';
+        if (phoneEl) phoneEl.value = log.phoneNumber || '';
+
+        const postcodeEl = this.addressPostcode || document.getElementById('addressPostcode');
+        const roadEl = this.addressRoad || document.getElementById('addressRoad');
+        const detailEl = this.addressDetail || document.getElementById('addressDetail');
+        const hiddenEl = this.addressHidden || document.getElementById('address');
+        if (postcodeEl) postcodeEl.value = log.addressPostcode || '';
+        if (roadEl) roadEl.value = log.addressRoad || '';
+        if (detailEl) detailEl.value = log.addressDetail || '';
+        if (hiddenEl) hiddenEl.value = log.address || '';
+        this.applyLegacyAddress(log);
+
+        this.populateApplicantType(log);
+        this.populateReceptionMethod(log);
+
+        const noteEl = document.getElementById('note');
+        if (noteEl) noteEl.value = log.note || '';
+    }
+
+    /**
+     * 법인/개인 신청자 구분 토글 — water/compost/heavy-metal/pesticide 공유
+     * soil은 applicantType 요소가 없으므로 스킵
+     * @param {Object} log
+     */
+    populateApplicantType(log) {
+        const select = this.applicantTypeSelect || document.getElementById('applicantType');
+        if (!select) return;
+        const applicantType = log.applicantType || '개인';
+        select.value = applicantType;
+        const birthDateField = this.birthDateField || document.getElementById('birthDateField');
+        const corpNumberField = this.corpNumberField || document.getElementById('corpNumberField');
+        const birthDateInput = this.birthDateInput || document.getElementById('birthDate');
+        const corpNumberInput = this.corpNumberInput || document.getElementById('corpNumber');
+        const isCorp = applicantType === '법인';
+        if (birthDateField) birthDateField.classList.toggle('hidden', isCorp);
+        if (corpNumberField) corpNumberField.classList.toggle('hidden', !isCorp);
+        if (isCorp) {
+            if (corpNumberInput) corpNumberInput.value = log.corpNumber || '';
+            if (birthDateInput) birthDateInput.value = '';
+        } else {
+            if (birthDateInput) birthDateInput.value = log.birthDate || '';
+            if (corpNumberInput) corpNumberInput.value = '';
+        }
+    }
+
+    /**
+     * 수령(통보)방법 버튼 active 토글 + hidden input 값 설정
+     * @param {Object} log
+     */
+    populateReceptionMethod(log) {
+        const btns = this.receptionMethodBtns || document.querySelectorAll('.reception-method-btn');
+        if (btns) btns.forEach(btn => btn.classList.toggle('active', btn.dataset.method === log.receptionMethod));
+        const input = this.receptionMethodInput || document.getElementById('receptionMethod');
+        if (input) input.value = log.receptionMethod || '';
+    }
+
+    /**
+     * 타입 고유 편집 필드 채우기 훅 (기본 no-op)
+     * @param {Object} log
+     */
+    populateTypeSpecificFields(log) {}
+
+    /**
+     * 편집 모드 UI 진입: navSubmitBtn '수정 완료' 표시 + 폼 뷰 전환
+     */
+    enterEditModeUI() {
+        if (this.navSubmitBtn) {
+            this.navSubmitBtn.title = '수정 완료';
+            this.navSubmitBtn.classList.add('btn-edit-mode');
+        }
+        this.switchToEditFormView();
+    }
+
+    /**
+     * 편집 시 폼 뷰 전환 훅 — 기본: switchView('form') + 안내 토스트
+     * (soil/pesticide는 직접 DOM 토글 + scrollIntoView로 오버라이드)
+     */
+    switchToEditFormView() {
+        this.switchView('form');
+        this.showToast('수정 모드입니다. 변경 후 등록 버튼을 클릭하세요.', 'warning');
     }
 
     /**

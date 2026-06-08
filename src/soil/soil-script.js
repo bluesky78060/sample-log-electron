@@ -2002,23 +2002,24 @@ class SoilSampleManager extends window.BaseSampleManager {
         this.cancelEditMode();
     }
 
+    // Override: 편집 시 폼 뷰 전환 (직접 DOM 토글 + 스크롤, 토스트 없음)
+    switchToEditFormView() {
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.getElementById('formView').classList.add('active');
+        document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelector('.nav-btn[data-view="form"]').classList.add('active');
+
+        setTimeout(() => {
+            this.form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+    }
+
     populateFormForEdit(log) {
         this.editingId = log.id;
         this.editingGroupIds = [];
 
-        this.receptionNumberInput.value = log.receptionNumber || '';
-        if (this.dateInput) this.dateInput.value = log.date || '';
-        document.getElementById('name').value = log.name || '';
-        document.getElementById('phoneNumber').value = log.phoneNumber || '';
-
-        // 주소 필드 처리: 개별 저장 필드 우선 사용
-        if (this.addressPostcode) this.addressPostcode.value = log.addressPostcode || '';
-        if (this.addressRoad) this.addressRoad.value = log.addressRoad || '';
-        if (this.addressDetail) this.addressDetail.value = log.addressDetail || '';
-        if (this.addressHidden) this.addressHidden.value = log.address || '';
-
-        // addressRoad가 없으면 address에서 파싱 (레거시 데이터 호환)
-        this.applyLegacyAddress(log);
+        // 공통 필드(접수번호/날짜/성명/전화/주소+레거시/수령방법/비고) — Base
+        this.populateCommonFields(log);
 
         const subCategorySelect = document.getElementById('subCategory');
         if (subCategorySelect) {
@@ -2038,20 +2039,6 @@ class SoilSampleManager extends window.BaseSampleManager {
         if (this.purposeSelect) {
             this.purposeSelect.value = log.purpose || '';
         }
-
-        const receptionMethodBtns = document.querySelectorAll('.reception-method-btn');
-        receptionMethodBtns.forEach(btn => {
-            btn.classList.remove('active');
-            if (btn.dataset.method === log.receptionMethod) {
-                btn.classList.add('active');
-            }
-        });
-        if (this.receptionMethodInput) {
-            this.receptionMethodInput.value = log.receptionMethod || '';
-        }
-
-        const noteInput = document.getElementById('note');
-        if (noteInput) noteInput.value = log.note || '';
 
         this.parcels = [];
         this.parcelIdCounter = 0;
@@ -2084,19 +2071,7 @@ class SoilSampleManager extends window.BaseSampleManager {
 
         this.updateParcelsData();
 
-        if (this.navSubmitBtn) {
-            this.navSubmitBtn.title = '수정 완료';
-            this.navSubmitBtn.classList.add('btn-edit-mode');
-        }
-
-        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-        document.getElementById('formView').classList.add('active');
-        document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-        document.querySelector('.nav-btn[data-view="form"]').classList.add('active');
-
-        setTimeout(() => {
-            this.form.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 100);
+        this.enterEditModeUI();
     }
 
     populateFormForGroupEdit(groupLogs) {
