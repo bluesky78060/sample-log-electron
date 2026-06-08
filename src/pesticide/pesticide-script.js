@@ -982,46 +982,32 @@ class PesticideSampleManager extends window.BaseSampleManager {
         }
     }
 
+    // Override: 편집 시 폼 뷰 전환 (직접 DOM 토글 + 스크롤, 토스트 없음)
+    switchToEditFormView() {
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.getElementById('formView').classList.add('active');
+        document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelector('.nav-btn[data-view="form"]').classList.add('active');
+
+        setTimeout(() => {
+            this.form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+    }
+
     populateFormForEdit(log) {
         const groupMembers = this.getGroupMembers(log);
         this.editingId = log.id;
         this.editingGroupIds = groupMembers.map(m => String(m.id));
 
-        // 그룹 멤버가 2개 이상이면 모든 접수번호를 표시
+        // 공통 필드(날짜/성명/전화/주소+레거시/법인토글/수령방법/비고) — Base
+        this.populateCommonFields(log);
+
+        // 그룹 멤버가 2개 이상이면 모든 접수번호를 표시 (공통이 채운 단건 접수번호 덮어씀)
         const receptionNumbersStr = groupMembers
             .map(m => m.receptionNumber || '')
             .filter(v => v)
             .join(', ');
         this.receptionNumberInput.value = receptionNumbersStr || (log.receptionNumber || '');
-        this.dateInput.value = log.date || '';
-        document.getElementById('name').value = log.name || '';
-        document.getElementById('phoneNumber').value = log.phoneNumber || '';
-
-        // 법인여부/생년월일/법인번호 설정
-        const applicantType = log.applicantType || '개인';
-        if (this.applicantTypeSelect) {
-            this.applicantTypeSelect.value = applicantType;
-            if (applicantType === '법인') {
-                this.birthDateField.classList.add('hidden');
-                this.corpNumberField.classList.remove('hidden');
-                if (this.corpNumberInput) this.corpNumberInput.value = log.corpNumber || '';
-                if (this.birthDateInput) this.birthDateInput.value = '';
-            } else {
-                this.birthDateField.classList.remove('hidden');
-                this.corpNumberField.classList.add('hidden');
-                if (this.birthDateInput) this.birthDateInput.value = log.birthDate || '';
-                if (this.corpNumberInput) this.corpNumberInput.value = '';
-            }
-        }
-
-        // 주소 필드 처리: 개별 저장 필드 우선 사용
-        this.addressPostcode.value = log.addressPostcode || '';
-        this.addressRoad.value = log.addressRoad || '';
-        this.addressDetail.value = log.addressDetail || '';
-        this.addressHidden.value = log.address || '';
-
-        // addressRoad가 없으면 address에서 파싱 (레거시 데이터 호환)
-        this.applyLegacyAddress(log);
 
         // 구분 선택
         const subCategorySelect = document.getElementById('subCategory');
@@ -1033,23 +1019,6 @@ class PesticideSampleManager extends window.BaseSampleManager {
         const purposeSelect = document.getElementById('purpose');
         if (purposeSelect) {
             purposeSelect.value = log.purpose || '';
-        }
-
-        // 수령 방법 선택
-        this.receptionMethodBtns.forEach(btn => {
-            btn.classList.remove('active');
-            if (btn.dataset.method === log.receptionMethod) {
-                btn.classList.add('active');
-            }
-        });
-        if (this.receptionMethodInput) {
-            this.receptionMethodInput.value = log.receptionMethod || '';
-        }
-
-        // 비고 필드
-        const noteInput = document.getElementById('note');
-        if (noteInput) {
-            noteInput.value = log.note || '';
         }
 
         // 생산자 성명
@@ -1083,21 +1052,8 @@ class PesticideSampleManager extends window.BaseSampleManager {
             if (cropInput) cropInput.value = member.requestContent || '';
         });
 
-        // 네비게이션 바 버튼 변경
-        if (this.navSubmitBtn) {
-            this.navSubmitBtn.title = '수정 완료';
-            this.navSubmitBtn.classList.add('btn-edit-mode');
-        }
-
-        // 시료 접수 화면으로 전환
-        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-        document.getElementById('formView').classList.add('active');
-        document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-        document.querySelector('.nav-btn[data-view="form"]').classList.add('active');
-
-        setTimeout(() => {
-            this.form.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 100);
+        // 편집 모드 UI (navSubmitBtn + 폼 뷰 전환) — Base
+        this.enterEditModeUI();
     }
 
     // ========================================
