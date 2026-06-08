@@ -1066,15 +1066,7 @@ class PesticideSampleManager extends window.BaseSampleManager {
         this.addressHidden.value = log.address || '';
 
         // addressRoad가 없으면 address에서 파싱 (레거시 데이터 호환)
-        if (!log.addressRoad && log.address) {
-            const addressMatch = log.address.match(/^\((\d{5})\)\s*(.+)$/);
-            if (addressMatch) {
-                this.addressPostcode.value = this.addressPostcode.value || addressMatch[1];
-                this.addressRoad.value = addressMatch[2];
-            } else {
-                this.addressRoad.value = log.address;
-            }
-        }
+        this.applyLegacyAddress(log);
 
         // 구분 선택
         const subCategorySelect = document.getElementById('subCategory');

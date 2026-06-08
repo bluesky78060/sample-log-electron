@@ -971,6 +971,20 @@ class BaseSampleManager {
         }
     }
 
+    /**
+     * 레거시 address 문자열을 주소 입력 필드(addressPostcode/addressRoad)에 반영
+     * addressRoad가 이미 있으면 건드리지 않음 (6곳 중복 코드의 공통 계약)
+     * @param {Object} log - 시료 레코드
+     */
+    applyLegacyAddress(log) {
+        if (log.addressRoad || !log.address) return;
+        const { postcode, road } = window.SampleUtils.splitLegacyAddress(log.address);
+        const postcodeEl = this.addressPostcode || document.getElementById('addressPostcode');
+        const roadEl = this.addressRoad || document.getElementById('addressRoad');
+        if (postcode && postcodeEl) postcodeEl.value = postcodeEl.value || postcode;
+        if (roadEl) roadEl.value = road;
+    }
+
     // ========================================
     // 추상 메서드 (서브클래스에서 구현 필요)
     // ========================================

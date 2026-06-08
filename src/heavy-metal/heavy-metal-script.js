@@ -387,15 +387,7 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
         if (addressDetail) addressDetail.value = log.addressDetail || '';
         if (addressHidden) addressHidden.value = log.address || '';
         // 레거시 데이터 호환: addressRoad 필드가 없고 address만 있는 경우
-        if (!log.addressRoad && log.address) {
-            const addressMatch = log.address.match(/^\((\d{5})\)\s*(.+)$/);
-            if (addressMatch) {
-                if (addressPostcode) addressPostcode.value = addressPostcode.value || addressMatch[1];
-                if (addressRoad) addressRoad.value = addressMatch[2];
-            } else {
-                if (addressRoad) addressRoad.value = log.address;
-            }
-        }
+        this.applyLegacyAddress(log);
 
         document.getElementById('samplingLocation').value = log.samplingLocation || '';
         document.getElementById('cropName').value = log.cropName || '';

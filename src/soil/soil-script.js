@@ -2034,15 +2034,7 @@ class SoilSampleManager extends window.BaseSampleManager {
         if (this.addressHidden) this.addressHidden.value = log.address || '';
 
         // addressRoad가 없으면 address에서 파싱 (레거시 데이터 호환)
-        if (!log.addressRoad && log.address) {
-            const addressMatch = log.address.match(/^\((\d{5})\)\s*(.+)$/);
-            if (addressMatch) {
-                if (this.addressPostcode) this.addressPostcode.value = this.addressPostcode.value || addressMatch[1];
-                if (this.addressRoad) this.addressRoad.value = addressMatch[2];
-            } else {
-                if (this.addressRoad) this.addressRoad.value = log.address;
-            }
-        }
+        this.applyLegacyAddress(log);
 
         const subCategorySelect = document.getElementById('subCategory');
         if (subCategorySelect) {
@@ -2144,15 +2136,8 @@ class SoilSampleManager extends window.BaseSampleManager {
         if (this.addressDetail) this.addressDetail.value = firstLog.addressDetail || '';
         if (this.addressHidden) this.addressHidden.value = firstLog.address || '';
 
-        if (!firstLog.addressRoad && firstLog.address) {
-            const addressMatch = firstLog.address.match(/^\((\d{5})\)\s*(.+)$/);
-            if (addressMatch) {
-                if (this.addressPostcode) this.addressPostcode.value = this.addressPostcode.value || addressMatch[1];
-                if (this.addressRoad) this.addressRoad.value = addressMatch[2];
-            } else {
-                if (this.addressRoad) this.addressRoad.value = firstLog.address;
-            }
-        }
+        // addressRoad가 없으면 address에서 파싱 (레거시 데이터 호환)
+        this.applyLegacyAddress(firstLog);
 
         const subCategorySelect = document.getElementById('subCategory');
         if (subCategorySelect) {

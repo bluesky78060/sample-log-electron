@@ -649,15 +649,7 @@ class CompostSampleManager extends window.BaseSampleManager {
         this.addressDetail.value = log.addressDetail || '';
         this.addressHidden.value = log.address || '';
         // 레거시 데이터 호환: addressRoad 필드가 없고 address만 있는 경우
-        if (!log.addressRoad && log.address) {
-            const addressMatch = log.address.match(/^\((\d{5})\)\s*(.+)$/);
-            if (addressMatch) {
-                this.addressPostcode.value = this.addressPostcode.value || addressMatch[1];
-                this.addressRoad.value = addressMatch[2];
-            } else {
-                this.addressRoad.value = log.address;
-            }
-        }
+        this.applyLegacyAddress(log);
 
         // 농장 정보
         if (this.farmAddressFullInput) {
