@@ -348,9 +348,15 @@ class BaseSampleManager {
 
                     if (firebaseLogs && firebaseLogs.length > 0) {
                         this.log(` Firebase 데이터:`, firebaseLogs.length, '건');
-                        this.sampleLogs = firebaseLogs;
 
-                        // PER-9: TTL 포함 캐시 저장
+                        // L2-P0: 무병합 덮어쓰기 금지 — 미업로드 로컬 항목(syncedAt 없음) 보존
+                        const localLogs = this.safeParseArray(yearStorageKey);
+                        const merged = window.SyncUtils?.mergeCloudData
+                            ? window.SyncUtils.mergeCloudData(localLogs, firebaseLogs)
+                            : { data: this.smartMerge(localLogs, firebaseLogs), localOnly: [] };
+                        this.sampleLogs = merged.data;
+
+                        // PER-9: TTL 포함 캐시 저장 (Firebase 원본 응답 기준 — 병합 결과 아님)
                         if (!cacheValid) {
                             // 메모리 누수 방지: 상한 초과 시 가장 오래된 항목 제거(LRU 근사)
                             if (this._firebaseCache.size >= this._firebaseCacheMax && !this._firebaseCache.has(year)) {
@@ -359,9 +365,20 @@ class BaseSampleManager {
                             this._firebaseCache.set(year, { data: JSON.parse(JSON.stringify(firebaseLogs)), timestamp: Date.now() });
                         }
 
-                        // Firebase 데이터를 localStorage에 저장 (캐싱)
-                        localStorage.setItem(yearStorageKey, JSON.stringify(firebaseLogs));
-                        this.log(` Firebase 데이터를 localStorage에 캐싱`);
+                        // 병합 결과를 localStorage에 저장
+                        localStorage.setItem(yearStorageKey, JSON.stringify(merged.data));
+                        this.log(` Firebase 데이터를 localStorage에 캐싱 (로컬 전용 ${merged.localOnly.length}건 보존)`);
+
+                        // 보존된 로컬 전용 항목을 클라우드로 재업로드 (전체가 아닌 localOnly만 —
+                        // 전체 재업로드 시 모든 문서의 updatedAt이 갱신되어 타 기기 병합을 교란함)
+                        if (merged.localOnly.length > 0 && window.firestoreDb?.isEnabled()) {
+                            window.firestoreDb.batchSave(this.moduleKey, parseInt(year, 10), merged.localOnly)
+                                .then(ok => {
+                                    if (ok) this.log(`☁️ 로컬 전용 ${merged.localOnly.length}건 클라우드 업로드 완료`);
+                                    else this._handleCloudSyncFailure();
+                                })
+                                .catch(() => this._handleCloudSyncFailure());
+                        }
                     } else {
                         this.log(` Firebase에 데이터 없음, localStorage 확인`);
                         // Firebase에 데이터가 없으면 localStorage 확인
