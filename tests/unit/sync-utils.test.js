@@ -50,4 +50,36 @@ describe('mergeCloudData', () => {
         )
         expect(result2.data[0].name).toBe('클라우드수정')
     })
+
+    // SAMPL-1-80: 캐시(불완전 가능) 읽기에서는 cross-device 삭제를 적용하지 않는다
+    it('fromCache=true(비신뢰 읽기)면 syncedAt 로컬 항목을 삭제하지 않고 보존한다', () => {
+        const local = [
+            { id: 'a', receptionNumber: '1', syncedAt: '2026-06-01T00:00:00Z' },
+            { id: 'b', receptionNumber: '2', syncedAt: '2026-06-01T00:00:00Z' }  // 캐시가 누락했을 뿐 실제 존재
+        ]
+        const cloud = [{ id: 'a', receptionNumber: '1' }]  // 캐시에서 온 불완전 응답 (b 누락)
+        const result = SyncUtils.mergeCloudData(local, cloud, { fromCache: true })
+        expect(result.data.length).toBe(2)               // b 보존
+        expect(result.data.find(x => x.id === 'b')).toBeTruthy()
+        expect(result.deleted).toBe(0)                   // 삭제 0건
+    })
+
+    it('fromCache=false(서버 authoritative)면 기존대로 cross-device 삭제를 반영한다', () => {
+        const local = [
+            { id: 'a', receptionNumber: '1', syncedAt: '2026-06-01T00:00:00Z' },
+            { id: 'b', receptionNumber: '2', syncedAt: '2026-06-01T00:00:00Z' }
+        ]
+        const cloud = [{ id: 'a', receptionNumber: '1' }]
+        const result = SyncUtils.mergeCloudData(local, cloud, { fromCache: false })
+        expect(result.data.length).toBe(1)
+        expect(result.deleted).toBe(1)
+    })
+
+    it('smartMerge allowDeletions=false면 syncedAt 로컬 항목을 보존한다', () => {
+        const local = [{ id: 'b', receptionNumber: '2', syncedAt: '2026-06-01T00:00:00Z' }]
+        const cloud = []
+        const result = SyncUtils.smartMerge(local, cloud, { allowDeletions: false })
+        expect(result.data.length).toBe(1)
+        expect(result.deleted).toBe(0)
+    })
 })
