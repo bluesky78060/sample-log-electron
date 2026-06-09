@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>경지구분 1차(landClass1) 이식 구현 계획 — sample-log-soil → 메인 (2026-06-09)</title>
+<style>
+  :root {
+    --bg:#f6f8fa; --card:#fff; --text:#1f2328; --muted:#59636e; --border:#d1d9e0; --accent:#0969da;
+    --red:#d1242f; --red-bg:#ffebe9; --orange:#bc4c00; --orange-bg:#fff1e5;
+    --yellow:#9a6700; --yellow-bg:#fff8c5; --green:#1a7f37; --green-bg:#dafbe1;
+    --purple:#8250df; --purple-bg:#fbefff; --code-bg:#eff2f5;
+  }
+  @media (prefers-color-scheme: dark){:root{
+    --bg:#0d1117; --card:#161b22; --text:#e6edf3; --muted:#8d96a0; --border:#30363d; --accent:#4493f8;
+    --red:#ff7b72; --red-bg:#2d1517; --orange:#f0883e; --orange-bg:#2b1a0f;
+    --yellow:#e3b341; --yellow-bg:#2a2410; --green:#56d364; --green-bg:#12261e;
+    --purple:#d2a8ff; --purple-bg:#271c36; --code-bg:#1f242c;
+  }}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Noto Sans KR",sans-serif;background:var(--bg);color:var(--text);line-height:1.65}
+  .container{max-width:1000px;margin:0 auto;padding:32px 20px 80px}
+  header.hero{background:linear-gradient(135deg,#1b3a2a 0%,#246b43 60%,#2d8a5a 100%);color:#fff;border-radius:14px;padding:36px 32px;margin-bottom:26px}
+  header.hero h1{margin:0 0 6px;font-size:24px;letter-spacing:-.3px}
+  header.hero p.sub{margin:0;opacity:.85;font-size:14px}
+  header.hero .meta{margin-top:18px;display:flex;flex-wrap:wrap;gap:8px}
+  header.hero .meta span{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:3px 12px;font-size:12.5px}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin-bottom:28px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;border-top:4px solid var(--accent)}
+  .card h3{margin:0 0 4px;font-size:15px}
+  .card .big{font-size:19px;font-weight:800;margin:2px 0 4px}
+  .card p{margin:0;font-size:13px;color:var(--muted)}
+  section{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px 26px;margin-bottom:22px}
+  section>h2{margin:0 0 14px;font-size:19px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+  section h3{font-size:15px;margin:18px 0 8px}
+  p,li{font-size:14px}
+  ul,ol{padding-left:22px;margin:8px 0}
+  li{margin:4px 0}
+  .muted{color:var(--muted)}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin:10px 0}
+  th,td{border:1px solid var(--border);padding:8px 11px;text-align:left;vertical-align:top}
+  th{background:var(--code-bg);font-size:12px}
+  code{background:var(--code-bg);border-radius:5px;padding:1.5px 6px;font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:12px}
+  pre{background:var(--code-bg);border:1px solid var(--border);border-radius:8px;padding:12px 14px;overflow-x:auto;font-size:12px;line-height:1.5}
+  pre code{background:none;padding:0}
+  .badge{font-size:11.5px;font-weight:700;border-radius:999px;padding:2px 9px;white-space:nowrap;display:inline-block}
+  .b-red{color:var(--red);background:var(--red-bg)} .b-orange{color:var(--orange);background:var(--orange-bg)}
+  .b-yellow{color:var(--yellow);background:var(--yellow-bg)} .b-green{color:var(--green);background:var(--green-bg)}
+  .b-purple{color:var(--purple);background:var(--purple-bg)} .b-accent{color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent)}
+  .callout{border-left:4px solid var(--accent);background:color-mix(in srgb,var(--accent) 7%,var(--card));border-radius:0 10px 10px 0;padding:13px 17px;margin:14px 0;font-size:14px}
+  .callout.warn{border-left-color:var(--red);background:var(--red-bg)}
+  .callout.decision{border-left-color:var(--purple);background:var(--purple-bg)}
+  .callout b.title{display:block;margin-bottom:4px}
+  .phase{border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin:12px 0}
+  .phase h4{margin:0 0 6px;font-size:14.5px}
+  .phase .files{font-size:12px;color:var(--muted);margin:4px 0 8px}
+  .flow{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin:12px 0;font-size:12.5px;font-weight:600}
+  .flow .node{border:1.5px solid var(--border);border-radius:8px;padding:6px 11px;background:var(--code-bg)}
+  .flow .arrow{color:var(--muted)}
+  .pill{display:inline-block;background:var(--code-bg);border:1px solid var(--border);border-radius:6px;padding:2px 8px;font-size:12px;margin:2px}
+  footer{text-align:center;color:var(--muted);font-size:12.5px;margin-top:36px}
+  @media print{body{background:#fff}section,.card,.phase{break-inside:avoid}header.hero{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header class="hero">
+    <h1>🌾 경지구분 1차(landClass1) 이식 구현 계획</h1>
+    <p class="sub">sample-log-soil의 경지구분 기능 → 메인 프로젝트(sample-log-electron) 토양 시료 적용</p>
+    <div class="meta">
+      <span>📅 2026-06-09</span>
+      <span>📋 계획 문서 (구현 전)</span>
+      <span>🔬 근거: .omc/research/gyeongji-gubun-analysis.md</span>
+      <span>🎯 6단계 + 의사결정 3건</span>
+    </div>
+  </header>
+
+  <!-- 요약 카드 -->
+  <div class="cards">
+    <div class="card" style="border-top-color:var(--green)">
+      <h3>경지구분 1차란?</h3>
+      <div class="big">12개 분류</div>
+      <p>개량제·전략·직불·자체·기타·친환경·유기농·무농약·GAP·농가의뢰·대표필지·공익직불제. 기본값 <b>농가의뢰</b>.</p>
+    </div>
+    <div class="card" style="border-top-color:var(--accent)">
+      <h3>핵심 동작</h3>
+      <div class="big">경지구분별 독립 접수번호</div>
+      <p>같은 연도라도 분류마다 1번부터 별도 시퀀스 (농가의뢰 1,2,3 / 개량제 1,2,3 병존).</p>
+    </div>
+    <div class="card" style="border-top-color:var(--orange)">
+      <h3>이식 성격</h3>
+      <div class="big">복사 ❌ · 재배선 ⭕</div>
+      <p>두 프로젝트가 분기됨 — soil은 구버전 Base, 메인은 L1 리팩토링. "개념을 메인 구조에 재배선".</p>
+    </div>
+    <div class="card" style="border-top-color:var(--red)">
+      <h3>데이터 마이그레이션</h3>
+      <div class="big">스크립트 불필요</div>
+      <p>읽기 시 <code>|| '농가의뢰'</code> 폴백 + 로드 1회 채움. 스토리지 구조 변경 없음, 하위호환 안전.</p>
+    </div>
+  </div>
+
+  <!-- 의사결정 -->
+  <section>
+    <h2>⚠️ 먼저 결정해야 할 사항 (구현 전 확정 필요)</h2>
+
+    <div class="callout decision">
+      <b class="title">🟣 결정 1 — 흙토람 "경지구분 1차" 의미 충돌 (가장 중요)</b>
+      soil 흙토람에서 "경지구분 1차" 컬럼 = <b>landClass1</b>(개량제/직불/…)을 출력합니다(<code>heuktoram-script.js:1600</code>).
+      그런데 <b>메인 흙토람</b>은 같은 "경지구분 1차" 컬럼을 이미 <b>subCategory(논/밭/과수)에서 파생</b>해 채우고 있습니다 — 같은 칸의 의미가 다릅니다.
+      <br><br>
+      <b>선택지:</b>
+      <span class="pill">A. soil과 동일하게 landClass1을 1차 컬럼에 출력(메인 기존 매핑 교체)</span>
+      <span class="pill">B. 메인 기존 매핑 유지하고 landClass1은 별도 칸/미반영</span>
+      <span class="pill">C. 흙토람 연동은 이번 범위 제외(폼·목록·채번만)</span>
+      <br>→ 이 결정이 Phase 6 포함 여부를 좌우합니다.
+    </div>
+
+    <div class="callout decision">
+      <b class="title">🟣 결정 2 — 엑셀 가져오기 범위</b>
+      soil은 전용 <code>soil-result-importer.js</code>(67KB, 경지구분 일괄선택 + 경지구분별 채번)를 씁니다.
+      메인은 공유 <code>ExcelImportManager</code> 기반이라 <b>그대로 못 옮깁니다</b>. 메인 importer에 "경지구분 일괄선택 UI + 경지구분별 채번"을 새로 붙여야 합니다.
+      <br>→ <span class="pill">포함(Phase 5 진행)</span> <span class="pill">제외(수기 입력만, 후속)</span>
+    </div>
+
+    <div class="callout decision">
+      <b class="title">🟣 결정 3 — 채번 순수모듈 도입 여부</b>
+      soil은 <code>reception-number.js</code> 순수모듈로 분리. 메인은 인라인 <code>generateNextReceptionNumber()</code>(인자 없음).
+      <span class="pill">A. soil처럼 모듈 신규 도입(테스트 용이, soil-entry 수정)</span>
+      <span class="pill">B. 메인 인라인에 landClass1 필터만 추가(변경 최소)</span>
+      → 권장: <b>B(변경 최소)</b> + 채번 핵심 로직만 단위테스트 가능하게 작은 순수함수로 추출.
+    </div>
+  </section>
+
+  <!-- 구조 차이 -->
+  <section>
+    <h2>🔀 소스(soil) vs 타겟(메인) 구조 차이 — 이식 충돌 지점</h2>
+    <div class="callout warn">
+      두 프로젝트는 단순 동기화 관계가 아니라 <b>서로 다른 방향으로 분기</b>했습니다. soil 코드를 복사하면 메인의 L1 리팩토링(<code>populateCommonFields</code>/<code>persistRecords</code>)과 충돌합니다.
+    </div>
+    <table>
+      <thead><tr><th>항목</th><th>soil (소스)</th><th>메인 (타겟)</th><th>이식 영향</th></tr></thead>
+      <tbody>
+        <tr><td>BaseSampleManager</td><td>구버전 1067줄 (L1 없음)</td><td><b>1602줄, L1 리팩토링</b></td><td>직접 복사 불가 → 재배선</td></tr>
+        <tr><td>채번</td><td><code>reception-number.js</code> 순수모듈, landClass1 인자</td><td>인라인 <code>generateNextReceptionNumber()</code> 인자 없음 (soil-script.js:651)</td><td>시그니처 변경 + landClass1 필터</td></tr>
+        <tr><td>레코드 빌드</td><td><code>soil-log-record.js</code> 팩토리</td><td>인라인 + <code>populateCommonFields</code> (:2004)</td><td>양쪽에 landClass1 추가</td></tr>
+        <tr><td>저장</td><td>saveLogs + firebaseSaveRecords</td><td><code>persistRecords(newLogs, removedIds)</code> (L1)</td><td>landClass1은 레코드 필드 → 저장경로 무관 ✅</td></tr>
+        <tr><td>엑셀 가져오기</td><td>전용 soil-result-importer.js</td><td>공유 ExcelImportManager (:4189)</td><td>메커니즘 상이 → 재구현</td></tr>
+        <tr><td>흙토람</td><td>landClass1 → 1차 컬럼</td><td>1차 컬럼 = subCategory 파생</td><td>의미 충돌 (결정 1)</td></tr>
+        <tr><td>값 목록 정의처</td><td>HTML 2곳+JS배열+통계매핑 (4중복)</td><td>없음</td><td>이식 시 단일소스화 권장</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 핵심 동작 설명 -->
+  <section>
+    <h2>🧩 핵심 동작 — 경지구분별 독립 접수번호</h2>
+    <p>soil의 채번 순수 로직(<code>reception-number.js</code>, 58줄)을 메인에 맞게 적용:</p>
+    <pre><code>// 같은 landClass1 범위 내에서만 본번 max+1
+function computeNextNumber(logs, targetClass, opts = {}) {
+    const def = '농가의뢰';
+    const fillPrefix = opts.fill ? 'F' : '';
+    const max = logs
+        .filter(l => (l.landClass1 || def) === targetClass)          // ← 경지구분별 필터
+        .map(l => parseInt(String(l.receptionNumber).replace(/^F/, '').split('-')[0], 10) || 0)
+        .reduce((a, b) => Math.max(a, b), 0);
+    return fillPrefix + (max + 1);
+}</code></pre>
+    <div class="flow">
+      <span class="node">폼: 경지구분 select 변경</span><span class="arrow">→</span>
+      <span class="node">change 핸들러 (수정모드 아니면)</span><span class="arrow">→</span>
+      <span class="node">computeNextNumber(logs, 선택분류)</span><span class="arrow">→</span>
+      <span class="node">접수번호 입력칸 자동 갱신</span>
+    </div>
+    <p class="muted">메인은 채번이 BaseSampleManager가 아닌 soil-script 자체 메서드라 <b>L1과 직접 충돌 없음</b>. 호출처(접수번호 자동입력 지점)만 점검하면 됩니다.</p>
+  </section>
+
+  <!-- 구현 단계 -->
+  <section>
+    <h2>🚀 구현 단계 (6 Phase, 위험도 오름차순)</h2>
+
+    <div class="phase">
+      <h4>Phase 1 — 상수 + 데이터 모델 + 마이그레이션 <span class="badge b-green">난이도 低</span></h4>
+      <div class="files">src/soil/soil-script.js</div>
+      <ul>
+        <li><code>LAND_CLASS1_OPTIONS</code>(12값) · <code>LAND_CLASS1_DEFAULT='농가의뢰'</code> · <code>LAND_CLASS1_STATS_MAPPING</code>(라벨·색상) 추가</li>
+        <li>로드 시 마이그레이션: <code>if (!log.landClass1) log.landClass1 = LAND_CLASS1_DEFAULT</code> (soil-script.js:299 대응 위치 = 메인 loadYearData/migrate 훅)</li>
+        <li>읽기 폴백 <code>log.landClass1 || LAND_CLASS1_DEFAULT</code> 패턴 일관 적용</li>
+        <li><b>단일소스화 제안</b>: 값 목록을 배열 1곳에 두고 폼·탭 option을 JS 동적 생성(soil의 4중복 약점 개선)</li>
+      </ul>
+    </div>
+
+    <div class="phase">
+      <h4>Phase 2 — 폼 / 목록 탭 / 컬럼 (HTML+CSS) <span class="badge b-yellow">난이도 中</span></h4>
+      <div class="files">src/soil/index.html · src/soil/soil-style.css</div>
+      <ul>
+        <li>접수 폼: 구분·목적 2열 → <b>경지구분·구분·목적 3열</b>. <code>&lt;select id="landClass1" name="landClass1"&gt;</code> (첫 번째 배치, 농가의뢰 기본 selected)</li>
+        <li>목록 필터: <code>&lt;select id="landClass1Tab"&gt;</code> "전체 경지구분" + 12값 추가</li>
+        <li>목록 표: <code>&lt;th class="col-landclass1 sticky-col"&gt;경지구분&lt;/th&gt;</code> + 셀 렌더</li>
+        <li>CSS: <code>.col-landclass1</code>, <code>.landclass1-tab</code>, 통계 색상 class</li>
+      </ul>
+    </div>
+
+    <div class="phase">
+      <h4>Phase 3 — 채번 landClass1화 + change 핸들러 <span class="badge b-orange">난이도 中~高</span></h4>
+      <div class="files">src/soil/soil-script.js (+ 선택: 신규 reception-number 순수함수)</div>
+      <ul>
+        <li><code>getCurrentLandClass1()</code> + <code>generateNextReceptionNumber(landClass1)</code>/<code>generateNextFillReceptionNumber(landClass1)</code> 시그니처 변경 — landClass1 범위 필터 적용</li>
+        <li>호출처 전수 점검: 접수번호 자동입력하는 모든 지점에 현재 경지구분 전달</li>
+        <li><code>landClass1Select</code> <b>change 이벤트</b>: 수정모드(editingId/editingGroupIds) 아니면 접수번호 재추천 (성토 분기 포함). subCategory 성토 change 핸들러와 동일 패턴</li>
+        <li>신규/그룹수정/단건수정/편집폼채우기에 landClass1 반영 (메인 submitForm/updateSample/populateCommonFields 대응 위치)</li>
+      </ul>
+    </div>
+
+    <div class="phase">
+      <h4>Phase 4 — 필터 + 통계 <span class="badge b-yellow">난이도 中</span></h4>
+      <div class="files">src/soil/soil-script.js</div>
+      <ul>
+        <li>탭 change → <code>currentSearchFilter.landClass1</code> → <code>filterAndRenderLogs()</code>. 메인 L1의 <code>matchesTypeSpecificFilters</code> 훅에 landClass1 조건 추가</li>
+        <li>고급검색 초기화 시 탭 값 유지, 탭 활성 시각표시(has-filter)</li>
+        <li>통계 <code>byLandClass</code> 집계(전체 시료 기준) + 통계 모달 차트(수령방법별과 동일 패턴)</li>
+      </ul>
+    </div>
+
+    <div class="phase">
+      <h4>Phase 5 — 엑셀 가져오기 (결정 2에서 포함 시) <span class="badge b-orange">난이도 中</span></h4>
+      <div class="files">src/soil/soil-script.js (buildRecord :4237) · 가져오기 모달 UI · ExcelImportManager 연동</div>
+      <ul>
+        <li>메인 <code>buildRecord</code>에 <code>landClass1</code> 추가</li>
+        <li>가져오기 모달에 "경지구분 1차 일괄선택" 드롭다운 + "경지구분별 채번" 옵션</li>
+        <li>중복 판정·자동채번을 경지구분별 범위로 (<code>getNextNumberForClass(year, landClass1)</code> 신규)</li>
+      </ul>
+    </div>
+
+    <div class="phase">
+      <h4>Phase 6 — 흙토람 연동 (결정 1 확정 후) <span class="badge b-red">난이도 中 · 의미 확정 필수</span></h4>
+      <div class="files">src/heuktoram/heuktoram-script.js</div>
+      <ul>
+        <li>일반 시트: 경지구분 1차 컬럼[4]에 landClass1 출력 (soil heuktoram-script.js:1600 대응)</li>
+        <li>공익직불제 시트: <code>getGongikLandClass1</code>('공익직불제'→'직불(일반)') 매핑</li>
+        <li>⚠️ 메인 기존 "1차=subCategory 파생"과 충돌 → 결정 1에 따라 교체/병행/제외</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 검증 -->
+  <section>
+    <h2>✅ 검증 전략</h2>
+    <ul>
+      <li><b>단위(vitest)</b>: <code>computeNextNumber</code> 순수함수 — 경지구분별 독립 시퀀스, 성토(F) 분리, 빈/누락 landClass1 폴백</li>
+      <li><b>E2E(Playwright)</b>: 경지구분 선택→접수번호 자동 1번 / 다른 경지구분 선택→다시 1번 / 목록 탭 필터 / 마이그레이션(기존 레코드 농가의뢰 분류)</li>
+      <li><b>회귀</b>: 기존 토양 접수/수정/그룹수정/엑셀 흐름(common-crud-smoke 등 203 E2E) 무파손</li>
+      <li><b>마이그레이션</b>: landClass1 없는 레거시 레코드 시드 → 로드 후 농가의뢰로 분류·렌더 단언</li>
+    </ul>
+  </section>
+
+  <!-- 위험 관리 -->
+  <section>
+    <h2>🛡️ 위험 관리</h2>
+    <table>
+      <thead><tr><th>위험</th><th>완화</th></tr></thead>
+      <tbody>
+        <tr><td>채번 호출처 누락 → 잘못된 접수번호</td><td>Phase 3에서 호출처 grep 전수 점검 + E2E로 경지구분 전환 시 번호 검증</td></tr>
+        <tr><td>L1 구조(populateCommonFields/persistRecords)와 충돌</td><td>landClass1은 레코드 필드 → 저장경로 무관. 편집폼 채우기에만 select 반영 추가</td></tr>
+        <tr><td>기존 데이터 분류 혼선</td><td>전부 농가의뢰로 폴백 → 기존 번호와 새 시퀀스가 같은 풀에서 연속(혼란 없음)</td></tr>
+        <tr><td>흙토람 컬럼 의미 충돌</td><td>결정 1 확정 전 Phase 6 착수 금지</td></tr>
+        <tr><td>값 목록 4중복(soil 약점) 승계</td><td>이식 시 배열 단일소스 + option 동적 생성으로 개선</td></tr>
+        <tr><td>테스트 프로젝트(TS) 동기화</td><td>완료 후 의미단위 TS 포팅 별도 티켓 (SAMPL-1-77 선례)</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 권장 순서 -->
+  <section>
+    <h2>📌 권장 진행</h2>
+    <div class="flow">
+      <span class="node">결정 1·2·3 확정</span><span class="arrow">→</span>
+      <span class="node">Phase 1 상수·마이그레이션</span><span class="arrow">→</span>
+      <span class="node">Phase 2 폼·탭·컬럼</span><span class="arrow">→</span>
+      <span class="node">Phase 3 채번</span><span class="arrow">→</span>
+      <span class="node">Phase 4 필터·통계</span><span class="arrow">→</span>
+      <span class="node">Phase 5 엑셀(선택)</span><span class="arrow">→</span>
+      <span class="node">Phase 6 흙토람(선택)</span>
+    </div>
+    <ul>
+      <li><b>최소 범위(MVP)</b>: Phase 1~4 — 폼·목록·경지구분별 채번까지. 엑셀/흙토람 없이도 수기 접수 완결.</li>
+      <li><b>전체 범위</b>: + Phase 5(엑셀) + Phase 6(흙토람, 결정 1 후).</li>
+      <li>각 Phase 완료 시 AI PM 티켓 + 빌드 + E2E + 코드리뷰(이 프로젝트 워크플로 준수).</li>
+    </ul>
+    <div class="callout">
+      <b>다음 액션</b>: 위 <b>의사결정 3건</b>(특히 흙토람 의미)에 답해 주시면, MVP(Phase 1~4) 또는 전체 범위로 상세 구현 플랜(태스크별 코드 포함)을 만들고 착수하겠습니다. 현재 문서는 <b>계획만</b>이며 코드는 변경하지 않았습니다.
+    </div>
+  </section>
+
+  <footer>
+    조사 근거: <code>.omc/research/gyeongji-gubun-analysis.md</code> · 소스: sample-log-soil · 타겟: sample-log-electron<br>
+    경지구분 1차(landClass1) 이식 구현 계획 · 2026-06-09 · 계획 문서(구현 전)
+  </footer>
+
+</div>
+</body>
+</html>
