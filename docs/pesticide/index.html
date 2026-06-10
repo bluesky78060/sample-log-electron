@@ -10,8 +10,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap">
-    <link rel="preload" as="style" href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined">
     <style>
         /* 다크 모드 select 강제 적용 - 최우선 */
         [data-theme="dark"] select#subCategory,
@@ -38,9 +36,9 @@
             color: #e9d5ff !important;
         }
     </style>
-  <script type="module" crossorigin src="../assets/pesticide-DbxkyfvY.js"></script>
+  <script type="module" crossorigin src="../assets/pesticide-CaqUgc1k.js"></script>
   <link rel="modulepreload" crossorigin href="../assets/theme-5IQAOg5H.js">
-  <link rel="modulepreload" crossorigin href="../assets/tooltip-BYsZrRvP.js">
+  <link rel="modulepreload" crossorigin href="../assets/tooltip-DsPZw8jD.js">
   <link rel="modulepreload" crossorigin href="../assets/xlsx.min-CvK3Qp9U.js">
   <link rel="modulepreload" crossorigin href="../assets/purify.es-GoFsRstw.js">
   <link rel="modulepreload" crossorigin href="../assets/excel-import-manager-C3jb_0g0.js">
@@ -50,9 +48,9 @@
   <link rel="modulepreload" crossorigin href="../assets/firestore-db-CT-hqm-D.js">
   <link rel="modulepreload" crossorigin href="../assets/cropData-D4YHZ2cy.js">
   <link rel="modulepreload" crossorigin href="../assets/pesticide-data-df7o846k.js">
-  <link rel="modulepreload" crossorigin href="../assets/mrl-api-CZ4KIMLE.js">
-  <link rel="stylesheet" crossorigin href="../assets/tooltip-CCmcblpp.css">
-  <link rel="stylesheet" crossorigin href="../assets/pesticide-D5VKvaCZ.css">
+  <link rel="modulepreload" crossorigin href="../assets/mrl-api-zM2XRoJq.js">
+  <link rel="stylesheet" crossorigin href="../assets/tooltip-DocPs4J_.css">
+  <link rel="stylesheet" crossorigin href="../assets/pesticide--Ju3s9Xv.css">
   <link rel="stylesheet" crossorigin href="../assets/tailwind-output-uplGniQ-.css">
 </head>
 
@@ -412,6 +410,9 @@
                     <button type="button" id="openSearchModalBtn" class="btn-search-open" title="검색">
                         🔍 검색
                     </button>
+                    <button type="button" id="openMrlSearchModalBtn" class="btn-mrl-search-open" title="MRL 검색">
+                        🔬 MRL 검색
+                    </button>
                 </div>
             </div>
 
@@ -732,6 +733,79 @@
             </div>
             <div class="modal-footer">
                 <button type="button" id="closeStatisticsBtn" class="btn-cancel">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MRL 검색 모달 -->
+    <div id="mrlSearchModal" class="modal hidden">
+        <div class="modal-overlay"></div>
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3>🔬 MRL 검색 (식품별 농약 잔류허용기준)</h3>
+                <button type="button" class="modal-close" id="closeMrlSearchModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- 상태 안내줄 -->
+                <div id="mrlSearchStatus" class="mrl-search-status hidden">
+                    <span class="mrl-search-dot"></span>
+                    <span id="mrlSearchStatusText">MRL 데이터 준비 중...</span>
+                    <button type="button" id="mrlSearchSetKeyBtn" class="mrl-search-link-btn hidden">API 키 설정</button>
+                </div>
+
+                <!-- 농약명 검색 입력 -->
+                <div class="mrl-search-input-row">
+                    <span class="material-icons-outlined mrl-search-input-icon">search</span>
+                    <input type="text" id="mrlSearchInput" class="mrl-search-input"
+                        placeholder="농약명 입력 (한글 또는 영문, 예: 다이아지논 / Diazinon)" autocomplete="off">
+                    <button type="button" id="mrlSearchClearBtn" class="mrl-search-clear-btn hidden" title="지우기">&times;</button>
+                </div>
+
+                <!-- 농약 후보 리스트 -->
+                <div id="mrlCandidateSection" class="mrl-candidate-section hidden">
+                    <div class="mrl-candidate-info"><span id="mrlCandidateCount">0개 농약</span></div>
+                    <ul id="mrlCandidateList" class="mrl-candidate-list"></ul>
+                </div>
+
+                <!-- 선택된 농약의 식품별 MRL 테이블 -->
+                <div id="mrlResultSection" class="mrl-result-section hidden">
+                    <div class="mrl-result-header">
+                        <div id="mrlResultTitle" class="mrl-result-title">
+                            <span id="mrlResultPesticideKor" class="mrl-result-kor"></span>
+                            <span id="mrlResultPesticideEng" class="mrl-result-eng"></span>
+                        </div>
+                        <button type="button" id="mrlBackToCandidatesBtn" class="mrl-back-btn hidden" title="농약 목록으로">
+                            <span class="material-icons-outlined" style="font-size:16px;">arrow_back</span> 목록
+                        </button>
+                    </div>
+                    <div class="mrl-food-filter-row">
+                        <span class="material-icons-outlined mrl-food-filter-icon">filter_list</span>
+                        <input type="text" id="mrlFoodFilterInput" class="mrl-food-filter-input"
+                            placeholder="식품명 필터 (예: 사과, 고추...)" autocomplete="off">
+                        <span id="mrlResultCount" class="mrl-result-count">0건</span>
+                    </div>
+                    <div class="mrl-result-table-wrapper">
+                        <table class="mrl-result-table">
+                            <thead>
+                                <tr>
+                                    <th class="mrl-col-food">식품(작물)명</th>
+                                    <th class="mrl-col-category">분류</th>
+                                    <th class="mrl-col-value">MRL 값</th>
+                                    <th class="mrl-col-unit">단위</th>
+                                </tr>
+                            </thead>
+                            <tbody id="mrlResultTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 빈/안내 상태 -->
+                <div id="mrlSearchEmpty" class="mrl-search-empty">
+                    농약명을 입력하면 식품별 잔류허용기준(MRL)을 검색합니다.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="closeMrlSearchBtn" class="btn-cancel">닫기</button>
             </div>
         </div>
     </div>

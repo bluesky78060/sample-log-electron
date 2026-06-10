@@ -34,9 +34,11 @@ import '../cropData.js';
 // 정적 시·군 데이터 제거 - 자동완성은 juso API 단독
 import '../shared/pesticide-data.js';
 import '../shared/pesticide-name-map.js';
+import '../shared/pesticide-use-type.js';
 
 // MRL API (식품안전나라)
 import '../shared/mrl-api.js';
+import '../shared/mrl-search.js';
 
 // Main script
 import './pesticide-script.js';

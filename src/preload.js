@@ -110,6 +110,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // 반환: { ok: boolean, items?: Array, total?: number, error?: string }
     jusoSearch: (payload) => ipcRenderer.invoke('juso:search', payload),
 
+    // MRL(식품안전나라) 내장 API 키 조회 (main process의 process.env.FOODSAFETY_API_KEY)
+    // 렌더러 localStorage('mrl_api_key') 수동 설정이 없을 때 mrl-api.js가 폴백으로 사용
+    mrlGetApiKey: () => ipcRenderer.invoke('mrl:get-api-key'),
+
     // Electron 환경 여부
     isElectron: true
 });

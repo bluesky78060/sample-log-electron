@@ -598,9 +598,38 @@
         <!-- 타임라인 -->
         <div class="timeline">
 
-            <!-- v1.15.4 -->
+            <!-- v1.16.0 -->
             <div class="version-entry">
                 <div class="version-dot latest"></div>
+                <div class="version-card">
+                    <div class="version-card-header">
+                        <div>
+                            <div class="version-meta">
+                                <span class="version-number">v1.16.0</span>
+                                <span class="version-date">2026-06-10</span>
+                            </div>
+                            <div class="version-title">토양 경지구분 관리 · MRL 검색 · 산 필지 토글 등 대규모 기능 추가</div>
+                        </div>
+                        <div class="badge-row">
+                            <span class="badge badge-latest">★ 최신</span>
+                            <span class="badge badge-feature">새 기능</span>
+                            <span class="badge badge-fix">개선</span>
+                        </div>
+                    </div>
+                    <ul class="change-list">
+                        <li><strong>토양 경지구분 1차 관리</strong> — 토양 접수에 경지구분(농가의뢰·공익직불제 등) 항목이 생겼습니다. 목록 상단 탭으로 구분별 조회가 가능하고, 접수번호가 구분별로 독립 부여됩니다. 통계와 엑셀 내보내기도 현재 탭 기준으로 집계되며, 내보내기에 '경지구분1차' 컬럼이 추가되었습니다.</li>
+                        <li><strong>잔류농약 MRL 검색</strong> — 잔류농약 접수목록에 🔬 MRL 검색 버튼이 생겼습니다. 농약명을 <strong>한글(다이아지논)이나 영문(Diazinon)</strong>으로 검색하면 식품별 잔류허용기준을 표로 보여주고, 농약 용도(살충제·살균제 등) 배지도 함께 표시됩니다. Windows 설치판은 API 키 입력 없이 바로 사용할 수 있습니다.</li>
+                        <li><strong>산(山) 필지 토글</strong> — 토양 필지 주소 옆 산 체크박스가 색상 토글 버튼으로 바뀌었고, 주소 자동완성에서 "산" 필지를 선택하면 자동으로 켜집니다.</li>
+                        <li><strong>흙토람 검정결과 대용량 저장</strong> — 검정결과 저장소를 IndexedDB로 전환해 저장 용량 한계(5MB)를 해소했습니다. 기존 데이터는 최초 1회 자동 이전되며 원본은 보존됩니다.</li>
+                        <li><strong>화면 깨짐 방지</strong> — 아이콘 글꼴을 앱에 내장해, 인터넷이 끊겨도 아이콘과 화면 배치가 깨지지 않습니다.</li>
+                        <li><strong>기타</strong> — 전국 17개 시·도 주소 표기 정확도 개선, 공익직불제 가져오기 시 필지 고유번호(PNU) 보존, 내부 코드 구조 개선 및 테스트 보강(단위테스트 82→169개).</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- v1.15.4 -->
+            <div class="version-entry">
+                <div class="version-dot"></div>
                 <div class="version-card">
                     <div class="version-card-header">
                         <div>
@@ -611,7 +640,6 @@
                             <div class="version-title">필지 주소 자동완성: 리(里) 이름만 입력해도 우리 지역이 먼저 검색</div>
                         </div>
                         <div class="badge-row">
-                            <span class="badge badge-latest">★ 최신</span>
                             <span class="badge badge-fix">개선</span>
                         </div>
                     </div>

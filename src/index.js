@@ -1281,3 +1281,10 @@ ipcMain.handle('vworld-geocode', async (event, { address }) => {
         req.on('error', () => { finish(null); });
     });
 });
+
+// MRL(식품안전나라) API 키 게터 — 렌더러가 fetch를 직접 수행하므로 키만 전달
+// 키 값은 main process의 process.env.FOODSAFETY_API_KEY에서 읽음 (렌더러 노출 최소화)
+// 우선순위: 렌더러 localStorage('mrl_api_key') > 이 IPC 반환값 (mrl-api.js에서 결정)
+ipcMain.handle('mrl:get-api-key', () => {
+    return process.env.FOODSAFETY_API_KEY || '';
+});

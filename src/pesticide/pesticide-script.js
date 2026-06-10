@@ -2731,6 +2731,9 @@ class PesticideSampleManager extends window.BaseSampleManager {
             });
         }
 
+        // -- MRL 검색 모달 --
+        this.bindMrlSearchModal();
+
         // -- 엑셀 내보내기 --
         const exportBtn = document.getElementById('exportBtn');
         if (exportBtn) {
@@ -3127,6 +3130,7 @@ class PesticideSampleManager extends window.BaseSampleManager {
         }
 
         statusEl.classList.remove('hidden');
+        await MrlApi.ensureEmbeddedKey?.(); // SAMPL-1-99: 내장 키 로드 완료 전 '미설정' 오판 방지
         if (!MrlApi.hasApiKey()) {
             statusEl.classList.add('pa-mrl-status-warn');
             statusEl.classList.remove('pa-mrl-status-error');
@@ -3179,6 +3183,431 @@ class PesticideSampleManager extends window.BaseSampleManager {
                 window.open(settingsUrl, '_blank');
             }
         }
+    }
+
+    // ========================================
+    // MRL 검색 모달 (접수목록 진입점)
+    // ========================================
+    bindMrlSearchModal() {
+        const modal = document.getElementById('mrlSearchModal');
+        const openBtn = document.getElementById('openMrlSearchModalBtn');
+        if (!modal || !openBtn) return;
+
+        const closeBtns = [
+            document.getElementById('closeMrlSearchModal'),
+            document.getElementById('closeMrlSearchBtn')
+        ];
+        const input = document.getElementById('mrlSearchInput');
+        const clearBtn = document.getElementById('mrlSearchClearBtn');
+        const setKeyBtn = document.getElementById('mrlSearchSetKeyBtn');
+        const backBtn = document.getElementById('mrlBackToCandidatesBtn');
+        const foodFilterInput = document.getElementById('mrlFoodFilterInput');
+
+        // 모달 내부 검색 상태
+        this._mrlSearch = { candidates: [], selectedKor: null, selectedEngNames: [], rows: [], debounceTimer: null };
+
+        const closeModal = () => { modal.classList.add('hidden'); };
+        const openModal = () => {
+            modal.classList.remove('hidden');
+            this.resetMrlSearchUI();
+            this.refreshMrlSearchStatus();
+            // SAMPL-1-99: 내장 키 로드가 아직이면 완료 후 상태줄 재갱신 (메모이즈라 비용 없음)
+            window.MrlApi?.ensureEmbeddedKey?.().then(() => this.refreshMrlSearchStatus());
+            // 캐시 미로드 시 init 시도 (네트워크 없음)
+            if (window.MrlApi && !window.MrlApi.isReady()) {
+                window.MrlApi.init().then(() => this.refreshMrlSearchStatus());
+            }
+            if (input) setTimeout(() => input.focus(), 50);
+        };
+
+        openBtn.addEventListener('click', openModal);
+        closeBtns.forEach(b => b && b.addEventListener('click', closeModal));
+        modal.querySelector('.modal-overlay')?.addEventListener('click', closeModal);
+        modal.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+        if (setKeyBtn) setKeyBtn.addEventListener('click', () => this.promptMrlApiKey());
+
+        if (input) {
+            input.addEventListener('input', () => {
+                if (clearBtn) clearBtn.classList.toggle('hidden', !input.value);
+                clearTimeout(this._mrlSearch.debounceTimer);
+                this._mrlSearch.debounceTimer = setTimeout(() => {
+                    this.runMrlPesticideSearch(input.value);
+                }, 200);
+            });
+        }
+        if (clearBtn) {
+            clearBtn.addEventListener('click', () => {
+                if (input) { input.value = ''; input.focus(); }
+                clearBtn.classList.add('hidden');
+                this.resetMrlSearchUI();
+            });
+        }
+        if (backBtn) {
+            backBtn.addEventListener('click', () => this.showMrlCandidateView());
+        }
+        if (foodFilterInput) {
+            foodFilterInput.addEventListener('input', () => this.renderMrlResultTable(foodFilterInput.value));
+        }
+    }
+
+    /** 상태 안내줄 갱신 (API 키/캐시 상태) */
+    refreshMrlSearchStatus() {
+        const statusEl = document.getElementById('mrlSearchStatus');
+        const textEl = document.getElementById('mrlSearchStatusText');
+        const setKeyBtn = document.getElementById('mrlSearchSetKeyBtn');
+        if (!statusEl || !textEl) return;
+        const MrlApi = window.MrlApi;
+
+        const setState = (cls, text, showKey) => {
+            statusEl.classList.remove('hidden', 'mrl-search-status-warn', 'mrl-search-status-error');
+            if (cls) statusEl.classList.add(cls);
+            textEl.textContent = text;
+            if (setKeyBtn) setKeyBtn.classList.toggle('hidden', !showKey);
+        };
+
+        if (!MrlApi) {
+            setState('mrl-search-status-error', 'MRL API 모듈 로드 실패', false);
+            return false;
+        }
+        if (!MrlApi.hasApiKey()) {
+            setState('mrl-search-status-warn', '식품안전나라 API 키가 설정되지 않아 MRL 검색을 사용할 수 없습니다.', true);
+            return false;
+        }
+        const status = MrlApi.getCacheStatus();
+        if (!status.cached) {
+            setState('mrl-search-status-warn', 'MRL 데이터가 아직 준비되지 않았습니다. 잔류농약 분석결과 화면에서 "MRL 일괄 조회"를 한 번 실행하세요.', false);
+            return false;
+        }
+        if (!MrlApi.isReady()) {
+            setState('mrl-search-status-warn', 'MRL 데이터 로딩 중...', false);
+            return false;
+        }
+        setState('', `MRL 데이터 준비 완료 (${status.count}건${status.expired ? ', 갱신 권장' : ''})`, false);
+        return true;
+    }
+
+    /** MRL 검색 모달 UI 초기화 */
+    resetMrlSearchUI() {
+        if (this._mrlSearch) {
+            this._mrlSearch.candidates = [];
+            this._mrlSearch.selectedKor = null;
+            this._mrlSearch.selectedEngNames = [];
+            this._mrlSearch.rows = [];
+        }
+        const candSection = document.getElementById('mrlCandidateSection');
+        const resultSection = document.getElementById('mrlResultSection');
+        const emptyEl = document.getElementById('mrlSearchEmpty');
+        const foodFilter = document.getElementById('mrlFoodFilterInput');
+        if (candSection) candSection.classList.add('hidden');
+        if (resultSection) resultSection.classList.add('hidden');
+        if (foodFilter) foodFilter.value = '';
+        if (emptyEl) {
+            emptyEl.classList.remove('hidden');
+            emptyEl.textContent = '농약명을 입력하면 식품별 잔류허용기준(MRL)을 검색합니다.';
+        }
+    }
+
+    /** 농약명 검색 실행 (한/영) */
+    runMrlPesticideSearch(rawQuery) {
+        const MrlApi = window.MrlApi;
+        const MrlSearch = window.MrlSearch;
+        const candSection = document.getElementById('mrlCandidateSection');
+        const resultSection = document.getElementById('mrlResultSection');
+        const emptyEl = document.getElementById('mrlSearchEmpty');
+
+        const query = (rawQuery || '').trim();
+        if (resultSection) resultSection.classList.add('hidden');
+
+        if (!query) { this.resetMrlSearchUI(); return; }
+
+        const ready = this.refreshMrlSearchStatus();
+        if (!ready || !MrlApi || !MrlApi.isReady() || !MrlSearch) {
+            if (candSection) candSection.classList.add('hidden');
+            if (emptyEl) {
+                emptyEl.classList.remove('hidden');
+                emptyEl.textContent = 'MRL 데이터가 준비되지 않아 검색할 수 없습니다.';
+            }
+            return;
+        }
+
+        // MRL 데이터의 고유 한글 농약명 목록 (캐시는 한글 농약명)
+        const korNames = this._getMrlKorPesticideNames();
+        const nameMap = (window.PESTICIDE_NAME_MAP && window.PESTICIDE_NAME_MAP.map) || null;
+        const candidates = MrlSearch.findPesticideCandidates(query, korNames, nameMap, 50);
+        this._mrlSearch.candidates = candidates;
+
+        if (!candidates.length) {
+            if (candSection) candSection.classList.add('hidden');
+            if (emptyEl) {
+                emptyEl.classList.remove('hidden');
+                emptyEl.textContent = `"${query}"에 해당하는 농약을 찾을 수 없습니다.`;
+            }
+            return;
+        }
+
+        // 단일 매치 & MRL 보유 → 바로 테이블
+        const mrlMatches = candidates.filter(c => c.inMrl);
+        if (candidates.length === 1 && candidates[0].inMrl) {
+            this.selectMrlPesticide(candidates[0], false);
+            return;
+        }
+        if (mrlMatches.length === 1 && candidates.length <= 1) {
+            this.selectMrlPesticide(mrlMatches[0], false);
+            return;
+        }
+
+        this.renderMrlCandidateList(candidates);
+    }
+
+    /** MRL 캐시의 고유 한글 농약명 목록 (캐싱) */
+    _getMrlKorPesticideNames() {
+        const MrlApi = window.MrlApi;
+        if (!MrlApi || !MrlApi.isReady()) return [];
+        // getRowCount 변동 시에만 재계산
+        const count = MrlApi.getRowCount();
+        if (this._mrlKorCache && this._mrlKorCacheCount === count) return this._mrlKorCache;
+        const set = new Set();
+        // allRows 직접 접근 불가 → getAllByCrop/getAllByPesticide는 단일용.
+        // searchNames로는 전수 확보 불가하므로 캐시 데이터를 직접 재구성한다.
+        const names = this._extractMrlKorNames();
+        names.forEach(n => set.add(n));
+        this._mrlKorCache = Array.from(set);
+        this._mrlKorCacheCount = count;
+        return this._mrlKorCache;
+    }
+
+    /** MrlApi 캐시에서 고유 한글 농약명 추출 (localStorage 슬림 캐시 사용) */
+    _extractMrlKorNames() {
+        try {
+            const raw = localStorage.getItem('mrl_cache_data');
+            if (!raw) return [];
+            const slim = JSON.parse(raw);
+            if (!Array.isArray(slim)) return [];
+            const set = new Set();
+            for (const r of slim) {
+                if (r && r.pest) set.add(r.pest);
+            }
+            return Array.from(set);
+        } catch (e) {
+            window.logger?.warn?.('[MRL검색] 농약명 추출 실패', e);
+            return [];
+        }
+    }
+
+    /** 농약 후보 리스트 렌더 */
+    /**
+     * 농약 용도 → 배지용 CSS 클래스 (SAMPL-1-101)
+     * @param {string|null} use 용도 문자열
+     * @returns {string} use-* 클래스명
+     */
+    mrlUseTypeClass(use) {
+        switch (use) {
+            case '살충제': return 'use-insecticide';
+            case '살균제': return 'use-fungicide';
+            case '제초제': return 'use-herbicide';
+            case '살응애제': return 'use-acaricide';
+            case '생장조정제': return 'use-pgr';
+            case '살선충제': return 'use-nematicide';
+            case '기타': return 'use-etc';
+            default: return 'use-unknown';
+        }
+    }
+
+    /**
+     * 농약 한글명으로 용도 배지 <span> 생성 (DOM API, textContent).
+     * @param {string} kor 한글 농약명
+     * @param {string[]} [engNames] 영문명(있으면 우선 조회)
+     * @param {boolean} [showUnknown=false] 미분류 시 회색 배지 표시 여부
+     * @returns {HTMLElement|null}
+     */
+    createMrlUseBadge(kor, engNames, showUnknown) {
+        const UseType = window.PesticideUseType;
+        if (!UseType) return null;
+        let use = null;
+        if (Array.isArray(engNames)) {
+            for (const eng of engNames) {
+                use = UseType.get(eng);
+                if (use) break;
+            }
+        }
+        if (!use) use = UseType.getByKor(kor);
+        if (!use && !showUnknown) return null;
+
+        const badge = document.createElement('span');
+        badge.className = `mrl-use-badge ${this.mrlUseTypeClass(use)}`;
+        badge.textContent = use || '미분류';
+        return badge;
+    }
+
+    renderMrlCandidateList(candidates) {
+        const candSection = document.getElementById('mrlCandidateSection');
+        const resultSection = document.getElementById('mrlResultSection');
+        const emptyEl = document.getElementById('mrlSearchEmpty');
+        const listEl = document.getElementById('mrlCandidateList');
+        const countEl = document.getElementById('mrlCandidateCount');
+        if (!candSection || !listEl) return;
+
+        if (emptyEl) emptyEl.classList.add('hidden');
+        if (resultSection) resultSection.classList.add('hidden');
+        candSection.classList.remove('hidden');
+        if (countEl) countEl.textContent = `${candidates.length}개 농약`;
+
+        // SAMPL-1-100: 테이블과 동일하게 DOM API 렌더 (sanitizer 화이트리스트 의존 제거)
+        listEl.textContent = '';
+        const frag = document.createDocumentFragment();
+        candidates.forEach((c, i) => {
+            const li = document.createElement('li');
+            li.className = `mrl-candidate-item${c.inMrl ? '' : ' mrl-cand-disabled'}`;
+
+            const korSpan = document.createElement('span');
+            korSpan.className = 'mrl-cand-kor';
+            korSpan.textContent = c.kor;
+            li.appendChild(korSpan);
+
+            const eng = c.engNames && c.engNames.length ? c.engNames.join(', ') : '';
+            if (eng) {
+                const engSpan = document.createElement('span');
+                engSpan.className = 'mrl-cand-eng';
+                engSpan.textContent = eng;
+                li.appendChild(engSpan);
+            }
+            // SAMPL-1-101: 농약 용도 배지 (미분류는 생략)
+            const useBadge = this.createMrlUseBadge(c.kor, c.engNames, false);
+            if (useBadge) li.appendChild(useBadge);
+            if (!c.inMrl) {
+                const badge = document.createElement('span');
+                badge.className = 'mrl-cand-nomrl';
+                badge.textContent = '기준없음';
+                li.appendChild(badge);
+            } else {
+                const arrow = document.createElement('span');
+                arrow.className = 'material-icons-outlined mrl-cand-arrow';
+                arrow.textContent = 'chevron_right';
+                li.appendChild(arrow);
+            }
+
+            li.addEventListener('click', () => {
+                const cand = candidates[i];
+                if (cand && cand.inMrl) this.selectMrlPesticide(cand, true);
+            });
+            frag.appendChild(li);
+        });
+        listEl.appendChild(frag);
+    }
+
+    /** 후보 리스트 화면으로 복귀 */
+    showMrlCandidateView() {
+        const candSection = document.getElementById('mrlCandidateSection');
+        const resultSection = document.getElementById('mrlResultSection');
+        if (resultSection) resultSection.classList.add('hidden');
+        if (candSection && this._mrlSearch.candidates.length > 1) {
+            candSection.classList.remove('hidden');
+        }
+    }
+
+    /** 농약 선택 → 식품별 MRL 테이블 표시 */
+    selectMrlPesticide(candidate, cameFromList) {
+        const MrlApi = window.MrlApi;
+        const candSection = document.getElementById('mrlCandidateSection');
+        const resultSection = document.getElementById('mrlResultSection');
+        const emptyEl = document.getElementById('mrlSearchEmpty');
+        const korEl = document.getElementById('mrlResultPesticideKor');
+        const engEl = document.getElementById('mrlResultPesticideEng');
+        const backBtn = document.getElementById('mrlBackToCandidatesBtn');
+        const foodFilter = document.getElementById('mrlFoodFilterInput');
+        if (!resultSection || !MrlApi) return;
+
+        this._mrlSearch.selectedKor = candidate.kor;
+        this._mrlSearch.selectedEngNames = candidate.engNames || [];
+
+        // 해당 농약의 모든 식품별 레코드
+        const records = MrlApi.getAllByPesticide(candidate.kor) || [];
+        this._mrlSearch.rows = records.map(r => ({
+            food: r.FOOD_KOR_NM || '',
+            category: r.LCLAS_NM || '',
+            mrl: r.MRL_VAL || '',
+            unit: 'mg/kg'
+        })).sort((a, b) => a.food.localeCompare(b.food, 'ko'));
+
+        if (emptyEl) emptyEl.classList.add('hidden');
+        if (candSection) candSection.classList.add('hidden');
+        resultSection.classList.remove('hidden');
+
+        if (korEl) korEl.textContent = candidate.kor;
+        if (engEl) engEl.textContent = candidate.engNames && candidate.engNames.length ? `(${candidate.engNames.join(', ')})` : '';
+
+        // SAMPL-1-101: 용도 배지 + 안내 텍스트 (결과 헤더 1곳)
+        const titleEl = document.getElementById('mrlResultTitle');
+        if (titleEl) {
+            // 기존 배지/안내 제거 후 재구성 (DOM API)
+            titleEl.querySelectorAll('.mrl-use-badge, .mrl-use-note').forEach(el => el.remove());
+            const useBadge = this.createMrlUseBadge(candidate.kor, candidate.engNames, true);
+            if (useBadge) {
+                titleEl.appendChild(useBadge);
+                const note = document.createElement('span');
+                note.className = 'mrl-use-note material-icons-outlined';
+                note.textContent = 'info';
+                note.style.fontSize = '14px';
+                note.title = '용도 분류는 참고용입니다 (IRAC/FRAC/HRAC 기반)';
+                titleEl.appendChild(note);
+            }
+        }
+
+        if (backBtn) backBtn.classList.toggle('hidden', !(cameFromList && this._mrlSearch.candidates.length > 1));
+        if (foodFilter) foodFilter.value = '';
+
+        this.renderMrlResultTable('');
+    }
+
+    /** 식품별 MRL 테이블 렌더 (식품명 필터 적용) */
+    renderMrlResultTable(filterRaw) {
+        const tbody = document.getElementById('mrlResultTableBody');
+        const countEl = document.getElementById('mrlResultCount');
+        if (!tbody) return;
+        const MrlSearch = window.MrlSearch;
+        const norm = MrlSearch ? MrlSearch.normalize : (s) => String(s || '').toLowerCase().replace(/\s+/g, '');
+        const filter = norm(filterRaw);
+
+        const rows = (this._mrlSearch.rows || []).filter(r => !filter || norm(r.food).includes(filter));
+        if (countEl) countEl.textContent = `${rows.length}건`;
+
+        // SAMPL-1-100: innerHTML+sanitizeHTML은 화이트리스트에서 tr/td가 제거되어
+        // 행이 한 덩어리 텍스트로 합쳐짐 → DOM API + textContent로 렌더 (XSS 원천 차단)
+        tbody.textContent = '';
+
+        if (!rows.length) {
+            const msg = (this._mrlSearch.rows || []).length
+                ? '필터 조건에 맞는 식품이 없습니다.'
+                : '이 농약의 MRL 기준이 없습니다.';
+            const tr = document.createElement('tr');
+            const td = document.createElement('td');
+            td.colSpan = 4;
+            td.className = 'mrl-result-empty-row';
+            td.textContent = msg;
+            tr.appendChild(td);
+            tbody.appendChild(tr);
+            return;
+        }
+
+        const frag = document.createDocumentFragment();
+        rows.forEach(r => {
+            const tr = document.createElement('tr');
+            const cells = [
+                ['mrl-col-food', r.food],
+                ['mrl-col-category', r.category || '-'],
+                ['mrl-col-value', r.mrl !== '' ? r.mrl : '-'],
+                ['mrl-col-unit', r.unit]
+            ];
+            cells.forEach(([cls, val]) => {
+                const td = document.createElement('td');
+                td.className = cls;
+                td.textContent = String(val ?? '');
+                tr.appendChild(td);
+            });
+            frag.appendChild(tr);
+        });
+        tbody.appendChild(frag);
     }
 
     /**
@@ -3285,6 +3714,7 @@ class PesticideSampleManager extends window.BaseSampleManager {
             window.showToast?.('MRL API 모듈이 로드되지 않았습니다', 'warning');
             return;
         }
+        await MrlApi.ensureEmbeddedKey?.(); // SAMPL-1-99: 내장 키 로드 완료 전 '미설정' 오판 방지
         if (!MrlApi.hasApiKey()) {
             this.promptMrlApiKey();
             return;

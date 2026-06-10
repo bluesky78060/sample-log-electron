@@ -60,6 +60,39 @@ const MrlApi = (function () {
     // 동시 호출 방지용 Promise
     let syncPromise = null;
 
+    // Electron 내장 API 키 캐시 (mrlGetApiKey IPC로 한 번만 조회)
+    // localStorage 수동 설정이 없을 때 폴백으로 사용 (웹 환경에서는 항상 '')
+    let _embeddedApiKey = '';
+    let _embeddedKeyPromise = null; // 메모이즈: IPC 조회는 1회만
+
+    /**
+     * Electron 내장 API 키를 보장 로드 (메모이즈, 웹에서는 즉시 resolve).
+     * hasApiKey()/getApiKey()를 신뢰하기 전에 await 해야 레이스가 없다.
+     * @returns {Promise<string>} 내장 키 ('' 가능)
+     */
+    function ensureEmbeddedKey() {
+        if (_embeddedKeyPromise) return _embeddedKeyPromise;
+        _embeddedKeyPromise = (async () => {
+            if (
+                typeof window !== 'undefined' &&
+                window.electronAPI?.isElectron &&
+                typeof window.electronAPI.mrlGetApiKey === 'function'
+            ) {
+                try {
+                    const embeddedKey = await window.electronAPI.mrlGetApiKey();
+                    if (embeddedKey) {
+                        _embeddedApiKey = embeddedKey;
+                        log('info', '내장 API 키 로드 완료 (IPC)');
+                    }
+                } catch (e) {
+                    log('warn', '내장 API 키 IPC 조회 실패', e);
+                }
+            }
+            return _embeddedApiKey;
+        })();
+        return _embeddedKeyPromise;
+    }
+
     // ========================================
     // 로깅 헬퍼
     // ========================================
@@ -77,11 +110,14 @@ const MrlApi = (function () {
     // ========================================
     function getApiKey() {
         try {
-            return localStorage.getItem(STORAGE_KEY_API_KEY) || '';
+            // 우선순위 1: 사용자 수동 설정 (localStorage)
+            const manual = localStorage.getItem(STORAGE_KEY_API_KEY);
+            if (manual) return manual;
         } catch (e) {
             log('warn', 'API 키 읽기 실패', e);
-            return '';
         }
+        // 우선순위 2: Electron 내장 키 (init() 시점에 캐시됨, 웹에서는 항상 '')
+        return _embeddedApiKey || '';
     }
 
     function setApiKey(key) {
@@ -509,6 +545,10 @@ const MrlApi = (function () {
     // ========================================
     async function init() {
         if (isLoaded) return true;
+
+        // Electron 내장 API 키 보장 로드 (메모이즈 — 실제 IPC는 최초 1회만)
+        await ensureEmbeddedKey();
+
         const loaded = loadCache();
         if (loaded && loaded.rows && loaded.rows.length) {
             allRows = loaded.rows;
@@ -849,6 +889,7 @@ const MrlApi = (function () {
         getApiKey,
         setApiKey,
         hasApiKey,
+        ensureEmbeddedKey,
 
         // 초기화/동기화
         init,
@@ -891,4 +932,7 @@ const MrlApi = (function () {
 // 브라우저 전역 노출
 if (typeof window !== 'undefined') {
     window.MrlApi = MrlApi;
+    // Electron 내장 API 키 선제 로드 (fire-and-forget, 웹에서는 즉시 종료)
+    // hasApiKey()를 동기적으로 읽는 UI보다 먼저 키가 준비되도록 모듈 로드 시점에 시작
+    MrlApi.ensureEmbeddedKey();
 }
