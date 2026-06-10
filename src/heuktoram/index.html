@@ -24,7 +24,6 @@
         <!-- 로고 -->
         <div class="navbar-brand">
             <span class="brand-icon">🌾</span>
-            <span class="brand-text">흙토람 내보내기</span>
         </div>
 
         <div class="navbar-divider"></div>
@@ -32,6 +31,13 @@
         <!-- 툴바: 연도, 채취년도, 시료채취자, 토양검정일, 용도구분 -->
         <div class="navbar-actions heuktoram-toolbar">
             <select id="yearSelect" class="toolbar-select" style="display:none;"></select>
+            <div class="toolbar-field">
+                <label for="exportFormatSelect">내보내기 양식</label>
+                <select id="exportFormatSelect" class="toolbar-select">
+                    <option value="heuktoram">흙토람 서식</option>
+                    <option value="gongik">공익직불제</option>
+                </select>
+            </div>
             <div class="toolbar-field">
                 <label for="collectYear">채취년도</label>
                 <input type="text" id="collectYear" class="toolbar-input" placeholder="2026" maxlength="4" style="width: 60px;">

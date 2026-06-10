@@ -33,5 +33,15 @@ import '../shared/excel-import-manager.js';
 import '../cropData.js';
 // 정적 시·군 데이터 제거 - 자동완성은 juso API 단독
 
+// Soil-specific pure logic modules (window.* 전역, soil-script보다 먼저 로드)
+import './reception-number.js';
+// 레코드 빌더 순수 로직 (soil-script.js 전 — window.SoilLogRecord 준비)
+import './soil-log-record.js';
+// 완료 그룹핑 순수 로직 (soil-script.js 전 — window.ReceptionGroup 준비)
+import './reception-group.js';
+
 // Main script
 import './soil-script.js';
+
+// 엑셀 가져오기 모달 (SAMPL-1-85: soil-result-importer, 자체완결 · soil-script 이후 로드)
+import './soil-result-importer.js';

@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>메인(토양) vs soil 프로젝트 기능 비교 분석</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --card:#fff; --ink:#1e293b; --muted:#64748b; --line:#e2e8f0;
+    --main:#2563eb; --soil:#16a34a; --both:#64748b; --port:#d97706; --rev:#7c3aed;
+    --th:#f1f5f9;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:'Noto Sans KR','Inter',system-ui,-apple-system,sans-serif;line-height:1.65;}
+  .wrap{max-width:1080px;margin:0 auto;padding:32px 20px 80px;}
+  header.hero{background:linear-gradient(135deg,#eff6ff 0%,#f0fdf4 100%);
+    border:1px solid var(--line);border-radius:18px;padding:28px 30px;margin-bottom:28px;}
+  header.hero h1{margin:0 0 6px;font-size:1.7rem;}
+  header.hero .sub{color:var(--muted);font-size:.95rem;}
+  header.hero .meta{margin-top:14px;font-size:.82rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:8px 18px;}
+  .legend{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 0;}
+  .badge{display:inline-flex;align-items:center;gap:5px;font-size:.74rem;font-weight:700;
+    padding:3px 10px;border-radius:20px;white-space:nowrap;}
+  .b-main{background:#dbeafe;color:#1e40af;}
+  .b-soil{background:#dcfce7;color:#166534;}
+  .b-both{background:#e2e8f0;color:#334155;}
+  .b-port{background:#fef3c7;color:#92400e;}
+  .b-rev{background:#ede9fe;color:#6d28d9;}
+  h2{margin:38px 0 4px;font-size:1.3rem;border-left:5px solid var(--main);padding-left:12px;}
+  h2 .num{color:var(--main);font-weight:800;margin-right:8px;}
+  h3{margin:24px 0 8px;font-size:1.05rem;color:#0f172a;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:18px 20px;margin:14px 0;box-shadow:0 1px 3px rgba(15,23,42,.04);}
+  p{margin:8px 0;}
+  ul{margin:8px 0 8px 4px;padding-left:20px;}
+  li{margin:4px 0;}
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:.86rem;}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top;}
+  th{background:var(--th);font-weight:700;font-size:.8rem;}
+  td.main{color:#1d4ed8;}
+  td.soil{color:#15803d;}
+  .star{color:#d97706;font-weight:800;}
+  .tag{font-size:.7rem;font-weight:700;padding:1px 7px;border-radius:6px;white-space:nowrap;}
+  .t-same{background:#e2e8f0;color:#475569;}
+  .t-diff{background:#fef9c3;color:#854d0e;}
+  .t-soil{background:#dcfce7;color:#166534;}
+  .t-main{background:#dbeafe;color:#1e40af;}
+  .kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:16px 0;}
+  .kpi .box{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;text-align:center;}
+  .kpi .n{font-size:1.6rem;font-weight:800;}
+  .kpi .l{font-size:.78rem;color:var(--muted);margin-top:2px;}
+  .callout{border-radius:12px;padding:14px 16px;margin:14px 0;font-size:.9rem;}
+  .callout.port{background:#fffbeb;border:1px solid #fde68a;}
+  .callout.rev{background:#f5f3ff;border:1px solid #ddd6fe;}
+  .callout.warn{background:#fef2f2;border:1px solid #fecaca;}
+  .callout b{display:block;margin-bottom:4px;}
+  .pri{display:inline-block;font-weight:800;font-size:.72rem;padding:2px 8px;border-radius:6px;background:#fee2e2;color:#b91c1c;margin-right:6px;}
+  .pri.p2{background:#ffedd5;color:#9a3412;}
+  .pri.p3{background:#fef9c3;color:#854d0e;}
+  .pri.p4{background:#ecfccb;color:#3f6212;}
+  .pri.p5{background:#e0f2fe;color:#075985;}
+  footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:.8rem;}
+  .toc{columns:2;column-gap:30px;font-size:.9rem;}
+  .toc a{color:var(--main);text-decoration:none;}
+  .toc a:hover{text-decoration:underline;}
+  @media(max-width:640px){.toc{columns:1}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <h1>🌱 메인(토양 모듈) vs soil 프로젝트 — 기능 비교 분석</h1>
+  <div class="sub">sample-log-electron <code>src/soil</code>·<code>src/heuktoram</code> &nbsp;⟷&nbsp; sample-log-soil (토양 단독 앱)</div>
+  <div class="meta">
+    <span>📅 작성: 2026-06-09</span>
+    <span>🔖 MAIN v1.15.4 / SOIL v1.7.7</span>
+    <span>🔍 4개 영역 병렬 정밀 분석 종합</span>
+    <span>📄 읽기 전용 (코드 변경 없음)</span>
+  </div>
+  <div class="legend">
+    <span class="badge b-both">⬜ 동일/동등</span>
+    <span class="badge b-main">🟦 메인 전용/우위</span>
+    <span class="badge b-soil">🟩 soil 전용/우위</span>
+    <span class="badge b-port">⭐ soil→메인 이식 후보</span>
+    <span class="badge b-rev">🟪 메인→soil 역포팅 후보</span>
+  </div>
+</header>
+
+<div class="card">
+  <h3 style="margin-top:0">📌 한눈 요약</h3>
+  <p>두 앱의 <b>토양 접수 화면은 약 95% 동일</b>합니다. 접수 폼·목록(22컬럼)·공익직불제 뷰어/일괄적용·통계·검색·다크모드·라벨인쇄, 그리고 <b>엑셀 가져오기 모달(<code>soil-result-importer.js</code>)·서식 모듈(<code>excel-import-manager.js</code>)은 바이트 단위로 동일</b>합니다. 차이의 대부분은 ① <b>아키텍처 분기</b>(메인=BaseSampleManager 중심, soil=순수 모듈 추출)와 ② <b>봉화군 전용 vs 전국 배포</b> 전제에서 비롯됩니다.</p>
+  <p><b>핵심 비대칭</b>: soil은 <span class="star">분석결과 IndexedDB 저장·전국 주소·산 토글·순수 모듈화</span>가 앞서고, 메인은 <span style="color:var(--rev);font-weight:700">클라우드 동기화 견고성(fromCache 가드·재시도·삭제 확인)</span>이 앞섭니다. → 동기화는 단순 일방향이 아니라 <b>양방향 선별 포팅</b> 대상입니다.</p>
+  <div class="kpi">
+    <div class="box"><div class="n" style="color:var(--both)">~95%</div><div class="l">토양 화면 동일도</div></div>
+    <div class="box"><div class="n" style="color:var(--port)">7</div><div class="l">soil→메인 이식 후보</div></div>
+    <div class="box"><div class="n" style="color:var(--rev)">6</div><div class="l">메인→soil 역포팅</div></div>
+    <div class="box"><div class="n" style="color:var(--main)">1</div><div class="l">데이터 필드 차이(basePnu)</div></div>
+  </div>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0">목차</h3>
+  <div class="toc">
+    <a href="#s1">1. 프로젝트 성격·범위</a><br>
+    <a href="#s2">2. 접수 폼 (UI)</a><br>
+    <a href="#s3">3. 목록·통계·검색</a><br>
+    <a href="#s4">4. 데이터 모델·채번</a><br>
+    <a href="#s5">5. 저장소·동기화·암호화</a><br>
+    <a href="#s6">6. 엑셀 가져오기/내보내기</a><br>
+    <a href="#s7">7. 흙토람·공익직불제</a><br>
+    <a href="#s8">8. 아키텍처·공유모듈</a><br>
+    <a href="#s9">9. 주소 자동완성</a><br>
+    <a href="#s10">10. 빌드·설정·파일구조</a><br>
+    <a href="#s11">11. 이식 후보 종합(우선순위)</a><br>
+  </div>
+</div>
+
+<!-- 1 -->
+<h2 id="s1"><span class="num">1</span>프로젝트 성격·범위</h2>
+<div class="card">
+<table>
+<tr><th>항목</th><th>MAIN (sample-log-electron)</th><th>SOIL (sample-log-soil)</th></tr>
+<tr><td>시료 타입</td><td class="main">토양·수질·퇴액비·중금속·잔류농약 (5종) + 분석결과 4페이지 + 흙토람</td><td class="soil">토양 단독 + 흙토람</td></tr>
+<tr><td>배포 대상</td><td class="main">봉화군 농업기술센터</td><td class="soil">전국 기관 배포 지향</td></tr>
+<tr><td>버전 트랙</td><td class="main">v1.15.4 (독립)</td><td class="soil">v1.7.7 (독립)</td></tr>
+<tr><td>언어</td><td colspan="2" style="text-align:center">둘 다 순수 <b>JavaScript</b> (TS·암호화는 <code>sample-log-electron-test</code> 전용, soil 무관)</td></tr>
+<tr><td>지역 하드코딩</td><td class="main">봉화/영주/울진 + 경상북도 (자동완성·예시)</td><td class="soil">전국(<code>regionKeys:null</code>) + <code>app_default_sido</code> 설정 흡수</td></tr>
+</table>
+</div>
+
+<!-- 2 -->
+<h2 id="s2"><span class="num">2</span>접수 폼 (UI/UX)</h2>
+<div class="card">
+<table>
+<tr><th>항목</th><th>MAIN</th><th>SOIL</th><th>판정</th></tr>
+<tr><td>카드 구성·순서</td><td colspan="2" style="text-align:center">좌: 토양시료정보 → 기본정보 → 비고 / 우: 필지정보</td><td><span class="tag t-same">동일</span><br><small>(SAMPL-1-91 정합 완료)</small></td></tr>
+<tr><td>입력 필드</td><td colspan="2" style="text-align:center">경지구분·구분·목적 / 접수번호·일자·성명·전화·주소 / 비고 / 필지</td><td><span class="tag t-same">동일</span></td></tr>
+<tr><td>수령방법·연도</td><td colspan="2" style="text-align:center">아이콘 4버튼(우편/이메일/팩스/직접방문) + 연도 select (시료정보 헤더)</td><td><span class="tag t-same">동일</span></td></tr>
+<tr><td>경지구분 입력</td><td class="main">빈 <code>&lt;select&gt;</code> + JS 동적생성(단일소스)</td><td class="soil">HTML 하드코딩 12옵션</td><td><span class="tag t-diff">구현차</span><br><small>값·기본(농가의뢰) 동일</small></td></tr>
+<tr><td>"산" 필지 입력</td><td class="main">mountain-checkbox (체크박스)</td><td class="soil"><span class="star">⭐ mountain-btn 토글(색상·aria) + 자동완성 산 자동 동기화</span></td><td><span class="tag t-soil">soil 우위</span></td></tr>
+</table>
+<div class="callout port"><b>⭐ 이식 후보 — 산 토글 버튼</b>필지 주소 옆 토글 버튼 + 주소 자동완성에서 산 필지 선택 시 <code>parcel.isMountain</code> 자동 반영. 봉화/전국 무관한 순수 UX 개선이라 위험 낮음.</div>
+</div>
+
+<!-- 3 -->
+<h2 id="s3"><span class="num">3</span>목록·통계·검색</h2>
+<div class="card">
+<h3>목록 테이블</h3>
+<table>
+<tr><th>항목</th><th>MAIN</th><th>SOIL</th><th>판정</th></tr>
+<tr><td>컬럼(22개)·스티키·공익직불제 전용 컬럼·페이지네이션</td><td colspan="2" style="text-align:center">동일</td><td><span class="tag t-same">동일</span></td></tr>
+<tr><td>경지구분 탭</td><td class="main">연도선택 뒤, JS 동적, 기본 농가의뢰</td><td class="soil">상태필터 뒤, HTML 정적, 기본 농가의뢰</td><td><span class="tag t-diff">위치·구현차</span></td></tr>
+<tr><td>주소 복사(셀)</td><td class="main">도(道) 9개 약어 매핑</td><td class="soil"><span class="star">⭐ 17개 시·도 전체(SIDO_SHORT_MAP)</span></td><td><span class="tag t-soil">soil 전국</span></td></tr>
+</table>
+<h3>통계 · 엑셀 내보내기</h3>
+<table>
+<tr><th>항목</th><th>MAIN</th><th>SOIL</th><th>판정</th></tr>
+<tr><td>통계 집계 범위</td><td class="main">항상 전체 <code>sampleLogs</code></td><td class="soil"><span class="star">⭐ 요약·구분별·목적별은 현재 경지구분 탭 연동(<code>getTabFilteredLogs</code>), 경지구분별만 전체</span></td><td><span class="tag t-soil">soil 탭 인지</span></td></tr>
+<tr><td>목록 엑셀 내보내기</td><td class="main">전체 기준, '경지구분1차' 컬럼 없음</td><td class="soil"><span class="star">⭐ 현재 탭 기준 + '경지구분1차' 컬럼 추가</span></td><td><span class="tag t-soil">soil 우위</span></td></tr>
+<tr><td>고급검색 모달·탭 필터</td><td colspan="2" style="text-align:center">필드 동일(접수일자·성명·접수번호·지번주소)</td><td><span class="tag t-same">동일</span></td></tr>
+</table>
+</div>
+
+<!-- 4 -->
+<h2 id="s4"><span class="num">4</span>데이터 모델 · 접수번호 채번</h2>
+<div class="card">
+<table>
+<tr><th>필드</th><th>MAIN</th><th>SOIL</th></tr>
+<tr><td>id·receptionNumber·date·name·phone·address·subCategory·purpose·parcels[]·crops·groupId·parcelIndex·totalParcels</td><td colspan="2" style="text-align:center">✅ 공통</td></tr>
+<tr><td>landClass1 (경지구분 1차)</td><td colspan="2" style="text-align:center">✅ 공통 (채번 기준 키, landClass2는 양쪽 미사용)</td></tr>
+<tr><td>businessRegNo·gongikOrder·gongikBaseYear (공익직불제)</td><td colspan="2" style="text-align:center">✅ 공통</td></tr>
+<tr><td><b>basePnu (BASEPNU)</b></td><td class="main">❌ 없음</td><td class="soil"><span class="star">⭐ 전용</span> (가져오기 보존 필드)</td></tr>
+</table>
+<p><b>채번 로직</b>: <code>reception-number.js</code> (<code>window.ReceptionNumber.computeNextNumber</code>) — <b>두 프로젝트 바이트 동일</b>. 경지구분별 독립 시퀀스 + 성토(F) 분리 알고리즘 동일.</p>
+<p>단 soil은 그룹핑·레코드 생성을 <b>순수 모듈로 추출</b>: <code>reception-group.js</code>(본·하위필지 그룹 SSOT), <code>soil-log-record.js</code>(레코드 팩토리). 메인은 <code>soil-script.js</code> 인라인.</p>
+</div>
+
+<!-- 5 -->
+<h2 id="s5"><span class="num">5</span>저장소 · 동기화 · 암호화</h2>
+<div class="card">
+<table>
+<tr><th>항목</th><th>MAIN</th><th>SOIL</th></tr>
+<tr><td>localStorage 키 / Firestore 컬렉션 / 자동저장 파일</td><td colspan="2" style="text-align:center"><code>soilSampleLogs_{year}</code> / <code>soilSamples_{year}</code> / <code>soil-autosave.json</code> — <b>동일</b> (둘 다 prod, test_ 접두 없음)</td></tr>
+<tr><td>분석결과(흙토람 검정) 저장</td><td class="main">localStorage <code>soilTestResults_{year}</code> (5MB 한계)</td><td class="soil"><span class="star">⭐ AnalysisDB (Dexie/IndexedDB) 주저장 + LS 백업 + 자동 마이그레이션</span></td></tr>
+<tr><td>storage-manager.js</td><td class="main">풀 CRUD (338줄)</td><td class="soil">슬림(116줄, CRUD를 Base+firestore로 이관)</td></tr>
+<tr><td><b>fromCache 가드 (SAMPL-1-80)</b></td><td class="main">🟪 전반 반영 (오프라인 오삭제 방지)</td><td class="soil">❌ 전무</td></tr>
+<tr><td>mergeCloudData·getAllWithMeta·멱등 삭제</td><td class="main">🟪 보유</td><td class="soil">❌ 미보유</td></tr>
+<tr><td>암호화 (encryption/crypto/secure-storage)</td><td colspan="2" style="text-align:center">❌ 양쪽 모두 없음 (test 프로젝트 전용)</td></tr>
+</table>
+<div class="callout rev"><b>🟪 메인 우위 — 동기화 견고성</b>오프라인/캐시/일시단절 시 유효 레코드 오삭제를 막는 <code>fromCache</code> 가드·<code>mergeCloudData</code>·멱등 삭제가 <b>메인에만</b> 있습니다. soil의 데이터 유실 리스크 완화를 위해 <b>메인→soil 역포팅 1순위</b>.</div>
+</div>
+
+<!-- 6 -->
+<h2 id="s6"><span class="num">6</span>엑셀 가져오기 / 내보내기</h2>
+<div class="card">
+<table>
+<tr><th>항목</th><th>MAIN</th><th>SOIL</th><th>판정</th></tr>
+<tr><td><code>soil-result-importer.js</code> (자체모달·컬럼 자동인식·경지구분 일괄선택)</td><td colspan="2" style="text-align:center">1249줄 <b>바이트 동일</b></td><td><span class="tag t-same">동일</span></td></tr>
+<tr><td><code>excel-import-manager.js</code> (서식 다운로드)</td><td colspan="2" style="text-align:center">527줄 <b>바이트 동일</b></td><td><span class="tag t-same">동일</span></td></tr>
+<tr><td>addImportedRecord 필드</td><td class="main">businessRegNo·gongikOrder·gongikBaseYear</td><td class="soil">+ <span class="star">basePnu</span></td><td><span class="tag t-soil">basePnu만 차</span></td></tr>
+<tr><td>저장 경로</td><td class="main"><code>persistRecords([log])</code></td><td class="soil"><code>saveLogs()+firebaseSaveRecords()</code></td><td><span class="tag t-diff">추상화차(동등)</span></td></tr>
+</table>
+</div>
+
+<!-- 7 -->
+<h2 id="s7"><span class="num">7</span>흙토람 연동 · 공익직불제</h2>
+<div class="card">
+<h3>흙토람 내보내기</h3>
+<table>
+<tr><th>항목</th><th>MAIN</th><th>SOIL</th><th>판정</th></tr>
+<tr><td>2종 양식 선택 (<code>exportFormatSelect</code>: 흙토람 서식 / 공익직불제)</td><td colspan="2" style="text-align:center">동일 (SAMPL-1-87 이식 완료)</td><td><span class="tag t-same">동일</span></td></tr>
+<tr><td>경지구분 1차/2차 매핑·데이터 유효성·병합·스타일</td><td colspan="2" style="text-align:center">산출물 동일</td><td><span class="tag t-same">동일</span></td></tr>
+<tr><td>헤더 템플릿 코드</td><td class="main">인라인 생성</td><td class="soil">상수 + <code>makeWsRow</code>/<code>_buildHeuktoramDataRow</code> 추출</td><td><span class="tag t-diff">리팩터차</span></td></tr>
+<tr><td>검정결과 저장</td><td class="main">localStorage 동기</td><td class="soil"><span class="star">⭐ AnalysisDB(IndexedDB) async</span></td><td><span class="tag t-soil">soil 우위</span></td></tr>
+<tr><td>시군구→시도 매핑</td><td class="main">경상북도 강제</td><td class="soil"><span class="star">⭐ 전국 SIGUNGU_TO_SIDO + SIDO SSOT</span></td><td><span class="tag t-soil">soil 전국</span></td></tr>
+</table>
+<h3>공익직불제 (입력·뷰어·일괄적용·인라인편집)</h3>
+<p>차수·경영체등록번호·기준년도 컬럼, <code>gongik-col/gongik-hide</code> 전환, 일괄적용 바, 인라인 편집, 마이그레이션 — <b>메인·soil 동등</b> (SAMPL-1-89 이식 완료). 유일한 차이는 soil의 <code>basePnu</code> 가져오기 필드(컬럼 렌더는 없음).</p>
+</div>
+
+<!-- 8 -->
+<h2 id="s8"><span class="num">8</span>아키텍처 · 공유 모듈</h2>
+<div class="card">
+<table>
+<tr><th>항목</th><th>MAIN</th><th>SOIL</th></tr>
+<tr><td>매니저 클래스</td><td colspan="2" style="text-align:center"><code>SoilSampleManager extends BaseSampleManager</code> — <b>상속 구조 동일</b></td></tr>
+<tr><td>BaseSampleManager</td><td class="main">🟪 1602줄 — L2 동기화 실패 복구·재시도·락 보유</td><td class="soil">1067줄 — fire-and-forget 단순형</td></tr>
+<tr><td>토양 전용 순수 모듈</td><td class="main">없음(인라인)</td><td class="soil"><span class="star">⭐ reception-group·soil-log-record·main-stats·analysis-db</span></td></tr>
+<tr><td>공유 모듈 수</td><td class="main">31개</td><td class="soil">32개 (+analysis-db.js)</td></tr>
+<tr><td>레코드 생성·필터·라벨</td><td class="main">BaseSampleManager 훅으로 공통화</td><td class="soil">인라인 + 별도 헬퍼</td></tr>
+</table>
+<div class="callout warn"><b>⚠️ 동기화 방향 주의</b>아키텍처 성숙도가 <b>역전</b>되어 있습니다. 베이스 동기화는 메인이, 모듈 추출·영속화 진화는 soil이 앞섭니다. <b>"한쪽을 통째로 복사"는 금지</b> — 의미 단위 선별 포팅만 안전합니다.</div>
+</div>
+
+<!-- 9 -->
+<h2 id="s9"><span class="num">9</span>주소 자동완성</h2>
+<div class="card">
+<table>
+<tr><th>항목</th><th>MAIN</th><th>SOIL</th></tr>
+<tr><td>juso-service / 리 단독검색(isBareVillage)</td><td colspan="2" style="text-align:center">알고리즘 동일 (SAMPL-1-83 ↔ SLS 동일)</td></tr>
+<tr><td>SIDO 데이터</td><td class="main">함수-로컬 변수</td><td class="soil"><span class="star">⭐ SLS-1-97 SSOT: address-parser에 <code>SIDO_LIST/SIDO_SHORT_MAP/expandSido</code> 전역 노출 (2023 강원·전북 특별자치도 반영)</span></td></tr>
+<tr><td>기본 시·도 결정</td><td class="main"><code>resolveDefaultRegion</code> 구버전</td><td class="soil"><span class="star">⭐ SLS-1-118 <code>getDefaultRegion</code> 주입(결합도 분리)</span></td></tr>
+<tr><td>검색 범위</td><td class="main">봉화/영주/울진 한정</td><td class="soil">전국(<code>regionKeys:null</code>) + JUSO 폴백</td></tr>
+</table>
+</div>
+
+<!-- 10 -->
+<h2 id="s10"><span class="num">10</span>빌드 · 설정 · 파일 구조</h2>
+<div class="card">
+<table>
+<tr><th>항목</th><th>MAIN</th><th>SOIL</th></tr>
+<tr><td>vite(outDir ../docs, emptyOutDir)·Tailwind·Forge·sync-version</td><td colspan="2" style="text-align:center">사실상 동일</td></tr>
+<tr><td>rollup input 엔트리</td><td class="main">15개 (5시료+분석4+기타)</td><td class="soil">8개 (+firebaseSetup 엔트리, copyManualAssets 플러그인)</td></tr>
+<tr><td>lint</td><td class="main">미설정(echo)</td><td class="soil">ESLint 도입</td></tr>
+<tr><td>의존성</td><td class="main">기본</td><td class="soil">+ dexie(IndexedDB), devDep xlsx, eslint</td></tr>
+<tr><td>Forge publisher</td><td class="main">GitHub(자동 배포)</td><td class="soil">비어있음</td></tr>
+<tr><td>단위 테스트</td><td class="main">reception-number·soil-result-importer·base-manager·sync-utils 등</td><td class="soil">+ auto-mapper·reception-group·address-parser·soil-log-record</td></tr>
+</table>
+<div class="callout warn"><b>⚠️ 절대 교차 복사 금지</b><code>forge.config.js</code>·<code>vite.config.js</code>·<code>firebase-config</code>·<code>network-config</code>·<code>constants.js</code>(APP_VERSION) — 이름/번들ID/엔트리/Firebase 프로젝트/버전이 모두 다릅니다.</div>
+</div>
+
+<!-- 11 -->
+<h2 id="s11"><span class="num">11</span>이식 후보 종합 (우선순위)</h2>
+
+<div class="card">
+<h3>⭐ soil → 메인 (가져올 기능)</h3>
+<table>
+<tr><th>우선</th><th>후보</th><th>내용 / 적용 시 고려</th></tr>
+<tr><td><span class="pri">P1</span></td><td>산(山) 토글 버튼</td><td>필지 주소 옆 토글 + 자동완성 산 자동 동기화. 순수 UX, 위험 낮음. 메인 체크박스 대체.</td></tr>
+<tr><td><span class="pri">P1</span></td><td>AnalysisDB (IndexedDB)</td><td>흙토람 검정결과를 Dexie/IndexedDB 주저장 + LS 백업 + 자동 마이그레이션. localStorage 5MB 한계 해소. <code>dexie</code> 의존성 추가 필요.</td></tr>
+<tr><td><span class="pri p2">P2</span></td><td>탭 인지 통계 + 엑셀 내보내기</td><td>현재 경지구분 탭 기준 집계/내보내기 + '경지구분1차' 컬럼. 동작 변경이라 사용자 확인 권장.</td></tr>
+<tr><td><span class="pri p3">P3</span></td><td>전국 주소(SIDO SSOT, 17개 시·도 약어)</td><td>주소 복사/내보내기 정확도. 봉화 운영엔 영향 작음. 위험 낮음.</td></tr>
+<tr><td><span class="pri p4">P4</span></td><td>basePnu 가져오기 필드</td><td>공익직불제 BASEPNU 보존. 공익직불제 import 사용 시에만 의미.</td></tr>
+<tr><td><span class="pri p4">P4</span></td><td>순수 모듈 추출(reception-group·soil-log-record)</td><td>코드 품질·단위테스트성. 산출물 동일이라 가치 중간.</td></tr>
+<tr><td><span class="pri p5">참고</span></td><td>전국 자동완성(regionKeys:null)</td><td>봉화 전용 메인엔 <b>이식 비권장</b>(범위 정책 충돌). 정책 결정 필요.</td></tr>
+</table>
+</div>
+
+<div class="card">
+<h3>🟪 메인 → soil (역포팅 권장)</h3>
+<table>
+<tr><th>우선</th><th>후보</th><th>내용</th></tr>
+<tr><td><span class="pri">P1</span></td><td>동기화 견고성 (SAMPL-1-80)</td><td><code>fromCache</code> 가드·<code>mergeCloudData</code>·<code>getAllWithMeta</code>·멱등 삭제·<code>smartMerge</code> allowDeletions. soil 오프라인 데이터 유실 리스크 완화.</td></tr>
+<tr><td><span class="pri p2">P2</span></td><td>클라우드 동기화 실패 복구</td><td><code>_handleCloudSyncFailure</code> + 온라인 복귀 재시도 + 배너. soil은 토스트만.</td></tr>
+<tr><td><span class="pri p2">P2</span></td><td>그룹수정 삭제 확인(SAMPL-1-82)</td><td>빈 필지/작물로 인한 조용한 삭제 전 confirm + 취소 시 롤백.</td></tr>
+<tr><td><span class="pri p3">P3</span></td><td>persistRecords 추상화 / landClass1 동적생성 / firestore false-resolve 감지</td><td>코드 일원화·유지보수성.</td></tr>
+</table>
+</div>
+
+<div class="callout warn">
+<b>🔑 동기화 대원칙</b>
+① 두 프로젝트는 <b>독립 Firebase·독립 버전·독립 배포</b> — 설정 파일 교차 복사 금지.<br>
+② soil은 <b>순수 .js</b> (TS 아님) — <code>sample-log-electron-test</code>의 TS 마이그레이션과 무관, .js 의미 단위 동기화.<br>
+③ 아키텍처 성숙도 역전 → <b>통째 복사 금지, 양방향 선별 포팅</b>만.<br>
+④ soil 전용 파일(analysis-db·reception-group·soil-log-record·main-stats) 및 메인 동기화 가드는 서로 덮어쓰지 말 것.
+</div>
+
+<footer>
+  <p>📑 본 문서는 4개 영역(UI·데이터·엑셀/흙토람·아키텍처) 병렬 정밀 분석을 종합한 것입니다.</p>
+  <p>세부 리포트: <code>.omc/research/compare-A1-ui.md</code>, <code>compare-A2-data.md</code>, <code>compare-A3-excel-heuktoram.md</code>, <code>compare-A4-arch.md</code></p>
+  <p>생성: 2026-06-09 · sample-log-electron (MAIN v1.15.4) vs sample-log-soil (SOIL v1.7.7)</p>
+</footer>
+
+</div>
+</body>
+</html>

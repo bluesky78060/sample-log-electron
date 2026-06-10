@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>메인 ⟷ soil 비교우위 양방향 구현 계획</title>
+<style>
+  :root{
+    --bg:#f6f7f9;--card:#fff;--ink:#1e293b;--muted:#64748b;--line:#e2e8f0;
+    --a:#16a34a;--b:#7c3aed;--th:#f1f5f9;
+    --r-low:#16a34a;--r-mid:#d97706;--r-high:#dc2626;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:'Noto Sans KR','Inter',system-ui,-apple-system,sans-serif;line-height:1.65}
+  .wrap{max-width:1100px;margin:0 auto;padding:32px 20px 80px}
+  header.hero{background:linear-gradient(135deg,#f0fdf4 0%,#f5f3ff 100%);
+    border:1px solid var(--line);border-radius:18px;padding:28px 30px;margin-bottom:24px}
+  header.hero h1{margin:0 0 6px;font-size:1.62rem}
+  header.hero .sub{color:var(--muted);font-size:.95rem}
+  header.hero .meta{margin-top:12px;font-size:.82rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:6px 18px}
+  h2{margin:36px 0 6px;font-size:1.28rem;padding-left:12px}
+  h2.dirA{border-left:5px solid var(--a)}
+  h2.dirB{border-left:5px solid var(--b)}
+  h2.plain{border-left:5px solid #334155}
+  h3{margin:0 0 4px;font-size:1.05rem}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin:14px 0;box-shadow:0 1px 3px rgba(15,23,42,.04)}
+  .feat{border-left:4px solid var(--line);padding-left:14px;margin:18px 0}
+  .feat.A{border-left-color:var(--a)}
+  .feat.B{border-left-color:var(--b)}
+  table{width:100%;border-collapse:collapse;margin:10px 0;font-size:.85rem}
+  th,td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+  th{background:var(--th);font-weight:700;font-size:.78rem}
+  code{background:#f1f5f9;padding:1px 5px;border-radius:5px;font-size:.85em}
+  ul{margin:6px 0 6px 2px;padding-left:20px}li{margin:3px 0}
+  p{margin:7px 0}
+  .pill{display:inline-block;font-size:.7rem;font-weight:800;padding:2px 9px;border-radius:20px;white-space:nowrap}
+  .pri1{background:#fee2e2;color:#b91c1c}.pri2{background:#ffedd5;color:#9a3412}
+  .pri3{background:#fef9c3;color:#854d0e}.pri4{background:#ecfccb;color:#3f6212}
+  .r-low{color:var(--r-low);font-weight:700}.r-mid{color:var(--r-mid);font-weight:700}.r-high{color:var(--r-high);font-weight:700}
+  .eff{font-weight:700}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:720px){.grid2{grid-template-columns:1fr}}
+  .meta-row{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.8rem;color:var(--muted);margin:6px 0}
+  .meta-row b{color:var(--ink)}
+  .callout{border-radius:12px;padding:13px 16px;margin:12px 0;font-size:.88rem}
+  .callout.warn{background:#fef2f2;border:1px solid #fecaca}
+  .callout.info{background:#eff6ff;border:1px solid #bfdbfe}
+  .callout.note{background:#fffbeb;border:1px solid #fde68a}
+  .phase{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:10px 0}
+  .phase h4{margin:0 0 6px;font-size:1rem}
+  .chip{display:inline-block;font-size:.72rem;font-weight:700;background:#e2e8f0;color:#334155;padding:2px 8px;border-radius:6px;margin:2px 4px 2px 0}
+  .chipA{background:#dcfce7;color:#166534}.chipB{background:#ede9fe;color:#6d28d9}
+  footer{margin-top:46px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:.8rem}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;font-size:.8rem;margin-top:8px}
+  .toc{columns:2;column-gap:28px;font-size:.9rem}.toc a{color:#7c3aed;text-decoration:none}.toc a:hover{text-decoration:underline}
+  @media(max-width:640px){.toc{columns:1}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <h1>🔄 메인 ⟷ soil — 비교우위 양방향 구현 계획</h1>
+  <div class="sub">각 프로젝트가 우위인 기능을 상대에 이식하는 실행 로드맵 (소스: 2026-06-09 비교 분석)</div>
+  <div class="meta">
+    <span>📅 2026-06-09</span>
+    <span>🟢 방향 A: soil → 메인 (6건)</span>
+    <span>🟣 방향 B: 메인 → soil (4건)</span>
+    <span>📄 계획 문서 (실행 시 AI PM 티켓 발행)</span>
+  </div>
+  <div class="legend">
+    <span><span class="pill pri1">P1</span> 최우선</span>
+    <span><span class="pill pri2">P2</span> 높음</span>
+    <span><span class="pill pri3">P3</span> 중간</span>
+    <span><span class="pill pri4">P4</span> 낮음</span>
+    <span>공수: <span class="eff">S</span>(~2h) · <span class="eff">M</span>(반나절) · <span class="eff">L</span>(1일+)</span>
+  </div>
+</header>
+
+<div class="card">
+  <h3 style="margin-top:0">🎯 계획 개요</h3>
+  <p>비교 분석 결과 <b>아키텍처 성숙도가 역전</b>되어 있어, 한쪽을 통째로 덮어쓰지 않고 <b>각자 우위 기능만 선별 양방향 이식</b>합니다.</p>
+  <ul>
+    <li><b>방향 A (soil → 메인)</b>: 산 토글, AnalysisDB(IndexedDB), 탭 인지 통계/내보내기, 전국 주소 SSOT, basePnu, 순수 모듈화</li>
+    <li><b>방향 B (메인 → soil)</b>: 동기화 견고성(fromCache 가드 등), 클라우드 실패 복구, 그룹수정 삭제 확인, persistRecords 추상화</li>
+  </ul>
+  <div class="callout info">두 프로젝트는 <b>독립 Firebase·버전·배포</b>입니다. 설정 파일(<code>forge.config.js</code>·<code>vite.config.js</code>·<code>firebase-config</code>·<code>constants.js</code>)은 절대 교차 복사하지 않고, <b>의미 단위 .js 포팅</b>만 수행합니다.</div>
+  <div class="toc">
+    <a href="#A1">A1. 산(山) 토글 버튼</a><br>
+    <a href="#A2">A2. AnalysisDB (IndexedDB)</a><br>
+    <a href="#A3">A3. 탭 인지 통계·엑셀 내보내기</a><br>
+    <a href="#A4">A4. 전국 주소 SIDO SSOT</a><br>
+    <a href="#A5">A5. basePnu 가져오기 필드</a><br>
+    <a href="#A6">A6. 순수 모듈 추출</a><br>
+    <a href="#B1">B1. 동기화 견고성(SAMPL-1-80)</a><br>
+    <a href="#B2">B2. 클라우드 동기화 실패 복구</a><br>
+    <a href="#B3">B3. 그룹수정 삭제 확인</a><br>
+    <a href="#B4">B4. persistRecords·동적생성</a><br>
+    <a href="#road">📅 실행 로드맵(권장 순서)</a><br>
+    <a href="#decide">⚖️ 정책 결정 필요</a><br>
+  </div>
+</div>
+
+<!-- ===================== 방향 A ===================== -->
+<h2 class="dirA">🟢 방향 A — soil → 메인 이식</h2>
+
+<!-- A1 -->
+<div class="card">
+<div class="feat A" id="A1">
+  <h3>A1. 산(山) 필지 토글 버튼 + 자동완성 자동 동기화</h3>
+  <div class="meta-row"><span><b>우선</b> <span class="pill pri1">P1</span></span><span><b>공수</b> <span class="eff">S~M</span></span><span><b>리스크</b> <span class="r-low">낮음</span></span><span><b>의존성</b> 없음</span></div>
+  <p><b>목표</b>: 필지 주소 옆 체크박스(<code>mountain-checkbox</code>)를 색상 피드백 토글 버튼(<code>mountain-btn</code>)으로 교체하고, 주소 자동완성에서 "산" 필지 선택 시 <code>parcel.isMountain</code>을 자동 반영.</p>
+  <table>
+    <tr><th>대상 파일</th><th>작업</th></tr>
+    <tr><td><code>src/soil/index.html</code></td><td>필지 카드 mountain-checkbox → <code>mountain-btn</code> 버튼(aria-pressed)</td></tr>
+    <tr><td><code>src/soil/soil-script.js</code></td><td><code>syncMountainCheckbox()</code>/<code>applyMountainToggleStyle()</code> 이식, 자동완성 <code>onSelect</code> ctx에 isMountain 전달</td></tr>
+    <tr><td><code>src/soil/soil-style.css</code></td><td><code>.mountain-btn</code> 활성(amber) 스타일 + 다크모드</td></tr>
+  </table>
+  <p><b>접근</b>: soil 동일 파일에서 의미 이식. <b>검증</b>: 등록→목록 isMountain 반영, 자동완성 산 선택 시 토글 자동 활성, E2E soil-form 회귀.</p>
+  <p><b>AI PM 티켓(예)</b>: "토양 산 필지 토글 버튼 + 자동완성 동기화 (soil 이식)" / General epic</p>
+</div>
+</div>
+
+<!-- A2 -->
+<div class="card">
+<div class="feat A" id="A2">
+  <h3>A2. AnalysisDB — 흙토람 검정결과 IndexedDB 저장</h3>
+  <div class="meta-row"><span><b>우선</b> <span class="pill pri1">P1</span></span><span><b>공수</b> <span class="eff">L</span></span><span><b>리스크</b> <span class="r-mid">중간</span></span><span><b>의존성</b> <code>dexie</code> npm 추가</span></div>
+  <p><b>목표</b>: 검정결과를 localStorage(5MB 한계) → Dexie/IndexedDB 주저장 + localStorage 백업 미러 + 1회성 자동 마이그레이션으로 전환.</p>
+  <table>
+    <tr><th>대상</th><th>작업</th></tr>
+    <tr><td><code>src/shared/analysis-db.js</code></td><td>soil에서 신규 복사(Dexie 래퍼, 복합 PK <code>[type+year+sampleKey]</code>, 멱등 마이그레이션 플래그 <code>analysis_db_migrated_v1</code>)</td></tr>
+    <tr><td><code>package.json</code></td><td><code>dexie ^4.4.3</code> 의존성 추가 + <code>soil-entry/heuktoram-entry</code> import</td></tr>
+    <tr><td><code>src/heuktoram/heuktoram-script.js</code></td><td>검정결과 load/save를 async AnalysisDB 경유로 변경, LS 폴백 유지, <code>_pendingIdbSave</code> 갭 차단</td></tr>
+  </table>
+  <div class="callout note"><b>주의</b>: 기존 사용자 localStorage 데이터 → IDB 마이그레이션 시 <b>원본 보존</b>(멱등). 마이그레이션 실패 시 LS 폴백으로 무중단. Electron/웹 양쪽 IndexedDB 동작 확인 필요.</div>
+  <p><b>검증</b>: 신규 검정결과 IDB 저장 확인, 대용량(수천 건) 저장, LS→IDB 마이그레이션 1회성, 오프라인 동작.</p>
+</div>
+</div>
+
+<!-- A3 -->
+<div class="card">
+<div class="feat A" id="A3">
+  <h3>A3. 탭 인지 통계 + 엑셀 내보내기('경지구분1차' 컬럼)</h3>
+  <div class="meta-row"><span><b>우선</b> <span class="pill pri2">P2</span></span><span><b>공수</b> <span class="eff">M</span></span><span><b>리스크</b> <span class="r-mid">중간(동작 변경)</span></span><span><b>의존성</b> 없음</span></div>
+  <p><b>목표</b>: 통계 요약·구분별·목적별과 목록 엑셀 내보내기를 <b>현재 경지구분 탭</b> 기준으로(전체 대신), 내보내기에 '경지구분1차' 컬럼 추가. (경지구분별 통계는 전체 유지)</p>
+  <table>
+    <tr><th>대상</th><th>작업</th></tr>
+    <tr><td><code>src/soil/soil-script.js</code></td><td><code>getTabFilteredLogs()</code> 헬퍼 이식, <code>calculateStatistics</code>·<code>exportToExcel</code>가 탭 데이터 사용, 내보내기 컬럼+wch에 '경지구분1차' 추가</td></tr>
+  </table>
+  <div class="callout note"><b>사용자 확인 권장</b>: 현재 메인은 "항상 전체" 집계. 탭 기준으로 바꾸면 운영 체감이 달라지므로 채택 전 확인. (또는 토글 옵션으로 제공)</div>
+  <p><b>검증</b>: 탭별 통계 수치 일치, 내보내기 행에 경지구분1차 값/컬럼 정합, 선택항목 내보내기 동작.</p>
+</div>
+</div>
+
+<!-- A4 -->
+<div class="card">
+<div class="feat A" id="A4">
+  <h3>A4. 전국 주소 SIDO SSOT (address-parser)</h3>
+  <div class="meta-row"><span><b>우선</b> <span class="pill pri3">P3</span></span><span><b>공수</b> <span class="eff">M</span></span><span><b>리스크</b> <span class="r-low">낮음</span></span><span><b>의존성</b> 없음</span></div>
+  <p><b>목표</b>: 함수-로컬 SIDO 테이블을 <code>address-parser.js</code> 전역 SSOT(<code>SIDO_LIST</code>/<code>SIDO_SHORT_MAP</code>/<code>expandSido()</code>)로 승격(2023 강원·전북 특별자치도 반영). 주소 복사/흙토람 시군구→시도 매핑에서 17개 시·도 전체 대응.</p>
+  <table>
+    <tr><th>대상</th><th>작업</th></tr>
+    <tr><td><code>src/shared/address-parser.js</code></td><td>SLS-1-97 패턴 이식: SIDO SSOT를 window 전역 노출</td></tr>
+    <tr><td><code>src/soil/soil-script.js</code>·<code>src/heuktoram/heuktoram-script.js</code></td><td>주소 복사·시군구 매핑이 SSOT 재사용(인라인 9개 테이블 제거)</td></tr>
+  </table>
+  <p><b>주의</b>: 자동완성 검색 <b>범위</b>(<code>regionKeys</code>)는 변경하지 않음 — §정책 결정 참조. 본 항목은 표기/약어 매핑 SSOT만.</p>
+  <p><b>검증</b>: 타지역 주소 복사 시 정식 시·도명 확장, 흙토람 export 시도 컬럼 정확, 단위테스트(address-parser).</p>
+</div>
+</div>
+
+<!-- A5 -->
+<div class="card">
+<div class="feat A" id="A5">
+  <h3>A5. basePnu 가져오기 필드</h3>
+  <div class="meta-row"><span><b>우선</b> <span class="pill pri4">P4</span></span><span><b>공수</b> <span class="eff">S</span></span><span><b>리스크</b> <span class="r-low">낮음</span></span><span><b>의존성</b> 공익직불제 import 사용 시</span></div>
+  <p><b>목표</b>: <code>addImportedRecord</code>에 <code>basePnu: src.basePnu || ''</code> 보존(공익직불제 BASEPNU). 필요 시 가져오기 모달 컬럼 매핑/뷰어 컬럼 추가는 후속.</p>
+  <table>
+    <tr><th>대상</th><th>작업</th></tr>
+    <tr><td><code>src/soil/soil-script.js</code></td><td><code>addImportedRecord</code> newLog에 basePnu 추가 + getAdditionalMigrations 기본값(선택)</td></tr>
+  </table>
+  <p><b>검증</b>: basePnu 매핑된 엑셀 가져오기 시 레코드 보존, 미매핑 시 빈값.</p>
+</div>
+</div>
+
+<!-- A6 -->
+<div class="card">
+<div class="feat A" id="A6">
+  <h3>A6. 순수 모듈 추출 (reception-group · soil-log-record)</h3>
+  <div class="meta-row"><span><b>우선</b> <span class="pill pri4">P4</span></span><span><b>공수</b> <span class="eff">L</span></span><span><b>리스크</b> <span class="r-mid">중간(리팩터)</span></span><span><b>의존성</b> 없음</span></div>
+  <p><b>목표</b>: 접수번호 그룹핑(본·하위필지)과 레코드 생성을 인라인 → 순수 모듈로 추출해 단위테스트 가능화(코드 품질, 산출물 동일).</p>
+  <table>
+    <tr><th>대상</th><th>작업</th></tr>
+    <tr><td><code>src/soil/reception-group.js</code> (신규)</td><td><code>parseReceptionGroup</code>/<code>findRelatedLogs</code>/<code>computeBulkTargetIds</code> + 단위테스트</td></tr>
+    <tr><td><code>src/soil/soil-log-record.js</code> (신규)</td><td><code>buildSoilLogRecord()</code> 팩토리(신규/그룹수정 × 작물분할/단일 4분기 단일화)</td></tr>
+    <tr><td><code>src/soil/soil-script.js</code></td><td>인라인 로직을 모듈 위임으로 치환</td></tr>
+  </table>
+  <p><b>주의</b>: 동작 변경 없는 리팩터지만 접수번호 그룹/레코드 생성은 핵심 경로 → E2E 회귀 충분히. <b>가성비 중간</b>(가치=유지보수성).</p>
+</div>
+</div>
+
+<!-- ===================== 방향 B ===================== -->
+<h2 class="dirB">🟣 방향 B — 메인 → soil 역포팅</h2>
+<div class="callout info">방향 B는 <b>soil 저장소</b>(<code>/Users/leechanhee/sample-log-soil</code>)에서 작업합니다. soil의 슬림 구조(storage-manager 116줄·BaseSampleManager 1067줄)에 맞춰 이식하고, soil 전용 파일(analysis-db 등)은 보존합니다.</div>
+
+<!-- B1 -->
+<div class="card">
+<div class="feat B" id="B1">
+  <h3>B1. 동기화 견고성 (SAMPL-1-80 백포트)</h3>
+  <div class="meta-row"><span><b>우선</b> <span class="pill pri1">P1</span></span><span><b>공수</b> <span class="eff">L</span></span><span><b>리스크</b> <span class="r-high">높음(데이터 안전 핵심)</span></span><span><b>의존성</b> 없음</span></div>
+  <p><b>목표</b>: 오프라인/캐시/일시단절 시 유효 레코드 오삭제를 막는 <code>fromCache</code> 가드·<code>mergeCloudData</code>·<code>getAllWithMeta</code>·멱등 삭제·<code>smartMerge(allowDeletions)</code>를 soil에 이식.</p>
+  <table>
+    <tr><th>대상(soil)</th><th>작업</th></tr>
+    <tr><td><code>src/shared/firestore-db.js</code></td><td><code>getAllDocumentsWithMeta</code>(metadata.fromCache 반환), 멱등 삭제(대상 없음→true)</td></tr>
+    <tr><td><code>src/shared/sync-utils.js</code></td><td><code>smartMerge</code>에 <code>allowDeletions</code> 옵션, <code>mergeCloudData</code>(localOnly 재업로드)</td></tr>
+    <tr><td><code>src/shared/BaseSampleManager.js</code></td><td>로드/머지 경로에서 fromCache=true면 cross-device 삭제 보류</td></tr>
+  </table>
+  <div class="callout warn"><b>최고 난도</b>: soil은 fromCache 가드가 전무(0건). 데이터 유실 방지 핵심 경로라 단계적 이식 + 다기기 시나리오(오프라인 등록→온라인 복귀, 캐시 로드 중 삭제 등) 집중 검증 필수.</div>
+</div>
+</div>
+
+<!-- B2 -->
+<div class="card">
+<div class="feat B" id="B2">
+  <h3>B2. 클라우드 동기화 실패 복구 + 재시도 배너</h3>
+  <div class="meta-row"><span><b>우선</b> <span class="pill pri2">P2</span></span><span><b>공수</b> <span class="eff">M</span></span><span><b>리스크</b> <span class="r-mid">중간</span></span><span><b>의존성</b> B1과 동반 권장</span></div>
+  <p><b>목표</b>: soil의 fire-and-forget 동기화를 <code>_handleCloudSyncFailure</code>/<code>_clearCloudSyncFailure</code>/<code>_retryCloudSyncAction</code>(실패 배너 + 온라인 복귀 자동 재시도)으로 강화.</p>
+  <table>
+    <tr><th>대상(soil)</th><th>작업</th></tr>
+    <tr><td><code>src/shared/BaseSampleManager.js</code></td><td>실패 상태 멤버(<code>_cloudSyncFailed</code>·재시도 핸들러)·online 이벤트 재시도·중복 토스트 방지·<code>cloudSyncPromise</code> 락</td></tr>
+    <tr><td>각 시료/배너 UI</td><td>실패 배너 표시 영역(soil은 토양만)</td></tr>
+  </table>
+</div>
+</div>
+
+<!-- B3 -->
+<div class="card">
+<div class="feat B" id="B3">
+  <h3>B3. 그룹수정 시 삭제 확인 다이얼로그 (SAMPL-1-82)</h3>
+  <div class="meta-row"><span><b>우선</b> <span class="pill pri2">P2</span></span><span><b>공수</b> <span class="eff">S~M</span></span><span><b>리스크</b> <span class="r-low">낮음</span></span><span><b>의존성</b> 없음</span></div>
+  <p><b>목표</b>: 그룹수정 시 빈 필지/빈 작물로 인한 조용한 레코드 삭제 전 <code>confirm()</code> 경고 + 취소 시 원본 복원.</p>
+  <table>
+    <tr><th>대상(soil)</th><th>작업</th></tr>
+    <tr><td><code>src/soil/soil-script.js</code></td><td>submitForm 그룹수정 분기에 N건 삭제 감지→confirm→취소 시 메모리/렌더 롤백</td></tr>
+  </table>
+  <p><b>검증</b>: 필지 제거 그룹수정 시 경고, 취소 시 원본 유지, 확정 시 정상 삭제.</p>
+</div>
+</div>
+
+<!-- B4 -->
+<div class="card">
+<div class="feat B" id="B4">
+  <h3>B4. persistRecords 추상화 · landClass1 동적생성 · false-resolve 감지</h3>
+  <div class="meta-row"><span><b>우선</b> <span class="pill pri3">P3</span></span><span><b>공수</b> <span class="eff">M</span></span><span><b>리스크</b> <span class="r-low">낮음</span></span><span><b>의존성</b> 없음</span></div>
+  <ul>
+    <li><b>persistRecords</b>: 호출부 분산된 <code>saveLogs()+firebaseSaveRecords()</code>를 단일 추상화로</li>
+    <li><b>landClass1 동적생성</b>: index.html 정적 12옵션 → <code>LAND_CLASS1_OPTIONS</code> 단일소스 JS 생성</li>
+    <li><b>firestore false-resolve 감지</b>: <code>r.value===false</code>까지 실패 판정</li>
+  </ul>
+  <p>코드 일원화·유지보수성 개선. 동작 동일.</p>
+</div>
+</div>
+
+<!-- 로드맵 -->
+<h2 class="plain" id="road">📅 실행 로드맵 (권장 순서)</h2>
+<div class="card">
+<p>가치·리스크·독립성을 고려한 권장 순서입니다. 각 단계는 독립 실행 가능하며, 메인 작업과 soil 작업은 별도 저장소라 병행 가능합니다.</p>
+
+<div class="phase">
+  <h4>🟢 1단계 — 빠른 가치 (메인)</h4>
+  <span class="chip chipA">A1 산 토글 P1·S~M</span><span class="chip chipA">A5 basePnu P4·S</span>
+  <p>위험 낮고 즉시 체감되는 UX/데이터 개선. 현재 미커밋 경지구분 캠페인과 함께 묶어 릴리스 후보.</p>
+</div>
+<div class="phase">
+  <h4>🟣 2단계 — 데이터 안전 (soil)</h4>
+  <span class="chip chipB">B1 동기화 견고성 P1·L</span><span class="chip chipB">B2 실패 복구 P2·M</span><span class="chip chipB">B3 삭제 확인 P2·S~M</span>
+  <p>soil의 가장 큰 결손(데이터 유실 방지). B1+B2 동반, B3는 독립. soil v1.7.x 패치.</p>
+</div>
+<div class="phase">
+  <h4>🟢 3단계 — 영속화·통계 (메인)</h4>
+  <span class="chip chipA">A2 AnalysisDB P1·L</span><span class="chip chipA">A3 탭 통계/내보내기 P2·M</span><span class="chip chipA">A4 SIDO SSOT P3·M</span>
+  <p>A2는 dexie 도입 + 마이그레이션 검증이 큰 작업. A3는 사용자 확인 후. A4는 무해.</p>
+</div>
+<div class="phase">
+  <h4>🔧 4단계 — 코드 품질 (양쪽)</h4>
+  <span class="chip chipA">A6 순수 모듈화 P4·L</span><span class="chip chipB">B4 추상화 P3·M</span>
+  <p>동작 변경 없는 리팩터. 여유 시 진행, 회귀 테스트 충분히.</p>
+</div>
+</div>
+
+<!-- 정책 -->
+<h2 class="plain" id="decide">⚖️ 정책 결정 필요 (이식 보류/토론)</h2>
+<div class="card">
+<table>
+<tr><th>항목</th><th>쟁점</th><th>권고</th></tr>
+<tr><td>전국 자동완성(<code>regionKeys:null</code> + JUSO 폴백)</td><td>메인은 봉화군 전용 제품 — 검색 범위를 전국으로 열면 제품 정체성/성능 충돌</td><td><b>이식 비권장</b>. 필요 시 설정(<code>app_default_sido</code>) 기반 옵션으로만</td></tr>
+<tr><td>A3 탭 인지 통계 동작 변경</td><td>"항상 전체" → "탭 기준"은 운영 체감 변화</td><td>사용자 확인 후 채택, 또는 토글 제공</td></tr>
+<tr><td>방향 B 전체(soil 작업)</td><td>soil은 별도 제품·별도 릴리스 — 작업 우선순위</td><td>데이터 안전(B1) 우선, 나머지는 soil 로드맵과 조율</td></tr>
+</table>
+</div>
+
+<div class="callout warn">
+<b>🔑 공통 원칙</b>
+① 설정 파일(forge/vite/firebase-config/network-config/constants) <b>교차 복사 금지</b>.
+② 의미 단위 <b>.js 포팅</b>(soil·메인 모두 순수 JS, test 프로젝트만 TS).
+③ 상대 전용 파일(soil: analysis-db·reception-group·soil-log-record / 메인: 동기화 가드) <b>덮어쓰기 금지</b>.
+④ 각 항목 실행 시 <b>AI PM 티켓 발행 → 구현 → 빌드/테스트 → 코드리뷰 → 승인</b> 워크플로 준수.
+</div>
+
+<footer>
+  <p>📑 근거: <code>docs-internal/MAIN-vs-SOIL-COMPARISON_2026-06-09.html</code> 및 <code>.omc/research/compare-A1~A4.md</code></p>
+  <p>생성 2026-06-09 · 본 문서는 실행 계획이며 코드 변경은 포함하지 않습니다.</p>
+</footer>
+
+</div>
+</body>
+</html>
