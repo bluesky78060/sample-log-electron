@@ -114,6 +114,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // 렌더러 localStorage('mrl_api_key') 수동 설정이 없을 때 mrl-api.js가 폴백으로 사용
     mrlGetApiKey: () => ipcRenderer.invoke('mrl:get-api-key'),
 
+    // PSIS(농촌진흥청 농약등록정보) 농약 용도 조회 (main process 경유, http 엔드포인트·키 노출 없음)
+    // 반환: { useName: string|null, error: string|null }
+    psisLookupUse: (korName) => ipcRenderer.invoke('psis:lookup-use', { korName }),
+
     // Electron 환경 여부
     isElectron: true
 });

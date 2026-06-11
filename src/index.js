@@ -1288,3 +1288,78 @@ ipcMain.handle('vworld-geocode', async (event, { address }) => {
 ipcMain.handle('mrl:get-api-key', () => {
     return process.env.FOODSAFETY_API_KEY || '';
 });
+
+// PSIS(농촌진흥청 농약등록정보) 농약 용도 조회 — main process 경유(http 엔드포인트라 렌더러 직접 호출 불가)
+// 보안: apiKey는 main process의 process.env.RDA_PSIS_API_KEY에서만 참조, 로그에 키 노출 금지
+ipcMain.handle('psis:lookup-use', async (event, { korName } = {}) => {
+    if (!ipcRateLimiter.check('psis:lookup-use', EXT_API_MAX_CALLS_PER_SEC)) {
+        return { useName: null, error: 'rate_limited' };
+    }
+    if (typeof korName !== 'string' || korName.length === 0 || korName.length > 100) {
+        return { useName: null, error: 'invalid_input' };
+    }
+    const apiKey = process.env.RDA_PSIS_API_KEY;
+    if (!apiKey) {
+        return { useName: null, error: 'no_key' };
+    }
+
+    const http = require('node:http');
+    const { parsePsisUseName } = require('./shared/psis-parse');
+    // 한글 품목명은 UTF-8 encodeURIComponent로 인코딩 (apiKey는 URL에만, 로그 금지)
+    const url = `http://psis.rda.go.kr/openApi/service.do?apiKey=${encodeURIComponent(apiKey)}`
+        + `&serviceCode=SVC01&serviceType=AA001&displayCount=20&startPoint=1`
+        + `&pestiKorName=${encodeURIComponent(korName)}`;
+    const MAX_RESPONSE_SIZE = 512 * 1024; // 512KB
+    return new Promise((resolve) => {
+        const chunks = [];
+        let totalSize = 0;
+        let aborted = false;
+        let timeout = null;
+        const finish = (value) => {
+            if (aborted) return;
+            aborted = true;
+            if (timeout) clearTimeout(timeout);
+            resolve(value);
+        };
+        const req = http.get(url, (res) => {
+            const status = res.statusCode || 0;
+            if (status < 200 || status >= 300) {
+                req.destroy();
+                return finish({ useName: null, error: `http_${status}` });
+            }
+            res.on('data', (chunk) => {
+                if (aborted) return;
+                chunks.push(chunk);
+                totalSize += chunk.length;
+                if (totalSize > MAX_RESPONSE_SIZE) {
+                    req.destroy();
+                    finish({ useName: null, error: 'response_too_large' });
+                }
+            });
+            res.on('end', () => {
+                if (aborted) return;
+                try {
+                    const body = Buffer.concat(chunks).toString('utf8');
+                    const parsed = parsePsisUseName(body);
+                    // 에러/0건 시 진단용 일부 로그(키는 절대 미포함 — body에는 키 없음)
+                    if (parsed.error || !parsed.useName) {
+                        const snippet = body.slice(0, 300).replace(/\s+/g, ' ');
+                        if (global.logger?.warn) {
+                            global.logger.warn(`[psis:lookup-use] "${korName}" 결과없음/오류: ${parsed.error || 'no_useName'} | ${snippet}`);
+                        } else {
+                            console.warn(`[psis:lookup-use] "${korName}" 결과없음/오류: ${parsed.error || 'no_useName'} | ${snippet}`);
+                        }
+                    }
+                    finish(parsed);
+                } catch {
+                    finish({ useName: null, error: 'parse_error' });
+                }
+            });
+        });
+        timeout = setTimeout(() => { req.destroy(); finish({ useName: null, error: 'timeout' }); }, 8000);
+        req.on('error', (err) => {
+            console.error('[psis:lookup-use] 네트워크 오류:', err?.message);
+            finish({ useName: null, error: 'network_error' });
+        });
+    });
+});

@@ -3205,6 +3205,9 @@ class PesticideSampleManager extends window.BaseSampleManager {
 
         // 모달 내부 검색 상태
         this._mrlSearch = { candidates: [], selectedKor: null, selectedEngNames: [], rows: [], debounceTimer: null };
+        // SAMPL-1-104: PSIS 공식 용도 조회 — in-memory 캐시 + 레이스 가드 토큰
+        this._psisUseCache = new Map(); // kor → { useName, ts }
+        this._psisLookupToken = 0;
 
         const closeModal = () => { modal.classList.add('hidden'); };
         const openModal = () => {
@@ -3440,6 +3443,97 @@ class PesticideSampleManager extends window.BaseSampleManager {
         return badge;
     }
 
+    // ===== SAMPL-1-104: PSIS 공식 용도 조회 (캐시 + 레이스 가드) =====
+
+    /** localStorage 캐시 키 + TTL(30일). */
+    get _psisCacheKey() { return 'psis_use_cache_v1'; }
+    get _psisCacheTtlMs() { return 30 * 24 * 60 * 60 * 1000; }
+
+    /** localStorage에서 농약별 용도 캐시 조회 (유효 시 useName, 아니면 null). */
+    _getPsisCached(kor) {
+        const now = Date.now();
+        // 1) in-memory 우선
+        const mem = this._psisUseCache.get(kor);
+        if (mem && (now - mem.ts) < this._psisCacheTtlMs) return mem.useName;
+        // 2) localStorage 폴백
+        try {
+            const raw = localStorage.getItem(this._psisCacheKey);
+            if (!raw) return null;
+            const store = JSON.parse(raw);
+            const entry = store && store[kor];
+            if (entry && typeof entry.ts === 'number' && (now - entry.ts) < this._psisCacheTtlMs) {
+                this._psisUseCache.set(kor, { useName: entry.useName || null, ts: entry.ts });
+                return entry.useName || null;
+            }
+        } catch { /* 손상된 캐시는 무시 */ }
+        return null;
+    }
+
+    /** 농약별 용도 결과를 in-memory + localStorage 캐시에 저장. */
+    _setPsisCached(kor, useName) {
+        const ts = Date.now();
+        this._psisUseCache.set(kor, { useName: useName || null, ts });
+        try {
+            const raw = localStorage.getItem(this._psisCacheKey);
+            const store = (raw && JSON.parse(raw)) || {};
+            store[kor] = { useName: useName || null, ts };
+            localStorage.setItem(this._psisCacheKey, JSON.stringify(store));
+        } catch { /* 쿼터 초과 등은 무시 (in-memory는 유지됨) */ }
+    }
+
+    /**
+     * 결과 헤더의 용도 배지를 공식(PSIS) 값으로 비동기 교체.
+     * 정적표 배지를 즉시 유지하고, Electron + psisLookupUse 가능 시에만 시도.
+     * 레이스 가드: 호출 시점 토큰/현재 선택 kor 와 응답 시점이 일치할 때만 DOM 반영.
+     * @param {string} kor 한글 농약명
+     */
+    async _enrichMrlUseBadgeWithPsis(kor) {
+        if (!kor) return;
+        const api = window.electronAPI;
+        if (!(api && api.isElectron === true && typeof api.psisLookupUse === 'function')) return;
+
+        const token = ++this._psisLookupToken;
+        const apply = (useName) => {
+            if (!useName) return;
+            // 레이스 가드: 토큰 + 현재 선택 농약 동시 일치해야 반영
+            if (token !== this._psisLookupToken) return;
+            if (this._mrlSearch.selectedKor !== kor) return;
+            this._applyOfficialMrlUseBadge(useName);
+        };
+
+        // 1) 캐시 우선
+        const cached = this._getPsisCached(kor);
+        if (cached) { apply(cached); return; }
+
+        // 2) 공식 조회
+        try {
+            const res = await api.psisLookupUse(kor);
+            const useName = res && res.useName ? String(res.useName).trim() : null;
+            if (useName) {
+                this._setPsisCached(kor, useName);
+                apply(useName);
+            } else if (res && res.error) {
+                window.logger?.warn?.(`[PSIS] "${kor}" 용도 조회 실패: ${res.error}`);
+            }
+        } catch (e) {
+            window.logger?.warn?.(`[PSIS] "${kor}" 용도 조회 예외: ${e?.message || e}`);
+        }
+    }
+
+    /** 결과 헤더의 용도 배지를 공식 값으로 교체(텍스트·클래스·툴팁). */
+    _applyOfficialMrlUseBadge(useName) {
+        const titleEl = document.getElementById('mrlResultTitle');
+        if (!titleEl) return;
+        const badge = titleEl.querySelector('.mrl-use-badge');
+        if (!badge) return;
+        badge.className = `mrl-use-badge ${this.mrlUseTypeClass(useName)}`;
+        badge.textContent = useName;
+        badge.title = '농촌진흥청 등록정보 (공식)';
+        // 안내 아이콘 툴팁도 공식 출처로 갱신
+        const note = titleEl.querySelector('.mrl-use-note');
+        if (note) note.title = '용도: 농촌진흥청 농약등록정보 (공식)';
+    }
+
     renderMrlCandidateList(candidates) {
         const candSection = document.getElementById('mrlCandidateSection');
         const resultSection = document.getElementById('mrlResultSection');
@@ -3553,6 +3647,9 @@ class PesticideSampleManager extends window.BaseSampleManager {
                 titleEl.appendChild(note);
             }
         }
+
+        // SAMPL-1-104: 정적표 배지는 즉시 표시(위)하고, Electron에서는 공식(PSIS) 용도를 비동기 교체
+        this._enrichMrlUseBadgeWithPsis(candidate.kor);
 
         if (backBtn) backBtn.classList.toggle('hidden', !(cameFromList && this._mrlSearch.candidates.length > 1));
         if (foodFilter) foodFilter.value = '';

@@ -104,8 +104,23 @@
         const korList = Array.isArray(korPesticideNames) ? korPesticideNames : [];
         const korToEngIndex = buildKorToEngIndex(nameMapEntries);
 
-        // MRL 한글명 normalize 집합 (inMrl 판정용)
-        const mrlKorSet = new Set(korList.map(normalize));
+        // 음역 정규화(canon) 모듈 로드: 브라우저=window.MrlNameCanon, Node(테스트)=require (UMD)
+        const C = (typeof window !== 'undefined' && window.MrlNameCanon)
+            || ((typeof module !== 'undefined' && module.exports) ? require('./mrl-name-canon.js') : null);
+        const canon = C ? C.canonicalizeKor : normalize;
+        const strip = C ? C.stripIsomerSuffix : (x => x);
+
+        // MRL 한글명 canon 인덱스 (inMrl 판정용): canon + 이성질체 접미 제거형 둘 다 등록
+        const mrlCanon = new Set();
+        for (const k of korList) {
+            const c = canon(k);
+            mrlCanon.add(c);
+            mrlCanon.add(strip(c));
+        }
+        const inMrlOf = (kor) => {
+            const c = canon(kor);
+            return mrlCanon.has(c) || mrlCanon.has(strip(c));
+        };
 
         // 결과 누적: key=normalize(kor) → { kor, engNames:Set, inMrl }
         const acc = new Map();
@@ -138,7 +153,7 @@
                     const entry = nameMapEntries[eng];
                     const kor = entry && entry.kor;
                     if (kor && normalize(kor).includes(q)) {
-                        add(kor, mrlKorSet.has(normalize(kor)));
+                        add(kor, inMrlOf(kor));
                     }
                 }
             }
@@ -149,7 +164,7 @@
                     if (normalize(eng).includes(q)) {
                         const entry = nameMapEntries[eng];
                         const kor = entry && entry.kor;
-                        if (kor) add(kor, mrlKorSet.has(normalize(kor)));
+                        if (kor) add(kor, inMrlOf(kor));
                     }
                 }
             }

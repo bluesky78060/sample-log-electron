@@ -851,10 +851,77 @@ const MrlApi = (function () {
     /**
      * 특정 농약의 모든 식품별 MRL 조회
      */
+    // canon 인덱스(canon → rows[]) lazy 캐시: allRows 교체 시 무효화(_canonIdxRows로 식별)
+    let _canonIndex = null;
+    let _canonIdxRows = null;
+
+    function getCanonIndex() {
+        const C = (typeof window !== 'undefined' && window.MrlNameCanon) || null;
+        if (!C) return null; // canon 모듈 없으면 인덱스 미사용 → 폴백 경로
+        if (_canonIndex && _canonIdxRows === allRows) return _canonIndex;
+
+        const canon = C.canonicalizeKor;
+        const strip = C.stripIsomerSuffix;
+        const idx = new Map();
+        const push = (key, r) => {
+            if (!key) return;
+            let arr = idx.get(key);
+            if (!arr) { arr = []; idx.set(key, arr); }
+            arr.push(r);
+        };
+        for (const r of (allRows || [])) {
+            const rc = canon(r.AGCHM_KOR_NM);
+            push(rc, r);
+            const rcs = strip(rc);
+            if (rcs !== rc) push(rcs, r); // 이성질체 접미 제거형도 색인
+        }
+        _canonIndex = idx;
+        _canonIdxRows = allRows;
+        return idx;
+    }
+
+    /**
+     * 특정 농약의 모든 식품별 MRL 조회
+     * 음역 정규화(canon)로 식품안전나라 한글명과 입력 농약명의 표기 차이를 흡수한다.
+     * 예: 'Buprofezin'→name-map '부프로페진' 입력 시 MRL '뷰프로페진' row도 매칭.
+     */
     function getAllByPesticide(pesticide) {
         if (!isLoaded || !allRows) return [];
-        const q = normalize(pesticide);
-        return allRows.filter(r => normalize(r.AGCHM_KOR_NM) === q);
+
+        const C = (typeof window !== 'undefined' && window.MrlNameCanon) || null;
+        if (!C) {
+            // 폴백: canon 모듈 미로드 시 기존 정확 매칭 유지
+            const q = normalize(pesticide);
+            return allRows.filter(r => normalize(r.AGCHM_KOR_NM) === q);
+        }
+
+        const canon = C.canonicalizeKor;
+        const strip = C.stripIsomerSuffix;
+        const qc = canon(pesticide);
+        const qcs = strip(qc);
+
+        const idx = getCanonIndex();
+        if (idx) {
+            // canon 인덱스 경유 (중복 row 제거)
+            const out = [];
+            const seen = new Set();
+            for (const key of (qc === qcs ? [qc] : [qc, qcs])) {
+                const arr = idx.get(key);
+                if (!arr) continue;
+                for (const r of arr) {
+                    if (seen.has(r)) continue;
+                    seen.add(r);
+                    out.push(r);
+                }
+            }
+            return out;
+        }
+
+        // 인덱스 미구축 시 직접 필터 (안전 폴백)
+        return allRows.filter(r => {
+            const rc = canon(r.AGCHM_KOR_NM);
+            return rc === qc || rc === qcs || strip(rc) === qc;
+        });
     }
 
     /**

@@ -37,6 +37,7 @@ import '../shared/pesticide-name-map.js';
 import '../shared/pesticide-use-type.js';
 
 // MRL API (식품안전나라)
+import '../shared/mrl-name-canon.js'; // canon 정규화 — mrl-api/mrl-search보다 먼저 로드(window.MrlNameCanon)
 import '../shared/mrl-api.js';
 import '../shared/mrl-search.js';
 
