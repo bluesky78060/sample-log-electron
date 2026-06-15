@@ -43,6 +43,7 @@ jobs:
           JUSO_API_KEY=${{ secrets.JUSO_API_KEY }}
           VWORLD_API_KEY=${{ secrets.VWORLD_API_KEY }}
           FOODSAFETY_API_KEY=${{ secrets.FOODSAFETY_API_KEY }}
+          RDA_PSIS_API_KEY=${{ secrets.RDA_PSIS_API_KEY }}
           "@ | Out-File -FilePath ".env" -Encoding utf8 -NoNewline
         shell: pwsh
 
