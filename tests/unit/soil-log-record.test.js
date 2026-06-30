@@ -2,9 +2,13 @@ import { describe, it, expect, beforeAll } from 'vitest'
 
 // soil-log-record.js → window.SoilLogRecord.buildSoilLogRecord
 let build
+let resolveCat, resolvePur, cropsFromDisplay
 beforeAll(async () => {
     await import('../../src/soil/soil-log-record.js')
     build = window.SoilLogRecord.buildSoilLogRecord
+    resolveCat = window.SoilLogRecord.resolveParcelCategory
+    resolvePur = window.SoilLogRecord.resolveParcelPurpose
+    cropsFromDisplay = window.SoilLogRecord.cropsFromDisplay
 })
 
 const parcel = (over = {}) => ({
@@ -145,6 +149,55 @@ describe('buildSoilLogRecord — 엣지', () => {
         })
         expect(rec.parcels[0].isMountain).toBe(true)
         expect(rec.lotAddress).toBe('봉화군 봉화읍 내성리 123')
+    })
+})
+
+describe('폼 복원 폴백 (SAMPL-1-119) — resolveParcelCategory', () => {
+    it('필지별 값이 있으면 그대로 사용', () => {
+        expect(resolveCat('밭', { subCategory: '논' })).toBe('밭')
+    })
+    it('필지별 값 비면 최상위 subCategory로 폴백', () => {
+        expect(resolveCat('', { subCategory: '논' })).toBe('논')
+        expect(resolveCat(undefined, { subCategory: '과수' })).toBe('과수')
+    })
+    it("'-' 센티넬 subCategory는 빈 문자열로 처리", () => {
+        expect(resolveCat('', { subCategory: '-' })).toBe('')
+    })
+    it('둘 다 없으면 빈 문자열', () => {
+        expect(resolveCat('', {})).toBe('')
+        expect(resolveCat('', null)).toBe('')
+    })
+})
+
+describe('폼 복원 폴백 (SAMPL-1-119) — resolveParcelPurpose', () => {
+    it('필지별 값 우선', () => {
+        expect(resolvePur('무농약', { purpose: 'GAP' })).toBe('무농약')
+    })
+    it('필지별 값 비면 최상위 purpose로 폴백', () => {
+        expect(resolvePur('', { purpose: '일반재배' })).toBe('일반재배')
+    })
+    it('둘 다 없으면 빈 문자열', () => {
+        expect(resolvePur('', {})).toBe('')
+        expect(resolvePur(undefined, null)).toBe('')
+    })
+})
+
+describe('폼 복원 폴백 (SAMPL-1-119) — cropsFromDisplay', () => {
+    it('단일 작물: area 부여', () => {
+        expect(cropsFromDisplay({ cropsDisplay: '고추', area: '1000' }))
+            .toEqual([{ name: '고추', area: '1000' }])
+    })
+    it('콤마 결합형: 첫 작물에만 area, 나머지는 빈 면적', () => {
+        expect(cropsFromDisplay({ cropsDisplay: '고추, 배추', area: '1500' }))
+            .toEqual([{ name: '고추', area: '1500' }, { name: '배추', area: '' }])
+    })
+    it("빈 cropsDisplay/'-' 센티넬은 빈 배열", () => {
+        expect(cropsFromDisplay({ cropsDisplay: '', area: '1000' })).toEqual([])
+        expect(cropsFromDisplay({ cropsDisplay: '-', area: '1000' })).toEqual([])
+        expect(cropsFromDisplay(null)).toEqual([])
+    })
+    it('area 없으면 빈 문자열', () => {
+        expect(cropsFromDisplay({ cropsDisplay: '벼' })).toEqual([{ name: '벼', area: '' }])
     })
 })
 

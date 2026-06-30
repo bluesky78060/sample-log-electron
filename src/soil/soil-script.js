@@ -2195,6 +2195,9 @@ class SoilSampleManager extends window.BaseSampleManager {
         }, 100);
     }
 
+    // 폼 복원 폴백 헬퍼는 순수 모듈 window.SoilLogRecord로 위임 (SAMPL-1-119)
+    // — resolveParcelCategory / resolveParcelPurpose / cropsFromDisplay
+
     populateFormForEdit(log) {
         this.editingId = log.id;
         this.editingGroupIds = [];
@@ -2230,16 +2233,23 @@ class SoilSampleManager extends window.BaseSampleManager {
         if (this.parcelsContainer) this.parcelsContainer.innerHTML = '';
 
         if (log.parcels && log.parcels.length > 0) {
+            const singleParcel = log.parcels.length === 1;
             log.parcels.forEach(parcel => {
                 const parcelId = `parcel-${this.parcelIdCounter++}`;
+                const hasCrops = parcel.crops && parcel.crops.length > 0;
+                // crops 폴백은 단일 필지 로그에서만 (cropsDisplay는 로그 전체 요약이므로
+                // 다필지 단일 로그에 일괄 적용하면 잘못 분배됨)
+                const crops = hasCrops
+                    ? parcel.crops.map(c => ({ ...c }))
+                    : (singleParcel ? window.SoilLogRecord.cropsFromDisplay(log) : []);
                 const newParcel = {
                     id: parcelId,
                     lotAddress: parcel.lotAddress || '',
                     isMountain: parcel.isMountain || false,
                     subLots: parcel.subLots ? [...parcel.subLots] : [],
-                    crops: parcel.crops ? parcel.crops.map(c => ({ ...c })) : [],
-                    category: parcel.category || '',
-                    purpose: parcel.purpose || '',
+                    crops,
+                    category: window.SoilLogRecord.resolveParcelCategory(parcel.category, log),
+                    purpose: window.SoilLogRecord.resolveParcelPurpose(parcel.purpose, log),
                     note: parcel.note || ''
                 };
                 this.parcels.push(newParcel);
@@ -2330,27 +2340,29 @@ class SoilSampleManager extends window.BaseSampleManager {
         sortedParcelIndices.forEach(pIdx => {
             const logsForParcel = parcelMap.get(pIdx);
             const firstLog = logsForParcel[0];
-            const parcel = firstLog.parcels?.[0];
-            if (!parcel) return;
+            // parcels[0]가 없어도 카드를 건너뛰지 않고 최상위 필드로 합성 (필지 누락 방지)
+            const parcel = firstLog.parcels?.[0] || {};
 
-            // 같은 필지의 여러 작물을 합침
+            // 같은 필지의 여러 작물을 합침 — 각 로그의 crops가 비면 cropsDisplay/area로 폴백
             const mergedCrops = [];
             logsForParcel.forEach(log => {
-                const logParcel = log.parcels?.[0];
-                if (logParcel?.crops) {
-                    logParcel.crops.forEach(c => mergedCrops.push({ ...c }));
+                const logCrops = log.parcels?.[0]?.crops;
+                if (logCrops && logCrops.length > 0) {
+                    logCrops.forEach(c => mergedCrops.push({ ...c }));
+                } else {
+                    window.SoilLogRecord.cropsFromDisplay(log).forEach(c => mergedCrops.push(c));
                 }
             });
 
             const parcelId = `parcel-${this.parcelIdCounter++}`;
             const newParcel = {
                 id: parcelId,
-                lotAddress: parcel.lotAddress || '',
+                lotAddress: parcel.lotAddress || firstLog.lotAddress || '',
                 isMountain: parcel.isMountain || false,
                 subLots: parcel.subLots ? [...parcel.subLots] : [],
                 crops: mergedCrops.length > 0 ? mergedCrops : [{ name: '', area: '' }],
-                category: parcel.category || '',
-                purpose: parcel.purpose || '',
+                category: window.SoilLogRecord.resolveParcelCategory(parcel.category, firstLog),
+                purpose: window.SoilLogRecord.resolveParcelPurpose(parcel.purpose, firstLog),
                 note: parcel.note || ''
             };
             this.parcels.push(newParcel);
@@ -3133,23 +3145,28 @@ class SoilSampleManager extends window.BaseSampleManager {
         logs.forEach(log => {
             if (log.parcels && log.parcels.length > 0) {
                 let subLotIndex = 1;
+                const singleParcelLog = log.parcels.length === 1;
                 log.parcels.forEach(parcel => {
-                    const cropsDisplay = parcel.crops && parcel.crops.length > 0
-                        ? parcel.crops.map(c => c.name).join(', ') : '-';
+                    // SAMPL-1-119: parcels[0]가 비어있는 레코드(레거시/동기화/부분저장)는
+                    // 단일 필지에 한해 최상위 cropsDisplay/area로 폴백 (편집 폼과 동일 동작)
+                    const effectiveCrops = (parcel.crops && parcel.crops.length > 0)
+                        ? parcel.crops
+                        : (singleParcelLog ? window.SoilLogRecord.cropsFromDisplay(log) : []);
+                    const cropsDisplay = effectiveCrops.length > 0
+                        ? effectiveCrops.map(c => c.name).join(', ') : '-';
                     let m2Total = 0;
                     let pyeongTotal = 0;
-                    if (parcel.crops) {
-                        parcel.crops.forEach(c => {
-                            const area = parseFloat(c.area) || 0;
-                            if (c.unit === 'pyeong') { pyeongTotal += area; } else { m2Total += area; }
-                        });
-                    }
+                    effectiveCrops.forEach(c => {
+                        const area = parseFloat(c.area) || 0;
+                        if (c.unit === 'pyeong') { pyeongTotal += area; } else { m2Total += area; }
+                    });
                     const areaParts = [];
                     if (m2Total > 0) areaParts.push(`${m2Total.toLocaleString()}㎡`);
                     if (pyeongTotal > 0) areaParts.push(`${pyeongTotal.toLocaleString()}평`);
                     const areaDisplay = areaParts.length > 0 ? areaParts.join(' / ') : '-';
-                    const lotAddressDisplay = parcel.lotAddress
-                        ? (parcel.isMountain ? `${parcel.lotAddress} (산)` : parcel.lotAddress) : '-';
+                    const effectiveLotAddress = parcel.lotAddress || (singleParcelLog ? log.lotAddress : '');
+                    const lotAddressDisplay = effectiveLotAddress
+                        ? (parcel.isMountain ? `${effectiveLotAddress} (산)` : effectiveLotAddress) : '-';
 
                     rows.push({
                         ...log,
@@ -3159,7 +3176,7 @@ class SoilSampleManager extends window.BaseSampleManager {
                         _lotAddress: lotAddressDisplay,
                         _cropsDisplay: cropsDisplay,
                         _areaDisplay: areaDisplay,
-                        _parcelPurpose: parcel.purpose || ''
+                        _parcelPurpose: window.SoilLogRecord.resolveParcelPurpose(parcel.purpose, log)
                     });
                     subLotIndex++;
 
@@ -3188,7 +3205,7 @@ class SoilSampleManager extends window.BaseSampleManager {
                                 _lotAddress: lotAddress,
                                 _cropsDisplay: subLotCropsDisplay,
                                 _areaDisplay: subAreaDisplay,
-                                _parcelPurpose: parcel.purpose || ''
+                                _parcelPurpose: window.SoilLogRecord.resolveParcelPurpose(parcel.purpose, log)
                             });
                             subLotIndex++;
                         });
