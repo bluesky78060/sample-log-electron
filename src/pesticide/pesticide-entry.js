@@ -31,6 +31,9 @@ import '../shared/excel-import-manager.js';
 
 // Data
 import '../cropData.js';
+// 작물 데이터 자체 업로드 로더 (SAMPL-1-126): cropData.js 뒤에 로드해 window.CROP_DATA 교체 가능
+import '../shared/crop-data-loader.js';
+window.CropDataLoader?.loadCropDataOnStartup?.(); // fire-and-forget (await 금지)
 // 정적 시·군 데이터 제거 - 자동완성은 juso API 단독
 import '../shared/pesticide-data.js';
 import '../shared/pesticide-name-map.js';

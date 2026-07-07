@@ -802,6 +802,82 @@ document.getElementById('mrlClearCacheBtn')?.addEventListener('click', () => {
 updateMrlStatusUI();
 
 // ========================================
+// 작물 데이터 관리 UI (SAMPL-1-126)
+// ========================================
+
+// 상태 박스 갱신
+async function updateCropDataStatusUI() {
+    const verEl = document.getElementById('cropDataVersion');
+    const countEl = document.getElementById('cropDataCount');
+    const updEl = document.getElementById('cropDataUpdatedAt');
+    const srcEl = document.getElementById('cropDataSource');
+    if (!verEl || !countEl || !updEl || !srcEl) return;
+
+    const count = Array.isArray(window.CROP_DATA) ? window.CROP_DATA.length : 0;
+    countEl.textContent = count ? `${count.toLocaleString()}건` : '-';
+
+    let envelope = null;
+    try {
+        envelope = await window.CropDataLoader?.readLocalEnvelope?.();
+    } catch { /* ignore */ }
+
+    if (envelope) {
+        verEl.textContent = envelope.version || '-';
+        updEl.textContent = envelope.updatedAt ? String(envelope.updatedAt).slice(0, 10) : '-';
+        srcEl.textContent = window.firebaseConfig?.isEnabled?.() ? '로컬 + 클라우드' : '로컬';
+    } else {
+        verEl.textContent = '내장 기본값';
+        updEl.textContent = '-';
+        srcEl.textContent = '앱 내장';
+    }
+}
+
+// 업로드 버튼
+document.getElementById('cropDataUploadBtn')?.addEventListener('click', async () => {
+    const Loader = window.CropDataLoader;
+    if (!Loader) { showToast('작물 데이터 모듈 로드 실패', 'error'); return; }
+
+    const fileInput = document.getElementById('cropDataFile');
+    const file = fileInput?.files?.[0];
+    if (!file) { showToast('업로드할 .xlsx 파일을 선택하세요', 'warning'); return; }
+
+    const btn = document.getElementById('cropDataUploadBtn');
+    const progress = document.getElementById('cropDataProgress');
+    btn.disabled = true;
+    btn.textContent = '⏳ 처리 중...';
+    progress?.classList.remove('hidden');
+
+    try {
+        const buf = await file.arrayBuffer();
+        const parsed = Loader.parseCropExcelFile(buf); // 실패 시 throw → 기존 데이터 보존
+        const prevCount = Array.isArray(window.CROP_DATA) ? window.CROP_DATA.length : 0;
+
+        const ok = confirm(
+            `작물 ${parsed.length.toLocaleString()}건을 불러왔습니다.\n` +
+            `(기존 ${prevCount.toLocaleString()}건 → 신규 ${parsed.length.toLocaleString()}건)\n\n` +
+            '적용하시겠습니까?'
+        );
+        if (!ok) return;
+
+        const versionLabel = new Date().toISOString().slice(0, 10);
+        await Loader.saveCropDataUpload(parsed, versionLabel);
+
+        showToast(`작물 데이터가 갱신되었습니다 (${parsed.length.toLocaleString()}건)`, 'success');
+        if (fileInput) fileInput.value = '';
+        await updateCropDataStatusUI();
+    } catch (e) {
+        showToast(`작물 데이터 처리 실패: ${e.message}`, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '📤 업로드';
+        progress?.classList.add('hidden');
+    }
+});
+
+// 페이지 로드 시 상태 표시
+updateCropDataStatusUI();
+
+// ========================================
 // 네트워크 접근 제어 UI
 // ========================================
 
