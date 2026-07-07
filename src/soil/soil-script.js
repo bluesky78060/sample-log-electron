@@ -3599,6 +3599,9 @@ class SoilSampleManager extends window.BaseSampleManager {
         this.form.reset();
         // yearSelect 복원: form.reset()이 yearSelect를 첫 옵션(2025)으로 되돌리므로 복원
         { const _yearSelect = document.getElementById('yearSelect'); if (_yearSelect && this.selectedYear) _yearSelect.value = this.selectedYear; }
+        // landClass1 복원: option.selected는 attribute가 아닌 property로 설정되어 있어
+        // form.reset()이 첫 옵션(개량제)으로 되돌리므로 기본값(농가의뢰)을 명시적으로 복원
+        if (this.landClass1Select) this.landClass1Select.value = LAND_CLASS1_DEFAULT;
         setTimeout(() => {
             if (receptionNumber && this.receptionNumberInput) this.receptionNumberInput.value = receptionNumber;
             if (date && this.dateInput) this.dateInput.value = date;

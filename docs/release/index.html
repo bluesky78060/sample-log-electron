@@ -598,9 +598,58 @@
         <!-- 타임라인 -->
         <div class="timeline">
 
-            <!-- v1.16.1 -->
+            <!-- v1.16.3 -->
             <div class="version-entry">
                 <div class="version-dot latest"></div>
+                <div class="version-card">
+                    <div class="version-card-header">
+                        <div>
+                            <div class="version-meta">
+                                <span class="version-number">v1.16.3</span>
+                                <span class="version-date">2026-07-07</span>
+                            </div>
+                            <div class="version-title">토양 초기화 버튼 경지구분 기본값 복원 · 작물 데이터 갱신</div>
+                        </div>
+                        <div class="badge-row">
+                            <span class="badge badge-latest">★ 최신</span>
+                            <span class="badge badge-fix">버그수정</span>
+                        </div>
+                    </div>
+                    <ul class="change-list">
+                        <li><strong>토양 시료정보 "초기화" 버튼 클릭 시 경지구분 기본값(농가의뢰)이 풀리던 문제 해결</strong> — 초기화 버튼을 누르면 경지구분이 첫 번째 항목(개량제)으로 바뀌어버리던 버그를 바로잡아, 항상 기본값인 '농가의뢰'로 복원됩니다.</li>
+                        <li><strong>작물 코드 데이터 2026-07-01 기준 갱신</strong> — 신규 작물 10종 추가, 표시 제외된 1종 반영, 명칭 변경 1건(산마늘→산마늘(명이나물)) 및 일부 작물의 분류 정확도 개선.</li>
+                        <li>사용설명서에 최신 버전 다운로드 링크 추가.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- v1.16.2 -->
+            <div class="version-entry">
+                <div class="version-dot"></div>
+                <div class="version-card">
+                    <div class="version-card-header">
+                        <div>
+                            <div class="version-meta">
+                                <span class="version-number">v1.16.2</span>
+                                <span class="version-date">2026-06-30</span>
+                            </div>
+                            <div class="version-title">토양 그룹 수정 시 입력값 사라짐 · 중복 등록 문제 해결</div>
+                        </div>
+                        <div class="badge-row">
+                            <span class="badge badge-fix">버그수정</span>
+                        </div>
+                    </div>
+                    <ul class="change-list">
+                        <li><strong>토양 그룹 수정 시 구분·용도·작물명·면적이 사라지던 문제 해결</strong> — 여러 필지가 묶인 시료를 "수정"하면 필지별 구분·용도·작물명·면적이 빈 칸으로 떠서 다시 입력해야 했고, 그 과정에서 같은 접수번호로 중복 등록되던 문제를 바로잡았습니다. 이제 기존 입력값이 그대로 복원됩니다.</li>
+                        <li>목록 화면에서도 일부 시료의 작물/면적이 '-'로 비어 보이던 경우를 함께 개선했습니다.</li>
+                        <li>값이 비어 보이던 기존 시료도 한 번 수정·저장하면 자동으로 정상화됩니다.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- v1.16.1 -->
+            <div class="version-entry">
+                <div class="version-dot"></div>
                 <div class="version-card">
                     <div class="version-card-header">
                         <div>
@@ -611,7 +660,6 @@
                             <div class="version-title">MRL 검색 정확도 향상 · 농약 용도 공식 데이터 연동</div>
                         </div>
                         <div class="badge-row">
-                            <span class="badge badge-latest">★ 최신</span>
                             <span class="badge badge-fix">개선</span>
                         </div>
                     </div>
