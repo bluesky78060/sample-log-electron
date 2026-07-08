@@ -3391,10 +3391,12 @@ class SoilSampleManager extends window.BaseSampleManager {
             }
             tr.appendChild(tdAddress);
 
-            // 필지 주소
+            // 필지 주소 (SAMPL-1-130: 저장값은 시도 포함 유지, 화면 표시에서만 시도 제거)
             const tdLotAddress = document.createElement('td');
             tdLotAddress.className = 'col-lot-address';
-            tdLotAddress.textContent = row._lotAddress;
+            const displayLotAddress = row._lotAddress && typeof SIDO_PATTERN !== 'undefined' && SIDO_PATTERN.test(row._lotAddress)
+                ? row._lotAddress.replace(SIDO_PATTERN, '') : row._lotAddress;
+            tdLotAddress.textContent = displayLotAddress;
             if (row.addressVerified === false) {
                 tdLotAddress.classList.add('address-invalid');
                 tdLotAddress.title = '지번 주소가 VWORLD에서 확인되지 않았습니다';

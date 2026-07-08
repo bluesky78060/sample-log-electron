@@ -3656,9 +3656,12 @@ input[type="number"] {
     text-align: center;
 }
 
-/* 주소와 필지 주소는 왼쪽 정렬 (제목은 가운데, 데이터는 왼쪽) */
-.data-table td:nth-child(9),
-.data-table td:nth-child(10) {
+/* 주소와 필지 주소는 왼쪽 정렬 (제목은 가운데, 데이터는 왼쪽)
+   SAMPL-1-131: 위치기반(:nth-child) 선택자는 경지구분/공익직불제 등 컬럼이
+   추가될 때마다 실제 위치가 밀려 엉뚱한 컬럼에 적용되는 문제가 있어,
+   시맨틱 클래스(col-address/col-lot-address) 기반으로 변경 — 컬럼 순서 변경에 안전. */
+.data-table td.col-address,
+.data-table td.col-lot-address {
     text-align: left;
 }
 
