@@ -997,6 +997,16 @@ class HeuktoramManager {
             e.preventDefault();
             activeEl.blur();
             this.moveFocus(rowIdx - 1, colIdx);
+        } else if (e.key === 'ArrowLeft') {
+            // 좌우도 상하와 동일하게 인접 셀로 이동(무조건 네비게이션).
+            // direction=-1: 숨김 컬럼 스킵 방향을 왼쪽으로.
+            e.preventDefault();
+            activeEl.blur();
+            this.moveFocus(rowIdx, colIdx - 1, -1);
+        } else if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            activeEl.blur();
+            this.moveFocus(rowIdx, colIdx + 1, 1);
         }
     }
 
