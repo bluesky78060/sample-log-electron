@@ -4138,7 +4138,16 @@ class SoilSampleManager extends window.BaseSampleManager {
                 this.firebaseSaveRecords(changedLogs);
                 this.filterAndRenderLogs();
                 if (this.selectAllCheckbox) { this.selectAllCheckbox.checked = false; this.selectAllCheckbox.indeterminate = false; }
-                this.showToast(`${changedLogs.length}건이 ${actionLabel}되었습니다.`, 'success');
+                this.updateSelectedCount();
+
+                // 현재 완료여부 필터에 의해 처리 대상이 목록에서 즉시 숨겨지는 경우 안내
+                const filterValue = document.getElementById('completedFilter')?.value;
+                const hiddenByFilter = (filterValue === 'incomplete' && newStatus === true)
+                    || (filterValue === 'completed' && newStatus === false);
+                const hiddenNote = hiddenByFilter
+                    ? ` ("${filterValue === 'incomplete' ? '미완료' : '완료'}" 필터로 인해 목록에서 숨겨짐)`
+                    : '';
+                this.showToast(`${changedLogs.length}건이 ${actionLabel}되었습니다.${hiddenNote}`, 'success');
             });
         }
 

@@ -367,6 +367,7 @@
 
         /* 상태 정보 패널 (인라인 스타일 오버라이드) */
         [data-theme="dark"] #cacheStatusInfo,
+        [data-theme="dark"] #cropDataStatus,
         [data-theme="dark"] #networkAccessSection div[style*="background: #f8fafc"] {
             background: #292524 !important;
             border-color: #57534E !important;
@@ -374,7 +375,13 @@
 
         /* 정보 패널 내부 텍스트 */
         [data-theme="dark"] #cacheStatusInfo div[style*="color: #64748b"],
+        [data-theme="dark"] #cropDataStatus div[style*="color: #64748b"],
         [data-theme="dark"] #networkAccessSection div[style*="color: #64748b"] {
+            color: #A8A29E !important;
+        }
+
+        /* 작물 데이터 업로드 진행 표시 텍스트 */
+        [data-theme="dark"] #cropDataProgress div[style*="color: #64748b"] {
             color: #A8A29E !important;
         }
 
