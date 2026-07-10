@@ -4163,6 +4163,7 @@ class SoilSampleManager extends window.BaseSampleManager {
                 this.firebaseDeleteRecords(selectedIds);
                 this.filterAndRenderLogs();
                 if (this.selectAllCheckbox) { this.selectAllCheckbox.checked = false; this.selectAllCheckbox.indeterminate = false; }
+                this.updateSelectedCount();
                 if (selectedIds.map(String).includes(String(this.editingId))) this.cancelEditMode();
                 this.showToast(`${selectedIds.length}건이 삭제되었습니다.`, 'success');
             });
