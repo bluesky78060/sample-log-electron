@@ -1209,9 +1209,13 @@ textarea:focus {
     line-height: 1.4;
 }
 
-/* 채취장소 왼쪽 정렬 */
+/* 채취장소/주작목/비고 - 한 줄로 전체 텍스트 표시 (잘림/줄바꿈 없음) */
 .water-navbar ~ .main-content td.text-truncate {
     text-align: left;
+    white-space: nowrap;
+    overflow: visible;
+    text-overflow: unset;
+    max-width: none;
 }
 
 /* ═══════════════════════════════════════

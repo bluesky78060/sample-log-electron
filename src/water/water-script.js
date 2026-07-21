@@ -129,12 +129,22 @@ class WaterSampleManager extends window.BaseSampleManager {
             ? addressOnly.replace(SIDO_PATTERN, '')
             : (addressOnly || '-');
 
+        // 채취장소: 시도 패턴이 있을 때만 제거 (주소 컬럼과 동일 규칙)
+        const samplingLocationRaw = log.samplingLocation || '-';
+        const displaySamplingLocation = samplingLocationRaw !== '-' && SIDO_PATTERN.test(samplingLocationRaw)
+            ? samplingLocationRaw.replace(SIDO_PATTERN, '')
+            : samplingLocationRaw;
+
         // XSS 방지
         const safeName = escapeHTML(log.name || '-');
-        const safeSamplingLocation = escapeHTML(log.samplingLocation || '-');
+        const safeSamplingLocation = escapeHTML(displaySamplingLocation);
+        const safeSamplingLocationFull = escapeHTML(samplingLocationRaw);
         const safeSampleName = escapeHTML(log.sampleName || '-');
         const safeMainCrop = escapeHTML(log.mainCrop || '-');
-        const safePhone = escapeHTML(log.phoneNumber || '-');
+        const displayPhone = log.phoneNumber && window.SampleUtils?.formatPhoneNumber
+            ? (window.SampleUtils.formatPhoneNumber(log.phoneNumber) || log.phoneNumber)
+            : (log.phoneNumber || '-');
+        const safePhone = escapeHTML(displayPhone);
         const noteDisplay = [log.sampleNote, log.note].filter(Boolean).join(' / ') || '-';
         const safeNote = escapeHTML(noteDisplay);
         const safeDisplayAddress = escapeHTML(displayAddress);
@@ -221,7 +231,7 @@ class WaterSampleManager extends window.BaseSampleManager {
         // 11. Sampling location (with tooltip)
         const tdSamplingLocation = document.createElement('td');
         tdSamplingLocation.className = 'text-truncate';
-        tdSamplingLocation.dataset.tooltip = safeSamplingLocation;
+        tdSamplingLocation.dataset.tooltip = safeSamplingLocationFull;
         tdSamplingLocation.textContent = safeSamplingLocation;
         row.appendChild(tdSamplingLocation);
 

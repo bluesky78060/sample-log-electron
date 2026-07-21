@@ -225,6 +225,18 @@ class PesticideSampleManager extends window.BaseSampleManager {
     }
 
     // ========================================
+    // Override: 연락처 자동 하이픈 포맷팅
+    // (base의 window.formatPhoneNumber 의존을 SampleUtils 경로로 대체)
+    // ========================================
+
+    setupPhoneFormatting() {
+        const phoneInput = document.getElementById('phoneNumber');
+        if (phoneInput && window.SampleUtils?.setupPhoneNumberInput) {
+            window.SampleUtils.setupPhoneNumberInput(phoneInput);
+        }
+    }
+
+    // ========================================
     // Override: 뷰 초기화
     // ========================================
 
@@ -1241,7 +1253,10 @@ class PesticideSampleManager extends window.BaseSampleManager {
             const producerAddrWithoutSido = (row.producerAddress || '-').replace(/^경상북도\s*/, '');
             const safeProducerAddress = escapeHTML(producerAddrWithoutSido);
             const safeRequestContent = escapeHTML(row.requestContent || '-');
-            const safePhone = escapeHTML(row.phoneNumber || '-');
+            const displayPhone = row.phoneNumber && window.SampleUtils?.formatPhoneNumber
+                ? (window.SampleUtils.formatPhoneNumber(row.phoneNumber) || row.phoneNumber)
+                : (row.phoneNumber || '-');
+            const safePhone = escapeHTML(displayPhone);
             const safeNote = escapeHTML(row.note || '-');
 
             tr.dataset.id = row.id;

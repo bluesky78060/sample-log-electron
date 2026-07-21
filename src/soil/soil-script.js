@@ -3423,7 +3423,9 @@ class SoilSampleManager extends window.BaseSampleManager {
 
             // 전화번호
             const tdPhone = document.createElement('td');
-            tdPhone.textContent = row.phoneNumber || '-';
+            tdPhone.textContent = row.phoneNumber && window.SampleUtils?.formatPhoneNumber
+                ? (window.SampleUtils.formatPhoneNumber(row.phoneNumber) || row.phoneNumber)
+                : (row.phoneNumber || '-');
             tr.appendChild(tdPhone);
 
             // 수령방법

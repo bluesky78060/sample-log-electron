@@ -146,6 +146,18 @@ class CompostSampleManager extends window.BaseSampleManager {
     }
 
     // ========================================
+    // Override: 연락처 자동 하이픈 포맷팅
+    // (base의 window.formatPhoneNumber 의존을 SampleUtils 경로로 대체)
+    // ========================================
+
+    setupPhoneFormatting() {
+        const phoneInput = document.getElementById('phoneNumber');
+        if (phoneInput && window.SampleUtils?.setupPhoneNumberInput) {
+            window.SampleUtils.setupPhoneNumberInput(phoneInput);
+        }
+    }
+
+    // ========================================
     // Override: 뷰 초기화
     // ========================================
 
@@ -250,7 +262,10 @@ class CompostSampleManager extends window.BaseSampleManager {
         const safeName = escapeHTML(logItem.name || '-');
         const safeDisplayAddress = escapeHTML(displayAddress);
         const safeFarmAddress = escapeHTML(logItem.farmAddress || '-');
-        const safePhone = escapeHTML(logItem.phoneNumber || '-');
+        const displayPhone = logItem.phoneNumber && window.SampleUtils?.formatPhoneNumber
+            ? (window.SampleUtils.formatPhoneNumber(logItem.phoneNumber) || logItem.phoneNumber)
+            : (logItem.phoneNumber || '-');
+        const safePhone = escapeHTML(displayPhone);
         const safeNote = escapeHTML(logItem.note || '-');
 
         // 법인여부 및 생년월일/법인번호

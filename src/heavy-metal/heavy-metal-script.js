@@ -47,6 +47,17 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
     }
 
     // ========================================
+    // 오버라이드: 연락처 자동 하이픈 포맷팅
+    // (base의 window.formatPhoneNumber 의존을 SampleUtils 경로로 대체)
+    // ========================================
+    setupPhoneFormatting() {
+        const phoneInput = document.getElementById('phoneNumber');
+        if (phoneInput && window.SampleUtils?.setupPhoneNumberInput) {
+            window.SampleUtils.setupPhoneNumberInput(phoneInput);
+        }
+    }
+
+    // ========================================
     // 오버라이드: 뷰 전환 (listViewStale 지원)
     // ========================================
     switchView(viewName) {
@@ -89,11 +100,20 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
             ? addressRoadVal.replace(SIDO_PATTERN, '')
             : addressRoadVal;
 
+        // 채취장소: 시도 패턴이 있을 때만 제거 (주소 컬럼과 동일 규칙)
+        const samplingLocationRaw = item.samplingLocation || '-';
+        const displaySamplingLocation = samplingLocationRaw !== '-' && SIDO_PATTERN.test(samplingLocationRaw)
+            ? samplingLocationRaw.replace(SIDO_PATTERN, '')
+            : samplingLocationRaw;
+
         // XSS 방지
         const safeName = escapeHTML(item.name || '-');
         const safeDisplayAddress = escapeHTML(displayAddress);
-        const safePhone = escapeHTML(item.phoneNumber || '-');
-        const safeSamplingLocation = escapeHTML(item.samplingLocation || '-');
+        const displayPhone = item.phoneNumber && window.SampleUtils?.formatPhoneNumber
+            ? (window.SampleUtils.formatPhoneNumber(item.phoneNumber) || item.phoneNumber)
+            : (item.phoneNumber || '-');
+        const safePhone = escapeHTML(displayPhone);
+        const safeSamplingLocation = escapeHTML(displaySamplingLocation);
         const safeCropName = escapeHTML(item.cropName || '-');
         const safeNote = escapeHTML(item.note || '-');
 
