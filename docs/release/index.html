@@ -598,9 +598,34 @@
         <!-- 타임라인 -->
         <div class="timeline">
 
-            <!-- v1.17.5 -->
+            <!-- v1.17.6 -->
             <div class="version-entry">
                 <div class="version-dot latest"></div>
+                <div class="version-card">
+                    <div class="version-card-header">
+                        <div>
+                            <div class="version-meta">
+                                <span class="version-number">v1.17.6</span>
+                                <span class="version-date">2026-07-28</span>
+                            </div>
+                            <div class="version-title">수질 접수 수정 후 목록으로 돌아오지 않던 문제 수정</div>
+                        </div>
+                        <div class="badge-row">
+                            <span class="badge badge-latest">★ 최신</span>
+                            <span class="badge badge-fix">버그수정</span>
+                        </div>
+                    </div>
+                    <ul class="change-list">
+                        <li><strong>수질 접수 내역을 수정하고 저장하면 목록 화면으로 돌아오지 않아 저장이 안 된 것처럼 보이던 문제를 수정했습니다.</strong> 저장 자체는 정상적으로 이루어지고 있었으나, 저장 직후 폼을 초기화하는 과정에서 오류가 발생해 화면 전환이 멈춰 있었습니다.</li>
+                        <li>수질 접수 폼에서 검사항목을 "생활용수 ↔ 농업용수"로 전환할 때 내부 오류가 발생하던 문제를 함께 수정했습니다.</li>
+                        <li>같은 원인으로 영향받던 신규 등록 후 폼 초기화, 네비게이션 "초기화" 버튼, "취소" 버튼 동작도 정상화되었습니다.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- v1.17.5 -->
+            <div class="version-entry">
+                <div class="version-dot"></div>
                 <div class="version-card">
                     <div class="version-card-header">
                         <div>
@@ -611,7 +636,6 @@
                             <div class="version-title">수질·중금속 채취장소 표시 개선 · 연락처 하이픈 표시 전체 시료 통일</div>
                         </div>
                         <div class="badge-row">
-                            <span class="badge badge-latest">★ 최신</span>
                             <span class="badge badge-fix">버그수정</span>
                         </div>
                     </div>

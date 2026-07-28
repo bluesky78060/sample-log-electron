@@ -508,8 +508,10 @@ class WaterSampleManager extends window.BaseSampleManager {
         const livingWaterRadio = document.querySelector('input[name="testItems"][value="생활용수"]');
         if (livingWaterRadio) {
             livingWaterRadio.checked = true;
-            this.livingWaterItems.classList.add('active');
-            this.agriculturalWaterItems.classList.remove('active');
+            // 두 컨테이너는 ac54454(수질: 검사항목 상세정보 삭제)에서 마크업이 제거되어 항상 null —
+            // editSample()의 동일 가드와 같은 이유 (SAMPL-1-144)
+            if (this.livingWaterItems) this.livingWaterItems.classList.add('active');
+            if (this.agriculturalWaterItems) this.agriculturalWaterItems.classList.remove('active');
         }
 
         // 채취장소 및 주작목 및 비고 초기화
@@ -1216,12 +1218,14 @@ class WaterSampleManager extends window.BaseSampleManager {
         const testItemRadios = document.querySelectorAll('input[name="testItems"]');
         testItemRadios.forEach(radio => {
             radio.addEventListener('change', () => {
+                // 두 컨테이너는 ac54454(수질: 검사항목 상세정보 삭제)에서 마크업이 제거되어 항상 null —
+                // editSample()/onAfterFormReset()의 동일 가드와 같은 이유 (SAMPL-1-144)
                 if (radio.value === '생활용수') {
-                    this.livingWaterItems.classList.add('active');
-                    this.agriculturalWaterItems.classList.remove('active');
+                    if (this.livingWaterItems) this.livingWaterItems.classList.add('active');
+                    if (this.agriculturalWaterItems) this.agriculturalWaterItems.classList.remove('active');
                 } else {
-                    this.livingWaterItems.classList.remove('active');
-                    this.agriculturalWaterItems.classList.add('active');
+                    if (this.livingWaterItems) this.livingWaterItems.classList.remove('active');
+                    if (this.agriculturalWaterItems) this.agriculturalWaterItems.classList.add('active');
                 }
             });
         });
