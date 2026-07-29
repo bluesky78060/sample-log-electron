@@ -186,8 +186,10 @@ describe('흙토람 토양 서식 — 실물 대조', () => {
 
     it('12. 안내문이 굵은 빨강이다', () => {
         // 실물 fontId 4 = <b/> + color indexed="10". 경고문이 눈에 띄어야 읽는다.
-        const font = objectLiteral('cellA2.s').font
-        expect(font.bold).toBe(true)
-        expect(font.color.rgb).toBe('FFFF0000')
+        const a2 = objectLiteral('cellA2.s')
+        expect(a2.font.bold).toBe(true)
+        expect(a2.font.color.rgb).toBe('FFFF0000')
+        // 실물 borderId 4 = bottom thin. A1은 테두리가 없어 우연이 아니다.
+        expect(a2.border.bottom.style).toBe('thin')
     })
 })

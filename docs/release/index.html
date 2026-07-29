@@ -598,9 +598,36 @@
         <!-- 타임라인 -->
         <div class="timeline">
 
-            <!-- v1.17.6 -->
+            <!-- v1.17.7 -->
             <div class="version-entry">
                 <div class="version-dot latest"></div>
+                <div class="version-card">
+                    <div class="version-card-header">
+                        <div>
+                            <div class="version-meta">
+                                <span class="version-number">v1.17.7</span>
+                                <span class="version-date">2026-07-29</span>
+                            </div>
+                            <div class="version-title">흙토람 일괄입력 양식을 실물과 일치시킴</div>
+                        </div>
+                        <div class="badge-row">
+                            <span class="badge badge-latest">★ 최신</span>
+                            <span class="badge badge-fix">버그수정</span>
+                        </div>
+                    </div>
+                    <ul class="change-list">
+                        <li><strong>내보낸 양식에서 날짜를 고쳐도 그대로 남습니다</strong> — 흙토람 일괄입력 양식을 내려받아 엑셀에서 날짜 칸을 수정하면 <strong>숫자로 바뀌어</strong> 흙토람이 읽지 못하는 경우가 있었습니다. 모든 칸을 글자 형식으로 고정했습니다.</li>
+                        <li><strong>흙토람이 받는 서식과 똑같이 맞췄습니다</strong> — 시트 이름, 필수 항목 표시(*), 안내문, 행 높이를 흙토람에서 내려받는 서식 그대로 맞췄습니다.</li>
+                        <li><strong>참고용 코드 목록을 숨겼습니다</strong> — 양식 오른쪽 끝의 코드 목록이 입력할 칸으로 보이던 것을 감췄습니다. 드롭다운 선택은 그대로 동작합니다.</li>
+                        <li><strong>행을 덧붙여도 선택 목록이 나옵니다</strong> — 내보낸 뒤 엑셀에서 줄을 추가해도 용도구분·성토여부 칸에서 목록을 고를 수 있습니다.</li>
+                        <li><strong>안내문이 눈에 잘 띕니다</strong> — 양식 위쪽 주의사항을 흙토람 원본과 같이 <strong>굵은 빨간 글씨</strong>로 표시하고 아래 구분선을 넣었습니다.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- v1.17.6 -->
+            <div class="version-entry">
+                <div class="version-dot"></div>
                 <div class="version-card">
                     <div class="version-card-header">
                         <div>
@@ -611,7 +638,6 @@
                             <div class="version-title">수질 접수 수정 후 목록으로 돌아오지 않던 문제 수정</div>
                         </div>
                         <div class="badge-row">
-                            <span class="badge badge-latest">★ 최신</span>
                             <span class="badge badge-fix">버그수정</span>
                         </div>
                     </div>

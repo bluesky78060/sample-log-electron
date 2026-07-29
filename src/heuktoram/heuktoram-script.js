@@ -1296,7 +1296,10 @@ class HeuktoramManager {
                     alignment: { horizontal: 'left', vertical: 'center', wrapText: true },
                     // 실물은 굵은 빨강이다(fontId 4 = <b/> + color indexed="10").
                     // 안내문이 눈에 띄어야 사용자가 읽는다.
-                    font: { bold: true, sz: 11, color: { rgb: 'FFFF0000' }, name: '맑은 고딕' }
+                    // 아래 구분선도 실물에 있다(borderId 4 = bottom thin).
+                    // A1은 borderId 0(없음)이라 우연이 아니다 (SAMPL-1-146).
+                    font: { bold: true, sz: 11, color: { rgb: 'FFFF0000' }, name: '맑은 고딕' },
+                    border: { bottom: { style: 'thin', color: { rgb: 'FF000000' } } }
                 };
             }
 
