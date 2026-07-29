@@ -28,6 +28,19 @@ beforeAll(() => {
 const col = (c) => XLSX.utils.encode_col(c)
 
 /**
+ * 흙토람 내보내기의 dataStyle을 집는다.
+ * ⚠️ `const dataStyle`이 파일에 둘 있다 — 흙토람용과 다른 내보내기용.
+ *    위치를 지정하지 않으면 파일 순서에 의존한다(플랜 리뷰 MINOR-1).
+ */
+function soilDataStyle() {
+    // 호출부나 주석이 아니라 **메서드 정의**를 앵커로 쓴다.
+    // 단순 문자열이면 앞쪽 호출부·주석에 걸려 엉뚱한 dataStyle을 조용히 집을 수 있다.
+    const at = SRC.indexOf('applyHeaderStyles(ws, wsData) {')
+    expect(at, 'applyHeaderStyles 정의를 찾지 못했다').toBeGreaterThan(-1)
+    return objectLiteral('const dataStyle', at)
+}
+
+/**
  * 실물은 줄바꿈이 CRLF, 우리는 LF다. Excel은 둘 다 같은 줄바꿈으로 렌더하므로
  * 기능 차이가 없다 — 비교 전에 맞춘다.
  * ⚠️ xlsx-js-style은 xlsx와 달리 CR을 보존한다. 이 저장소는 전자를 쓴다.
@@ -51,8 +64,8 @@ function runMethod(name, params, args) {
  * 소스의 객체 리터럴을 실제 객체로 평가한다.
  * ⚠️ 게으른 정규식은 중첩 괄호(border: { ... })에서 끊긴다 — 괄호 균형으로 잡는다.
  */
-function objectLiteral(decl) {
-    const at = SRC.indexOf(`${decl} = {`)
+function objectLiteral(decl, after = 0) {
+    const at = SRC.indexOf(`${decl} = {`, after)
     expect(at, `${decl} 리터럴을 찾지 못했다`).toBeGreaterThan(-1)
     let i = SRC.indexOf('{', at), depth = 0, end = -1
     for (let k = i; k < SRC.length; k++) {
@@ -181,7 +194,7 @@ describe('흙토람 토양 서식 — 실물 대조', () => {
     it('11. 데이터 셀이 텍스트 서식이다', () => {
         // 없으면 사용자가 내보낸 뒤 날짜 칸을 고칠 때 Excel이 일련번호로 바꾼다.
         // xlsx-js-style은 numFmt: '@'를 numFmtId="49"로 내보낸다(실물과 동일).
-        expect(objectLiteral('const dataStyle').numFmt).toBe('@')
+        expect(soilDataStyle().numFmt).toBe('@')
     })
 
     it('12. 안내문이 굵은 빨강이다', () => {
@@ -191,5 +204,34 @@ describe('흙토람 토양 서식 — 실물 대조', () => {
         expect(a2.font.color.rgb).toBe('FFFF0000')
         // 실물 borderId 4 = bottom thin. A1은 테두리가 없어 우연이 아니다.
         expect(a2.border.bottom.style).toBe('thin')
+    })
+
+    // 🚨 여기까지는 "그 객체가 소스에 있다"만 증명했다 (SAMPL-2-21).
+    //    xlsx-js-style이 실제 .xlsx로 직렬화하는지는 사람이 손으로만 확인했다.
+    //    이제 테스트가 한다 — 프로덕션과 **같은 write 옵션**으로 돌린다.
+    //
+    // ⚠️ 여전히 증명하지 못하는 것: 내보내기 코드가 이 객체를 실제 셀에 **붙이는지**.
+    //    그 연결은 아직 문자열 검색에 기댄다. 닫으려면 export 메서드가 워크시트를
+    //    주입받게 고쳐 진짜 산출물을 검사해야 한다.
+    it('13. 추출한 스타일 객체가 올바른 OOXML로 직렬화된다', async () => {
+        const JSZip = (await import('jszip')).default
+
+        const sheet = XLSX.utils.aoa_to_sheet([['guide'], ['data']])
+        sheet.A1.s = objectLiteral('cellA2.s')   // 안내문 스타일
+        sheet.A2.s = soilDataStyle()             // 데이터 셀 스타일
+        const wb = XLSX.utils.book_new()
+        XLSX.utils.book_append_sheet(wb, sheet, 'T')
+
+        const zip = await JSZip.loadAsync(
+            XLSX.write(wb, { type: 'array', bookType: 'xlsx' }))
+        const styles = await zip.file('xl/styles.xml').async('string')
+
+        // 데이터 셀 — 텍스트 서식이 아니면 사용자가 고친 날짜가 숫자로 바뀐다
+        expect(styles, 'numFmt @ → numFmtId 49').toContain('numFmtId="49"')
+        expect(styles).toContain('applyNumberFormat="1"')
+        // 안내문 — 굵은 빨강 + 아래 구분선
+        expect(styles, '굵게').toContain('<b/>')
+        expect(styles, '빨강').toContain('rgb="FFFF0000"')
+        expect(styles, '아래 테두리').toContain('<bottom style="thin">')
     })
 })
