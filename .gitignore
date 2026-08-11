@@ -110,3 +110,11 @@ docs/.pdca-status.json
 
 # 구 빌드 잔재 (vite outDir=../docs 사용, src/dist는 불필요·키 노출 위험)
 src/dist/
+
+# AI PM 워크플로우 문서 — docs/ 쪽은 훅 통과용 파생물이다 (SAMPL-2-23)
+# 원본은 docs-internal/ai-pm/{티켓}/ 이며 git이 추적한다.
+# 빌드(restore-ai-pm-docs)가 자동 생성하므로 추적하면 같은 내용이 두 번 커밋된다.
+docs/00-discovery/
+docs/01-plan/
+docs/02-review/
+docs/03-code-review/

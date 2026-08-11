@@ -2,9 +2,30 @@
 const { test, expect } = require('@playwright/test');
 const path = require('path');
 
-const screenshotDir = path.join(__dirname, '../../docs/manual/images');
+/**
+ * 사용 설명서 스크린샷 캡처 (SAMPL-2-23)
+ *
+ * 평시 `npm test`에서는 실행하지 않는다. 이 스펙은 소스 트리(src/manual/images)에 파일을 쓰므로
+ * 매번 돌면 (a) E2E를 돌릴 때마다 git diff가 생기고, (b) .githooks/pre-push의 태그 게이트가
+ * src/ 오염을 차단하므로 태그 푸시 전에 스크린샷을 커밋해야 하는 상황이 된다.
+ *
+ * 설명서 화면을 갱신할 때만 의도적으로 실행한다:
+ *   npm run build                                   # 최신 docs/를 서빙 대상으로 만든다
+ *   UPDATE_SCREENSHOTS=1 npm run test:screenshots
+ *   npm run build                                   # 새 이미지를 해시 자산으로 설명서에 반영
+ *   git add -A src/manual/images docs/ && git commit
+ *
+ * 캡처 대상은 src/manual/index.html이 실제로 참조하는 화면만 둔다.
+ * 참조되지 않는 캡처는 어디에도 표시되지 않으면서 git 히스토리에 영구 잔존한다
+ * (이전에 03/05/06/07/08 5건 ~1MB가 그 상태였다. 설명서에 해당 화면을 넣을 때 되살릴 것).
+ */
+
+const screenshotDir = path.join(__dirname, '../../src/manual/images');
 
 test.describe('사용 설명서 스크린샷 캡처', () => {
+
+  test.skip(!process.env.UPDATE_SCREENSHOTS,
+    'UPDATE_SCREENSHOTS=1 일 때만 실행 (소스 트리에 파일을 씀)');
 
   test('01. 메인 화면', async ({ page }) => {
     await page.goto('/');
@@ -25,17 +46,6 @@ test.describe('사용 설명서 스크린샷 캡처', () => {
     });
   });
 
-  test('03. 토양 시료 - 필지 추가', async ({ page }) => {
-    await page.goto('/soil/');
-    await page.waitForLoadState('networkidle');
-
-    // 등록 뷰에서 필지 추가된 상태의 스크린샷
-    await page.screenshot({
-      path: path.join(screenshotDir, '03-soil-parcel.png'),
-      fullPage: false
-    });
-  });
-
   test('04. 토양 시료 - 목록 화면', async ({ page }) => {
     await page.goto('/soil/');
     await page.waitForLoadState('networkidle');
@@ -49,42 +59,6 @@ test.describe('사용 설명서 스크린샷 캡처', () => {
 
     await page.screenshot({
       path: path.join(screenshotDir, '04-soil-list.png'),
-      fullPage: false
-    });
-  });
-
-  test('05. 잔류농약 - 등록 화면', async ({ page }) => {
-    await page.goto('/pesticide/');
-    await page.waitForLoadState('networkidle');
-    await page.screenshot({
-      path: path.join(screenshotDir, '05-pesticide-register.png'),
-      fullPage: false
-    });
-  });
-
-  test('06. 수질 - 등록 화면', async ({ page }) => {
-    await page.goto('/water/');
-    await page.waitForLoadState('networkidle');
-    await page.screenshot({
-      path: path.join(screenshotDir, '06-water-register.png'),
-      fullPage: false
-    });
-  });
-
-  test('07. 퇴액비 - 등록 화면', async ({ page }) => {
-    await page.goto('/compost/');
-    await page.waitForLoadState('networkidle');
-    await page.screenshot({
-      path: path.join(screenshotDir, '07-compost-register.png'),
-      fullPage: false
-    });
-  });
-
-  test('08. 중금속 - 등록 화면', async ({ page }) => {
-    await page.goto('/heavy-metal/');
-    await page.waitForLoadState('networkidle');
-    await page.screenshot({
-      path: path.join(screenshotDir, '08-heavy-metal-register.png'),
       fullPage: false
     });
   });

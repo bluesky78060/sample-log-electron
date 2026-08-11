@@ -18,14 +18,16 @@ while read local_ref local_sha remote_ref remote_sha; do
   case "$remote_ref" in
     refs/tags/*)
       tag="${remote_ref#refs/tags/}"
-      dirty=$(git status --porcelain -- src/ package.json scripts/ 2>/dev/null)
+      # package-lock.json 포함: sync-version이 lock의 version도 갱신하므로(SAMPL-2-23)
+      # package.json만 검사하면 짝이 맞지 않는다
+      dirty=$(git status --porcelain -- src/ package.json package-lock.json scripts/ 2>/dev/null)
 
       if [ -n "$dirty" ]; then
         printf '\n\033[31m[X] Pre-tag check FAILED: %s 푸시 차단\033[0m\n\n' "$tag" >&2
-        printf 'src/, package.json, scripts/ 영역에 미커밋/미추적 파일이 있습니다:\n\n' >&2
+        printf 'src/, package.json, package-lock.json, scripts/ 영역에 미커밋/미추적 파일이 있습니다:\n\n' >&2
         printf '%s\n\n' "$dirty" >&2
         printf '해결:\n' >&2
-        printf '  git status --short -- src/ package.json scripts/\n' >&2
+        printf '  git status --short -- src/ package.json package-lock.json scripts/\n' >&2
         printf '  git add <files> && git commit -m "..."\n' >&2
         printf '  git push origin %s\n\n' "$tag" >&2
         printf '강제 우회(권장하지 않음): git push --no-verify origin %s\n\n' "$tag" >&2

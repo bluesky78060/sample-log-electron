@@ -156,9 +156,28 @@ JSON File (Auto-save)
 
 ### Build & 버전
 
-- 빌드 파이프라인: `build:css` (Tailwind) → `sync-version` → `vite build` → `docs/`
-- 버전 관리 3곳: `package.json` (소스) / `src/shared/constants.js` (자동 동기화) / `src/index.html` (수동, 폴백용)
-- `npm run sync-version`으로 constants.js 자동 반영
+- 빌드 파이프라인: `build:css` (Tailwind) → `sync-version` → `vite build` → `docs/` → `restore-ai-pm-docs`
+- **버전은 `package.json`만 고치면 된다.** `npm run sync-version`이 나머지 4곳을 자동 반영:
+  `src/shared/constants.js`(APP_VERSION) / `src/index.html`(#appVersion) /
+  `src/manual/index.html`(version-badge + footer) / `package-lock.json`(version, packages[""].version)
+- `docs/.nojekyll`은 `src/public/.nojekyll`에서 Vite가 복사한다. `emptyOutDir`가 dotfile까지 지우므로
+  `docs/`에 직접 만들면 다음 빌드에 사라진다 (SAMPL-2-23)
+- `docs/00~03` AI PM 워크플로우 문서는 빌드가 지운 뒤 `restore-ai-pm-docs`가 `docs-internal/ai-pm/`에서
+  자동 복원한다. **원본은 `docs-internal/ai-pm/{티켓}/`이며 `docs/` 쪽은 훅 통과용 파생물이다**
+  (그래서 `.gitignore` 대상 — 추적하면 같은 내용이 두 번 커밋된다).
+  신규 클론에서 빌드 전에 워크플로우 훅이 막히면 `node scripts/restore-ai-pm-docs.js`를 단독 실행하면 된다.
+
+**설명서 스크린샷 갱신** (평시 `npm test`에서는 실행되지 않는다 — 소스 트리를 더럽히지 않기 위해):
+
+```bash
+npm run build                                  # 스크린샷이 찍을 대상(docs/)을 최신화
+UPDATE_SCREENSHOTS=1 npm run test:screenshots  # src/manual/images/ 갱신
+npm run build                                  # 새 이미지를 해시 자산으로 설명서에 반영 (2패스 필수)
+```
+
+두 번째 빌드를 빼먹으면 `docs/manual/index.html`은 구 해시를, `src/manual/images/`는 신 이미지를 갖고
+**각자 자기 일관적이라 `check:docs`가 통과한다** — 낡은 스크린샷이 조용히 배포된다.
+캡처 대상은 `src/manual/index.html`이 실제로 참조하는 화면만 둔다 (미참조 캡처는 표시되지 않으면서 git에 영구 잔존).
 
 ### 릴리스 (GitHub Actions)
 
@@ -166,7 +185,18 @@ JSON File (Auto-save)
 git tag v1.7.55 && git push origin v1.7.55
 ```
 
-Windows(windows-latest) + Node 20에서 `npm run make` → GitHub Release 자동 생성. 태그 시 **`src/release/index.html`에 새 버전 항목 추가 필수** (docs/ + 테스트 프로젝트 동기화).
+Windows(windows-latest) + Node 20에서 `npm run make` → GitHub Release 자동 생성.
+태그 시 **`src/release/index.html`에 새 버전 항목 추가 필수** (이전 최신 항목의 `version-dot latest`·`badge-latest` 제거).
+빌드하면 `docs/release/index.html`에 자동 반영된다.
+
+> **테스트 프로젝트는 릴리스 동기화 대상이 아니다** (SAMPL-2-23에서 정정).
+> `sample-log-electron-test`는 v1.10.0에서 TypeScript로 분기된 독립 코드베이스이고
+> 릴리즈 노트도 v1.7.75에서 멈춰 있다. 메인 릴리스마다 맞추는 것은 불가능하며,
+> 기능 이식은 **별도 포팅 티켓**으로 진행한다 (선례 SAMPL-1-77).
+
+**커밋 시 `docs/`를 소스와 함께 넣어야 한다.** `src/`만 커밋하면 번들 해시가 어긋나
+GitHub Pages 웹 버전이 404가 된다 (v1.17.7 실제 사고 → SAMPL-2-22).
+`pre-push` 훅과 `npm run check:docs`가 이를 검사한다.
 
 ### 새 시료 타입 추가 시
 
