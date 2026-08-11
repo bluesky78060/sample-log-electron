@@ -179,6 +179,30 @@ npm run build                                  # 새 이미지를 해시 자산�
 **각자 자기 일관적이라 `check:docs`가 통과한다** — 낡은 스크린샷이 조용히 배포된다.
 캡처 대상은 `src/manual/index.html`이 실제로 참조하는 화면만 둔다 (미참조 캡처는 표시되지 않으면서 git에 영구 잔존).
 
+### main 브랜치 보호 (2026-08-11 적용)
+
+**main 직접 푸시는 차단된다.** `git push origin HEAD:main`은 거부되고, PR을 거쳐야 한다.
+
+| 규칙 | 설정 |
+| ---- | ---- |
+| 필수 CI | `check-docs-assets` (docs/ 자산 참조 정합성) |
+| 최신 상태 요구 | 예 (`strict`) — PR이 오래되면 main을 머지/리베이스해야 한다 |
+| 관리자도 준수 | 예 — `--no-verify`나 소유자 권한으로 우회 불가 |
+| force push / 브랜치 삭제 | 차단 |
+| 리뷰 승인 | 요구하지 않음 (1인 저장소에서 자기 PR은 승인할 수 없어 머지가 영구 불가해진다) |
+
+```bash
+git switch -c fix/작업이름
+git add -A docs/ src/ ...        # docs/를 소스와 함께 (참조 정합성)
+git commit -m "..."
+git push -u origin fix/작업이름
+gh pr create --fill
+gh pr checks --watch              # check-docs-assets 통과 대기
+gh pr merge --squash --delete-branch
+```
+
+태그 푸시는 브랜치 보호 대상이 아니므로 머지 후 그대로 진행한다.
+
 ### 릴리스 (GitHub Actions)
 
 ```bash
