@@ -4,14 +4,11 @@ name: Check docs assets
 # 즉 docs/의 자산 참조가 어긋난 채 main에 push되면 그 순간 웹 앱이 404로 깨진다.
 # v1.17.7(36acadb)이 실제로 이 상태로 배포됐다. (SAMPL-2-22)
 #
-# ⚠️ 이 워크플로는 "게이트"가 아니라 "사후 경보기"다.
-#    - main 브랜치 보호가 설정돼 있지 않고(gh api .../branches/main/protection → 404),
-#      PR 이력이 0건이라 pull_request 트리거는 사실상 발동하지 않는다.
-#    - legacy Pages 빌드는 Actions와 무관하게 병렬로 배포되므로, push가 수락된 뒤 도는
-#      이 잡은 배포 자체를 막을 수 없다.
-#    실제 차단 게이트는 .githooks/pre-push 이며, 이 잡은 훅이 우회(--no-verify)되거나
-#    core.hooksPath 미설정으로 동작하지 않았을 때를 잡는 2차 그물이다.
-#    진짜 게이트로 승격하려면 main 브랜치 보호 + required status check 등록이 필요하다.
+# 이 잡은 required status check다 (SAMPL-2-23에서 브랜치 보호 적용, SAMPL-2-24에서 typecheck 추가).
+#    main 브랜치 보호: contexts = [check-docs-assets, typecheck], strict: true, enforce_admins: true
+#    → main 직접 푸시가 거부되고, 이 검사를 통과한 PR만 머지된다. --no-verify로 우회할 수 없다.
+#    (그 전까지는 브랜치 보호가 없어 push 수락 후에 도는 사후 경보기였다.)
+#    로컬 .githooks/pre-push도 같은 검사를 수행해 푸시 전에 먼저 알려준다.
 #
 # build.yml은 태그에서만 돌고 Pages와 무관하므로 이 검사의 위치가 아니다.
 

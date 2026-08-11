@@ -51,9 +51,30 @@ npm run package        # 현재 OS용 패키지
 npm run make           # 설치 파일 (Win: exe, Mac: zip)
 npm test               # Playwright E2E (docs/ 대상)
 npm run test:unit      # vitest 단위 테스트 (tests/unit/)
+npm run typecheck      # tsc --noEmit (main 필수 CI)
+npm run check:docs     # docs/ 자산 참조 정합성 (main 필수 CI)
 ```
 
 자세한 스크립트는 `package.json` 참조.
+
+### 타입 검사 (SAMPL-2-24)
+
+`tsconfig.json`의 `checkJs`는 **false**다. `// @ts-check`가 붙은 파일만 검사한다
+(전체 검사는 오류 2654건으로 게이트가 불가능함을 실측했다 — `window.*` 전역 패턴 코드베이스).
+
+- **모듈 형태의 파일**(import/export가 있는 파일, `tests/unit/`, `scripts/`)은 `// @ts-check` 한 줄로 게이트에 들어온다.
+- 새 전역을 노출하면 `types/globals.d.ts`에도 추가해야 `@ts-check` 파일에서 쓸 수 있다.
+  `declare var`와 `interface Window` **양쪽에** 넣는다 — 소스에 `showToast(...)`(bare)와
+  `window.showToast(...)` 두 형태가 섞여 있어 한쪽만으로는 절반만 커버된다.
+
+> ⚠️ **classic script는 한 줄로 opt-in할 수 없다.** `src/{soil,compost,pesticide}/*-script.js`는
+> import/export가 없어 TS가 전역 스크립트로 취급하고, 최상위 `const SAMPLE_TYPE`이 전역 스코프를
+> 공유해 파일 간 **TS2451(Cannot redeclare)** 충돌이 난다(3개 타입이 같은 이름을 선언한다).
+> `@ts-check`를 붙인 파일에 다른 파일의 충돌까지 보고되므로 그 파일만 고쳐서는 해결되지 않는다.
+> IIFE로 감싸거나 상수를 생성자 옵션으로 옮기는 선행 작업이 필요하다(water/heavy-metal이 쓰는 패턴).
+>
+> 확대하기 쉬운 것은 `src/shared/`의 순수 모듈(`sanitize.js`, `address-parser.js`,
+> `mrl-name-canon.js`, `pesticide-use-type.js` 등)이다 — 전역 의존이 적고 단위 테스트가 이미 있다.
 
 ## Architecture
 
@@ -185,7 +206,7 @@ npm run build                                  # 새 이미지를 해시 자산�
 
 | 규칙 | 설정 |
 | ---- | ---- |
-| 필수 CI | `check-docs-assets` (docs/ 자산 참조 정합성) |
+| 필수 CI | `check-docs-assets` (docs/ 자산 참조 정합성) + `typecheck` (`tsc --noEmit`) |
 | 최신 상태 요구 | 예 (`strict`) — PR이 오래되면 main을 머지/리베이스해야 한다 |
 | 관리자도 준수 | 예 — `--no-verify`나 소유자 권한으로 우회 불가 |
 | force push / 브랜치 삭제 | 차단 |

@@ -28,14 +28,34 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # build.yml(릴리스 빌드)과 같은 메이저를 쓴다 — 검증 런타임과 배포 런타임을 맞춘다
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
-      # build.yml과 같은 방식(npm install)을 쓴다. npm ci는 이 저장소에서 실패한 이력이 있다.
+      # 게이트가 무작위로 닫히지 않게 하는 핵심은 `typescript`를 정확 버전(5.9.3)으로
+      # 고정한 것이다. 캐럿을 두면 TS 마이너 릴리스가 새 오류를 도입하는 날
+      # 아무 잘못 없는 PR이 전부 막힌다(enforce_admins: true라 우회 수단도 없다).
+      #
+      # npm ci는 쓰지 못한다 — lock이 크로스플랫폼으로 완결되지 않아
+      # Linux 러너에서 `Missing: esbuild@0.28.2 from lock file`로 거부된다.
+      # (로컬 darwin에서 npm install/npm ci --dry-run은 통과하므로 로컬 검증만으로는 안 잡힌다.)
+      # lock 완전 재생성은 이 티켓 범위가 아니라 별건이다 → SAMPL-2-25 참조.
+      # --no-save로 lock 변조만 막는다.
       - name: 의존성 설치
-        run: npm install --no-audit --no-fund
+        run: npm install --no-save --no-audit --no-fund
+
+      # include 오타·경로 이동으로 프로그램이 0파일이 되면 tsc는 다시 조용히 exit 0 한다
+      # — 이 티켓이 고친 바로 그 실패 양식이다. 검사 대상 수를 확인해 자기검사한다.
+      - name: 게이트 실효성 확인 (검사 대상이 비면 실패)
+        run: |
+          n=$(npx tsc -p tsconfig.json --noEmit --listFilesOnly | grep -c 'tests/e2e/.*\.spec\.js')
+          echo "검사 대상 spec 파일: $n"
+          if [ "$n" -lt 20 ]; then
+            echo "::error::검사 대상이 $n개로 줄었습니다. tsconfig include/@ts-check를 확인하세요."
+            exit 1
+          fi
 
       - name: 타입 검사
         run: npm run typecheck
