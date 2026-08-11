@@ -56,13 +56,19 @@ test.describe('토양 그룹 수정 — 빈 parcels[0] 폼 복원 (SAMPL-1-119)'
         await page.waitForTimeout(200)
 
         // ── 핵심 단언: 필지 카드에 구분/용도/작물명/면적이 복원됨 (버그 시 모두 빈 칸)
-        const cards = await page.evaluate(() =>
-            [...document.querySelectorAll('.parcel-card')].map(c => ({
-                cat: c.querySelector('.parcel-category-select')?.value || '',
-                pur: c.querySelector('.parcel-purpose-select')?.value || '',
-                crop: c.querySelector('.crop-direct-input')?.value || '',
-                area: c.querySelector('.area-direct-input')?.value || '',
-            })))
+        const cards = await page.evaluate(() => {
+            // querySelector는 Element를 반환해 .value가 없다 — 입력 요소로 좁혀서 읽는다
+            const val = (/** @type {Element} */ parent, /** @type {string} */ sel) => {
+                const el = /** @type {HTMLInputElement | HTMLSelectElement | null} */ (parent.querySelector(sel))
+                return el?.value || ''
+            }
+            return [...document.querySelectorAll('.parcel-card')].map(c => ({
+                cat: val(c, '.parcel-category-select'),
+                pur: val(c, '.parcel-purpose-select'),
+                crop: val(c, '.crop-direct-input'),
+                area: val(c, '.area-direct-input'),
+            }))
+        })
         expect(cards.length).toBe(2)
         expect(cards[0]).toEqual({ cat: '밭', pur: '무농약', crop: '고추', area: '1000' })
         expect(cards[1]).toEqual({ cat: '논', pur: '일반재배', crop: '벼', area: '2000' })
