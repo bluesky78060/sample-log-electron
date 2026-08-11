@@ -188,6 +188,190 @@
         return dups;
     }
 
+    // ============================================================
+    // 접수번호 채번 (순수 함수, DOM/매니저 비의존 · 단위 테스트 대상)
+    // ============================================================
+
+    /**
+     * 기존 레코드에서 "같은 경지구분1차 + 같은 시퀀스(일반/성토)" 범위의 접수번호 집합.
+     *
+     * ⚠️ 이 함수의 분류 규칙은 `reception-number.js`의 `computeNextNumber`와
+     * **한 줄씩 같아야 한다.** 어긋나면 미리보기가 보여준 번호와 실제 저장 번호가 달라진다
+     * (SAMPL-1-153이 정확히 그 결함이었다):
+     *  - 성토(`subCategory==='성토'`)는 F 접두의 별 시퀀스이고 두 시퀀스는 서로를 제외한다
+     *  - 일반 시퀀스에서는 `F` 접두 번호를 제외한다
+     *  - 성토 시퀀스에서는 `F`를 떼고 숫자만 비교한다
+     *  - 서브넘버(`5-1`)는 본번(`5`)으로 접어 넣는다
+     *
+     * @param {Array<Object>} logs
+     * @param {string} landClass1
+     * @param {{fill?: boolean}} [opts]
+     * @returns {Set<string>}
+     */
+    function collectExistingNumbers(logs, landClass1, opts) {
+        const fill = !!(opts && opts.fill);
+        const set = new Set();
+        for (const log of (logs || [])) {
+            if (!log || !log.receptionNumber) continue;
+            if ((log.landClass1 || LAND_CLASS1_DEFAULT) !== landClass1) continue;
+            if (fill !== (log.subCategory === '성토')) continue;
+            const base = String(log.receptionNumber).split('-')[0].trim();
+            if (!fill && base.startsWith('F')) continue;
+            set.add(fill ? base.replace('F', '') : base);
+        }
+        return set;
+    }
+
+    /** 번호 집합에서 다음 번호를 추정한다 (매니저 미준비 시 폴백) */
+    function inferNextNumber(existing) {
+        let maxN = 0;
+        existing.forEach((n) => {
+            const v = parseInt(n, 10);
+            if (!Number.isNaN(v) && v > maxN) maxN = v;
+        });
+        return maxN + 1;
+    }
+
+    /**
+     * 파싱된 행 + 매핑 → 미리보기 항목·집계 (순수 함수).
+     *
+     * 반환 `null`은 "미리보기를 만들 수 없음"이다 — 행이 없거나, 매핑이 없거나,
+     * 식별 필드(성명·지번주소·접수번호)가 하나도 매핑되지 않은 경우.
+     *
+     * @param {Object} o
+     * @param {Array<Array<string>>} o.rows
+     * @param {Object} o.mapping  { 필드키: 컬럼인덱스 }
+     * @param {string} o.landClass1
+     * @param {boolean} [o.autoNumber]
+     * @param {'skip'|'overwrite'} [o.dupPolicy]
+     * @param {Set<string>} [o.existing]      일반 시퀀스 기존 번호
+     * @param {number|null} [o.nextNumber]    일반 시퀀스 시작 번호
+     * @param {Set<string>} [o.existingFill]  성토 시퀀스 기존 번호
+     * @param {number|null} [o.nextFillNumber] 성토 시퀀스 시작 번호(F 접두 없이)
+     */
+    function computePreview(o) {
+        const rows = o.rows || [];
+        const mapping = o.mapping || {};
+        const landClass1 = o.landClass1 || LAND_CLASS1_DEFAULT;
+        const dupPolicy = o.dupPolicy || 'skip';
+        const existing = o.existing || new Set();
+        const existingFill = o.existingFill || new Set();
+
+        const mappedKeys = Object.keys(mapping);
+        // 최소 1개 식별 필드가 매핑돼야 의미 있음
+        const hasIdentity = mapping.name != null || mapping.lotAddress != null || mapping.receptionNumber != null;
+        if (rows.length === 0 || mappedKeys.length === 0 || !hasIdentity) return null;
+
+        // 접수번호 컬럼이 매핑되지 않았으면 자동부여가 강제된다
+        const autoAll = !!o.autoNumber || mapping.receptionNumber == null;
+
+        // 커서는 autoAll이 아니어도 반드시 초기화한다 — 접수번호 컬럼은 매핑됐지만
+        // 특정 행의 칸만 빈 경우에도 자동부여로 넘어가기 때문이다.
+        // (초기화를 autoAll로 감싸면 그 행의 번호가 String(null) → 'null'이 된다 → SAMPL-1-151)
+        let nextNum = o.nextNumber != null ? o.nextNumber : inferNextNumber(existing);
+        let nextFill = o.nextFillNumber != null ? o.nextFillNumber : inferNextNumber(existingFill);
+
+        // 배치 내 사용 번호 — 두 시퀀스가 독립이므로 집합도 따로 둔다
+        // (일반 5와 성토 F5는 충돌이 아니다)
+        const seenInBatch = new Set();
+        const seenFillInBatch = new Set();
+
+        const items = [];
+        const stats = { total: rows.length, new: 0, dup: 0, err: 0 };
+
+        rows.forEach((row) => {
+            const get = (key) => {
+                const idx = mapping[key];
+                if (idx == null || idx < 0) return '';
+                return String(row[idx] ?? '').trim();
+            };
+            const rec = {
+                name: get('name'),
+                phoneNumber: get('phoneNumber'),
+                lotAddress: get('lotAddress'),
+                cropsDisplay: get('cropsDisplay'),
+                area: get('area'),
+                subCategory: get('subCategory'),
+                purpose: get('purpose'),
+                note: get('note'),
+                businessRegNo: get('businessRegNo'),
+                addressRoad: get('addressRoad'),
+                date: get('date'),
+                landClass1,
+            };
+
+            // 식별 정보 없는 빈 행 → 오류
+            if (!rec.name && !rec.lotAddress) {
+                stats.err++;
+                items.push({ status: 'err', reason: '성명·주소 없음', display: '(빈 행)', rec });
+                return;
+            }
+
+            let recNo;
+            let useAuto = autoAll;
+            if (!useAuto) {
+                recNo = get('receptionNumber');
+                // 매핑은 있으나 그 칸이 빈 행은 자동부여로 넘긴다
+                if (!recNo) useAuto = true;
+            }
+
+            // 성토는 F 접두의 별 시퀀스다. 이 분기가 없으면 성토 행에 일반 번호가 찍히고,
+            // 저장된 성토 레코드는 일반 풀에서 제외돼 카운터가 전진하지 않아
+            // 전 행이 같은 번호로 저장된다 (SAMPL-1-153).
+            const isFill = rec.subCategory === '성토';
+            const pool = isFill ? existingFill : existing;
+            const seenPool = isFill ? seenFillInBatch : seenInBatch;
+
+            if (useAuto) {
+                // 기존·배치 양쪽을 피해 증가시킨다
+                let candidate = isFill ? nextFill : nextNum;
+                while (pool.has(String(candidate)) || seenPool.has(String(candidate))) candidate++;
+                seenPool.add(String(candidate));
+                recNo = isFill ? `F${candidate}` : String(candidate);
+                if (isFill) nextFill = candidate + 1;
+                else nextNum = candidate + 1;
+                stats.new++;
+                items.push({ status: 'new', display: recNo, rec: { ...rec, receptionNumber: undefined }, auto: true });
+            } else {
+                const base = String(recNo).split('-')[0].trim();
+                // 성토 시퀀스는 F를 떼고 숫자만 비교한다 (computeNextNumber와 동일)
+                const key = isFill ? base.replace('F', '') : base;
+                const isDup = pool.has(key) || seenPool.has(key);
+                const willBeSaved = !(isDup && dupPolicy === 'skip');
+                seenPool.add(key);
+
+                // 수동 번호가 실제로 저장되면 매니저의 max+1 채번이 그 번호를 넘어간다.
+                // 미리보기 커서도 같이 올려야 뒤따르는 자동부여 행의 표시 번호가 실제와 맞는다
+                // (기존 최대 10에 수동 50을 저장하면 다음 자동번호는 11이 아니라 51이다).
+                if (willBeSaved) {
+                    const baseNum = parseInt(key, 10);
+                    if (!Number.isNaN(baseNum)) {
+                        if (isFill) { if (baseNum + 1 > nextFill) nextFill = baseNum + 1; }
+                        else if (baseNum + 1 > nextNum) nextNum = baseNum + 1;
+                    }
+                }
+
+                if (isDup) {
+                    stats.dup++;
+                    items.push({
+                        status: 'dup', display: recNo, skip: dupPolicy === 'skip',
+                        rec: { ...rec, receptionNumber: recNo },
+                    });
+                } else {
+                    stats.new++;
+                    items.push({ status: 'new', display: recNo, rec: { ...rec, receptionNumber: recNo } });
+                }
+            }
+        });
+
+        // 실제 등록될 건수 = new + (덮어쓰기 정책의 dup)
+        const willImport = items.filter(it =>
+            it.status === 'new' || (it.status === 'dup' && !it.skip)
+        ).length;
+
+        return { items, stats, willImport, landClass1 };
+    }
+
     function escapeHtml(s) {
         if (window.escapeHTML) return window.escapeHTML(String(s ?? ''));
         return String(s ?? '')
@@ -923,134 +1107,62 @@
             this._renderPreview();
         }
 
-        /** 현재 연도 + 경지구분1차 범위의 기존 접수번호 집합 */
-        _existingNumbers(landClass1) {
-            const set = new Set();
+        /** 현재 연도 범위의 기존 접수 레코드 (매니저 미준비 시 localStorage 폴백) */
+        _existingLogs() {
             const mgr = window.soilManager;
-            let logs = [];
-            if (mgr && Array.isArray(mgr.sampleLogs)) {
-                logs = mgr.sampleLogs;
-            } else {
-                // 매니저 미준비 시 localStorage 직접 읽기
-                const year = (mgr && mgr.selectedYear) || new Date().getFullYear();
-                try {
-                    const raw = localStorage.getItem(`soilSampleLogs_${year}`);
-                    logs = raw ? JSON.parse(raw) : [];
-                } catch (_) { logs = []; }
-            }
-            for (const log of (logs || [])) {
-                if (!log || !log.receptionNumber) continue;
-                if ((log.landClass1 || LAND_CLASS1_DEFAULT) !== landClass1) continue;
-                // 매니저 getNextNumberForClass와 동일한 제외 조건 (성토·F접두 번호 제외)
-                if (log.subCategory === '성토') continue;
-                const base = String(log.receptionNumber).split('-')[0].trim();
-                if (base.startsWith('F')) continue;
-                set.add(base);
-            }
-            return set;
+            if (mgr && Array.isArray(mgr.sampleLogs)) return mgr.sampleLogs;
+            const year = (mgr && mgr.selectedYear) || new Date().getFullYear();
+            try {
+                const raw = localStorage.getItem(`soilSampleLogs_${year}`);
+                return raw ? JSON.parse(raw) : [];
+            } catch (_) { return []; }
         }
 
+        /**
+         * 기존 접수번호 집합. 순수 계산은 collectExistingNumbers()에 위임한다.
+         * @param {string} landClass1
+         * @param {{fill?: boolean}} [opts] fill=true면 성토(F) 시퀀스 풀
+         */
+        _existingNumbers(landClass1, opts) {
+            return collectExistingNumbers(this._existingLogs(), landClass1, opts);
+        }
+
+        /**
+         * 미리보기 재계산. 순수 계산은 computePreview()에 위임하고
+         * 이 메서드는 매니저·상태에서 입력을 모으는 일만 한다.
+         */
         _recompute() {
             const { rows } = this._parseInput();
-            const mapping = this._state.fieldMapping;
-            const mappedKeys = Object.keys(mapping);
-            // 최소 1개 식별 필드(성명 또는 지번주소)가 매핑돼야 의미 있음
-            const hasIdentity = mapping.name != null || mapping.lotAddress != null || mapping.receptionNumber != null;
-            if (rows.length === 0 || mappedKeys.length === 0 || !hasIdentity) {
-                this._state.preview = null;
-                return;
-            }
-
             const landClass1 = this._state.bulkLandClass || LAND_CLASS1_DEFAULT;
-            const existing = this._existingNumbers(landClass1);
             const mgr = window.soilManager;
             const year = (mgr && mgr.selectedYear) || new Date().getFullYear();
 
-            // 자동부여 미리보기용 다음번호 시뮬레이션
-            let nextNum = null;
-            if (this._state.autoNumber || mapping.receptionNumber == null) {
-                if (mgr && typeof mgr.getNextNumberForClass === 'function') {
-                    nextNum = mgr.getNextNumberForClass(year, landClass1);
-                } else {
-                    let maxN = 0;
-                    existing.forEach(n => { const v = parseInt(n, 10); if (!Number.isNaN(v) && v > maxN) maxN = v; });
-                    nextNum = maxN + 1;
-                }
+            // 일반과 성토(F 접두)는 완전히 분리된 채번이라 양쪽을 다 넘겨야 한다.
+            // 한쪽만 넘기면 성토 행 미리보기가 실제 저장 번호와 어긋난다 (SAMPL-1-153).
+            const existing = this._existingNumbers(landClass1);
+            const existingFill = this._existingNumbers(landClass1, { fill: true });
+
+            const nextNumber = (mgr && typeof mgr.getNextNumberForClass === 'function')
+                ? mgr.getNextNumberForClass(year, landClass1)
+                : null;
+            // 매니저는 'F3' 문자열을 주므로 숫자만 뽑아 커서로 쓴다
+            let nextFillNumber = null;
+            if (mgr && typeof mgr.generateNextFillReceptionNumber === 'function') {
+                const parsed = parseInt(String(mgr.generateNextFillReceptionNumber(landClass1)).replace('F', ''), 10);
+                if (!Number.isNaN(parsed)) nextFillNumber = parsed;
             }
-            const seenInBatch = new Set();
 
-            const items = [];
-            const stats = { total: rows.length, new: 0, dup: 0, err: 0 };
-
-            rows.forEach((row) => {
-                const get = (key) => {
-                    const idx = mapping[key];
-                    if (idx == null || idx < 0) return '';
-                    return String(row[idx] ?? '').trim();
-                };
-                const rec = {
-                    name: get('name'),
-                    phoneNumber: get('phoneNumber'),
-                    lotAddress: get('lotAddress'),
-                    cropsDisplay: get('cropsDisplay'),
-                    area: get('area'),
-                    subCategory: get('subCategory'),
-                    purpose: get('purpose'),
-                    note: get('note'),
-                    businessRegNo: get('businessRegNo'),
-                    addressRoad: get('addressRoad'),
-                    date: get('date'),
-                    landClass1,
-                };
-
-                // 식별 정보 없는 빈 행 → 오류
-                if (!rec.name && !rec.lotAddress) {
-                    stats.err++;
-                    items.push({ status: 'err', reason: '성명·주소 없음', display: '(빈 행)', rec });
-                    return;
-                }
-
-                // 접수번호 결정
-                let recNo;
-                let useAuto = this._state.autoNumber || mapping.receptionNumber == null;
-                if (!useAuto) {
-                    recNo = get('receptionNumber');
-                    if (!recNo) useAuto = true;
-                }
-                if (useAuto) {
-                    // 배치 내 자동 증가 시뮬레이션
-                    let candidate = nextNum;
-                    while (existing.has(String(candidate)) || seenInBatch.has(String(candidate))) candidate++;
-                    recNo = String(candidate);
-                    nextNum = candidate + 1;
-                    seenInBatch.add(recNo);
-                    stats.new++;
-                    items.push({ status: 'new', display: recNo, rec: { ...rec, receptionNumber: undefined }, auto: true });
-                } else {
-                    const base = String(recNo).split('-')[0].trim();
-                    const isDup = existing.has(base) || seenInBatch.has(base);
-                    seenInBatch.add(base);
-                    if (isDup) {
-                        if (this._state.dupPolicy === 'skip') {
-                            stats.dup++;
-                            items.push({ status: 'dup', display: recNo, skip: true, rec: { ...rec, receptionNumber: recNo } });
-                        } else {
-                            stats.dup++;
-                            items.push({ status: 'dup', display: recNo, skip: false, rec: { ...rec, receptionNumber: recNo } });
-                        }
-                    } else {
-                        stats.new++;
-                        items.push({ status: 'new', display: recNo, rec: { ...rec, receptionNumber: recNo } });
-                    }
-                }
+            this._state.preview = computePreview({
+                rows,
+                mapping: this._state.fieldMapping,
+                landClass1,
+                autoNumber: this._state.autoNumber,
+                dupPolicy: this._state.dupPolicy,
+                existing,
+                nextNumber,
+                existingFill,
+                nextFillNumber,
             });
-
-            // 실제 등록될 건수 = new + (덮어쓰기 정책의 dup)
-            const willImport = items.filter(it =>
-                it.status === 'new' || (it.status === 'dup' && !it.skip)
-            ).length;
-
-            this._state.preview = { items, stats, willImport, landClass1 };
         }
 
         // ----------------------------------------------------------
@@ -1236,7 +1348,11 @@
     window.SoilResultImporter = instance;
 
     // 단위 테스트용 순수 매핑 로직 노출 (DOM 비의존) — 외부 호출은 권장하지 않음
-    instance._fns = { normalizeHeader, scoreFieldHeader, computeAutoMapping, auditDuplicateKeywords };
+    instance._fns = {
+        normalizeHeader, scoreFieldHeader, computeAutoMapping, auditDuplicateKeywords,
+        // 접수번호 채번 (SAMPL-1-153) — 성토/일반 시퀀스 분리가 여기서 결정된다
+        collectExistingNumbers, computePreview,
+    };
 
     // 로드 시 1회: 교차 필드 중복 키워드가 있으면 콘솔 경고(개발 보조)
     auditDuplicateKeywords();
