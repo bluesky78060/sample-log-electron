@@ -1,70 +1,66 @@
 /**
- * 전역 선언 — SAMPL-2-24
+ * 전역 선언 — SAMPL-2-24 도입, SAMPL-2-25에서 역할 정정
  *
  * 이 앱은 번들러 도입 전부터 전역에 모듈을 노출하는 구조로 커왔다
- * (src/shared/*.js 끝의 `window.XxxManager = ...`, 최상위 `function`/`const` 선언).
- * `// @ts-check`가 붙은 파일에서 그것을 참조하면 선언이 없어 오류가 난다.
+ * (src/shared/*.js 끝의 `window.Xxx = ...`, 최상위 `function`/`const`/`class` 선언).
  *
- * ## `declare var` + `interface Window`를 같이 두는 이유
+ * ## `declare var`에 넣을 것과 넣지 말 것 (SAMPL-2-25 실측)
  *
- * 두 접근 형태가 소스에 섞여 있어 한쪽만으로는 절반만 커버된다 (실측):
+ * **넣지 않는다 — `src/`에 최상위 정의가 있는 전역.**
+ * TS는 전역 스크립트(import/export 없는 파일)의 최상위 선언을 전역으로 수집하므로,
+ * 정의 파일이 이미 선언 제공자다. `d.ts`에 또 선언하면 **TS2300 Duplicate identifier**가 난다.
+ * 실측: `d.ts`에서 `sanitizeHTML`/`escapeHTML`을 빼도 다른 @ts-check 파일에서 그대로 쓸 수 있었다.
+ *   → escapeHTML·sanitizeHTML(sanitize.js), formatPhoneNumber(utils.js), logger(logger.js),
+ *     APP_VERSION(constants.js), BaseSampleManager·ThemeManager·AddressManager·CacheManager·
+ *     ExcelImportManager(각 shared 모듈), waterManager(water-script.js), heavyMetalManager(heavy-metal-script.js)
  *
- *   window.showToast(...)   → interface Window 가 필요
- *   showToast(...)          → declare var 가 필요 (없으면 TS2304/TS2551)
+ * **넣는다 — IIFE 내부에서 `window.X = ...`로만 노출되어 최상위 선언이 없는 것,**
+ * 그리고 외부 라이브러리 전역(CDN/번들로 들어와 소스에 선언이 없다).
  *
- * 실제 사용 빈도도 bare 쪽이 더 많다 — showToast는 window. 95곳 / bare 127곳,
- * escapeHTML은 14곳 / 62곳. `declare var`는 typeof globalThis에 들어가고
- * lib.dom이 `declare var window: Window & typeof globalThis`로 선언하므로
- * 두 형태를 모두 통과시킨다.
+ * ## `interface Window`는 별개다
+ *
+ * `window.X` 형태 접근에는 `interface Window` 항목이 필요하다. 자기정의 전역이라도
+ * `window.`로 접근하는 코드가 있으면 여기에는 남겨야 한다 — 중복 충돌은 `declare var`에서만 난다.
  *
  * ## 타입이 `any`인 이유
  *
- * 실제 클래스 타입을 JS 구현에서 끌어오려면 각 모듈에 JSDoc을 붙이고 export 구조를
- * 바꿔야 한다. 이 파일의 목적은 "전역이 존재한다"를 인정해 게이트를 세우는 것이고,
- * 실질 검사는 그 전역을 쓰는 코드 쪽에서 일어난다. 개별 타입 부여는 별건이다.
+ * 실제 타입을 JS 구현에서 끌어오려면 각 모듈에 JSDoc을 붙이고 export 구조를 바꿔야 한다.
+ * 이 파일의 목적은 "전역이 존재한다"를 인정하는 것이고 실질 검사는 사용처에서 일어난다.
+ * 예외는 `electronAPI` — 웹에서 undefined이므로 옵셔널 객체로 두어 무가드 접근을 잡는다.
  *
- * 예외는 `electronAPI`다 — 웹에서는 undefined이므로 `any`로 두면 이 앱에서 가장
- * 중요한 가드(Electron/Web 분기)를 검사기가 놓친다. 최소 객체 타입을 준다.
- *
- * 새 전역을 노출하면 여기에도 추가한다 — 그러지 않으면 @ts-check 파일에서 쓸 수 없다.
+ * 새 전역을 노출하면 위 기준으로 판정해 추가한다.
  */
 
 declare global {
-    // ── 시료 타입별 매니저 (각 페이지 진입 스크립트가 노출) ──
+    // ── 외부 라이브러리 전역 (소스에 선언이 없다) ──
+    /** DOMPurify — sanitize.js가 XSS 방지에 사용. CDN 또는 번들로 주입된다 */
+    var DOMPurify: any;
+    /** SheetJS — 엑셀 가져오기/내보내기 */
+    var XLSX: any;
+    /** Firebase compat SDK */
+    var firebase: any;
+
+    // ── IIFE 내부에서 window에만 노출되는 전역 (최상위 선언 없음) ──
     var soilManager: any;
-    var waterManager: any;
     var compostManager: any;
-    var heavyMetalManager: any;
     var pesticideManager: any;
     var heuktoramManager: any;
     var waterAnalysisManager: any;
-
-    // ── 공용 모듈 (src/shared/) ──
-    var BaseSampleManager: any;
-    var AddressManager: any;
-    var CacheManager: any;
-    var ExcelImportManager: any;
     var PaginationManager: any;
-    var ThemeManager: any;
     var storageManager: any;
     var firestoreDb: any;
     var firebaseConfig: any;
     var SyncUtils: any;
     var SampleUtils: any;
     var SoilLogRecord: any;
-    var logger: any;
-
-    // ── 전역 헬퍼 ──
     var showToast: any;
-    var escapeHTML: any;
-    var sanitizeHTML: any;
-    var formatPhoneNumber: any;
     var loadFromAutoSaveFile: any;
     var getSelectedIds: any;
 
-    // ── 앱 버전 (constants.js가 노출) ──
-    var APP_VERSION: string;
-
+    /**
+     * `window.X` 접근용. 자기정의 전역도 window로 접근하는 코드가 있으므로 여기엔 남긴다
+     * (중복 충돌은 declare var에서만 발생한다).
+     */
     interface Window {
         soilManager: any;
         waterManager: any;
@@ -94,6 +90,13 @@ declare global {
         formatPhoneNumber: any;
         loadFromAutoSaveFile: any;
         getSelectedIds: any;
+
+        SIDO_LIST: any;
+        SIDO_SHORT_MAP: any;
+        MrlNameCanon: any;
+        PesticideUseType: any;
+        PESTICIDE_NAME_MAP: any;
+        PsisParse: any;
 
         APP_VERSION: string;
 
