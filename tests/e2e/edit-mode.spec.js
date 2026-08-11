@@ -54,10 +54,10 @@ function heavyMetalRecord(overrides = {}) {
 /** 시드 후 목록 뷰에서 첫 행의 [수정] 진입 */
 async function seedAndEnterEdit(page, path, storageKey, record, editBtnSelector) {
     await page.goto(path)
-    await page.evaluate(([k, v]) => {
+    await page.evaluate(({ k, v }) => {
         localStorage.clear()
         localStorage.setItem(k, JSON.stringify([v]))
-    }, [storageKey, record])
+    }, { k: storageKey, v: record })
     await page.reload()
     await page.waitForTimeout(1200)
 
@@ -206,10 +206,10 @@ test.describe('SAMPL-1-147 — 목록 수정 시 기본정보 저장', () => {
         }))
 
         await page.goto('/water/')
-        await page.evaluate(([k, v]) => {
+        await page.evaluate(({ k, v }) => {
             localStorage.clear()
             localStorage.setItem(k, JSON.stringify(v))
-        }, [key, rows])
+        }, { k: key, v: rows })
         await page.reload()
         await page.waitForTimeout(1200)
 
@@ -247,10 +247,10 @@ test.describe('SAMPL-1-147 — 목록 수정 시 기본정보 저장', () => {
         })
 
         await page.goto('/water/')
-        await page.evaluate(([k, v]) => {
+        await page.evaluate(({ k, v }) => {
             localStorage.clear()
             localStorage.setItem(k, JSON.stringify([v]))
-        }, [key, seeded])
+        }, { k: key, v: seeded })
         await page.reload()
         await page.waitForTimeout(1200)
 
@@ -299,13 +299,13 @@ test.describe('SAMPL-1-147 — 목록 수정 시 기본정보 저장', () => {
         })
 
         await page.goto('/soil/')
-        await page.evaluate(([k, rows]) => {
+        await page.evaluate(({ k, rows }) => {
             localStorage.clear()
             localStorage.setItem(k, JSON.stringify(rows))
-        }, [key, [
+        }, { k: key, rows: [
             { ...common, ...mkParcel('내성리 100', '벼'), id: 'sg-a', receptionNumber: '11', parcelIndex: 1 },
             { ...common, ...mkParcel('내성리 200', '콩'), id: 'sg-b', receptionNumber: '12', parcelIndex: 2 }
-        ]])
+        ] })
         await page.reload()
         await page.waitForTimeout(1500)
 
@@ -351,16 +351,16 @@ test.describe('SAMPL-1-147 — 목록 수정 시 기본정보 저장', () => {
         })
 
         await page.goto('/soil/')
-        await page.evaluate(([k, rows]) => {
+        await page.evaluate(({ k, rows }) => {
             localStorage.clear()
             localStorage.setItem(k, JSON.stringify(rows))
-        }, [key, [
+        }, { k: key, rows: [
             { ...common, ...mkParcel('내성리 100', '벼'), id: 'sg-a', receptionNumber: '11', parcelIndex: 1 },
             { ...common, ...mkParcel('내성리 200', '콩'), id: 'sg-b', receptionNumber: '12', parcelIndex: 2 },
             // groupId가 없는 레거시 단건 — 가드가 없으면 filter(l => l.groupId !== undefined)에
             // 떨어져 saveLogs가 축소본을 기록하며 영구 삭제된다
             { ...common, ...mkParcel('내성리 300', '고추'), id: 'solo-1', receptionNumber: '13', groupId: undefined }
-        ]])
+        ] })
         await page.reload()
         await page.waitForTimeout(1500)
 
@@ -402,10 +402,10 @@ test.describe('SAMPL-1-147 — 목록 수정 시 기본정보 저장', () => {
         }
 
         await page.goto('/compost/')
-        await page.evaluate(([k, v]) => {
+        await page.evaluate(({ k, v }) => {
             localStorage.clear()
             localStorage.setItem(k, JSON.stringify([v]))
-        }, [key, rec])
+        }, { k: key, v: rec })
         await page.reload()
         await page.waitForTimeout(1200)
 
@@ -439,10 +439,10 @@ test.describe('SAMPL-1-147 — 목록 수정 시 기본정보 저장', () => {
         }
 
         await page.goto('/compost/')
-        await page.evaluate(([k, v]) => {
+        await page.evaluate(({ k, v }) => {
             localStorage.clear()
             localStorage.setItem(k, JSON.stringify([v]))
-        }, [key, rec])
+        }, { k: key, v: rec })
         await page.reload()
         await page.waitForTimeout(1200)
 

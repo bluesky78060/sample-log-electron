@@ -1,0 +1,41 @@
+{
+  "//": "SAMPL-2-24 — npm run typecheck가 실제로 검사하게 만드는 설정.",
+  "//2": "이 파일이 없으면 `tsc --noEmit`이 도움말만 출력하고 exit 0 하는 위장 게이트가 된다.",
+  "//3": "checkJs는 false다. 전역 window.* 패턴 코드베이스라 true로 켜면 오류 2654건이 나와",
+  "//4": "게이트로 쓸 수 없다(실측). 대신 `// @ts-check`를 붙인 파일만 검사한다 —",
+  "//5": "새 코드·수정 파일에 한 줄 추가하면 게이트 범위가 점진적으로 넓어진다.",
+
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,
+
+    "strict": true,
+    "noImplicitAny": false,
+
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "types": ["node"]
+  },
+
+  "include": [
+    "src/**/*.js",
+    "scripts/**/*.js",
+    "tests/**/*.js",
+    "types/**/*.d.ts"
+  ],
+
+  "exclude": [
+    "node_modules",
+    "docs",
+    "out",
+    "playwright-report",
+    "test-results"
+  ]
+}
