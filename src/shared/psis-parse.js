@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * psis-parse.js — 농촌진흥청 PSIS 농약등록정보 API(XML) 순수 파서 (UMD).
  *

@@ -1,3 +1,4 @@
+// @ts-check
 // ========================================
 // 주소 파싱 공통 모듈 (시도 매핑 단일 출처 · SSOT)
 // 시도, 시군구, 읍면동, 나머지주소 분리
@@ -74,7 +75,9 @@ function parseAddressParts(address) {
     if (parts.length > 0) {
         const sigunguPattern = /(시|군|구)$/;
         if (sigunguPattern.test(parts[0])) {
-            sigungu = parts.shift();
+            // `?? ''`: shift()의 반환 타입은 string | undefined다. 바로 위 test(parts[0])를
+            // 통과했으므로 실제로 undefined일 수 없지만 검사기는 그것을 모른다. 동작은 동일하다.
+            sigungu = parts.shift() ?? '';
             // 두 번째 파트도 구인지 확인 (예: "성남시 분당구")
             if (parts.length > 0 && /구$/.test(parts[0])) {
                 sigungu += ' ' + parts.shift();
@@ -86,7 +89,7 @@ function parseAddressParts(address) {
     if (parts.length > 0) {
         const eupmyeondongPattern = /(읍|면|동|리|가)$/;
         if (eupmyeondongPattern.test(parts[0])) {
-            eupmyeondong = parts.shift();
+            eupmyeondong = parts.shift() ?? '';
         }
     }
 

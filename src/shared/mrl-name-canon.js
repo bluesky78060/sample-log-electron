@@ -1,3 +1,4 @@
+// @ts-check
 // ========================================
 // mrl-name-canon.js — 농약 한글명 음역 정규화 (UMD, SAMPL-1-105)
 // ========================================
@@ -65,6 +66,9 @@
         x = x.replace(STEREO_PREFIX, '');
 
         // 2) 음역 동치 규칙 (순서 의존: 긴 패턴 먼저)
+        // 튜플 타입 명시: 없으면 TS가 (string | RegExp)[][]로 추론해
+        // replace(re, to)에서 to가 string|RegExp가 되어 오버로드 불일치(TS2769)가 난다.
+        /** @type {Array<[RegExp, string]>} */
         const rules = [
             [/아이소/g, '이소'],   // iso: 아이소펜포스 → 이소펜포스
             [/아이드/g, '이드'],   // -ide: ...아이드 → ...이드

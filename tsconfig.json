@@ -21,14 +21,41 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "types": ["node"]
+    "types": ["node"],
+
+    // vitest.config.js:11의 @shared alias와 짝을 맞춘다.
+    // 없으면 tests/unit에서 @shared를 쓰면서 @ts-check를 붙일 때 TS2307이 난다.
+    "baseUrl": ".",
+    "paths": { "@shared/*": ["src/shared/*"] }
   },
 
+  // 확장자를 좁혀두면 나중에 .ts/.mjs 파일을 추가할 때 @ts-check를 붙여도
+  // 프로그램에 안 들어가 조용히 무시된다 — 원래 위장 게이트와 같은 실패 양식이다.
+  //
+  // ⚠️ TS의 include glob은 `*`·`?`·`**/`만 지원하고 **중괄호 확장을 지원하지 않는다.**
+  // `src/**/*.{js,ts}`로 쓰면 리터럴로 취급돼 아무 파일도 매치되지 않고,
+  // 그러면 검사할 것이 없어 tsc가 0건으로 통과한다(= 위장 게이트 재발).
+  // 확장자마다 항목을 나열해야 한다.
   "include": [
     "src/**/*.js",
+    "src/**/*.mjs",
+    "src/**/*.cjs",
+    "src/**/*.ts",
+    "src/**/*.mts",
+    "src/**/*.cts",
     "scripts/**/*.js",
+    "scripts/**/*.mjs",
+    "scripts/**/*.cjs",
+    "scripts/**/*.ts",
     "tests/**/*.js",
-    "types/**/*.d.ts"
+    "tests/**/*.mjs",
+    "tests/**/*.cjs",
+    "tests/**/*.ts",
+    "types/**/*.d.ts",
+    "forge.config.js",
+    "vite.config.js",
+    "vitest.config.js",
+    "playwright.config.js"
   ],
 
   "exclude": [
