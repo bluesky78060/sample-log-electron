@@ -10,7 +10,7 @@
 
 - 코드 리뷰(code-reviewer 독립 리뷰) — 수행
 - 오류 0건 + **뮤테이션 검증**(의도적 오류 주입 시 실패 확인) — 수행
-- E2E 219건 회귀 — 수행
+- E2E 회귀 210 pass + 4 skipped(스크린샷 분리) — 수행
 - gemini 교차검증 — 환경 문제로 계속 불가(`GOOGLE_CLOUD_PROJECT` 미설정, `codex` ENOENT)
 
 ## 설계 판단 기록

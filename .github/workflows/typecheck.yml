@@ -28,14 +28,30 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # build.yml(릴리스 빌드)과 같은 메이저를 쓴다 — 검증 런타임과 배포 런타임을 맞춘다
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
-      # build.yml과 같은 방식(npm install)을 쓴다. npm ci는 이 저장소에서 실패한 이력이 있다.
+      # npm ci를 쓴다 — 게이트 도구가 부동 버전이면 TS 마이너 릴리스 하나로
+      # 아무 잘못 없는 PR이 전부 막힌다(enforce_admins: true라 우회 수단도 없다).
+      # 과거 npm ci 실패는 도구 문제가 아니라 커밋된 lock이 stale했던 것이고
+      # (lock의 esbuild 0.28.0 vs package.json 요구 0.28.2), SAMPL-2-24에서 동기화했다.
+      # typescript도 캐럿을 떼고 정확 버전으로 고정했다.
       - name: 의존성 설치
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
+
+      # include 오타·경로 이동으로 프로그램이 0파일이 되면 tsc는 다시 조용히 exit 0 한다
+      # — 이 티켓이 고친 바로 그 실패 양식이다. 검사 대상 수를 확인해 자기검사한다.
+      - name: 게이트 실효성 확인 (검사 대상이 비면 실패)
+        run: |
+          n=$(npx tsc -p tsconfig.json --noEmit --listFilesOnly | grep -c 'tests/e2e/.*\.spec\.js')
+          echo "검사 대상 spec 파일: $n"
+          if [ "$n" -lt 20 ]; then
+            echo "::error::검사 대상이 $n개로 줄었습니다. tsconfig include/@ts-check를 확인하세요."
+            exit 1
+          fi
 
       - name: 타입 검사
         run: npm run typecheck
