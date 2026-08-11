@@ -1,10 +1,18 @@
 #!/bin/sh
-# Pre-push hook: prevent tag pushes when source tree is dirty.
+# Pre-push hook
 #
-# Triggered on `git push origin <tag>`. Checks src/, package.json, scripts/
-# for uncommitted or untracked files and aborts the push if any are found.
+# 1) 태그 푸시: src/, package.json, scripts/ 에 미커밋/미추적 파일이 있으면 차단.
+# 2) 모든 푸시: 푸시되는 커밋의 docs/ 자산 참조 정합성 검사 (SAMPL-2-22).
 #
-# Bypass (NOT recommended): git push --no-verify origin <tag>
+#    GitHub Pages는 main 브랜치의 /docs를 직접 서빙하므로, 참조가 어긋난 채 push되면
+#    그 순간 웹 앱이 404로 깨진다. v1.17.7이 실제로 그렇게 배포됐다.
+#    워킹트리가 아니라 "푸시되는 커밋의 트리"를 검사해야 한다 — 워킹트리는 미추적 신규 번들까지
+#    반영해 자기 일관적으로 보이지만, 원격에 올라가는 트리는 깨져 있을 수 있다.
+#
+#    이 검사는 빌드를 강제하지 않는다. 빌드하지 않은 낡은 docs/는 자기 일관적이라 통과하고,
+#    실패하는 것은 docs/가 부분적으로만 갱신된 경우뿐이다.
+#
+# Bypass (NOT recommended): git push --no-verify
 
 while read local_ref local_sha remote_ref remote_sha; do
   case "$remote_ref" in
@@ -27,6 +35,50 @@ while read local_ref local_sha remote_ref remote_sha; do
       printf '\033[32m[OK] Pre-tag check passed: %s\033[0m\n' "$tag"
       ;;
   esac
+
+  # 삭제 푸시(local_sha가 0으로만 구성)는 검사 대상이 아니다.
+  case "$local_sha" in
+    *[!0]*) ;;
+    *) continue ;;
+  esac
+
+  # 푸시되는 커밋에 docs/가 없으면(다른 저장소 구조/오래된 커밋) 건너뛴다.
+  if ! git cat-file -e "${local_sha}:docs" 2>/dev/null; then
+    continue
+  fi
+
+  # node가 없으면(nvm/asdf + GUI 클라이언트는 로그인 셸 PATH를 물려받지 않는다)
+  # 검사를 건너뛴다. 실행 실패를 "자산 깨짐"으로 번역하면 정상 커밋이 엉뚱한 메시지로 막히고,
+  # 개발자가 --no-verify를 상습화해 훅 전체가 무력화된다.
+  if ! command -v node >/dev/null 2>&1; then
+    printf '\033[33m[!] node를 찾을 수 없어 docs/ 자산 검사를 건너뜁니다 (CI가 검사합니다)\033[0m\n' >&2
+    continue
+  fi
+
+  checkout_dir=$(mktemp -d 2>/dev/null)
+  if [ -z "$checkout_dir" ]; then
+    printf '\033[33m[!] 임시 디렉터리 생성 실패 — docs/ 자산 검사를 건너뜁니다\033[0m\n' >&2
+    continue
+  fi
+
+  # git archive | tar 는 파이프 마지막(tar) 상태만 보이므로, 실패를 조용히 넘기면
+  # 유일한 게이트가 무음으로 사라진다. 반드시 경고를 남긴다.
+  if git archive "$local_sha" docs 2>/dev/null | tar -x -C "$checkout_dir" 2>/dev/null; then
+    node scripts/check-docs-assets.js --dir="$checkout_dir/docs"
+    check_status=$?
+    if [ "$check_status" -eq 1 ]; then
+      printf '\n\033[31m[X] docs/ 자산 참조 검사 실패 — 푸시를 중단합니다 (%s)\033[0m\n' "$local_ref" >&2
+      printf 'GitHub Pages가 이 커밋의 docs/를 그대로 서빙하므로 웹 앱이 깨집니다.\n\n' >&2
+      [ -n "$checkout_dir" ] && rm -rf "$checkout_dir"
+      exit 1
+    elif [ "$check_status" -ne 0 ]; then
+      # exit 2 = 환경·사용법 오류. 자산 깨짐이 아니므로 차단하지 않는다.
+      printf '\033[33m[!] docs/ 자산 검사를 수행하지 못했습니다 (exit %s)\033[0m\n' "$check_status" >&2
+    fi
+  else
+    printf '\033[33m[!] %s 의 docs/ 추출 실패 — 자산 검사를 건너뜁니다\033[0m\n' "$local_sha" >&2
+  fi
+  [ -n "$checkout_dir" ] && rm -rf "$checkout_dir"
 done
 
 exit 0

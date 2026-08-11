@@ -260,7 +260,7 @@ describe('동치성: buildSoilLogRecord vs 기존 인라인 객체 리터럴', (
         expect(Object.keys(stripIds(built))).toEqual(Object.keys(stripIds(legacy)))
     })
 
-    it('그룹수정 분할: 필드/값/키순서 동일', () => {
+    it('그룹수정 분할: 필드/값 동일 (키 집합 기준)', () => {
         const existing = { id: 'old-id', createdAt: 'OLD-C', isComplete: true }
         const built = build(parcel(), {
             receptionNumber: '5-1', commonData: commonGroup, groupId: 'g1',
@@ -269,6 +269,44 @@ describe('동치성: buildSoilLogRecord vs 기존 인라인 객체 리터럴', (
         })
         const legacy = legacyGroupSplit(parcel(), { name: '콩', area: '500' }, 1, commonGroup, 'g1', 0, 1, existing)
         expect(stripIds(built)).toEqual(stripIds(legacy))
-        expect(Object.keys(stripIds(built))).toEqual(Object.keys(stripIds(legacy)))
+        // SAMPL-1-147: 그룹 수정이 existingLog를 전개해 폼 밖 필드를 보존하도록 계약이 바뀌면서
+        // createdAt/isComplete의 키 위치가 앞으로 이동했다. 키 '순서'는 기능에 영향이 없다 —
+        // 엑셀 내보내기는 별도 객체를 명시 순서로 조립하고(soil-script.js:4485-4496),
+        // 목록 렌더도 Object.keys를 쓰지 않는다. 그래서 순서가 아니라 키 집합으로 동치를 고정한다.
+        expect(Object.keys(stripIds(built)).sort()).toEqual(Object.keys(stripIds(legacy)).sort())
+    })
+
+    it('그룹수정: 폼 밖 필드(우편발송일자·공익직불제)를 보존한다 (SAMPL-1-147)', () => {
+        const existing = {
+            id: 'old-id', createdAt: 'OLD-C', isComplete: true,
+            mailDate: '2026-03-05', gongikOrder: '2', gongikBaseYear: '2026',
+            businessRegNo: '1234567890', basePnu: '4792025021001230000',
+        }
+        const built = build(parcel(), {
+            receptionNumber: '5', commonData: commonGroup, groupId: 'g1',
+            index: 0, totalParcels: 1, isGroupEdit: true, existingLog: existing, now: 'NOW',
+        })
+        expect(built.mailDate).toBe('2026-03-05')
+        expect(built.gongikOrder).toBe('2')
+        expect(built.gongikBaseYear).toBe('2026')
+        expect(built.businessRegNo).toBe('1234567890')
+        expect(built.basePnu).toBe('4792025021001230000')
+        // 보존은 그룹 수정 모드에서만 — 신규 등록은 기존 레코드를 이어받지 않는다
+        const fresh = build(parcel(), {
+            receptionNumber: '6', commonData: commonNew, groupId: 'g1',
+            index: 0, totalParcels: 1, isGroupEdit: false, existingLog: existing, now: 'NOW',
+        })
+        expect(fresh.mailDate).toBeUndefined()
+        expect(fresh.gongikOrder).toBeUndefined()
+    })
+
+    it('그룹수정 단일: 기존 레코드의 낡은 cropIndex가 남지 않는다 (SAMPL-1-147)', () => {
+        // 작물 2개(분할) → 1개로 줄이면 cropIndex가 사라져야 한다
+        const existing = { id: 'old-id', createdAt: 'OLD-C', isComplete: false, cropIndex: 2 }
+        const built = build(parcel(), {
+            receptionNumber: '5', commonData: commonGroup, groupId: 'g1',
+            index: 0, totalParcels: 1, isGroupEdit: true, existingLog: existing, now: 'NOW',
+        })
+        expect('cropIndex' in built).toBe(false)
     })
 })

@@ -805,7 +805,7 @@ class PesticideSampleManager extends window.BaseSampleManager {
         if (this.editingId) {
             const editingLog = this.sampleLogs.find(l => String(l.id) === String(this.editingId));
             if (!editingLog) {
-                this.showToast('수정할 데이터를 찾을 수 없습니다.', 'error');
+                this.notifyEditTargetMissing('submitForm');
                 return;
             }
 
@@ -865,6 +865,8 @@ class PesticideSampleManager extends window.BaseSampleManager {
                 // oldOrdered와 매핑할 때 item.index(DOM 순서)를 우선 사용
                 const prev = oldOrdered[item.index] || oldOrdered[idx];
                 const newLog = {
+                    // 기존 레코드를 먼저 펼쳐 폼 밖 필드(후발 추가 필드 포함)를 보존한다 (SAMPL-1-147)
+                    ...(prev || {}),
                     ...commonData,
                     id: prev?.id || crypto.randomUUID(),
                     groupId,
@@ -969,10 +971,12 @@ class PesticideSampleManager extends window.BaseSampleManager {
     // 샘플 수정 (그룹 멤버 조회는 Base getGroupMembers 사용)
     // ========================================
     editSample(id) {
-        const logItem = this.sampleLogs.find(l => String(l.id) === id);
-        if (logItem) {
-            this.populateFormForEdit(logItem);
+        const logItem = this.sampleLogs.find(l => String(l.id) === String(id));
+        if (!logItem) {
+            this.notifyEditTargetMissing('editSample', { requestedId: id });
+            return;
         }
+        this.populateFormForEdit(logItem);
     }
 
     // Override: 편집 시 폼 뷰 전환 (직접 DOM 토글 + 스크롤, 토스트 없음)
@@ -2381,6 +2385,9 @@ class PesticideSampleManager extends window.BaseSampleManager {
                     } else {
                         this.showToast(count > 1 ? `${count}개 시료가 완료 취소되었습니다` : '완료 취소되었습니다', 'success');
                     }
+                } else {
+                    // 배지를 눌렀는데 아무 일도 안 일어나는 조용한 실패 방지 (SAMPL-1-148)
+                    this.notifyEditTargetMissing('toggleComplete', { requestedId: id });
                 }
             }
 
@@ -2400,6 +2407,8 @@ class PesticideSampleManager extends window.BaseSampleManager {
                     log.updatedAt = new Date().toISOString();
                     this.saveLogs();
                     this.filterAndRenderLogs();
+                } else {
+                    this.notifyEditTargetMissing('toggleResult', { requestedId: id });
                 }
             }
 
@@ -3886,7 +3895,11 @@ class PesticideSampleManager extends window.BaseSampleManager {
 
     openPesticideAnalysisModal(logId) {
         const log = this.sampleLogs.find(l => String(l.id) === String(logId));
-        if (!log) return;
+        if (!log) {
+            this.notifyEditTargetMissing('openPesticideAnalysisModal', { requestedId: logId },
+                window.BaseSampleManager.ANALYSIS_TARGET_MISSING_MESSAGE);
+            return;
+        }
 
         const modal = document.getElementById('pesticideAnalysisModal');
         if (!modal) return;
@@ -4218,7 +4231,11 @@ class PesticideSampleManager extends window.BaseSampleManager {
         if (!logId) return;
 
         const log = this.sampleLogs.find(l => String(l.id) === String(logId));
-        if (!log) return;
+        if (!log) {
+            this.notifyEditTargetMissing('savePesticideAnalysis', { requestedId: logId },
+                window.BaseSampleManager.ANALYSIS_TARGET_MISSING_MESSAGE);
+            return;
+        }
 
         // 안전 체크: 모달이 비어있는데 저장하려 하면 (placeholder 방지)
         const preCheckRows = document.querySelectorAll('#paDetectionsBody .pa-detection-row:not(.pa-acid-row)');

@@ -9,6 +9,18 @@
  */
 class BaseSampleManager {
     /**
+     * 편집/저장 대상 레코드를 찾지 못했을 때의 공통 안내 문구 (5타입 통일 — SAMPL-1-147)
+     * 지배적 원인이 "다른 연도 데이터"이므로 복구 경로를 함께 알린다.
+     */
+    static EDIT_TARGET_MISSING_MESSAGE = '수정할 데이터를 찾을 수 없습니다. 다른 연도의 데이터일 수 있습니다.';
+
+    /**
+     * 분석결과 입력/저장 경로 전용 문구 (SAMPL-1-148)
+     * "입력할"은 모달 열기(조회)와 저장 양쪽에서 성립한다.
+     */
+    static ANALYSIS_TARGET_MISSING_MESSAGE = '분석결과를 입력할 접수 데이터를 찾을 수 없습니다. 다른 연도의 데이터일 수 있습니다.';
+
+    /**
      * @param {Object} config - 시료 타입별 설정
      * @param {string} config.moduleKey - 모듈 키 (예: 'soil', 'water')
      * @param {string} config.moduleName - 모듈 표시명 (예: '토양', '수질분석')
@@ -452,7 +464,9 @@ class BaseSampleManager {
             this.updateRecordCount();
 
             // 다음 접수번호 설정 (서브클래스에서 구현된 경우)
-            if (typeof this.generateNextReceptionNumber === 'function') {
+            // 편집 중에는 건드리지 않는다 — 수정 모드에서 사용자가 보고 있는 원본/입력값을
+            // 자동생성 번호로 덮어써 "접수번호가 멋대로 바뀐다"가 된다 (SAMPL-1-147)
+            if (!this.isEditing() && typeof this.generateNextReceptionNumber === 'function') {
                 const nextNumber = this.generateNextReceptionNumber();
                 const receptionNumberInput = document.getElementById('receptionNumber');
                 if (receptionNumberInput && nextNumber) {
@@ -924,24 +938,57 @@ class BaseSampleManager {
     }
 
     /**
+     * 편집 취소 — 타입별 정식 편집 해제 API (SAMPL-1-147)
+     * soil은 동일 구현, pesticide는 구분/필지 정리를 더한 확장 구현으로 오버라이드한다.
+     */
+    cancelEditMode() {
+        this.resetForm();
+    }
+
+    /**
+     * 편집 중 연도 변경 가드 (SAMPL-1-147)
+     * 연도를 바꾸면 sampleLogs가 교체되어 편집 대상이 사라진다 → 확인 후 편집을 명시적으로 해제한다.
+     * @param {HTMLSelectElement} selectEl - 변경된 연도 셀렉트
+     * @param {string} newYear - 변경 전에 캡처한 새 연도
+     * @returns {boolean} 연도 변경을 계속할지 여부
+     */
+    confirmYearChangeWhileEditing(selectEl, newYear) {
+        if (!this.isEditing()) return true;
+
+        if (!confirm('수정 중인 내용이 있습니다. 연도를 변경하면 수정이 취소됩니다. 계속하시겠습니까?')) {
+            if (selectEl && this.selectedYear) selectEl.value = this.selectedYear;  // 셀렉트 원복
+            return false;
+        }
+
+        this.cancelEditMode();
+        // cancelEditMode → resetForm이 form.reset()으로 yearSelect를 되돌리므로(:1384-1387) 새 연도로 재설정.
+        // 직후 syncYearSelects가 다시 세팅하므로 기능상 중복이지만, 순서 변경에 대한 방어로 남겨둔다.
+        if (selectEl) selectEl.value = newYear;
+        return true;
+    }
+
+    /**
      * 연도 선택 이벤트 설정
      */
     setupYearSelection() {
         const yearSelect = document.getElementById('yearSelect');
         const listYearSelect = document.getElementById('listYearSelect');
 
+        // newYear 선캡처 필수 — yearSelect는 <form> 내부에 있어 가드의 resetForm()이
+        // e.target.value를 구 연도로 되돌린다. 캡처 없이 읽으면 연도 변경이 무효화된다 (SAMPL-1-147)
+        const handleYearChange = (e, selectEl) => {
+            const newYear = e.target.value;
+            if (!this.confirmYearChangeWhileEditing(selectEl, newYear)) return;  // 조기 return: syncYearSelects도 실행 안 함
+            this.syncYearSelects(newYear);
+            this.loadYearData(newYear);
+        };
+
         if (yearSelect) {
-            yearSelect.addEventListener('change', (e) => {
-                this.syncYearSelects(e.target.value);
-                this.loadYearData(e.target.value);
-            });
+            yearSelect.addEventListener('change', (e) => handleYearChange(e, yearSelect));
         }
 
         if (listYearSelect) {
-            listYearSelect.addEventListener('change', (e) => {
-                this.syncYearSelects(e.target.value);
-                this.loadYearData(e.target.value);
-            });
+            listYearSelect.addEventListener('change', (e) => handleYearChange(e, listYearSelect));
         }
     }
 
@@ -1258,13 +1305,45 @@ class BaseSampleManager {
     }
 
     /**
+     * 편집(단건 또는 그룹) 진행 중인지 (SAMPL-1-147)
+     * @returns {boolean}
+     */
+    isEditing() {
+        return !!(this.editingId || (this.editingGroupIds && this.editingGroupIds.length));
+    }
+
+    /**
+     * 편집/저장 대상 레코드를 찾지 못했을 때의 공통 안내 + 진단 로그 (SAMPL-1-147)
+     * 조용한 실패(무반응)나 가짜 성공 대신, 사용자에게 원인과 복구 경로를 알린다.
+     * @param {string} context - 호출 지점 (editSample/updateSample 등)
+     * @param {Object} [detail] - 추가 진단 정보
+     * @param {string} [message] - 안내 문구 (분석결과 경로는 ANALYSIS_TARGET_MISSING_MESSAGE 사용)
+     */
+    notifyEditTargetMissing(context, detail = {}, message = BaseSampleManager.EDIT_TARGET_MISSING_MESSAGE) {
+        // `|| 기본값` 정규화: 호출부가 상수 참조를 잘못 평가해 빈 값을 넘기더라도
+        // "조용한 실패를 없애는 가드"가 빈 토스트로 다시 조용해지지 않게 한다.
+        this.showToast(message || BaseSampleManager.EDIT_TARGET_MISSING_MESSAGE, 'error');
+        // warn이 아니라 error — logger.warn은 레벨 게이트에 걸리고 errorReports에도 남지 않아
+        // 패키징된 앱에서 사후 원인 특정이 불가능하다 (logger.js:110-135)
+        (window.logger?.error || console.error)(`[${this.moduleKey}] ${context}: 대상 레코드 조회 실패`, {
+            editingId: this.editingId,
+            selectedYear: this.selectedYear,
+            logCount: this.sampleLogs?.length ?? 0,
+            ...detail
+        });
+    }
+
+    /**
      * 샘플 편집 — Template Method
      * find → 편집상태 세팅 → 공통 필드 → 타입 고유 필드(훅) → 편집모드 UI
      * @param {string} id
      */
     editSample(id) {
         const log = this.sampleLogs.find(l => String(l.id) === String(id));
-        if (!log) return;
+        if (!log) {
+            this.notifyEditTargetMissing('editSample', { requestedId: id });
+            return;
+        }
         this.editingId = log.id;
         this.editingGroupIds = [];
         this.populateCommonFields(log);

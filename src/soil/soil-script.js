@@ -493,18 +493,21 @@ class SoilSampleManager extends window.BaseSampleManager {
         const yearSelect = document.getElementById('yearSelect');
         const listYearSelect = document.getElementById('listYearSelect');
 
-        const handleYearChange = async (e) => {
-            this.syncYearSelects(e.target.value);
-            await this.loadYearData(e.target.value);
+        // newYear 선캡처 + 편집 중 가드 — Base setupYearSelection과 동일 계약 (SAMPL-1-147)
+        const handleYearChange = async (e, selectEl) => {
+            const newYear = e.target.value;
+            if (!this.confirmYearChangeWhileEditing(selectEl, newYear)) return;
+            this.syncYearSelects(newYear);
+            await this.loadYearData(newYear);
             // 로컬 모드에서만 auto-save 로드 (Firebase 모드에서는 로드 안함)
             if (window.isElectron && this.FileAPI && !window.firebaseConfig?.isEnabled()) {
                 await this.loadAutoSaveForSelectedYear();
             }
-            this.showToast(`${e.target.value}년 데이터를 불러왔습니다.`, 'success');
+            this.showToast(`${newYear}년 데이터를 불러왔습니다.`, 'success');
         };
 
-        if (yearSelect) yearSelect.addEventListener('change', handleYearChange);
-        if (listYearSelect) listYearSelect.addEventListener('change', handleYearChange);
+        if (yearSelect) yearSelect.addEventListener('change', (e) => handleYearChange(e, yearSelect));
+        if (listYearSelect) listYearSelect.addEventListener('change', (e) => handleYearChange(e, listYearSelect));
     }
 
     // ========================================
@@ -1865,6 +1868,16 @@ class SoilSampleManager extends window.BaseSampleManager {
             const oldGroupLogs = this.editingGroupIds
                 .map(eid => this.sampleLogs.find(l => String(l.id) === String(eid)))
                 .filter(Boolean);
+
+            // 대상이 전부 사라졌으면(편집 중 연도 변경·다중 창 동기화 등) 중단한다 (SAMPL-1-148).
+            // 그냥 진행하면 groupId=undefined 레코드가 생기고, 아래 filter가
+            // groupId 없는 레코드를 전부 배열에서 떨어뜨려 saveLogs가 축소본을 기록한다.
+            // 게다가 성공 토스트까지 떠서 사용자가 실패를 인지할 수 없다.
+            if (oldGroupLogs.length === 0) {
+                this.notifyEditTargetMissing('submitForm(group)', { editingGroupIds: this.editingGroupIds });
+                return;
+            }
+
             const groupId = oldGroupLogs[0]?.groupId;
 
             // 기존 그룹 레코드 모두 제거
@@ -1942,9 +1955,10 @@ class SoilSampleManager extends window.BaseSampleManager {
 
         // 수정 모드인 경우
         if (this.editingId) {
-            const logIndex = this.sampleLogs.findIndex(l => l.id === this.editingId);
+            // String 정규화: 숫자형 id 레코드에서도 조회되도록 (SAMPL-1-147)
+            const logIndex = this.sampleLogs.findIndex(l => String(l.id) === String(this.editingId));
             if (logIndex === -1) {
-                this.showToast('수정할 데이터를 찾을 수 없습니다.', 'error');
+                this.notifyEditTargetMissing('submitForm');
                 return;
             }
 
@@ -2130,8 +2144,11 @@ class SoilSampleManager extends window.BaseSampleManager {
     // ========================================
 
     editSample(id) {
-        const logItem = this.sampleLogs.find(l => String(l.id) === id);
-        if (!logItem) return;
+        const logItem = this.sampleLogs.find(l => String(l.id) === String(id));
+        if (!logItem) {
+            this.notifyEditTargetMissing('editSample', { requestedId: id });
+            return;
+        }
 
         // groupId가 있고 같은 그룹에 2개 이상의 레코드가 있으면 그룹 수정
         if (logItem.groupId) {
@@ -3652,7 +3669,7 @@ class SoilSampleManager extends window.BaseSampleManager {
         if (this.subCategorySelect) {
             this.subCategorySelect.addEventListener('change', (e) => {
                 const isFill = e.target.value === '성토';
-                if (this.receptionNumberInput && !this.editingId && !(this.editingGroupIds && this.editingGroupIds.length)) {
+                if (this.receptionNumberInput && !this.isEditing()) {
                     this.receptionNumberInput.value = isFill
                         ? this.generateNextFillReceptionNumber()
                         : this.generateNextReceptionNumber();
@@ -3664,7 +3681,7 @@ class SoilSampleManager extends window.BaseSampleManager {
         // 경지구분 1차 변경 시 접수번호를 해당 분류 기준으로 재추천 (수정 모드 제외)
         if (this.landClass1Select) {
             this.landClass1Select.addEventListener('change', () => {
-                if (this.receptionNumberInput && !this.editingId && !(this.editingGroupIds && this.editingGroupIds.length)) {
+                if (this.receptionNumberInput && !this.isEditing()) {
                     const isFill = this.subCategorySelect?.value === '성토';
                     this.receptionNumberInput.value = isFill
                         ? this.generateNextFillReceptionNumber()
@@ -3855,6 +3872,9 @@ class SoilSampleManager extends window.BaseSampleManager {
                         } else {
                             this.showToast(count > 1 ? `${count}개 시료가 완료 취소되었습니다` : '완료 취소되었습니다', 'success');
                         }
+                    } else {
+                        // 배지를 눌렀는데 아무 일도 안 일어나는 조용한 실패 방지 (SAMPL-1-148)
+                        this.notifyEditTargetMissing('toggleComplete', { requestedId: id });
                     }
                 }
 
@@ -3919,6 +3939,9 @@ class SoilSampleManager extends window.BaseSampleManager {
                         this.tableBody.querySelectorAll(`.${cls}[data-id="${id}"]`).forEach(sel => {
                             if (sel !== e.target) sel.value = val;
                         });
+                    } else {
+                        // 차수/기준년도를 골랐는데 반영되지 않는 조용한 실패 방지 (SAMPL-1-148)
+                        this.notifyEditTargetMissing('gongikInlineEdit', { requestedId: id });
                     }
                 }
             });

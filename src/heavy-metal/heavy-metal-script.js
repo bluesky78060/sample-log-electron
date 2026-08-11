@@ -314,7 +314,21 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
         // 공통 입력 필드는 Base collectCommonFormData로 수집 (L1 Phase 3 P3-A)
         // date/name/phoneNumber는 heavy-metal 고유 동작(기본값 today, trim)을 보존하기 위해 오버라이드
         const formData = new FormData(this.form);
+        // 편집 중이면 기존 레코드를 한 번만 조회해 인덱스·원본 모두 재사용 (String 정규화 — SAMPL-1-147)
+        const editIdx = this.editingId
+            ? this.sampleLogs.findIndex(l => String(l.id) === String(this.editingId))
+            : -1;
+        if (this.editingId && editIdx < 0) {
+            // 가짜 성공 금지 — 대상을 못 찾으면 저장/초기화를 진행하지 않고 알린다 (SAMPL-1-147)
+            this.notifyEditTargetMissing('submitForm');
+            return;
+        }
+        const existing = editIdx >= 0 ? this.sampleLogs[editIdx] : null;
+
         const data = {
+            // 기존 레코드를 먼저 펼쳐 폼 밖 필드(mailDate/testResult 등 후발 추가 필드 포함)를 보존한다.
+            // 이 레코드는 sampleLogs[editIdx]를 전체 교체하므로, 나열 누락 = 조용한 데이터 유실 (SAMPL-1-147)
+            ...(existing || {}),
             id: this.editingId || this.generateId(),
             ...this.collectCommonFormData(formData),
             receptionNumber: document.getElementById('receptionNumber')?.value || this.generateNextReceptionNumber(),
@@ -327,14 +341,17 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
             samplingDate: samplingDate,
             sampleCount: document.getElementById('sampleCount')?.value || 1,
             analysisItems: selectedItems,
-            isComplete: this.editingId ? (this.sampleLogs.find(l => l.id === this.editingId)?.isComplete || false) : false,
-            createdAt: this.editingId ? (this.sampleLogs.find(l => l.id === this.editingId)?.createdAt || new Date().toISOString()) : new Date().toISOString(),
+            isComplete: existing?.isComplete || false,
+            // 폼 밖에서 설정되는 필드는 명시 보존 — 레코드를 전체 교체하므로
+            // 누락 시 수정만으로 우편발송일자·판정이 조용히 사라진다 (SAMPL-1-147)
+            mailDate: existing?.mailDate || '',
+            testResult: existing?.testResult || '',
+            createdAt: existing?.createdAt || new Date().toISOString(),
             updatedAt: new Date().toISOString()
         };
 
         if (this.editingId) {
-            const editIdx = this.sampleLogs.findIndex(l => l.id === this.editingId);
-            if (editIdx >= 0) this.sampleLogs[editIdx] = data;
+            this.sampleLogs[editIdx] = data;
             showToast('접수 정보가 수정되었습니다.', 'success');
             this.editingId = null;
         } else {
@@ -497,7 +514,11 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
     // ========================================
     toggleComplete(id) {
         const log = this.sampleLogs.find(l => String(l.id) === String(id));
-        if (!log) return;
+        if (!log) {
+            // 배지를 눌렀는데 아무 일도 안 일어나는 조용한 실패 방지 (SAMPL-1-148)
+            this.notifyEditTargetMissing('toggleComplete', { requestedId: id });
+            return;
+        }
         log.isComplete = !log.isComplete;
         log.updatedAt = new Date().toISOString();
         this.listViewStale = true;
@@ -510,7 +531,10 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
     // ========================================
     toggleResult(id) {
         const log = this.sampleLogs.find(l => String(l.id) === String(id));
-        if (!log) return;
+        if (!log) {
+            this.notifyEditTargetMissing('toggleResult', { requestedId: id });
+            return;
+        }
         if (!log.testResult || log.testResult === '') {
             log.testResult = 'pass';
         } else if (log.testResult === 'pass') {
@@ -1894,7 +1918,11 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
 
     openHeavyMetalAnalysisModal(logId) {
         const log = this.sampleLogs.find(l => String(l.id) === String(logId));
-        if (!log) return;
+        if (!log) {
+            this.notifyEditTargetMissing('openHeavyMetalAnalysisModal', { requestedId: logId },
+                window.BaseSampleManager.ANALYSIS_TARGET_MISSING_MESSAGE);
+            return;
+        }
 
         const modal = document.getElementById('heavyMetalAnalysisModal');
         if (!modal) return;
@@ -2049,7 +2077,11 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
         if (!logId) return;
 
         const log = this.sampleLogs.find(l => String(l.id) === String(logId));
-        if (!log) return;
+        if (!log) {
+            this.notifyEditTargetMissing('saveHeavyMetalAnalysis', { requestedId: logId },
+                window.BaseSampleManager.ANALYSIS_TARGET_MISSING_MESSAGE);
+            return;
+        }
 
         const fields = HeavyMetalSampleManager.HEAVY_METAL_FIELDS;
         const allResults = this.loadAllHeavyMetalTestResults();

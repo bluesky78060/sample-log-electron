@@ -505,37 +505,41 @@ class CompostSampleManager extends window.BaseSampleManager {
 
         if (this.editingId) {
             // === 수정 모드 ===
-            const log = this.sampleLogs.find(l => l.id === this.editingId);
-            if (log) {
-                Object.assign(log, this.collectCommonFormData(formData), {
-                    receptionNumber: formData.get('receptionNumber'),
-                    farmName: formData.get('farmName'),
-                    farmAddress: formData.get('farmAddressFull'),
-                    farmArea: this.parseFormattedNumber(formData.get('farmArea') || ''),
-                    farmAreaUnit: formData.get('farmAreaUnit') || 'm2',
-                    sampleType: formData.get('sampleType'),
-                    animalType: animalType,
-                    productionDate: formData.get('productionDate'),
-                    sampleCount: formData.get('sampleCount') || '1',
-                    rawMaterials: formData.get('rawMaterials'),
-                    updatedAt: new Date().toISOString()
-                });
-
-                this.saveLogs();
-                this.showToast('수정이 완료되었습니다.', 'success');
-                this.resetForm();
-                this.receptionNumberInput.value = this.generateNextReceptionNumber();
-                this.editingId = null;
-
-                // 제출 버튼 원래대로
-                if (this.navSubmitBtn) {
-                    this.navSubmitBtn.title = '접수 등록';
-                    this.navSubmitBtn.classList.remove('btn-edit-mode');
-                }
-
-                // 목록 뷰로 전환
-                this.switchView('list');
+            // String 정규화: 숫자형 id 레코드에서도 조회되도록 (SAMPL-1-147)
+            const log = this.sampleLogs.find(l => String(l.id) === String(this.editingId));
+            if (!log) {
+                // 조용한 실패 금지 — 편집 중 연도 변경 등으로 대상이 사라진 경우를 알린다 (SAMPL-1-147)
+                this.notifyEditTargetMissing('submitForm');
+                return;
             }
+            Object.assign(log, this.collectCommonFormData(formData), {
+                receptionNumber: formData.get('receptionNumber'),
+                farmName: formData.get('farmName'),
+                farmAddress: formData.get('farmAddressFull'),
+                farmArea: this.parseFormattedNumber(formData.get('farmArea') || ''),
+                farmAreaUnit: formData.get('farmAreaUnit') || 'm2',
+                sampleType: formData.get('sampleType'),
+                animalType: animalType,
+                productionDate: formData.get('productionDate'),
+                sampleCount: formData.get('sampleCount') || '1',
+                rawMaterials: formData.get('rawMaterials'),
+                updatedAt: new Date().toISOString()
+            });
+
+            this.saveLogs();
+            this.showToast('수정이 완료되었습니다.', 'success');
+            this.resetForm();
+            this.receptionNumberInput.value = this.generateNextReceptionNumber();
+            this.editingId = null;
+
+            // 제출 버튼 원래대로
+            if (this.navSubmitBtn) {
+                this.navSubmitBtn.title = '접수 등록';
+                this.navSubmitBtn.classList.remove('btn-edit-mode');
+            }
+
+            // 목록 뷰로 전환
+            this.switchView('list');
         } else {
             // === 신규 등록 모드 ===
             const data = {
@@ -1013,13 +1017,16 @@ class CompostSampleManager extends window.BaseSampleManager {
     // ========================================
 
     toggleComplete(id) {
-        const log = this.sampleLogs.find(l => String(l.id) === id);
-        if (log) {
-            log.isComplete = !log.isComplete;
-            log.updatedAt = new Date().toISOString();
-            this.saveLogs();
-            this.filterAndRenderLogs();
+        const log = this.sampleLogs.find(l => String(l.id) === String(id));
+        if (!log) {
+            // 배지를 눌렀는데 아무 일도 안 일어나는 조용한 실패 방지 (SAMPL-1-148)
+            this.notifyEditTargetMissing('toggleComplete', { requestedId: id });
+            return;
         }
+        log.isComplete = !log.isComplete;
+        log.updatedAt = new Date().toISOString();
+        this.saveLogs();
+        this.filterAndRenderLogs();
     }
 
     // ========================================
@@ -1027,19 +1034,21 @@ class CompostSampleManager extends window.BaseSampleManager {
     // ========================================
 
     toggleTestResult(id) {
-        const log = this.sampleLogs.find(l => String(l.id) === id);
-        if (log) {
-            if (!log.testResult || log.testResult === '') {
-                log.testResult = 'pass';
-            } else if (log.testResult === 'pass') {
-                log.testResult = 'fail';
-            } else {
-                log.testResult = '';
-            }
-            log.updatedAt = new Date().toISOString();
-            this.saveLogs();
-            this.filterAndRenderLogs();
+        const log = this.sampleLogs.find(l => String(l.id) === String(id));
+        if (!log) {
+            this.notifyEditTargetMissing('toggleTestResult', { requestedId: id });
+            return;
         }
+        if (!log.testResult || log.testResult === '') {
+            log.testResult = 'pass';
+        } else if (log.testResult === 'pass') {
+            log.testResult = 'fail';
+        } else {
+            log.testResult = '';
+        }
+        log.updatedAt = new Date().toISOString();
+        this.saveLogs();
+        this.filterAndRenderLogs();
     }
 
     // BaseSampleManager의 setupTableEventDelegation()이 toggleResult를 호출하므로 alias
@@ -1052,23 +1061,28 @@ class CompostSampleManager extends window.BaseSampleManager {
     // ========================================
 
     updateMaturity(id, value) {
-        const logItem = this.sampleLogs.find(l => String(l.id) === id);
-        if (logItem) {
-            logItem.maturity = value;
-            logItem.updatedAt = new Date().toISOString();
-            this.saveLogs();
-            this.log('부숙도 업데이트:', id, value);
+        const logItem = this.sampleLogs.find(l => String(l.id) === String(id));
+        if (!logItem) {
+            // 인라인 입력이 반영되지 않는 조용한 실패 방지 (SAMPL-1-148)
+            this.notifyEditTargetMissing('updateMaturity', { requestedId: id });
+            return;
         }
+        logItem.maturity = value;
+        logItem.updatedAt = new Date().toISOString();
+        this.saveLogs();
+        this.log('부숙도 업데이트:', id, value);
     }
 
     updateMoisture(id, value) {
-        const logItem = this.sampleLogs.find(l => String(l.id) === id);
-        if (logItem) {
-            logItem.moisture = value;
-            logItem.updatedAt = new Date().toISOString();
-            this.saveLogs();
-            this.log('함수율 업데이트:', id, value);
+        const logItem = this.sampleLogs.find(l => String(l.id) === String(id));
+        if (!logItem) {
+            this.notifyEditTargetMissing('updateMoisture', { requestedId: id });
+            return;
         }
+        logItem.moisture = value;
+        logItem.updatedAt = new Date().toISOString();
+        this.saveLogs();
+        this.log('함수율 업데이트:', id, value);
     }
 
     // ========================================
@@ -2187,7 +2201,11 @@ class CompostSampleManager extends window.BaseSampleManager {
 
     openCompostAnalysisModal(logId) {
         const log = this.sampleLogs.find(l => String(l.id) === String(logId));
-        if (!log) return;
+        if (!log) {
+            this.notifyEditTargetMissing('openCompostAnalysisModal', { requestedId: logId },
+                window.BaseSampleManager.ANALYSIS_TARGET_MISSING_MESSAGE);
+            return;
+        }
 
         const modal = document.getElementById('compostAnalysisModal');
         if (!modal) return;
@@ -2438,7 +2456,11 @@ class CompostSampleManager extends window.BaseSampleManager {
         if (!logId) return;
 
         const log = this.sampleLogs.find(l => String(l.id) === String(logId));
-        if (!log) return;
+        if (!log) {
+            this.notifyEditTargetMissing('saveCompostAnalysis', { requestedId: logId },
+                window.BaseSampleManager.ANALYSIS_TARGET_MISSING_MESSAGE);
+            return;
+        }
 
         const fields = this.getFieldsForSample(log.sampleType || '가축분퇴비', log.animalType || '');
         const allResults = this.loadAllCompostTestResults();

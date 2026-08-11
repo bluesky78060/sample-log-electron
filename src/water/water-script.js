@@ -408,10 +408,15 @@ class WaterSampleManager extends window.BaseSampleManager {
     // ========================================
     editSample(id) {
         const log = this.sampleLogs.find(l => String(l.id) === String(id));
-        if (!log) return;
+        if (!log) {
+            this.notifyEditTargetMissing('editSample', { requestedId: id });
+            return;
+        }
 
         const groupMembers = this.getGroupMembers(log);
-        this.editingId = id;
+        // Base editSample(:1268)과 동일하게 레코드의 id 원본을 보관 —
+        // dataset.id(문자열)를 그대로 담으면 숫자형 id 레코드에서 updateSample의 조회가 실패한다 (SAMPL-1-147)
+        this.editingId = log.id;
         this.editingGroupIds = groupMembers.map(m => String(m.id));
 
         try {
@@ -721,8 +726,13 @@ class WaterSampleManager extends window.BaseSampleManager {
     // ========================================
     updateSample() {
         const formData = new FormData(this.form);
-        const log = this.sampleLogs.find(l => l.id === this.editingId);
-        if (!log) return;
+        // String 정규화: 숫자형 id 레코드에서도 조회되도록 (SAMPL-1-147)
+        const log = this.sampleLogs.find(l => String(l.id) === String(this.editingId));
+        if (!log) {
+            // 조용한 실패 금지 — 편집 중 연도 변경 등으로 대상이 사라진 경우를 알린다 (SAMPL-1-147)
+            this.notifyEditTargetMissing('updateSample');
+            return;
+        }
 
         // SAMPL-1-81: 행(슬롯) 기준으로 읽어야 빈 채취장소 멤버가 삭제되지 않고,
         // crops/sampleNames/notes와 인덱스가 정렬된다.
@@ -766,7 +776,20 @@ class WaterSampleManager extends window.BaseSampleManager {
         const nowIso = new Date().toISOString();
         for (let i = 0; i < samplingLocations.length; i++) {
             const prev = oldOrdered[i];
+            // 기존 레코드를 펼쳐 폼 밖 필드(mailDate 등 후발 추가 필드 포함)를 보존한다.
+            // 화이트리스트로 필드를 하나씩 나열하면 새 필드가 추가될 때마다 수정 시 조용히 유실된다 (SAMPL-1-147).
+            // 단, 아래 레거시 배열은 per-row 레코드에 남으면 editSample(:452)이 단수 필드보다
+            // 우선 참조해 편집 화면이 낡은 값으로 되돌아가므로 의도적으로 제외한다.
+            const {
+                samplingLocations: _legacyLocations,
+                samplingCrops: _legacyCrops,
+                samplingNotes: _legacyNotes,
+                sampleNamesPerRow: _legacyNames,
+                ...prevPreserved
+            } = prev || {};
+
             const data = {
+                ...prevPreserved,
                 ...commonData,
                 id: prev?.id || this.generateId(),
                 groupId,
@@ -778,6 +801,7 @@ class WaterSampleManager extends window.BaseSampleManager {
                 sampleNote: samplingNotes[i] || '',
                 isComplete: prev?.isComplete || false,
                 testResult: prev?.testResult || '',
+                mailDate: prev?.mailDate || '',
                 createdAt: prev?.createdAt || nowIso,
                 updatedAt: nowIso
             };
@@ -806,29 +830,34 @@ class WaterSampleManager extends window.BaseSampleManager {
     // 완료/판정 토글
     // ========================================
     toggleComplete(id) {
-        const log = this.sampleLogs.find(l => String(l.id) === id);
-        if (log) {
-            log.isComplete = !log.isComplete;
-            log.updatedAt = new Date().toISOString();
-            this.saveLogs();
-            this.filterAndRenderLogs();
+        const log = this.sampleLogs.find(l => String(l.id) === String(id));
+        if (!log) {
+            // 배지를 눌렀는데 아무 일도 안 일어나는 조용한 실패 방지 (SAMPL-1-148)
+            this.notifyEditTargetMissing('toggleComplete', { requestedId: id });
+            return;
         }
+        log.isComplete = !log.isComplete;
+        log.updatedAt = new Date().toISOString();
+        this.saveLogs();
+        this.filterAndRenderLogs();
     }
 
     toggleTestResult(id) {
-        const log = this.sampleLogs.find(l => String(l.id) === id);
-        if (log) {
-            if (!log.testResult || log.testResult === '') {
-                log.testResult = 'pass';
-            } else if (log.testResult === 'pass') {
-                log.testResult = 'fail';
-            } else {
-                log.testResult = '';
-            }
-            log.updatedAt = new Date().toISOString();
-            this.saveLogs();
-            this.filterAndRenderLogs();
+        const log = this.sampleLogs.find(l => String(l.id) === String(id));
+        if (!log) {
+            this.notifyEditTargetMissing('toggleTestResult', { requestedId: id });
+            return;
         }
+        if (!log.testResult || log.testResult === '') {
+            log.testResult = 'pass';
+        } else if (log.testResult === 'pass') {
+            log.testResult = 'fail';
+        } else {
+            log.testResult = '';
+        }
+        log.updatedAt = new Date().toISOString();
+        this.saveLogs();
+        this.filterAndRenderLogs();
     }
 
     // ========================================
@@ -1967,8 +1996,12 @@ class WaterSampleManager extends window.BaseSampleManager {
     }
 
     openAnalysisModal(logId) {
-        const log = this.sampleLogs.find(l => l.id === logId);
-        if (!log) return;
+        const log = this.sampleLogs.find(l => String(l.id) === String(logId));
+        if (!log) {
+            this.notifyEditTargetMissing('openAnalysisModal', { requestedId: logId },
+                window.BaseSampleManager.ANALYSIS_TARGET_MISSING_MESSAGE);
+            return;
+        }
 
         const modal = document.getElementById('analysisResultModal');
         if (!modal) return;
@@ -2194,8 +2227,12 @@ class WaterSampleManager extends window.BaseSampleManager {
         const logId = this._analysisLogId;
         if (!logId) return;
 
-        const log = this.sampleLogs.find(l => l.id === logId);
-        if (!log) return;
+        const log = this.sampleLogs.find(l => String(l.id) === String(logId));
+        if (!log) {
+            this.notifyEditTargetMissing('saveAnalysisResult', { requestedId: logId },
+                window.BaseSampleManager.ANALYSIS_TARGET_MISSING_MESSAGE);
+            return;
+        }
 
         const testItems = log.testItems || '생활용수';
         const allFields = WaterSampleManager.WATER_QUALITY_FIELDS;
