@@ -341,11 +341,11 @@ describe('computePreview — 수동 번호 중복은 시퀀스 무관·표기 �
     const collectLit = (logs, cls) => fns().collectLiteralNumbers(logs, cls)
     const MAP_FULL = { receptionNumber: 0, name: 1, lotAddress: 2, subCategory: 3 }
 
+    // 프로덕션과 같은 경로로 넘긴다 — `logs`를 주면 computePreview가 세 풀을 도출한다.
+    // 풀을 직접 주입하면 "호출부가 풀을 빠뜨리는" 형태의 회귀를 이 테스트가 놓친다.
     const withPools = (logs, rows, opts = {}) => preview({
         rows, mapping: MAP_FULL, landClass1: '농가의뢰', dupPolicy: opts.dupPolicy || 'skip',
-        existing: collect(logs, '농가의뢰'),
-        existingFill: collect(logs, '농가의뢰', { fill: true }),
-        existingLiteral: collectLit(logs, '농가의뢰'),
+        logs,
         nextNumber: opts.nextNumber ?? 1,
         nextFillNumber: opts.nextFillNumber ?? 1,
     })
@@ -426,5 +426,55 @@ describe('collectLiteralNumbers', () => {
         expect(collectLit([], '농가의뢰').size).toBe(0)
         expect(collectLit(null, '농가의뢰').size).toBe(0)
         expect(collectLit([{ receptionNumber: '' }, {}], '농가의뢰').size).toBe(0)
+    })
+})
+
+describe('computePreview — 저장되지 않는 행은 배치 집합에도 남지 않는다 (SAMPL-1-153 재리뷰 M-2)', () => {
+    // 건너뛰는 중복 행의 번호가 배치 집합에 남으면, 뒤따르는 자동부여 행이 그 번호를
+    // 피해 가면서 미리보기가 실제 저장 번호보다 앞서 나간다 (미리보기 ≠ 저장).
+    const MAP_FULL = { receptionNumber: 0, name: 1, lotAddress: 2, subCategory: 3 }
+
+    it('건너뛴 성토 중복 뒤의 자동부여가 매니저와 같은 번호를 보여준다', () => {
+        // 대장: F1(성토) · 2(일반). 배치: 성토 수동 '2'(일반 2와 표기 충돌 → skip) + 성토 자동
+        const r = preview({
+            rows: [['2', 'A', '주소', '성토'], ['', 'B', '주소', '성토']],
+            mapping: MAP_FULL, landClass1: '농가의뢰', dupPolicy: 'skip',
+            logs: [
+                { receptionNumber: 'F1', subCategory: '성토', landClass1: '농가의뢰' },
+                { receptionNumber: '2', subCategory: '논', landClass1: '농가의뢰' },
+            ],
+            nextNumber: 3, nextFillNumber: 2,
+        })
+        expect(r.items[0].status).toBe('dup')
+        expect(r.items[0].skip).toBe(true)
+        // 행1이 저장되지 않으므로 매니저는 F2를 부여한다 (수정 전에는 F3을 보여줬다)
+        expect(r.items[1].display).toBe('F2')
+    })
+
+    it('덮어쓰기 정책이면 저장되므로 배치 집합에 남는다', () => {
+        const r = preview({
+            rows: [['2', 'A', '주소', '논'], ['', 'B', '주소', '논']],
+            mapping: MAP_FULL, landClass1: '농가의뢰', dupPolicy: 'overwrite',
+            logs: [{ receptionNumber: '2', subCategory: '논', landClass1: '농가의뢰' }],
+            nextNumber: 3,
+        })
+        expect(r.items[0].skip).toBe(false)
+        expect(r.items[1].display).toBe('3')
+    })
+
+    it('logs가 배열이 아니면 경고하되 죽지 않는다', () => {
+        const r = preview({
+            rows: [['5', 'A', '주소', '논']], mapping: MAP_FULL,
+            logs: { not: 'an array' }, nextNumber: 1,
+        })
+        expect(r).not.toBeNull()
+        expect(r.items[0].status).toBe('new')
+    })
+})
+
+describe('collectExistingNumbers — 기본 경지구분 폴백 (computeNextNumber와 대칭)', () => {
+    it('landClass1 생략 시 기본값으로 폴백한다', () => {
+        expect(collect([{ receptionNumber: '5' }], undefined).has('5')).toBe(true)
+        expect(collect([{ receptionNumber: 'F5', subCategory: '성토' }], undefined, { fill: true }).has('5')).toBe(true)
     })
 })

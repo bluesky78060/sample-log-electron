@@ -210,10 +210,12 @@
      */
     function collectExistingNumbers(logs, landClass1, opts) {
         const fill = !!(opts && opts.fill);
+        // computeNextNumber(reception-number.js)와 같이 기본 경지구분으로 폴백한다
+        const target = landClass1 || LAND_CLASS1_DEFAULT;
         const set = new Set();
         for (const log of (logs || [])) {
             if (!log || !log.receptionNumber) continue;
-            if ((log.landClass1 || LAND_CLASS1_DEFAULT) !== landClass1) continue;
+            if ((log.landClass1 || LAND_CLASS1_DEFAULT) !== target) continue;
             if (fill !== (log.subCategory === '성토')) continue;
             const base = String(log.receptionNumber).split('-')[0].trim();
             if (!fill && base.startsWith('F')) continue;
@@ -285,6 +287,11 @@
         // 호출부가 하나를 빠뜨릴 수 없다 — 빠뜨리면 그 검사가 조용히 사라진다
         // (SAMPL-1-153 리뷰에서 실제로 그렇게 중복 검사가 없어졌다).
         // 개별 풀 인자는 단위 테스트에서 특정 상태를 주입할 때만 쓴다.
+        // logs를 줬는데 배열이 아니면(손상된 localStorage 등) 조용히 넘기지 않는다 —
+        // 그러면 세 풀이 모두 비어 중복 검사가 사라진다.
+        if (o.logs != null && !Array.isArray(o.logs)) {
+            logWarn('[가져오기] computePreview: logs가 배열이 아님 — 중복 검사가 비어 있게 됩니다', o.logs);
+        }
         const hasLogs = Array.isArray(o.logs);
         const existing = hasLogs ? collectExistingNumbers(o.logs, landClass1) : (o.existing || new Set());
         const existingFill = hasLogs ? collectExistingNumbers(o.logs, landClass1, { fill: true }) : (o.existingFill || new Set());
@@ -382,8 +389,12 @@
 
                 // 커서는 시퀀스별로 올린다 — 매니저가 그 시퀀스로 채번하기 때문이다.
                 // 성토 시퀀스는 F를 떼고 숫자만 본다 (computeNextNumber와 동일).
+                //
+                // 저장되지 않는 행(건너뛰는 중복)의 번호는 배치 집합에도 넣지 않는다.
+                // 넣으면 뒤따르는 자동부여 행이 그 번호를 피해 가면서 미리보기가
+                // 실제 저장 번호보다 앞서 나간다 (미리보기 ≠ 저장).
                 const key = isFill ? base.replace('F', '') : base;
-                seenPool.add(key);
+                if (willBeSaved) seenPool.add(key);
 
                 // 수동 번호가 실제로 저장되면 매니저의 max+1 채번이 그 번호를 넘어간다.
                 // 미리보기 커서도 같이 올려야 뒤따르는 자동부여 행의 표시 번호가 실제와 맞는다
@@ -1163,14 +1174,9 @@
             } catch (_) { return []; }
         }
 
-        /**
-         * 기존 접수번호 집합. 순수 계산은 collectExistingNumbers()에 위임한다.
-         * @param {string} landClass1
-         * @param {{fill?: boolean}} [opts] fill=true면 성토(F) 시퀀스 풀
-         */
-        _existingNumbers(landClass1, opts) {
-            return collectExistingNumbers(this._existingLogs(), landClass1, opts);
-        }
+        // 풀을 하나씩 뽑아 넘기는 진입점(_existingNumbers)은 두지 않는다.
+        // computePreview가 logs에서 세 풀을 함께 도출한다 — 하나를 빠뜨리면
+        // 그 검사가 조용히 사라지고, 그것이 이 티켓의 회귀 원인이었다.
 
         /**
          * 미리보기 재계산. 순수 계산은 computePreview()에 위임하고
