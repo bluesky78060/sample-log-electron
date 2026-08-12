@@ -222,6 +222,30 @@
         return set;
     }
 
+    /**
+     * 기존 레코드의 접수번호 **본번 표기 그대로**의 집합 (경지구분1차 범위).
+     *
+     * 자동채번 풀(collectExistingNumbers)과 목적이 다르다:
+     *  - 자동채번 풀은 매니저 computeNextNumber를 따라 시퀀스를 분리하고 F를 떼거나 제외한다
+     *  - 이 함수는 **수동 입력 번호의 중복 판정**용이라 표기를 그대로 둔다
+     *
+     * 수동 번호 중복은 시퀀스와 무관하게 판정해야 한다. 폼 등록 경로도 그렇게 한다
+     * (`soil-script.js`의 `logBaseNumber === numToCheck` — subCategory를 보지 않는다).
+     * 시퀀스별로 나눠 판정하면 구분='성토' 행에 수동 번호 `5`를 주었을 때
+     * 일반 `5`와 충돌하는 것을 놓쳐 같은 번호가 두 건 저장된다.
+     * `F5`와 `5`는 표기가 달라 서로 충돌하지 않는다 — 그것이 이 함수가 표기를 보존하는 이유다.
+     */
+    function collectLiteralNumbers(logs, landClass1) {
+        const target = landClass1 || LAND_CLASS1_DEFAULT;
+        const set = new Set();
+        for (const log of (logs || [])) {
+            if (!log || !log.receptionNumber) continue;
+            if ((log.landClass1 || LAND_CLASS1_DEFAULT) !== target) continue;
+            set.add(String(log.receptionNumber).split('-')[0].trim());
+        }
+        return set;
+    }
+
     /** 번호 집합에서 다음 번호를 추정한다 (매니저 미준비 시 폴백) */
     function inferNextNumber(existing) {
         let maxN = 0;
@@ -248,14 +272,24 @@
      * @param {number|null} [o.nextNumber]    일반 시퀀스 시작 번호
      * @param {Set<string>} [o.existingFill]  성토 시퀀스 기존 번호
      * @param {number|null} [o.nextFillNumber] 성토 시퀀스 시작 번호(F 접두 없이)
+     * @param {Set<string>} [o.existingLiteral] 수동 번호 중복 판정용 — 표기 그대로, 시퀀스 통합
+     * @param {Array<Object>} [o.logs] 기존 레코드. 주면 위 세 풀을 여기서 도출한다(권장).
+     *   개별 풀 인자는 단위 테스트 주입용이다.
      */
     function computePreview(o) {
         const rows = o.rows || [];
         const mapping = o.mapping || {};
         const landClass1 = o.landClass1 || LAND_CLASS1_DEFAULT;
         const dupPolicy = o.dupPolicy || 'skip';
-        const existing = o.existing || new Set();
-        const existingFill = o.existingFill || new Set();
+        // 세 풀은 항상 같은 로그에서 나와야 한다. `logs`를 주면 여기서 도출하므로
+        // 호출부가 하나를 빠뜨릴 수 없다 — 빠뜨리면 그 검사가 조용히 사라진다
+        // (SAMPL-1-153 리뷰에서 실제로 그렇게 중복 검사가 없어졌다).
+        // 개별 풀 인자는 단위 테스트에서 특정 상태를 주입할 때만 쓴다.
+        const hasLogs = Array.isArray(o.logs);
+        const existing = hasLogs ? collectExistingNumbers(o.logs, landClass1) : (o.existing || new Set());
+        const existingFill = hasLogs ? collectExistingNumbers(o.logs, landClass1, { fill: true }) : (o.existingFill || new Set());
+        // 수동 번호 중복 판정용 — 표기 그대로, 두 시퀀스 통합
+        const existingLiteral = hasLogs ? collectLiteralNumbers(o.logs, landClass1) : (o.existingLiteral || new Set());
 
         const mappedKeys = Object.keys(mapping);
         // 최소 1개 식별 필드가 매핑돼야 의미 있음
@@ -275,6 +309,8 @@
         // (일반 5와 성토 F5는 충돌이 아니다)
         const seenInBatch = new Set();
         const seenFillInBatch = new Set();
+        // 수동 번호 중복 판정용 배치 집합 (표기 그대로, 시퀀스 무관)
+        const seenLiteralInBatch = new Set();
 
         const items = [];
         const stats = { total: rows.length, new: 0, dup: 0, err: 0 };
@@ -328,16 +364,25 @@
                 while (pool.has(String(candidate)) || seenPool.has(String(candidate))) candidate++;
                 seenPool.add(String(candidate));
                 recNo = isFill ? `F${candidate}` : String(candidate);
+                // 뒤따르는 수동 행이 이 번호와 충돌하는 것을 감지해야 한다
+                seenLiteralInBatch.add(recNo);
                 if (isFill) nextFill = candidate + 1;
                 else nextNum = candidate + 1;
                 stats.new++;
                 items.push({ status: 'new', display: recNo, rec: { ...rec, receptionNumber: undefined }, auto: true });
             } else {
                 const base = String(recNo).split('-')[0].trim();
-                // 성토 시퀀스는 F를 떼고 숫자만 비교한다 (computeNextNumber와 동일)
-                const key = isFill ? base.replace('F', '') : base;
-                const isDup = pool.has(key) || seenPool.has(key);
+
+                // 중복 판정은 **표기 그대로, 시퀀스 무관**이다 (폼 등록 경로와 동일 규칙).
+                // 시퀀스별로 나눠 판정하면 구분='성토' 행의 수동 번호 `5`가 일반 `5`와
+                // 충돌하는 것을 놓쳐 같은 번호가 두 건 저장된다.
+                const isDup = existingLiteral.has(base) || seenLiteralInBatch.has(base);
                 const willBeSaved = !(isDup && dupPolicy === 'skip');
+                seenLiteralInBatch.add(base);
+
+                // 커서는 시퀀스별로 올린다 — 매니저가 그 시퀀스로 채번하기 때문이다.
+                // 성토 시퀀스는 F를 떼고 숫자만 본다 (computeNextNumber와 동일).
+                const key = isFill ? base.replace('F', '') : base;
                 seenPool.add(key);
 
                 // 수동 번호가 실제로 저장되면 매니저의 max+1 채번이 그 번호를 넘어간다.
@@ -1139,8 +1184,8 @@
 
             // 일반과 성토(F 접두)는 완전히 분리된 채번이라 양쪽을 다 넘겨야 한다.
             // 한쪽만 넘기면 성토 행 미리보기가 실제 저장 번호와 어긋난다 (SAMPL-1-153).
-            const existing = this._existingNumbers(landClass1);
-            const existingFill = this._existingNumbers(landClass1, { fill: true });
+            // 번호 풀은 computePreview가 이 로그에서 직접 도출한다 (하나를 빠뜨릴 수 없게)
+            const logs = this._existingLogs();
 
             const nextNumber = (mgr && typeof mgr.getNextNumberForClass === 'function')
                 ? mgr.getNextNumberForClass(year, landClass1)
@@ -1158,9 +1203,8 @@
                 landClass1,
                 autoNumber: this._state.autoNumber,
                 dupPolicy: this._state.dupPolicy,
-                existing,
+                logs,
                 nextNumber,
-                existingFill,
                 nextFillNumber,
             });
         }
@@ -1351,7 +1395,7 @@
     instance._fns = {
         normalizeHeader, scoreFieldHeader, computeAutoMapping, auditDuplicateKeywords,
         // 접수번호 채번 (SAMPL-1-153) — 성토/일반 시퀀스 분리가 여기서 결정된다
-        collectExistingNumbers, computePreview,
+        collectExistingNumbers, collectLiteralNumbers, computePreview,
     };
 
     // 로드 시 1회: 교차 필드 중복 키워드가 있으면 콘솔 경고(개발 보조)

@@ -153,6 +153,43 @@ test.describe('성토 행 가져오기 접수번호 (SAMPL-1-153)', () => {
         expect(persisted.map((s) => s.receptionNumber).sort()).toEqual(['7', '8', 'F4', 'F5']);
     });
 
+    test('성토 행의 수동 번호가 기존 일반 번호와 겹치면 등록되지 않는다', async ({ page }) => {
+        // 리뷰 회귀: 중복 판정 풀을 시퀀스별로 나눴다가 이 충돌을 놓쳐
+        // 같은 접수번호가 두 건 저장됐다. 폼 등록 경로는 시퀀스 무관하게 막는다.
+        await page.evaluate(() => {
+            const year = window.soilManager.selectedYear;
+            localStorage.setItem(`soilSampleLogs_${year}`, JSON.stringify([
+                { id: 's1', receptionNumber: '1', name: '기존1', landClass1: '농가의뢰', subCategory: '논', parcels: [] },
+                { id: 's2', receptionNumber: '2', name: '기존2', landClass1: '농가의뢰', subCategory: '논', parcels: [] },
+            ]));
+        });
+        await page.reload();
+        await page.waitForLoadState('networkidle');
+        await page.waitForFunction(() => (window.soilManager?.sampleLogs || []).length === 2);
+
+        // 접수번호 컬럼을 매핑해 수동 번호 경로를 태운다
+        await page.click('#soilImportBtn');
+        const modal = page.locator('#soilImporterModal');
+        await expect(modal).toBeVisible();
+        await modal.locator('input[name="sriMode"][value="paste"]').check();
+        await modal.locator('[data-el="textarea"]').fill([
+            '접수번호\t성명\t지번주소\t구분',
+            '1\t성토A\t봉화읍 내성리 1\t성토',
+            '2\t성토B\t봉화읍 내성리 2\t성토',
+        ].join('\n'));
+        await modal.locator('[data-act="automap"]').click();
+        // 자동부여 체크를 해제해 매핑된 수동 번호를 쓰게 한다
+        await modal.locator('[data-el="autoNumber"]').uncheck();
+
+        await expect(modal.locator('.sri-pill.dup')).toContainText('중복 2');
+        await expect(modal.locator('[data-act="import"]')).toBeDisabled();
+
+        // 기본 정책(건너뛰기)에서 한 건도 등록되지 않고 대장이 그대로여야 한다
+        const persisted = await readPersisted(page);
+        expect(persisted.map((s) => s.receptionNumber)).toEqual(['1', '2']);
+        expectUniqueReceptionNumbers(persisted);
+    });
+
     test('일반 행만 가져오면 기존 동작이 유지된다 (회귀 방지)', async ({ page }) => {
         const modal = await pasteAndAutoMap(page, [
             '홍길동\t010-1111-2222\t봉화읍 내성리 123\t벼\t1200\t논\t일반재배',
