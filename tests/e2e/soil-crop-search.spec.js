@@ -14,12 +14,24 @@
 const { test, expect } = require('@playwright/test');
 
 const MODAL = '#cropModal';
-const ROWS = '#cropModal #cropList li';
+// ⚠️ `li`가 아니라 `li.crop-row`다. 결과 0건일 때 안내용 `li.crop-empty`가 들어가므로
+//    (SAMPL-1-157) 범위를 안 좁히면 빈 결과를 1건으로 센다.
+const ROWS = '#cropModal #cropList li.crop-row';
+
+// 🚨 형제 프로젝트(sample-log-electron-test · sample-log-soil)도 `docs/`에 `/soil/`을 내고
+//    이 기능은 soil에서 **이식**한 것이라 셀렉터가 전부 일치한다. 서버가 바뀌어도
+//    대부분의 단언이 그대로 통과해 엉뚱한 산출물을 승인한다 (적대적 검증이 실증: 13건 중 12건).
+//    포트를 이 저장소 전용(8899)으로 옮겼고, 그래도 겹칠 때를 대비해 여기서 지문을 본다.
+const EXPECTED_VERSION = require('../../package.json').version;
 
 async function openSoil(page) {
     page.on('dialog', (d) => d.dismiss().catch(() => {}));
     const res = await page.goto('/soil/');
     expect(res && res.status(), 'docs/soil/ 없음 — `npm run build` 먼저').toBeLessThan(400);
+    expect(
+        await page.evaluate(() => /** @type {any} */ (window).APP_VERSION),
+        '이 저장소가 아닌 다른 프로젝트의 docs/를 검증하고 있다 — 8899 포트를 누가 물고 있는지 확인하라'
+    ).toBe(EXPECTED_VERSION);
     // ⚠️ window.CropSearch는 **모듈 로드 시점**에 생긴다. 배선은 DOMContentLoaded 이후
     //    soilManager가 만들어질 때 붙으므로, CropSearch만 기다리면 배선 전에 클릭해
     //    "배선이 끊겼다"고 오판한다(실제로 그렇게 11건이 실패했다).
@@ -142,6 +154,46 @@ test.describe('작물 검색 (SAMPL-1-156)', () => {
         // 폼에 채우는 기능이 아니므로 "선택 완료"가 있으면 안 된다
         await expect(page.locator('#confirmCropSelection')).toHaveCount(0);
         await expect(page.locator('#selectedCropTags')).toHaveCount(0);
+    });
+
+    // 🚨 사용자 보고: "검색을 하다 보면 모달이 순간순간 변화를 해서 눈이 어지러워".
+    //    목록이 max-height라 결과가 줄면 상자가 줄고, 모달이 세로 중앙 정렬이라
+    //    전체가 위아래로 움직였다. 글자 하나 칠 때마다 흔들린다.
+    test('검색해도 모달 크기와 위치가 흔들리지 않는다 (SAMPL-1-157)', async ({ page }) => {
+        await openSoil(page);
+        await openModal(page);
+
+        const box = async () => {
+            const b = await page.locator('#cropModal .modal-content').boundingBox();
+            if (!b) throw new Error('모달 박스를 잡지 못했다');
+            return { h: Math.round(b.height), y: Math.round(b.y) };
+        };
+
+        // ⚠️ `.modal-content`에 `modalIn 0.3s` 애니메이션이 걸려 있다(style.css:3924).
+        //    끝나기 전에 재면 기준값이 애니메이션 중간 프레임이 되어 항상 어긋난다.
+        await page.locator('#cropModal .modal-content')
+            .evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+        const base = await box();
+        // 결과 수를 크게 흔든다: 전체 → 소수 → 0건 → 다시 전체
+        for (const kw of ['고추', '벼', '__없는작물__', '']) {
+            await page.locator('#cropSearchInput').fill(kw);
+            await page.waitForTimeout(150);   // render는 동기지만 레이아웃 반영을 기다린다
+            const cur = await box();
+            expect(cur.h, `검색어 '${kw}'에서 모달 높이가 ${base.h}→${cur.h}로 바뀌었다`).toBe(base.h);
+            expect(cur.y, `검색어 '${kw}'에서 모달 위치가 ${base.y}→${cur.y}로 움직였다`).toBe(base.y);
+        }
+    });
+
+    test('결과가 0건이면 사유를 보여준다', async ({ page }) => {
+        await openSoil(page);
+        await openModal(page);
+        await page.locator('#cropSearchInput').fill('__없는작물__');
+
+        await expect(page.locator(ROWS)).toHaveCount(0);
+        await expect(
+            page.locator('#cropModal #cropList li.crop-empty'),
+            '고정 높이라 안내가 없으면 빈 상자만 남는다'
+        ).toContainText('조건에 맞는 작물이 없습니다');
     });
 
     test('ESC로 닫힌다', async ({ page }) => {

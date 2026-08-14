@@ -4470,6 +4470,13 @@ class SoilSampleManager extends window.BaseSampleManager {
                 category: filter ? filter.value : '전체',
             });
             listEl.innerHTML = '';
+            if (!r.items.length) {
+                // 목록 높이가 고정이라(SAMPL-1-157) 안내가 없으면 빈 상자만 남는다
+                const empty = document.createElement('li');
+                empty.className = 'crop-empty';
+                empty.textContent = '조건에 맞는 작물이 없습니다. 검색어나 분류를 바꿔 보세요.';
+                listEl.appendChild(empty);
+            }
             for (const c of r.items) {
                 const li = document.createElement('li');
                 li.className = 'crop-row';

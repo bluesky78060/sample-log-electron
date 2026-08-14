@@ -4195,6 +4195,40 @@ input[type="number"] {
     background: var(--gray-50);
 }
 
+/* 작물 검색 모달 — 높이 고정 (SAMPL-1-157).
+   `.crop-list-wrapper`의 `max-height`는 결과가 적으면 그만큼 줄어들고,
+   `.modal-content`가 세로 중앙 정렬이라 모달 전체가 위아래로 움직인다.
+   타이핑할 때마다 결과 수가 바뀌므로 글자 하나마다 모달이 흔들렸다.
+   → 목록 영역에 **고정 높이**를 준다. 작은 화면에서 넘치지 않게 vh로 상한을 둔다
+     (뷰포트가 바뀌지 않는 한 검색 중에는 변하지 않는다). */
+#cropModal .crop-list-wrapper {
+    height: min(360px, 50vh);
+    max-height: none;
+}
+
+/* 건수 문구가 길이에 따라 줄바꿈되면 그것도 높이를 흔든다 */
+#cropModal .results-info {
+    min-height: 1.5rem;
+}
+
+/* 고정 높이라 결과 0건이면 빈 상자만 남는다 — 사유를 보여준다 */
+#cropModal li.crop-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 6rem;
+    padding: 1rem;
+    color: var(--gray-500);
+    font-size: 0.875rem;
+    text-align: center;
+    border-bottom: none;
+    cursor: default;
+}
+
+#cropModal li.crop-empty:hover {
+    background: transparent;
+}
+
 /* 작물 검색 모달 — 조회 전용 행 (SAMPL-1-156).
    색은 전부 --gray-* 토큰으로 둔다. 다크 테마가 이 토큰들을 갈아끼우므로
    (:5618 `--gray-100: #292524`) 별도 [data-theme="dark"] 규칙이 필요 없다. */
