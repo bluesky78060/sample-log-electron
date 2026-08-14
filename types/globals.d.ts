@@ -42,6 +42,10 @@ declare global {
 
     // ── IIFE 내부에서 window에만 노출되는 전역 (최상위 선언 없음) ──
     var soilManager: any;
+    // 작물 데이터 — cropData.js가 선언하고 crop-data-loader.js가 런타임에 교체한다 (SAMPL-1-156)
+    var CROP_DATA: any[];
+    var CROP_CATEGORIES: string[];
+    var CropSearch: any;
     var compostManager: any;
     var pesticideManager: any;
     var heuktoramManager: any;
@@ -63,6 +67,9 @@ declare global {
      */
     interface Window {
         soilManager: any;
+        CROP_DATA: any[];
+        CROP_CATEGORIES: string[];
+        CropSearch: any;
         waterManager: any;
         compostManager: any;
         heavyMetalManager: any;
