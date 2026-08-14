@@ -42,6 +42,8 @@ import './reception-number.js';
 import './soil-log-record.js';
 // 완료 그룹핑 순수 로직 (soil-script.js 전 — window.ReceptionGroup 준비)
 import './reception-group.js';
+// 작물 검색 순수 로직 (SAMPL-1-156 — window.CropSearch 준비)
+import './crop-search.js';
 
 // Main script
 import './soil-script.js';
