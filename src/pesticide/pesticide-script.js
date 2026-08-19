@@ -778,7 +778,7 @@ class PesticideSampleManager extends window.BaseSampleManager {
         duplicateVillageName.textContent = result.villageName;
 
         regionOptions.innerHTML = sanitizeHTML(result.locations.map(loc => `
-            <button type="button" class="region-option-btn" data-address="${escapeHTML(loc.fullAddress)}">
+            <button type="button" class="region-option-btn" data-address="${escapeAttr(loc.fullAddress)}">
                 ${escapeHTML(loc.region)} ${escapeHTML(loc.district)}
             </button>
         `).join(''));

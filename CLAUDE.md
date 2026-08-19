@@ -64,8 +64,12 @@ npm run check:docs     # docs/ 자산 참조 정합성 (main 필수 CI)
 
 - **모듈 형태의 파일**(import/export가 있는 파일, `tests/unit/`, `scripts/`)은 `// @ts-check` 한 줄로 게이트에 들어온다.
 - 새 전역을 노출하면 `types/globals.d.ts`에도 추가해야 `@ts-check` 파일에서 쓸 수 있다.
-  `declare var`와 `interface Window` **양쪽에** 넣는다 — 소스에 `showToast(...)`(bare)와
-  `window.showToast(...)` 두 형태가 섞여 있어 한쪽만으로는 절반만 커버된다.
+  소스에 `showToast(...)`(bare)와 `window.showToast(...)` 두 형태가 섞여 있어
+  보통 `declare var`와 `interface Window` **양쪽**이 필요하다.
+  **단, `src/`에 최상위 `function`/`const`/`class` 정의가 있는 전역은 `declare var`에 넣지 않는다** —
+  TS가 전역 스크립트의 최상위 선언을 이미 수집하므로 **TS2300 Duplicate identifier**가 난다
+  (SAMPL-2-25 실측, SAMPL-2-32 재확인). 예: `escapeHTML`·`escapeAttr`(sanitize.js에 `function` 정의).
+  판단 기준은 `types/globals.d.ts` 상단 주석에 정리돼 있다 — 그쪽이 기준이다.
 
 > ⚠️ **classic script는 한 줄로 opt-in할 수 없다.** `src/{soil,compost,pesticide}/*-script.js`는
 > import/export가 없어 TS가 전역 스크립트로 취급하고, 최상위 `const SAMPLE_TYPE`이 전역 스코프를

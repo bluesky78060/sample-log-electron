@@ -38,12 +38,28 @@ function sanitizeHTML(html) {
         };
         return DOMPurify.sanitize(html, config);
     }
-    // DOMPurify가 없으면 기본 이스케이프 처리
+    // ⚠️ DOMPurify가 없으면 **마크업 전체가 문자로 보인다** — 화면이 깨진다.
+    //    13페이지 중 6곳(`/`·`*-analysis`·`heuktoram`)에 DOMPurify가 없고,
+    //    지금은 그 페이지들이 sanitizeHTML을 호출하지 않아 드러나지 않을 뿐이다.
+    //    → SAMPL-2-34 (시끄럽게 실패시키거나 6개 entry에 DOMPurify를 추가)
     return escapeHTML(html);
 }
 
 /**
- * 텍스트를 HTML 엔티티로 이스케이프
+ * 텍스트를 HTML 엔티티로 이스케이프 — **요소 내용 전용**이다.
+ *
+ * ⚠️ **속성 위치에는 쓰지 말 것.** `escapeAttr`를 쓴다 (SAMPL-2-32).
+ *    이 구현은 `textContent → innerHTML`이라 브라우저가 `&`·`<`·`>`만 변환하고
+ *    **따옴표는 그대로 통과시킨다.** 그래서 `value="${escapeHTML(v)}"` 형태에
+ *    `" onfocus=alert(1) x="` 같은 값이 들어오면 속성을 탈출해 임의 속성이 주입된다.
+ *    실측: `escapeHTML('a"b<c')` → `a"b&lt;c`
+ *
+ * 따옴표까지 변환하도록 이 함수를 고치는 것은 **택하지 않았다.** 호출부 63곳 중
+ * 25곳가량이 결과를 `textContent`·`dataset`에 그대로 넣는데(예: `tdName.textContent = safeName`),
+ * 거기서는 엔티티가 문자 그대로 보인다. 지금도 `&`·`<`가 그렇게 보이는 버그가 있고
+ * (`김&철수` → `김&amp;철수`), 따옴표를 추가하면 그 버그가 비고·주소처럼
+ * 따옴표가 흔한 칸으로 번진다. 그 이중 이스케이프는 별 티켓이다 → **SAMPL-2-33**.
+ *
  * @param {string|null|undefined} text - 이스케이프할 텍스트
  * @returns {string} 이스케이프된 텍스트
  */
@@ -52,6 +68,38 @@ function escapeHTML(text) {
     const div = document.createElement('div');
     div.textContent = String(text);
     return div.innerHTML;
+}
+
+/**
+ * HTML 속성 값 이스케이프 — **속성에는 필수, 텍스트에도 안전하다.**
+ *
+ * `escapeHTML`과 달리 따옴표(`"`, `'`)까지 변환하므로 속성을 탈출할 수 없다.
+ * `title="..."`, `value="..."`, `data-*="..."`처럼 값이 속성 안에 들어가는 모든 자리에 쓴다.
+ *
+ * ```js
+ * html += `<input value="${escapeAttr(userInput)}">`;   // ✅
+ * html += `<input value="${escapeHTML(userInput)}">`;   // ❌ 속성 탈출 가능
+ * ```
+ *
+ * ⚠️ **텍스트 위치에서 이 함수를 `escapeHTML`로 "되돌리지" 말 것.**
+ *    `&quot;`는 텍스트 내용에서 `"`로 디코드되므로 표시가 달라지지 않는다 —
+ *    즉 `escapeAttr`는 `escapeHTML`의 상위집합이고 두 위치 모두에서 안전하다.
+ *    이름만 보고 "여긴 속성이 아니니 escapeHTML로 바꾸자"고 하면 취약점이 돌아온다.
+ *
+ * ⚠️ **인용부호로 감싼 속성**을 전제한다. `<div class=${v}>`처럼 인용부호 없이 쓰면
+ *    공백만으로도 속성이 갈라지므로 이 함수로 막을 수 없다. 속성은 항상 `"`로 감쌀 것.
+ *
+ * @param {string|number|null|undefined} value - 속성에 넣을 값
+ * @returns {string} 이스케이프된 값
+ */
+function escapeAttr(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 /**
@@ -139,6 +187,7 @@ function sanitizeExcelAoa(aoa) {
 // 전역으로 내보내기
 window.sanitizeHTML = sanitizeHTML;
 window.escapeHTML = escapeHTML;
+window.escapeAttr = escapeAttr;
 window.setInnerHTML = setInnerHTML;
 window.clearElement = clearElement;
 window.safeText = safeText;

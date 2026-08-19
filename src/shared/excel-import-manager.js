@@ -243,17 +243,18 @@ class ExcelImportManager {
             const sampleValue = this._excelData[0]?.[idx] ?? '';
 
             const safeHeader = window.escapeHTML(header);
-            const safeSampleValue = window.escapeHTML(String(sampleValue || ''));
+            // ⚠️ `||`는 숫자 0을 빈 문자열로 바꿔 미리보기에서 값이 사라진다 (독립 리뷰 지적)
+            const safeSampleValue = window.escapeHTML(String(sampleValue ?? ''));
             row.innerHTML = `
-                <span class="mapping-excel-col" title="${safeHeader}">${safeHeader}</span>
+                <span class="mapping-excel-col" title="${window.escapeAttr(header)}">${safeHeader}</span>
                 <span class="mapping-arrow">\u2192</span>
                 <select class="mapping-select" data-col-idx="${idx}">
                     <option value="">-- 건너뛰기 --</option>
                     ${this.config.appFields.map(f =>
-                        `<option value="${window.escapeHTML(f.key)}" ${this._columnMapping[idx] === f.key ? 'selected' : ''}>${window.escapeHTML(f.label)}</option>`
+                        `<option value="${window.escapeAttr(f.key)}" ${this._columnMapping[idx] === f.key ? 'selected' : ''}>${window.escapeHTML(f.label)}</option>`
                     ).join('')}
                 </select>
-                <span class="mapping-sample" title="${safeSampleValue}">예: ${safeSampleValue}</span>
+                <span class="mapping-sample" title="${window.escapeAttr(String(sampleValue ?? ''))}">예: ${safeSampleValue}</span>
             `;
 
             const select = row.querySelector('.mapping-select');

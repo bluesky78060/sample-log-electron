@@ -96,6 +96,8 @@ declare global {
 
         showToast: any;
         escapeHTML: any;
+        /** HTML **속성 값** 전용 escape — escapeHTML은 따옴표를 변환하지 않는다 (SAMPL-2-32) */
+        escapeAttr: (value: any) => string;
         sanitizeHTML: any;
         formatPhoneNumber: any;
         loadFromAutoSaveFile: any;
