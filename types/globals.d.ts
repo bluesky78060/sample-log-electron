@@ -46,6 +46,8 @@ declare global {
     var CROP_DATA: any[];
     var CROP_CATEGORIES: string[];
     var CropSearch: any;
+    /** 흙토람 미리보기 표 구성 순수 로직 (SAMPL-1-158) */
+    var PreviewTable: any;
     var compostManager: any;
     var pesticideManager: any;
     var heuktoramManager: any;
@@ -70,6 +72,7 @@ declare global {
         CROP_DATA: any[];
         CROP_CATEGORIES: string[];
         CropSearch: any;
+        PreviewTable: any;
         waterManager: any;
         compostManager: any;
         heavyMetalManager: any;
