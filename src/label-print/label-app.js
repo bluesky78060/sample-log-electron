@@ -298,7 +298,9 @@
     // 헤더
     html += '<thead><tr>';
     columns.forEach(col => {
-      html += `<th style="border: 1px solid #ddd; padding: 8px; background: #f5f5f5;">${col}</th>`;
+      // 값은 가져온 엑셀에서 온다 (SAMPL-2-32). 무이스케이프면 헤더가 태그로 먹혀
+      // 항목이 빈칸으로 보이고, <img>는 렌더 시 외부 요청까지 낸다.
+      html += `<th style="border: 1px solid #ddd; padding: 8px; background: #f5f5f5;">${window.escapeHTML(col)}</th>`;
     });
     html += '</tr></thead>';
 
@@ -308,7 +310,7 @@
       html += '<tr>';
       columns.forEach((col, index) => {
         const value = typeof row === 'object' && !Array.isArray(row) ? row[col] : row[index];
-        html += `<td style="border: 1px solid #ddd; padding: 8px;">${value || ''}</td>`;
+        html += `<td style="border: 1px solid #ddd; padding: 8px;">${window.escapeHTML(value ?? '')}</td>`;
       });
       html += '</tr>';
     });
@@ -346,7 +348,7 @@
           <label for="${selectId}">${field.label}:</label>
           <select id="${selectId}" data-field="${field.key}">
             <option value="">선택 안함</option>
-            ${columns.map(col => `<option value="${col}" ${isMatch(col, field.key) ? 'selected' : ''}>${col}</option>`).join('')}
+            ${columns.map(col => `<option value="${window.escapeAttr(col)}" ${isMatch(col, field.key) ? 'selected' : ''}>${window.escapeHTML(col)}</option>`).join('')}
           </select>
         </div>
       `;
@@ -515,8 +517,12 @@
           // 100mm 폭, 12pt 한글 기준 약 23자에서 줄바꿈 → 24자 초과 시 long-content 적용
           const isLong = combinedAddress.length > 24 || displayName.length > 18 || `${postalCode}`.length > 8;
 
+          // ⚠️ 여기는 **실제 인쇄물**이다. 태그가 살아남으면 라벨이 조용히 오염되고
+          //    담당자는 인쇄한 뒤에야 안다 (SAMPL-2-32).
+          //    isLong 계산은 위에서 **원본 길이**로 이미 끝냈다 — 이스케이프 후 길이로 재면
+          //    `&amp;`가 5자로 세어져 줄바꿈 임계값이 틀어진다.
           const addressBlock = combinedAddress
-            ? `<div class="label-address-line">${combinedAddress}</div>`
+            ? `<div class="label-address-line">${window.escapeHTML(combinedAddress)}</div>`
             : '<div class="label-address-line"></div>';
 
           sheetHtml += `
@@ -524,8 +530,8 @@
               <div class="label-address-block">
                 ${addressBlock}
               </div>
-              <div class="label-name-line">${displayName}</div>
-              <div class="label-postal-line">${postalCode ?? ''}</div>
+              <div class="label-name-line">${window.escapeHTML(displayName)}</div>
+              <div class="label-postal-line">${window.escapeHTML(postalCode ?? '')}</div>
             </div>
           `;
           dataIndex++;

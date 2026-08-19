@@ -104,6 +104,8 @@
      *    값은 사용자가 붙여넣은 엑셀에서 온다.
      */
     function escapeAttr(s) {
+        // 공용 구현을 쓴다 (SAMPL-2-32에서 sanitize.js로 승격). 사본을 두면 갈린다.
+        if (window.escapeAttr) return window.escapeAttr(s);
         return String(s ?? '')
             .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;').replace(/'/g, '&#39;');

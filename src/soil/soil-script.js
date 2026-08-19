@@ -1034,8 +1034,6 @@ class SoilSampleManager extends window.BaseSampleManager {
         const firstCrop = parcel.crops[0] || { name: '', area: '' };
         const parcelNumber = index;
 
-        const safeLotAddress = escapeHTML(parcel.lotAddress);
-        const safeCropName = escapeHTML(firstCrop.name);
         const parcelCategory = parcel.category || '';
         const parcelPurpose = parcel.purpose || '';
         card.innerHTML = sanitizeHTML(`
@@ -1075,7 +1073,7 @@ class SoilSampleManager extends window.BaseSampleManager {
                                        name="lot-address-${parcel.id}"
                                        data-id="${parcel.id}"
                                        placeholder="예: 문단리 224, 문단리 산 423"
-                                       value="${safeLotAddress}">
+                                       value="${escapeAttr(parcel.lotAddress)}">
                                 <ul class="lot-address-autocomplete-list" id="lotAutocomplete-${parcel.id}"></ul>
                             </div>
                             <button type="button" class="mountain-btn" data-id="${parcel.id}" data-active="${parcel.isMountain ? 'true' : 'false'}" aria-pressed="${parcel.isMountain ? 'true' : 'false'}" style="flex:0 0 auto; padding:0.5rem 1rem; border:1px solid ${parcel.isMountain ? '#f59e0b' : '#d1d5db'}; border-radius:0.5rem; background:${parcel.isMountain ? '#fef3c7' : '#f9fafb'}; color:${parcel.isMountain ? '#92400e' : '#374151'}; font-weight:${parcel.isMountain ? '600' : 'normal'}; font-size:0.875rem; cursor:pointer; user-select:none; white-space:nowrap; transition:all 0.15s;">산</button>
@@ -1090,7 +1088,7 @@ class SoilSampleManager extends window.BaseSampleManager {
                                        name="crop-direct-${parcel.id}"
                                        data-id="${parcel.id}"
                                        placeholder="예: 고추"
-                                       value="${safeCropName}">
+                                       value="${escapeAttr(firstCrop.name)}">
                                 <ul class="crop-autocomplete-list" id="autocomplete-direct-${parcel.id}"></ul>
                             </div>
                         </div>
@@ -1102,8 +1100,8 @@ class SoilSampleManager extends window.BaseSampleManager {
                                        name="area-direct-${parcel.id}"
                                        data-id="${parcel.id}"
                                        placeholder="면적"
-                                       value="${firstCrop.area}">
-                                <div class="area-unit-toggle" id="area-unit-${parcel.id}" data-id="${parcel.id}" data-unit="${firstCrop.unit || 'm2'}">
+                                       value="${escapeAttr(firstCrop.area)}">
+                                <div class="area-unit-toggle" id="area-unit-${parcel.id}" data-id="${parcel.id}" data-unit="${escapeAttr(firstCrop.unit || 'm2')}">
                                     <button type="button" class="unit-btn ${(!firstCrop.unit || firstCrop.unit === 'm2') ? 'active' : ''}" data-value="m2">㎡</button>
                                     <button type="button" class="unit-btn ${firstCrop.unit === 'pyeong' ? 'active' : ''}" data-value="pyeong">평</button>
                                 </div>
@@ -1144,7 +1142,7 @@ class SoilSampleManager extends window.BaseSampleManager {
                                name="parcel-note-${parcel.id}"
                                data-id="${parcel.id}"
                                placeholder="예: 1동, 2동"
-                               value="${escapeHTML(parcel.note || '')}">
+                               value="${escapeAttr(parcel.note || '')}">
                     </div>
                 </div>
                 <div class="parcel-summary" id="summary-${parcel.id}">
@@ -1607,6 +1605,9 @@ class SoilSampleManager extends window.BaseSampleManager {
     getSubLotOptions(parcelId) {
         const parcel = this.parcels.find(p => p.id === parcelId);
         if (!parcel) return [];
+        // ⚠️ `value`에 원소를 통째로 넣는다. push 사이트(:3727)가 객체를 저장하므로
+        //    신규 데이터에서는 `value="[object Object]"`가 되고 선택 복원도 깨진다.
+        //    → SAMPL-1-159 (식별자를 정하는 별 티켓). 여기서는 escape만 했다.
         const options = [{ value: 'all', label: '전체 (상위 필지 전체)' }];
         if (parcel.subLots && parcel.subLots.length > 0) {
             parcel.subLots.forEach((lot, idx) => {
@@ -1639,7 +1640,7 @@ class SoilSampleManager extends window.BaseSampleManager {
                            id="crop-search-${idx}"
                            name="crop-search-${idx}"
                            placeholder="작물명 검색..."
-                           value="${escapeHTML(crop.name)}"
+                           value="${escapeAttr(crop.name)}"
                            data-index="${idx}">
                     <ul class="crop-autocomplete-list" id="autocomplete-${idx}"></ul>
                 </div>
@@ -1648,12 +1649,12 @@ class SoilSampleManager extends window.BaseSampleManager {
                            id="area-input-${idx}"
                            name="area-input-${idx}"
                            placeholder="면적"
-                           value="${escapeHTML(String(crop.area ?? ''))}"
+                           value="${escapeAttr(crop.area ?? '')}"
                            data-index="${idx}">
                     <div class="area-unit-toggle area-unit-modal-toggle"
                          id="area-unit-modal-${idx}"
                          data-index="${idx}"
-                         data-unit="${crop.unit || 'm2'}">
+                         data-unit="${escapeAttr(crop.unit || 'm2')}">
                         <button type="button" class="unit-btn ${(!crop.unit || crop.unit === 'm2') ? 'active' : ''}" data-value="m2">㎡</button>
                         <button type="button" class="unit-btn ${crop.unit === 'pyeong' ? 'active' : ''}" data-value="pyeong">평</button>
                     </div>
@@ -1665,8 +1666,8 @@ class SoilSampleManager extends window.BaseSampleManager {
                             name="sublot-select-${idx}"
                             data-index="${idx}">
                         ${subLotOptions.map(opt => `
-                            <option value="${opt.value}" ${crop.subLotTarget === opt.value ? 'selected' : ''}>
-                                ${opt.label}
+                            <option value="${escapeAttr(opt.value)}" ${crop.subLotTarget === opt.value ? 'selected' : ''}>
+                                ${escapeHTML(opt.label)}
                             </option>
                         `).join('')}
                     </select>

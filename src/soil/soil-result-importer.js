@@ -429,7 +429,8 @@
     }
 
     function escapeHtml(s) {
-        if (window.escapeHTML) return window.escapeHTML(String(s ?? ''));
+        // window.escapeHTML은 따옴표를 변환하지 않는다 (SAMPL-2-32). 위임하지 않는다.
+        // 속성 위치라면 window.escapeAttr를 쓸 것.
         return String(s ?? '')
             .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
