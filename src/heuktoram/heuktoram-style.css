@@ -1016,8 +1016,12 @@
 [data-theme="dark"] .badge-muted { background: rgba(120,113,108,0.18); color: #d6d3d1; }
 
 .importer-preview-list {
-    max-height: 260px;
-    overflow-y: auto;
+    /* ⚠️ 세로 스크롤을 여기 두면 sticky 헤더가 죽는다 (SAMPL-1-158).
+       `.importer-pv-scroll`의 `overflow-x:auto`가 CSS 규격상 `overflow-y`를
+       `visible` → `auto`로 승격시켜 **그쪽이 sticky의 기준 스크롤포트**가 되는데,
+       거기엔 높이 제한이 없어 스스로는 스크롤되지 않는다. 실제로 움직이는 것은
+       바깥 상자라서 헤더가 그대로 위로 밀려 사라진다 (실측 16px).
+       → 두 축 모두 안쪽 `.importer-pv-scroll`이 맡는다. */
     border: 1px solid #e7e5e4;
     border-radius: 6px;
     background: #fff;
@@ -1031,6 +1035,9 @@
     list-style: none;
     margin: 0;
     padding: 0;
+    /* 바깥 상자가 스크롤을 표에 넘겼으므로(위 참조) 미매칭 목록은 스스로 제한한다 */
+    max-height: 200px;
+    overflow-y: auto;
 }
 .importer-preview-item {
     display: flex;
@@ -1059,6 +1066,73 @@
     font-weight: 500;
 }
 [data-theme="dark"] .importer-preview-value { color: #86efac; }
+
+/* ── 미리보기 표 (SAMPL-1-158) ──
+   시료 한 건이 한 줄, 분석항목이 가로 열. 값은 숫자라 오른쪽 정렬 + tabular-nums로
+   자릿수를 맞춘다 — 세로로 훑을 때 자리가 어긋나면 비교하려고 가로로 놓은 의미가 없다. */
+.importer-pv-scroll {
+    max-height: 260px;
+    overflow: auto;   /* 세로·가로 모두 여기서 — 가로 스크롤바도 보이는 영역 안에 들어온다 */
+}
+.importer-pv-table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 0.82rem;
+}
+.importer-pv-table th,
+.importer-pv-table td {
+    padding: 5px 8px;
+    text-align: right;
+    white-space: nowrap;
+    border-bottom: 1px solid #f5f5f4;
+    font-variant-numeric: tabular-nums;
+}
+[data-theme="dark"] .importer-pv-table th,
+[data-theme="dark"] .importer-pv-table td { border-bottom-color: #3d3656; }
+
+/* 헤더와 시료번호 열은 스크롤해도 남아야 한다 — 열이 많으면 가로로 밀리는데
+   그때 무슨 항목인지·어느 시료인지 잃으면 표가 아니라 숫자 더미가 된다 */
+.importer-pv-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: #fff;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #78716c;
+    border-bottom: 1.5px solid #e7e5e4;
+}
+.importer-pv-table tbody th {
+    position: sticky;
+    left: 0;
+    background: #fff;
+    text-align: left;
+    font-weight: 600;
+    color: #292524;
+}
+.importer-pv-table thead th:first-child { left: 0; z-index: 2; text-align: left; }
+[data-theme="dark"] .importer-pv-table thead th,
+[data-theme="dark"] .importer-pv-table tbody th { background: #1f1b2e; color: #d6d3d1; }
+[data-theme="dark"] .importer-pv-table thead th { border-bottom-color: #3d3656; }
+
+.importer-pv-table td.is-conflict { background: rgba(59,130,246,0.14); color: #1e40af; font-weight: 600; }
+.importer-pv-table td.is-warn     { background: rgba(234,179,8,0.18);  color: #92400e; font-weight: 600; }
+/* ⚠️ 건너뜀은 취소선을 **새 값에만** 준다. td 전체에 주면 `<s>기존값</s>새값`이
+   두 겹으로 그어져 "어느 값이 남는지"가 읽히지 않는다 (코드 리뷰 지적).
+   또 취소선만으로는 색을 못 보는 사용자에게 전달이 안 되므로 텍스트 표시를 함께 둔다. */
+.importer-pv-table td.is-skip { opacity: 0.55; }
+.importer-pv-table td.is-skip .importer-pv-new { text-decoration: line-through; }
+.importer-pv-table td.is-skip .importer-pv-old { text-decoration: none; font-weight: 600; color: #292524; }
+[data-theme="dark"] .importer-pv-table td.is-skip .importer-pv-old { color: #e7e5e4; }
+.importer-pv-skip-mark { font-size: 0.7rem; color: #78716c; margin-left: 0.25rem; }
+[data-theme="dark"] .importer-pv-skip-mark { color: #a8a29e; }
+
+/* 값이 없는 칸 — 파일에 값이 없었다는 뜻이다. 빈 칸과 구분되게 표시한다 */
+.importer-pv-table td.is-empty::after { content: '·'; color: #d6d3d1; }
+[data-theme="dark"] .importer-pv-table td.is-empty::after { color: #57534e; }
+[data-theme="dark"] .importer-pv-table td.is-conflict { color: #93c5fd; }
+[data-theme="dark"] .importer-pv-table td.is-warn     { color: #fde68a; }
+.importer-pv-old { color: #a8a29e; margin-right: 0.25rem; font-weight: 400; }
 
 .importer-preview-empty,
 .importer-preview-overflow {

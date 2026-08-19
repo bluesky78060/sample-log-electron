@@ -20,6 +20,8 @@ import '../shared/logger.js';
 import '../shared/analysis-db.js';
 
 // 결과 가져오기 모달 (Phase 1)
+// 미리보기 표 구성 순수 로직 (SAMPL-1-158 — importer보다 먼저: window.PreviewTable 준비)
+import './preview-table.js';
 import './heuktoram-result-importer.js';
 
 // Main script

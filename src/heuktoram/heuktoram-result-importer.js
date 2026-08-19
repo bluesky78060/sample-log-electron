@@ -22,7 +22,9 @@
     // ============================================================
     const FILE_SIZE_WARN  = 5  * 1024 * 1024;   // 5MB: 경고만
     const FILE_SIZE_HARD  = 50 * 1024 * 1024;   // 50MB: 거부
-    const PREVIEW_MATCHED_LIMIT   = 50;          // 미리보기 매칭 셀 최대 표시
+    // ⚠️ 이름을 바꿨다 (SAMPL-1-158). 예전에는 **셀** 상한이라 분석항목 10개 기준
+    //    시료 5건이면 다 찼다. 이제 표의 **시료 행** 상한이라 시료 50건을 담는다.
+    const PREVIEW_ROW_LIMIT       = 50;          // 미리보기 시료 행 최대 표시
     const PREVIEW_UNMATCHED_LIMIT = 20;          // 미리보기 미매칭 행 최대 표시
     const UTF8_BOM = '﻿';                   // CSV 한글 인식용 BOM (Excel)
 
@@ -78,8 +80,30 @@
         return String(text || '').replace(/[\s\r\n]/g, '').toLowerCase();
     }
 
+    /**
+     * ⚠️ `window.escapeHTML` 위임을 **일부러 걷어냈다** (SAMPL-1-158).
+     *    공용 구현은 `div.textContent → innerHTML` 방식이라 따옴표를 변환하지 않아
+     *    속성 위치에서 탈출이 가능했다. 이 파일 안에서는 텍스트든 속성이든
+     *    항상 같은(안전한) 규칙을 쓴다 — 성능 차이는 무의미하고, 함정이 사라진다.
+     *    공용 모듈 쪽 문제는 별 티켓(SAMPL-2-32)이다.
+     */
     function escapeHtml(s) {
-        if (window.escapeHTML) return window.escapeHTML(String(s ?? ''));
+        return String(s ?? '')
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    /**
+     * **속성 위치 전용** escape.
+     *
+     * ⚠️ `escapeHtml`을 속성에 쓰면 안 된다. 그 함수는 `window.escapeHTML`에 위임하는데
+     *    `sanitize.js`의 구현이 `div.textContent → innerHTML` 방식이라 **따옴표를 변환하지 않는다.**
+     *    (실측: `escapeHTML('a"b<c')` → `a"b&lt;c`)
+     *    그래서 `title="${escapeHtml(v)}"`에 `">` 로 시작하는 값이 들어오면 속성을 탈출해
+     *    `<td>`에 `onerror`·`onmouseover` 같은 **임의 속성이 주입된다.** 실제로 재현했다.
+     *    값은 사용자가 붙여넣은 엑셀에서 온다.
+     */
+    function escapeAttr(s) {
         return String(s ?? '')
             .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -764,6 +788,9 @@
 
             const result = {
                 matched: [],          // { rowKey, sampleNumber, field, oldValue, newValue, hasConflict, willApply, rangeWarning }
+                // 표의 **열 순서**. matched에서 유추하면 skipEmpty가 만든 구멍 때문에
+                // 열 집합이 데이터에 따라 흔들린다 (SAMPL-1-158)
+                fields: fields.slice(),
                 unmatched: [],        // { excelRowIdx, key, rawRow }
                 stats: { matchedCells: 0, unmatchedRows: 0, conflicts: 0, rangeWarnings: 0, totalRows: rows.length },
                 warnings: [],         // 사용자에게 표시할 일반 경고 메시지
@@ -874,12 +901,26 @@
             }
 
             const willApplyCount = p.matched.filter(m => m.willApply).length;
+            // 표를 먼저 만들어 요약 배지가 표와 같은 이야기를 하게 한다 (SAMPL-1-158).
+            // 중복·절단은 목록 아래가 아니라 **항상 보이는 요약줄**에 나와야 한다 —
+            // 아래에 두면 260px 상자 밖이라 사용자가 영원히 못 본다.
+            const table = window.PreviewTable
+                ? window.PreviewTable.buildTable(p.matched, p.fields, { rowLimit: PREVIEW_ROW_LIMIT })
+                : null;
+            const extraBadges = [];
+            if (table && table.overwritten > 0) {
+                extraBadges.push(`<span class="badge badge-warn">⚠️ 시료번호 중복 ${table.overwritten}건 (뒤 행이 앞 행을 덮어씀)</span>`);
+            }
+            if (table && table.truncated) {
+                extraBadges.push(`<span class="badge badge-muted">시료 ${table.totalRows}건 중 ${table.rows.length}건만 표시</span>`);
+            }
             const badges = [
                 `<span class="badge badge-ok">✅ ${willApplyCount}셀 저장 예정</span>`,
                 `<span class="badge badge-warn">⚠️ ${p.stats.unmatchedRows}건 미매칭</span>`,
                 `<span class="badge badge-info">🔵 ${p.stats.conflicts}건 기존값 충돌</span>`,
                 `<span class="badge badge-warn">⚠️ ${p.stats.rangeWarnings}건 범위 초과</span>`,
                 `<span class="importer-summary-muted">전체 행 ${p.stats.totalRows}건</span>`,
+                ...extraBadges,
             ].join(' ');
             // m-1: 일반 경고 메시지 (매칭 키 중복 등)
             const warningsHtml = (p.warnings && p.warnings.length > 0)
@@ -887,48 +928,93 @@
                 : '';
             summary.innerHTML = badges + warningsHtml;
 
-            const items = [];
             const labels = this.cfg.fieldLabels || {};
-            // 매칭된 셀 (충돌·경고 우선 정렬, 상한 제한)
-            const sorted = p.matched.slice().sort((a, b) => {
-                const sa = (a.hasConflict ? 2 : 0) + (a.rangeWarning ? 1 : 0);
-                const sb = (b.hasConflict ? 2 : 0) + (b.rangeWarning ? 1 : 0);
-                return sb - sa;
-            });
-            sorted.slice(0, PREVIEW_MATCHED_LIMIT).forEach(m => {
-                const lbl = labels[m.field] || m.field;
-                let badges = '';
-                if (m.hasConflict) {
-                    badges += `<span class="badge badge-info">기존: ${escapeHtml(m.oldValue)}</span>`;
-                }
-                if (!m.willApply) {
-                    badges += '<span class="badge badge-muted">건너뜀</span>';
-                }
-                if (m.rangeWarning) {
-                    badges += `<span class="badge badge-warn" title="${escapeHtml(m.rangeWarning)}">범위 초과</span>`;
-                }
-                items.push(`<li class="importer-preview-item ${m.willApply ? '' : 'is-skip'}">
-                    <span class="importer-preview-key">${escapeHtml(m.sampleNumber)}</span>
-                    <span class="importer-preview-field">${escapeHtml(lbl)}</span>
-                    <span class="importer-preview-arrow">→</span>
-                    <span class="importer-preview-value">${escapeHtml(m.newValue)}</span>
-                    ${badges}
-                </li>`);
-            });
-            // 미매칭 표시 (상한 제한)
-            p.unmatched.slice(0, PREVIEW_UNMATCHED_LIMIT).forEach(u => {
-                items.push(`<li class="importer-preview-item is-unmatched">
-                    <span class="importer-preview-key">${escapeHtml(u.key || '(빈 키)')}</span>
-                    <span class="badge badge-warn">미매칭</span>
-                </li>`);
-            });
 
-            const overflow = (sorted.length > PREVIEW_MATCHED_LIMIT || p.unmatched.length > PREVIEW_UNMATCHED_LIMIT)
-                ? `<li class="importer-preview-overflow">… (전체 ${sorted.length}셀 / 미매칭 ${p.unmatched.length}건)</li>`
-                : '';
+            // ── 매칭된 값: 시료 한 건이 한 줄인 표 (SAMPL-1-158) ──
+            //    셀 하나가 한 줄이면 분석항목 10개 × 시료 5건으로 상한 50이 다 찼다.
+            //    표에서는 같은 상한이 **시료 50건**을 담는다.
+            // ⚠️ `?.`로 넘기면 안 된다. 모듈이 없을 때 표가 안 그려져 "저장될 항목이 없습니다"가
+            //    뜨는데 저장 버튼은 `willApplyCount`로만 정해져 **활성 상태로 남는다** —
+            //    화면은 없다고 하고 버튼은 N셀을 쓰는 상태가 된다. 크게, 먼저 실패시킨다.
+            if (!window.PreviewTable) {
+                (window.logger?.error || console.error)('PreviewTable 모듈 없음 — 미리보기를 그릴 수 없습니다.');
+                list.innerHTML = '<div class="importer-preview-empty">미리보기 모듈을 불러오지 못했습니다. 저장할 수 없습니다.</div>';
+                saveBtn.disabled = true;
+                saveBtn.textContent = '저장';
+                if (csvBtn) csvBtn.disabled = true;
+                return;
+            }
+            let matchedHtml = '';
+            if (table && table.rows.length > 0) {
+                const head = table.columns
+                    .map(f => `<th scope="col">${escapeHtml(labels[f] || f)}</th>`)
+                    .join('');
 
-            list.innerHTML = items.length
-                ? `<ul class="importer-preview-ul">${items.join('')}${overflow}</ul>`
+                const body = table.rows.map(r => {
+                    const tds = table.columns.map(f => {
+                        const m = r.cells[f];
+                        if (!m) return '<td class="is-empty"></td>';
+
+                        // 배지 대신 칸 색으로 옮긴다 — 열 폭이 배지 때문에 들쭉날쭉해지면
+                        // 가로로 놓은 이유(비교)가 사라진다. 사유는 title로 남긴다.
+                        const cls = [];
+                        const tips = [];
+                        if (m.hasConflict) {
+                            cls.push('is-conflict');
+                            tips.push(`기존값 ${m.oldValue} → ${m.newValue}`);
+                        }
+                        if (m.rangeWarning) {
+                            cls.push('is-warn');
+                            tips.push(m.rangeWarning);
+                        }
+                        if (!m.willApply) {
+                            cls.push('is-skip');
+                            tips.push('건너뜁니다');
+                        }
+                        const oldMark = m.hasConflict
+                            ? `<s class="importer-pv-old">${escapeHtml(m.oldValue)}</s>`
+                            : '';
+                        // 건너뜀은 취소선·투명도(시각 신호)만으로는 전달되지 않는다.
+                        // title은 스크린리더·터치에서 신뢰할 수 없으므로 텍스트를 남긴다.
+                        const skipMark = m.willApply ? '' : '<span class="importer-pv-skip-mark">(건너뜀)</span>';
+                        return `<td class="${cls.join(' ')}" title="${escapeAttr(tips.join(' · '))}">`
+                            + `${oldMark}<span class="importer-pv-new">${escapeHtml(m.newValue)}</span>${skipMark}</td>`;
+                    }).join('');
+
+                    return `<tr><th scope="row">${escapeHtml(r.sampleNumber)}</th>${tds}</tr>`;
+                }).join('');
+
+                const cut = table.truncated
+                    ? `<div class="importer-preview-overflow">… 시료 ${table.totalRows}건 중 ${table.rows.length}건 표시</div>`
+                    : '';
+
+                // tabindex/role: 스크롤되는 영역은 키보드로 닿을 수 있어야 한다 (WCAG 2.1.1).
+                // 없으면 키보드만 쓰는 사용자는 오른쪽 열에 아예 접근하지 못한다.
+                matchedHtml = `<div class="importer-pv-scroll" tabindex="0" role="region" aria-label="가져올 결과 미리보기">
+                    <table class="importer-pv-table">
+                        <thead><tr><th scope="col">시료번호</th>${head}</tr></thead>
+                        <tbody>${body}</tbody>
+                    </table>
+                </div>${cut}`;
+            }
+
+            // ── 미매칭: 시료번호를 못 찾은 행이라 표에 자리가 없다. 지금처럼 아래에 나열 ──
+            let unmatchedHtml = '';
+            if (p.unmatched.length > 0) {
+                const lis = p.unmatched.slice(0, PREVIEW_UNMATCHED_LIMIT).map(u =>
+                    `<li class="importer-preview-item is-unmatched">
+                        <span class="importer-preview-key">${escapeHtml(u.key || '(빈 키)')}</span>
+                        <span class="badge badge-warn">미매칭</span>
+                    </li>`
+                ).join('');
+                const more = p.unmatched.length > PREVIEW_UNMATCHED_LIMIT
+                    ? `<li class="importer-preview-overflow">… 미매칭 ${p.unmatched.length}건 중 ${PREVIEW_UNMATCHED_LIMIT}건 표시</li>`
+                    : '';
+                unmatchedHtml = `<ul class="importer-preview-ul">${lis}${more}</ul>`;
+            }
+
+            list.innerHTML = (matchedHtml || unmatchedHtml)
+                ? matchedHtml + unmatchedHtml
                 : '<div class="importer-preview-empty">저장될 항목이 없습니다.</div>';
 
             saveBtn.disabled = willApplyCount === 0;
