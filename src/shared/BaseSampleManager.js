@@ -1199,6 +1199,23 @@ class BaseSampleManager {
                     const row = this.buildTableRow(item, index);
                     if (row) this.tableBody.appendChild(row);
                 });
+            } else if (preparedData.length) {
+                // ⚠️ 그릴 데이터가 있는데 그릴 곳이 없다 — 정상 상태가 아니다.
+                //    예전에는 여기서 조용히 끝나 **행 0개인 목록**이 오류 없이 나왔고,
+                //    E2E는 "버튼이 화면 밖"이라는 엉뚱한 사유로 실패해 원인을 감췄다.
+                //    (수질·중금속 14건, SAMPL-2-36). 조용히 넘기지 않는다.
+                //
+                //    ⚠️ **인스턴스당 한 번만** 남긴다. 데이터 로드가 cacheElements()보다
+                //       먼저 끝나는 초기화 경쟁은 곧 정상 복구되는데, 매 렌더마다 찍으면
+                //       그 복구 가능한 경쟁이 로그를 덮어 진짜 신호를 묻는다 (독립 리뷰 지적).
+                this._warnedNoTableBody = this._warnedNoTableBody || false;
+                if (!this._warnedNoTableBody) {
+                    this._warnedNoTableBody = true;
+                    (window.logger?.warn || console.warn)(
+                        `[${this.moduleKey}] renderLogs: tableBody가 없어 ${preparedData.length}건을 그리지 못했습니다 ` +
+                        '— cacheElements()가 아직 실행되지 않았을 수 있습니다'
+                    );
+                }
             }
         }
     }
@@ -1607,6 +1624,16 @@ class BaseSampleManager {
                 return this.buildTableRow(item, index);
             }
         });
+
+        // ⚠️ 여기서 tableBody가 없으면 페이지네이션은 **그릴 곳 없이** 만들어지고,
+        //    이후 렌더는 폴백 경고에도 걸리지 않는다(pagination이 있으므로) — 진단이
+        //    한쪽만 되는 사각지대다 (독립 리뷰 지적). 그 자리에서 알린다.
+        if (!this.tableBody) {
+            (window.logger?.warn || console.warn)(
+                `[${this.moduleKey}] initPagination: tableBody가 없는 채로 페이지네이션을 만들었습니다 ` +
+                '— cacheElements()가 먼저 실행돼야 합니다'
+            );
+        }
 
         this.pagination.setTableElements(
             this.tableBody,

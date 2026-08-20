@@ -62,7 +62,14 @@ async function openList(page, type, dialogs) {
     });
     const res = await page.goto(type.path);
     expect(res && res.status(), `docs${type.path} 없음 — \`npm run build\` 먼저`).toBeLessThan(400);
-    await page.waitForFunction((m) => !!window[m], type.mgr, { timeout: 15000 });
+    // ⚠️ 매니저 **객체**만 기다리면 안 된다 — `tableBody` 바인딩까지 기다려야 한다.
+    //    수질·중금속은 그 바인딩이 늦어, 사이에 심으면 `renderLogs`가 조용히 0행을
+    //    렌더하고 엔티티 검사가 "검사할 셀이 없어서" 통과/실패한다 (SAMPL-2-36).
+    await page.waitForFunction(
+        (m) => { const mgr = /** @type {any} */ (window)[m]; return !!mgr && !!mgr.tableBody; },
+        type.mgr,
+        { timeout: 15000 }
+    );
     expect(
         await page.evaluate(() => /** @type {any} */ (window).APP_VERSION),
         'docs/의 APP_VERSION이 package.json과 다르다 — 빌드 누락이거나 다른 프로젝트다'
@@ -75,6 +82,17 @@ async function openList(page, type, dialogs) {
         if (typeof mgr.switchView === 'function') mgr.switchView('list');
     }, [type.mgr, RECORD]);
     await page.waitForTimeout(400);
+
+    // ⚠️ 0행이면 엔티티 검사는 **검사할 셀이 없어서** 통과한다 — 가장 나쁜 위장이다.
+    //    심은 레코드가 실제로 그려졌는지 여기서 못 박는다 (SAMPL-2-36).
+    //
+    //    개수만 세지 않고 **우리가 심은 id**(`RECORD.id === 'r1'`)인지까지 본다 —
+    //    페이지가 자체 로드한 데이터가 그려졌다면 그 안에는 검사할 엔티티가 없다
+    //    (독립 리뷰 지적). `toHaveCount`는 자동 재시도하므로 늦은 렌더도 잡는다.
+    await expect(
+        page.locator(`.btn-edit[data-id="${RECORD.id}"]`),
+        '심은 레코드가 렌더되지 않았다 — 엔티티 검사가 남의 표를 검사하게 된다'
+    ).toHaveCount(1);
 }
 
 for (const type of TYPES) {
