@@ -122,3 +122,9 @@ docs/03-code-review/
 # Playwright 실행 산물 (SAMPL-1-159 리뷰에서 커밋 잡음으로 확인)
 test-results/
 playwright-report/
+
+# 테스트·에이전트 실행 산물 (SAMPL-2-33 리뷰 지적 — 커밋에 딸려 들어가기 쉽다)
+.playwright-mcp/
+tmp-prefix-pw.config.js
+*-scrolled.png
+*-midscroll.png

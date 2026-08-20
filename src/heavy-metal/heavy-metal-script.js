@@ -107,15 +107,22 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
             : samplingLocationRaw;
 
         // XSS 방지
-        const safeName = escapeHTML(item.name || '-');
-        const safeDisplayAddress = escapeHTML(displayAddress);
+        // ⚠️ 이 값들은 **이스케이프하지 않는다** (SAMPL-2-33).
+        //    아래에서 `textContent`·`dataset`·`el.title`로 넣는데, 그 경로는 HTML을
+        //    해석하지 않으므로 이스케이프하면 **엔티티 코드가 글자로 보인다**
+        //    (실측: `김&철수` → 화면에 `김&amp;철수`).
+        //    변수명도 `safeXxx` → `xxxText`로 바꿨다 — `safe`라는 이름이 붙어 있으면
+        //    다음 사람이 템플릿 문자열에 그대로 써서 XSS를 만든다.
+        //    템플릿(`${}`) 자리에 넣을 때는 반드시 `escapeHTML`/`escapeAttr`를 쓸 것.
+        const nameText = item.name || '-';
+        const displayAddressText = displayAddress;
         const displayPhone = item.phoneNumber && window.SampleUtils?.formatPhoneNumber
             ? (window.SampleUtils.formatPhoneNumber(item.phoneNumber) || item.phoneNumber)
             : (item.phoneNumber || '-');
-        const safePhone = escapeHTML(displayPhone);
-        const safeSamplingLocation = escapeHTML(displaySamplingLocation);
-        const safeCropName = escapeHTML(item.cropName || '-');
-        const safeNote = escapeHTML(item.note || '-');
+        const phoneText = displayPhone;
+        const samplingLocationText = displaySamplingLocation;
+        const cropNameText = item.cropName || '-';
+        const noteText = item.note || '-';
 
         const applicantType = item.applicantType || '개인';
         const birthOrCorp = applicantType === '법인' ? (item.corpNumber || '-') : (item.birthDate || '-');
@@ -172,8 +179,8 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
         const tdName = document.createElement('td');
         tdName.className = 'sticky-col col-name';
         tdName.dataset.name = item.name || '';
-        tdName.textContent = safeName;
-        tdName.title = `"${safeName}" 클릭하면 같은 이름 일괄 선택`;
+        tdName.textContent = nameText;
+        tdName.title = `"${nameText}" 클릭하면 같은 이름 일괄 선택`;
         tr.appendChild(tdName);
 
         // 7. Applicant type (hidden)
@@ -191,22 +198,22 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
         // 9. Address
         const tdAddress = document.createElement('td');
         tdAddress.className = 'col-address';
-        tdAddress.textContent = safeDisplayAddress;
+        tdAddress.textContent = displayAddressText;
         tr.appendChild(tdAddress);
 
         // 10. Phone
         const tdPhone = document.createElement('td');
-        tdPhone.textContent = safePhone;
+        tdPhone.textContent = phoneText;
         tr.appendChild(tdPhone);
 
         // 11. Sampling location
         const tdSamplingLocation = document.createElement('td');
-        tdSamplingLocation.textContent = safeSamplingLocation;
+        tdSamplingLocation.textContent = samplingLocationText;
         tr.appendChild(tdSamplingLocation);
 
         // 12. Crop name (with tree age if present)
         const tdCropName = document.createElement('td');
-        tdCropName.textContent = safeCropName + (item.treeAge ? ' (' + item.treeAge + '년생)' : '');
+        tdCropName.textContent = cropNameText + (item.treeAge ? ' (' + item.treeAge + '년생)' : '');
         tr.appendChild(tdCropName);
 
         // 13. Sampling date
@@ -234,8 +241,8 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
         // 17. Note (with tooltip)
         const tdNote = document.createElement('td');
         tdNote.className = 'text-truncate';
-        tdNote.setAttribute('data-tooltip', safeNote);
-        tdNote.textContent = safeNote;
+        tdNote.setAttribute('data-tooltip', noteText);
+        tdNote.textContent = noteText;
         tr.appendChild(tdNote);
 
         // 18. Mail date

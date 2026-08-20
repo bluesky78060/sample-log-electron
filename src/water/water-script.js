@@ -136,18 +136,25 @@ class WaterSampleManager extends window.BaseSampleManager {
             : samplingLocationRaw;
 
         // XSS 방지
-        const safeName = escapeHTML(log.name || '-');
-        const safeSamplingLocation = escapeHTML(displaySamplingLocation);
-        const safeSamplingLocationFull = escapeHTML(samplingLocationRaw);
-        const safeSampleName = escapeHTML(log.sampleName || '-');
-        const safeMainCrop = escapeHTML(log.mainCrop || '-');
+        // ⚠️ 이 값들은 **이스케이프하지 않는다** (SAMPL-2-33).
+        //    아래에서 `textContent`·`dataset`·`el.title`로 넣는데, 그 경로는 HTML을
+        //    해석하지 않으므로 이스케이프하면 **엔티티 코드가 글자로 보인다**
+        //    (실측: `김&철수` → 화면에 `김&amp;철수`).
+        //    변수명도 `safeXxx` → `xxxText`로 바꿨다 — `safe`라는 이름이 붙어 있으면
+        //    다음 사람이 템플릿 문자열에 그대로 써서 XSS를 만든다.
+        //    템플릿(`${}`) 자리에 넣을 때는 반드시 `escapeHTML`/`escapeAttr`를 쓸 것.
+        const nameText = log.name || '-';
+        const samplingLocationText = displaySamplingLocation;
+        const samplingLocationFullText = samplingLocationRaw;
+        const sampleNameText = log.sampleName || '-';
+        const mainCropText = log.mainCrop || '-';
         const displayPhone = log.phoneNumber && window.SampleUtils?.formatPhoneNumber
             ? (window.SampleUtils.formatPhoneNumber(log.phoneNumber) || log.phoneNumber)
             : (log.phoneNumber || '-');
-        const safePhone = escapeHTML(displayPhone);
+        const phoneText = displayPhone;
         const noteDisplay = [log.sampleNote, log.note].filter(Boolean).join(' / ') || '-';
-        const safeNote = escapeHTML(noteDisplay);
-        const safeDisplayAddress = escapeHTML(displayAddress);
+        const noteText = noteDisplay;
+        const displayAddressText = displayAddress;
 
         const applicantType = log.applicantType || '개인';
         const birthOrCorp = applicantType === '법인' ? (log.corpNumber || '-') : (log.birthDate || '-');
@@ -212,8 +219,8 @@ class WaterSampleManager extends window.BaseSampleManager {
         const tdName = document.createElement('td');
         tdName.className = 'col-name sticky-col';
         tdName.dataset.name = log.name || '';
-        tdName.textContent = safeName;
-        tdName.title = `"${safeName}" 클릭하면 같은 이름 일괄 선택`;
+        tdName.textContent = nameText;
+        tdName.title = `"${nameText}" 클릭하면 같은 이름 일괄 선택`;
         row.appendChild(tdName);
 
         // 9. Zipcode (hidden)
@@ -225,19 +232,19 @@ class WaterSampleManager extends window.BaseSampleManager {
         // 10. Address
         const tdAddress = document.createElement('td');
         tdAddress.className = 'col-address';
-        tdAddress.textContent = safeDisplayAddress;
+        tdAddress.textContent = displayAddressText;
         row.appendChild(tdAddress);
 
         // 11. Sampling location (with tooltip)
         const tdSamplingLocation = document.createElement('td');
         tdSamplingLocation.className = 'text-truncate';
-        tdSamplingLocation.dataset.tooltip = safeSamplingLocationFull;
-        tdSamplingLocation.textContent = safeSamplingLocation;
+        tdSamplingLocation.dataset.tooltip = samplingLocationFullText;
+        tdSamplingLocation.textContent = samplingLocationText;
         row.appendChild(tdSamplingLocation);
 
         // 12. Sample name
         const tdSampleName = document.createElement('td');
-        tdSampleName.textContent = safeSampleName;
+        tdSampleName.textContent = sampleNameText;
         row.appendChild(tdSampleName);
 
         // 13. Sample count
@@ -248,8 +255,8 @@ class WaterSampleManager extends window.BaseSampleManager {
         // 14. Main crop (with tooltip)
         const tdMainCrop = document.createElement('td');
         tdMainCrop.className = 'text-truncate';
-        tdMainCrop.dataset.tooltip = safeMainCrop;
-        tdMainCrop.textContent = safeMainCrop;
+        tdMainCrop.dataset.tooltip = mainCropText;
+        tdMainCrop.textContent = mainCropText;
         row.appendChild(tdMainCrop);
 
         // 15. Purpose
@@ -264,7 +271,7 @@ class WaterSampleManager extends window.BaseSampleManager {
 
         // 17. Phone
         const tdPhone = document.createElement('td');
-        tdPhone.textContent = safePhone;
+        tdPhone.textContent = phoneText;
         row.appendChild(tdPhone);
 
         // 18. Reception method
@@ -275,8 +282,8 @@ class WaterSampleManager extends window.BaseSampleManager {
         // 19. Note (with tooltip)
         const tdNote = document.createElement('td');
         tdNote.className = 'col-note text-truncate';
-        tdNote.dataset.tooltip = safeNote;
-        tdNote.textContent = safeNote;
+        tdNote.dataset.tooltip = noteText;
+        tdNote.textContent = noteText;
         row.appendChild(tdNote);
 
         // 20. Mail date
