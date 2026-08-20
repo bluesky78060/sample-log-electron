@@ -76,12 +76,20 @@ test.describe('하위필지 선택 (SAMPL-1-159)', () => {
 
         // 두 번째 하위필지를 고르고 확정한다
         await page.locator(SELECT).selectOption('문단리 226');
+        // ⚠️ SAMPL-1-161부터 배정은 꼬리표가 아니라 **실제 이동**이다.
+        //    선택이 저장됐다는 증거는 `crops[].subLotTarget`이 아니라
+        //    그 작물이 해당 하위필지 안에 있다는 것이다 (엑셀·목록·흙토람이 그것을 읽는다).
         const saved = await page.evaluate(() => {
             const mgr = /** @type {any} */ (window).soilManager;
             mgr.confirmCropArea();
-            return mgr.parcels[0].crops.map((c) => c.subLotTarget);
+            const p = mgr.parcels[0];
+            return {
+                own: p.crops.map((c) => c.name),
+                lot226: p.subLots[1].crops.map((c) => c.name),
+            };
         });
-        expect(saved, '선택이 저장되지 않았다').toEqual(['문단리 226']);
+        expect(saved.lot226, '선택이 저장되지 않았다').toEqual(['고추']);
+        expect(saved.own, '배정했는데 상위 필지에 그대로 남았다').toEqual([]);
 
         // 다시 열면 그 항목이 선택돼 있어야 한다
         const reopened = await page.evaluate(() => {
@@ -301,23 +309,30 @@ test.describe('하위필지 선택 (SAMPL-1-159)', () => {
         await page.locator('#navSubmitBtn').click();
         await expect(page.locator('.btn-edit').first()).toBeAttached({ timeout: 15000 });
 
+        // ⚠️ SAMPL-1-161부터 배정은 실제 이동이다 — 작물이 **하위필지 안에** 저장돼야
+        //    엑셀·목록·흙토람이 그 배정을 반영한다. 꼬리표만 있으면 화면만 맞고 내보내기는 틀렸다.
         const saved = await page.evaluate(() => {
             const mgr = /** @type {any} */ (window).soilManager;
-            return mgr.sampleLogs.flatMap((l) =>
-                (l.parcels || []).flatMap((p) => (p.crops || []).map((c) => c.subLotTarget))
-            );
+            return mgr.sampleLogs.map((l) => {
+                const p = (l.parcels || [])[0] || {};
+                return {
+                    rn: l.receptionNumber,
+                    own: (p.crops || []).map((c) => c.name),
+                    subLots: (p.subLots || []).map((sub) => ({
+                        addr: typeof sub === 'string' ? sub : sub.lotAddress,
+                        crops: (typeof sub === 'string' ? [] : (sub.crops || [])).map((c) => c.name),
+                    })),
+                    cropsDisplay: l.cropsDisplay,
+                };
+            });
         });
-        expect(saved, `배정이 저장되지 않았다: ${JSON.stringify(saved)}`).toContain('문단리 226');
-        // 저장된 레코드의 crops 자체를 함께 본다 (수정 후 0이 되는 원인 추적용)
-        const savedShape = await page.evaluate(() => {
-            const mgr = /** @type {any} */ (window).soilManager;
-            return mgr.sampleLogs.map((l) => ({
-                rn: l.receptionNumber,
-                cropsLen: (l.parcels?.[0]?.crops || []).length,
-                cropsDisplay: l.cropsDisplay,
-            }));
-        });
-        expect(savedShape[0].cropsLen, `저장된 crops: ${JSON.stringify(savedShape)}`).toBeGreaterThan(0);
+        const dump = JSON.stringify(saved);
+        const target = saved[0].subLots.find((sub) => sub.addr === '문단리 226');
+        expect(target, `하위필지가 저장되지 않았다: ${dump}`).toBeTruthy();
+        expect(target.crops, `배정이 저장되지 않았다: ${dump}`).toEqual(['고추']);
+        expect(saved[0].own, `배정했는데 상위 필지에 남았다: ${dump}`).toEqual([]);
+        // 전량 배정된 필지는 상위 요약이 '-'여야 한다 — '고추'면 상위 행과 하위 행에 두 번 뜬다
+        expect(saved[0].cropsDisplay, `상위 요약이 하위필지 작물을 중복 표시한다: ${dump}`).toBe('-');
 
         // ⚠️ **수정 왕복은 여기서 검증할 수 없다** — 다만 사유가 처음 적었던 것과 다르다.
         //

@@ -312,6 +312,33 @@ class SoilSampleManager extends window.BaseSampleManager {
                     if (log && log.gongikBaseYear === undefined) log.gongikBaseYear = '';
                 });
                 return logs;
+            },
+            // SAMPL-1-161: 옛 하위필지 배정(`subLotTarget` 꼬리표)을 실제 이동으로 이관.
+            // 이걸 로드 시점에 하지 않으면 사용자가 그 레코드를 열어 확정하기 전까지
+            // 엑셀·목록·흙토람이 계속 상위 필지 행에 넣는다 (`migrateParcels` 주석 참조).
+            (logs) => {
+                if (!Array.isArray(logs)) return logs;
+                let moved = 0;
+                logs.forEach(log => {
+                    if (!log || !Array.isArray(log.parcels)) return;
+                    // 옵셔널 체이닝: 여기서 던지면 `loadData`의 try에 잡혀
+                    // "데이터 로드 실패" 토스트만 뜨고 **목록이 통째로 안 그려진다**.
+                    const n = window.SubLotIdentity?.migrateParcels?.(log.parcels) ?? 0;
+                    if (n === 0) return;
+                    moved += n;
+                    // 🚨 최상위 요약도 함께 갱신해야 한다.
+                    //    `flattenLogsForTable`·`populateFormForEdit`는 `parcel.crops`가 비면
+                    //    **단일 필지에 한해** `cropsFromDisplay(log)`로 폴백한다. 이관으로
+                    //    `crops`가 비었는데 `cropsDisplay`에 옛 작물명이 남아 있으면
+                    //    그 폴백이 작물을 상위 행에 되살려 **하위 행과 중복 표시**된다
+                    //    (독립 모델 리뷰 지적). `buildSoilLogRecord`의 비분할 계산과 같은 규칙이다.
+                    const first = log.parcels[0];
+                    const own = (first && Array.isArray(first.crops)) ? first.crops : [];
+                    log.cropsDisplay = own.map(c => c.name).join(', ') || '-';
+                    log.area = own.reduce((sum, c) => sum + (parseFloat(c.area) || 0), 0).toString();
+                });
+                if (moved > 0) this.log(`하위필지 배정 이관: 작물 ${moved}건`);
+                return logs;
             }
         ];
     }
@@ -1435,7 +1462,12 @@ class SoilSampleManager extends window.BaseSampleManager {
         const cropArea = areaInput.value.trim();
         const unit = unitToggle ? unitToggle.dataset.unit : 'm2';
 
-        if (cropName && cropArea) {
+        // ⚠️ 판정 기준은 **이름**이다 (면적은 나중에 채울 수 있다).
+        //    예전에는 `cropName && cropArea` 둘 다 있어야 기록했는데, 확정 필터가
+        //    이름만 보도록 완화되면서(SAMPL-1-161) 면적 없는 작물이 정상 데이터가 됐다.
+        //    옛 기준을 그대로 두면 그 작물의 이름을 고쳐도 **반영되지 않고**,
+        //    아래 else 분기로 떨어져 사라지기까지 했다 (독립 모델·코드리뷰 지적).
+        if (cropName) {
             if (parcel.crops.length === 0) {
                 parcel.crops.push({ name: cropName, area: cropArea, code: '', unit: unit });
             } else {
@@ -1444,7 +1476,12 @@ class SoilSampleManager extends window.BaseSampleManager {
                 parcel.crops[0].unit = unit;
             }
         } else {
-            if (parcel.crops.length === 1 && (!parcel.crops[0].name || !parcel.crops[0].area)) {
+            // ⚠️ 판정 기준은 **이름**이다. 예전에는 면적이 비어도 지웠는데,
+            //    확정 필터가 이름만 보도록 완화되면서(SAMPL-1-161) 면적 없는 작물이
+            //    정상적으로 `parcel.crops`에 들어오게 됐다. 옛 기준을 그대로 두면
+            //    사용자가 인라인 칸을 건드리는 순간 그 작물이 사라진다
+            //    (독립 모델 리뷰 지적). 두 경로가 같은 기준을 써야 한다.
+            if (parcel.crops.length === 1 && !parcel.crops[0].name) {
                 parcel.crops = [];
             }
         }
@@ -1458,13 +1495,18 @@ class SoilSampleManager extends window.BaseSampleManager {
     // ========================================
 
     renderParcelSummary(parcel) {
+        // ⚠️ **개수는 이름 기준, 면적 합산만 면적 기준이다.**
+        //    예전에는 `c.name && c.area`로 한 번에 걸러, 면적을 아직 안 채운 작물이
+        //    카드에는 보이는데 요약은 `작물 수: 0개`라고 말했다. 담당자가
+        //    "입력이 안 먹었나" 하고 다시 넣으면 중복 입력이 된다.
+        //    확정 필터·`updateFirstCrop`·저장이 모두 이름 기준이므로 여기도 맞춘다 (SAMPL-1-161).
         const allCrops = [
             ...parcel.crops,
             ...parcel.subLots.flatMap(subLot => {
                 if (typeof subLot === 'string') return [];
                 return subLot.crops || [];
             })
-        ].filter(c => c.name && c.area);
+        ].filter(c => c && c.name);
 
         let m2Total = 0;
         let pyeongTotal = 0;
@@ -1584,6 +1626,39 @@ class SoilSampleManager extends window.BaseSampleManager {
         }).join(''));
     }
 
+    /**
+     * 인라인 첫 작물 입력란을 `parcel.crops[0]`에 다시 맞춘다 (SAMPL-1-161).
+     *
+     * ## 🚨 이걸 부르지 않으면 작물이 파괴된다
+     * 필지 카드의 `작물`·`면적` 입력란은 `parcel.crops[0]`에 바인딩돼 있다(`renderParcelCard`).
+     * 그런데 `updateCropsAreaDisplay`는 `parcel.crops.slice(1)`만 다시 그리므로
+     * **첫 작물 입력란은 갱신되지 않는다.**
+     *
+     * 첫 작물을 하위필지로 배정하면 `parcel.crops`에서 빠지면서 두 번째 작물이 0번이 되는데,
+     * 화면 입력란은 여전히 옛 작물을 보여준다. 사용자가 그 칸을 한 글자라도 건드리면
+     * `updateFirstCrop`이 스테일 값을 `parcel.crops[0]`에 써서 **두 번째 작물을 덮어쓴다.**
+     * 작물이 하나뿐이면 `parcel.crops`가 비어 `push`가 일어나 상위·하위 **양쪽에 존재**하게
+     * 되고, 엑셀 행이 중복되며 총면적이 두 배가 된다.
+     * @param {string} parcelId
+     */
+    syncFirstCropInputs(parcelId) {
+        const parcel = this.parcels.find(p => p.id === parcelId);
+        if (!parcel) return;
+        const firstCrop = parcel.crops[0] || { name: '', area: '', unit: 'm2' };
+        const cropInput = document.querySelector(`.crop-direct-input[data-id="${parcelId}"]`);
+        const areaInput = document.querySelector(`.area-direct-input[data-id="${parcelId}"]`);
+        const unitToggle = document.getElementById(`area-unit-${parcelId}`);
+        if (cropInput) cropInput.value = firstCrop.name || '';
+        if (areaInput) areaInput.value = firstCrop.area || '';
+        if (unitToggle) {
+            const unit = firstCrop.unit || 'm2';
+            unitToggle.dataset.unit = unit;
+            unitToggle.querySelectorAll('.unit-btn').forEach((btn) => {
+                btn.classList.toggle('active', btn.dataset.value === unit);
+            });
+        }
+    }
+
     getSubLotLabel(subLotTarget, parcel) {
         // ⚠️ 예전에는 `subLots.indexOf(subLotTarget)`로 비교했다. 하위필지가 객체면
         //    문자열과 절대 같지 않아 **항상 라벨이 사라졌다** (SAMPL-1-159).
@@ -1597,13 +1672,13 @@ class SoilSampleManager extends window.BaseSampleManager {
     openCropAreaModal(parcelId) {
         this.currentParcelIdForCrop = parcelId;
         const parcel = this.parcels.find(p => p.id === parcelId);
-        // 저장된 subLotTarget을 여기서 정리한다 (SAMPL-1-159).
-        // ⚠️ `resolveTarget`이 아니라 `resolveForEdit`다. 판정할 수 없을 때(분할모드
-        //    레코드처럼 subLots가 빈 경우) 원값을 보존한다 — 무조건 정리하면
-        //    수정 버튼만 눌러도 배정이 소멸한다(적대적 검증 실측).
-        //    저장 경로(normalizeParcels)와 **같은 규칙**을 쓴다.
-        this.tempCropAreas = parcel.crops.map(c => ({
+        // 상위 작물 + **하위필지 작물까지 함께** 모은다 (SAMPL-1-161).
+        // 배정이 실제 이동이 됐으므로, 하위필지 작물도 보여야 배정을 되돌리거나 옮길 수 있다.
+        // 소속은 `subLotTarget`으로 표시되고 확정 시 그 값에 따라 다시 나뉜다.
+        this.tempCropAreas = window.SubLotIdentity.collectCrops(parcel).map(c => ({
             ...c,
+            // 예전 데이터에 남은 `'[object Object]'`·삭제된 대상은 여기서 정리한다 (SAMPL-1-159).
+            // `resolveTarget`이 아니라 `resolveForEdit`다 — 판정할 수 없을 때 원값을 보존한다.
             subLotTarget: window.SubLotIdentity.resolveForEdit(c.subLotTarget, parcel.subLots)
         }));
         this.renderCropAreaModal();
@@ -1827,11 +1902,29 @@ class SoilSampleManager extends window.BaseSampleManager {
     }
 
     confirmCropArea() {
-        const validCrops = this.tempCropAreas.filter(c => c.name.trim() && c.area).map((crop, idx) => {
-            const unitToggle = document.getElementById(`area-unit-modal-${idx}`);
-            const unit = unitToggle ? unitToggle.dataset.unit : 'm2';
-            return { ...crop, unit: unit };
-        });
+        // ⚠️ 단위 토글의 DOM id는 **필터 전** 인덱스로 렌더된다(`renderCropAreaModal`).
+        //    예전에는 필터 **후** 인덱스로 읽어서, 중간 행이 걸러지면 뒤 작물이
+        //    **앞 행의 토글**을 읽었다 — '평'이 조용히 ㎡로 바뀌었다.
+        //    상위 모달이 하위필지 작물까지 편집하게 되면서 이 경로가 실사용이 됐다.
+        // `c.name`은 외부 유입(레거시 JSON·Firestore) 시 없을 수 있어 옵셔널로 방어한다.
+        //
+        // ⚠️ 판정 기준이 `name && area`가 아니라 **`name`만**이다.
+        //    이 필터의 목적은 빈 서식 행(`{name:'', area:'', code:''}`)을 버리는 것이지
+        //    담당자가 입력한 작물을 지우는 것이 아니다. 상위 모달이 하위필지 작물까지
+        //    편집하게 되면서(SAMPL-1-161), 면적이 아직 빈 하위필지 작물이
+        //    **모달을 열고 확인만 눌러도 삭제**됐다 — `distributeCrops`가 먼저
+        //    `lot.crops = []`로 비우므로 복구 지점도 없다 (적대적 검증 실측).
+        //    `area: 0`(숫자)도 falsy라 같이 사라졌다.
+        //    이름이 있으면 사용자가 입력한 자료다. 면적 없는 작물은 면적 합산에서 0으로
+        //    잡히고 개수에는 포함된다 — `renderParcelSummary`도 같은 기준(이름)으로 통일했다.
+        const validCrops = this.tempCropAreas
+            .map((crop, idx) => ({ crop, idx }))
+            .filter(({ crop }) => crop && crop.name?.trim())
+            .map(({ crop, idx }) => {
+                const unitToggle = document.getElementById(`area-unit-modal-${idx}`);
+                const unit = unitToggle ? unitToggle.dataset.unit : (crop.unit || 'm2');
+                return { ...crop, unit: unit };
+            });
 
         if (this.currentSubLotParcelId && this.currentSubLotIndex !== null) {
             const parcel = this.parcels.find(p => p.id === this.currentSubLotParcelId);
@@ -1849,8 +1942,15 @@ class SoilSampleManager extends window.BaseSampleManager {
             this.currentSubLotIndex = null;
         } else {
             const parcel = this.parcels.find(p => p.id === this.currentParcelIdForCrop);
-            parcel.crops = validCrops;
+            // 배정(`subLotTarget`)에 따라 **실제로** 상위/하위필지에 나눠 담는다 (SAMPL-1-161).
+            // 예전에는 `parcel.crops`에 통째로 넣고 꼬리표만 붙였는데, 엑셀·목록·흙토람은
+            // `subLot.crops`만 읽어서 배정이 반영되지 않았다 — 화면과 내보내기가 달랐다.
+            window.SubLotIdentity.distributeCrops(parcel, validCrops);
+            // ⚠️ 첫 작물 입력란을 반드시 다시 맞춘다 — 빠뜨리면 스테일 입력이
+            //    다음 작물을 덮어쓴다 (`syncFirstCropInputs` 주석 참조).
+            this.syncFirstCropInputs(this.currentParcelIdForCrop);
             this.updateCropsAreaDisplay(this.currentParcelIdForCrop);
+            this.updateSubLotsDisplay(this.currentParcelIdForCrop);
             this.updateParcelSummary(this.currentParcelIdForCrop);
             this.updateParcelsData();
         }
@@ -1908,11 +2008,66 @@ class SoilSampleManager extends window.BaseSampleManager {
 
             // 새 레코드 생성 (필지 수 × 작물 수에 맞춰)
             const newLogs = [];
-            let existingLogIdx = 0;
+            // 🚨 옛 레코드는 **위치(필지·작물)로 짝지어야 한다.**
+            //    예전에는 `oldGroupLogs[existingLogIdx++]`로 새 레코드 순서를 따라
+            //    옛 배열을 훑었다. 레코드 개수가 줄면(작물을 지우거나, 하위필지가 생겨
+            //    분할이 금지되면) 그 뒤 필지가 **엉뚱한 옛 레코드를 물려받는다** —
+            //    `buildSoilLogRecord`가 `...existingLog`를 그대로 펼치므로
+            //    id·우편발송일자·gongikOrder·businessRegNo가 **다른 지번에 붙는다.**
+            //    이 필드들은 폼에 입력란이 없어 담당자가 화면에서 틀린 것을 볼 수 없다
+            //    (적대적 검증 실측). 유실보다 오귀속이 나쁘다.
+            const posKey = (parcelNo, cropNo) => `${parcelNo}:${cropNo}`;
+            const byPos = new Map();
+            oldGroupLogs.forEach(l => {
+                const k = posKey(l.parcelIndex || 1, l.cropIndex || 0);
+                if (!byPos.has(k)) byPos.set(k, l);
+            });
+            const usedOld = new Set();
+            /**
+             * 이 자리(필지·작물)의 옛 레코드를 고른다.
+             * 분할↔단건 전이에서는 서로의 자리를 대체 후보로 본다:
+             *   분할 → 단건 : 첫 작물(`:1`)의 신원을 잇는다
+             *   단건 → 분할 : 단건(`:0`)의 신원을 첫 작물이 잇는다
+             * **한 옛 레코드는 한 번만 쓴다** — 두 새 레코드가 같은 id를 갖는 것을 막는다.
+             */
+            const pickExisting = (parcelNo, cropNo) => {
+                const candidates = cropNo === 0
+                    ? [posKey(parcelNo, 0), posKey(parcelNo, 1)]
+                    : [posKey(parcelNo, cropNo), posKey(parcelNo, 0)];
+                for (const k of candidates) {
+                    const found = byPos.get(k);
+                    if (found && !usedOld.has(found.id)) {
+                        usedOld.add(found.id);
+                        return found;
+                    }
+                }
+                return undefined;
+            };
             validParcels.forEach((parcel, index) => {
                 const num = baseNumber + index;
-                const validCrops = parcel.crops.filter(c => c.name.trim());
-                const useSubNumbers = validCrops.length > 1;
+                const validCrops = parcel.crops.filter(c => c.name?.trim());
+                // 🚨 하위필지가 있으면 **분할하지 않는다** (SAMPL-1-161).
+                //    분할모드는 `buildSoilLogRecord`에서 `subLots: isSplit ? []`로
+                //    하위필지를 통째로 버리는데, 배정이 실제 이동이 된 뒤로는
+                //    그 안에 담당자가 입력한 작물이 들어 있다 — 저장하는 순간 소멸했다
+                //    (실측: 작물 2개 + 하위필지 1개 등록 → 하위필지 작물이 사라짐).
+                //    게다가 두 기능이 같은 `-N` 번호 공간을 다툰다:
+                //      분할모드 = 한 지번에 작물 여럿 → `321`, `321-1`
+                //      하위필지 = 한 접수에 지번 여럿 → `321-1`, `321-2`
+                //    둘이 동시에 일어나면 같은 번호가 두 가지를 뜻하게 된다.
+                //
+                //    ⚠️ **채번 규칙 변경이며, 담당자 확인을 받은 결정이다** (2026-08-20).
+                //       하위필지가 있는 필지는 작물이 몇 개든 접수번호를 1개만 받고,
+                //       작물은 한 행에 함께 표시된다. `-1`, `-2`는 하위 지번이 쓴다.
+                //
+                //         321     내성리 100      고추, 배추
+                //         321-1   내성리 100-1    마늘
+                //         321-2   내성리 100-2    무
+                //
+                //       접수번호는 분석결과 매칭 키이므로(`soil-result-importer.js`)
+                //       이 규칙을 바꾸려면 다시 확인을 받아야 한다.
+                //       확인 대화상자에 합쳐지는 사유를 표시한다.
+                const useSubNumbers = validCrops.length > 1 && !window.SubLotIdentity.hasUsableSubLots(parcel);
 
                 if (useSubNumbers) {
                     // 첫 작물은 기본번호, 두 번째부터 -1, -2
@@ -1920,7 +2075,7 @@ class SoilSampleManager extends window.BaseSampleManager {
                     validCrops.forEach((crop, cropIndex) => {
                         const baseNum = isFillNumber ? `F${num}` : String(num);
                         const receptionNumber = cropIndex === 0 ? baseNum : `${baseNum}-${cropIndex}`;
-                        const existingLog = oldGroupLogs[existingLogIdx++];
+                        const existingLog = pickExisting(index + 1, cropIndex + 1);
                         newLogs.push(window.SoilLogRecord.buildSoilLogRecord(parcel, {
                             receptionNumber,
                             commonData,
@@ -1935,7 +2090,7 @@ class SoilSampleManager extends window.BaseSampleManager {
                     });
                 } else {
                     const receptionNumber = isFillNumber ? `F${num}` : String(num);
-                    const existingLog = oldGroupLogs[existingLogIdx++];
+                    const existingLog = pickExisting(index + 1, 0);
                     newLogs.push(window.SoilLogRecord.buildSoilLogRecord(parcel, {
                         receptionNumber,
                         commonData,
@@ -1958,8 +2113,20 @@ class SoilSampleManager extends window.BaseSampleManager {
 
             // SAMPL-1-82: 빈 필지주소/빈 작물명이 필터(validParcels·validCrops)되면 해당 멤버가
             // removedIds에 포함돼 조용히 삭제된다. 삭제 전 사용자에게 확인 — 취소 시 원본 복원.
+            //
+            // ⚠️ 사유를 **한 가지로 단정하지 않는다.** 예전 문구는 "빈 필지 주소 또는 빈 작물명이
+            //    있으면"이라고만 말했는데, 하위필지가 생겨 작물별 번호가 하나로 합쳐질 때도
+            //    삭제가 일어난다. 빈 값이 하나도 없는 화면에서 그 문구를 보면 담당자는
+            //    "해당 없네" 하고 확인을 누른다 — 확인 대화상자가 가드 구실을 못 했다
+            //    (적대적 검증 지적). 실제 사유를 함께 보여준다.
+            const mergedBySubLot = validParcels.some(p =>
+                p.crops.filter(c => c.name?.trim()).length > 1
+                && window.SubLotIdentity.hasUsableSubLots(p));
+            const removeReason = mergedBySubLot
+                ? '하위필지가 있는 필지는 작물별로 번호를 나누지 않고 1건으로 접수합니다.'
+                : '빈 필지 주소 또는 빈 작물명이 있으면 해당 항목이 제외됩니다.';
             if (removedIds.length > 0 &&
-                !confirm(`기존 ${oldGroupLogs.length}건 중 ${removedIds.length}건이 삭제됩니다. (빈 필지 주소 또는 빈 작물명이 있으면 해당 항목이 제외됩니다.) 계속하시겠습니까?`)) {
+                !confirm(`기존 ${oldGroupLogs.length}건 중 ${removedIds.length}건이 삭제됩니다. (${removeReason}) 계속하시겠습니까?`)) {
                 this.sampleLogs = this.sampleLogs.filter(l => l.groupId !== groupId);  // 방금 추가한 새 레코드 제거
                 this.sampleLogs.push(...oldGroupLogs);                                 // 원본 그룹 복원
                 this.filterAndRenderLogs();
@@ -2083,8 +2250,9 @@ class SoilSampleManager extends window.BaseSampleManager {
         const newLogs = [];
         validParcels.forEach((parcel, index) => {
             const num = baseNumber + index;
-            const validCrops = parcel.crops.filter(c => c.name.trim());
-            const useSubNumbers = validCrops.length > 1;
+            const validCrops = parcel.crops.filter(c => c.name?.trim());
+            // 하위필지가 있으면 분할하지 않는다 — 위 그룹수정 분기의 주석 참조 (SAMPL-1-161)
+            const useSubNumbers = validCrops.length > 1 && !window.SubLotIdentity.hasUsableSubLots(parcel);
 
             if (useSubNumbers) {
                 // 한 필지에 작물이 여러 개: 321, 321-1, 321-2 형태
@@ -2286,7 +2454,12 @@ class SoilSampleManager extends window.BaseSampleManager {
                     id: parcelId,
                     lotAddress: parcel.lotAddress || '',
                     isMountain: parcel.isMountain || false,
-                    subLots: parcel.subLots ? [...parcel.subLots] : [],
+                    // ⚠️ **깊은 복사여야 한다.** 얕은 복사면 하위필지 객체가 `sampleLogs`의
+                    //    저장 레코드와 **공유**되고, 작물·면적 모달 확정이 그 객체를 제자리에서
+                    //    비웠다 다시 채우므로 **취소해도 저장본이 이미 바뀌어 있다**
+                    //    (SAMPL-1-161 코드 리뷰 실측). 바로 아래 `crops`는 이미 깊은 복사인데
+                    //    `subLots`만 얕았던 비대칭이 원인이었다.
+                    subLots: window.SubLotIdentity.cloneSubLots(parcel.subLots),
                     crops,
                     category: window.SoilLogRecord.resolveParcelCategory(parcel.category, log),
                     purpose: window.SoilLogRecord.resolveParcelPurpose(parcel.purpose, log),
@@ -2399,7 +2572,8 @@ class SoilSampleManager extends window.BaseSampleManager {
                 id: parcelId,
                 lotAddress: parcel.lotAddress || firstLog.lotAddress || '',
                 isMountain: parcel.isMountain || false,
-                subLots: parcel.subLots ? [...parcel.subLots] : [],
+                // 깊은 복사 — 저장 레코드와의 별칭 차단 (위 `populateFormForEdit` 주석 참조)
+                subLots: window.SubLotIdentity.cloneSubLots(parcel.subLots),
                 crops: mergedCrops.length > 0 ? mergedCrops : [{ name: '', area: '' }],
                 category: window.SoilLogRecord.resolveParcelCategory(parcel.category, firstLog),
                 purpose: window.SoilLogRecord.resolveParcelPurpose(parcel.purpose, firstLog),
@@ -3764,6 +3938,16 @@ class SoilSampleManager extends window.BaseSampleManager {
                     const container = target.closest('.sub-lots-container');
                     const parcelId = container.id.replace('subLots-', '');
                     const parcel = this.parcels.find(p => p.id === parcelId);
+                    // 🚨 하위필지를 지우면 **그 안의 작물이 함께 사라진다.**
+                    //    배정이 꼬리표뿐이던 시절에는 작물이 늘 `parcel.crops`에 있어서
+                    //    이 splice가 주소만 지웠다. 이제 배정은 실제 이동이라
+                    //    (SAMPL-1-161) 담당자가 입력한 작물이 여기서 소멸한다.
+                    //    → 지우기 전에 상위 필지로 **되돌려 놓는다.** 배정을 잃는 것과
+                    //      작물을 잃는 것은 다르다.
+                    const removed = parcel.subLots[subLotIndex];
+                    const rescued = (removed && typeof removed === 'object' && Array.isArray(removed.crops))
+                        ? removed.crops : [];
+                    if (rescued.length > 0) parcel.crops = [...parcel.crops, ...rescued];
                     parcel.subLots.splice(subLotIndex, 1);
                     this.updateSubLotsDisplay(parcelId);
                     this.updateParcelSummary(parcelId);
@@ -3771,9 +3955,13 @@ class SoilSampleManager extends window.BaseSampleManager {
                     //    작물 목록을 다시 그리지 않아 **배지가 옛 값을 계속 보여줬다** —
                     //    손실 사실이 화면에 감춰졌다 (적대적 검증 실측).
                     const cleaned = window.SubLotIdentity.normalizeParcels(this.parcels);
+                    // 되돌린 작물이 첫 번째 자리에 올 수도 있으므로 인라인 입력칸도 맞춘다
+                    this.syncFirstCropInputs(parcelId);
                     this.updateCropsAreaDisplay(parcelId);
                     this.updateParcelsData();
-                    if (cleaned > 0) {
+                    if (rescued.length > 0) {
+                        this.showToast(`하위필지를 지우고 작물 ${rescued.length}건을 상위 필지로 되돌렸습니다.`, 'warning');
+                    } else if (cleaned > 0) {
                         this.showToast(`하위필지 삭제로 작물 ${cleaned}건의 배정을 '전체'로 되돌렸습니다.`, 'warning');
                     }
                 }
