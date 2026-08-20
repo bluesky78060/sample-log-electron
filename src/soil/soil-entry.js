@@ -44,6 +44,8 @@ import './soil-log-record.js';
 import './reception-group.js';
 // 작물 검색 순수 로직 (SAMPL-1-156 — window.CropSearch 준비)
 import './crop-search.js';
+// 하위필지 식별 순수 로직 (SAMPL-1-159 — window.SubLotIdentity 준비)
+import './sublot-identity.js';
 
 // Main script
 import './soil-script.js';

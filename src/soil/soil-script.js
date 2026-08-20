@@ -998,6 +998,13 @@ class SoilSampleManager extends window.BaseSampleManager {
     }
 
     updateParcelsData() {
+        // 저장 직전에 하위필지 배정을 정리한다 (SAMPL-1-159).
+        // 모달에서만 정리하면 모달을 열지 않고 저장되는 경로에서 예전 결함이 남긴
+        // `'[object Object]'`가 그대로 재저장된다.
+        // ⚠️ 옵셔널 체이닝을 쓰지 않는다. 모듈이 없으면 **조용한 no-op**이 되어
+        //    쓰레기 값이 신호 없이 재저장된다. 이 파일의 다른 호출부(:1587·:1615·:3729)도
+        //    무가드이므로 여기만 관대하면 하필 저장 경로가 가장 조용해진다.
+        window.SubLotIdentity.normalizeParcels(this.parcels);
         if (this.parcelsDataInput) {
             this.parcelsDataInput.value = JSON.stringify(this.parcels);
         }
@@ -1578,13 +1585,9 @@ class SoilSampleManager extends window.BaseSampleManager {
     }
 
     getSubLotLabel(subLotTarget, parcel) {
-        if (!subLotTarget || subLotTarget === 'all') return '';
-        if (!parcel.subLots || parcel.subLots.length === 0) return '';
-        const idx = parcel.subLots.indexOf(subLotTarget);
-        if (idx >= 0) {
-            return `[${subLotTarget}]`;
-        }
-        return '';
+        // ⚠️ 예전에는 `subLots.indexOf(subLotTarget)`로 비교했다. 하위필지가 객체면
+        //    문자열과 절대 같지 않아 **항상 라벨이 사라졌다** (SAMPL-1-159).
+        return window.SubLotIdentity.labelOf(subLotTarget, parcel?.subLots);
     }
 
     // ========================================
@@ -1594,9 +1597,14 @@ class SoilSampleManager extends window.BaseSampleManager {
     openCropAreaModal(parcelId) {
         this.currentParcelIdForCrop = parcelId;
         const parcel = this.parcels.find(p => p.id === parcelId);
+        // 저장된 subLotTarget을 여기서 정리한다 (SAMPL-1-159).
+        // ⚠️ `resolveTarget`이 아니라 `resolveForEdit`다. 판정할 수 없을 때(분할모드
+        //    레코드처럼 subLots가 빈 경우) 원값을 보존한다 — 무조건 정리하면
+        //    수정 버튼만 눌러도 배정이 소멸한다(적대적 검증 실측).
+        //    저장 경로(normalizeParcels)와 **같은 규칙**을 쓴다.
         this.tempCropAreas = parcel.crops.map(c => ({
             ...c,
-            subLotTarget: c.subLotTarget || 'all'
+            subLotTarget: window.SubLotIdentity.resolveForEdit(c.subLotTarget, parcel.subLots)
         }));
         this.renderCropAreaModal();
         if (this.cropAreaModal) this.cropAreaModal.classList.remove('hidden');
@@ -1605,21 +1613,22 @@ class SoilSampleManager extends window.BaseSampleManager {
     getSubLotOptions(parcelId) {
         const parcel = this.parcels.find(p => p.id === parcelId);
         if (!parcel) return [];
-        // ⚠️ `value`에 원소를 통째로 넣는다. push 사이트(:3727)가 객체를 저장하므로
-        //    신규 데이터에서는 `value="[object Object]"`가 되고 선택 복원도 깨진다.
-        //    → SAMPL-1-159 (식별자를 정하는 별 티켓). 여기서는 escape만 했다.
-        const options = [{ value: 'all', label: '전체 (상위 필지 전체)' }];
-        if (parcel.subLots && parcel.subLots.length > 0) {
-            parcel.subLots.forEach((lot, idx) => {
-                options.push({ value: lot, label: `하위 ${idx + 1}: ${lot}` });
-            });
-        }
-        return options;
+        // 식별자는 **주소**다 (SAMPL-1-159). 하위필지 원소가 문자열(구)·객체(신)로
+        // 섞여 있어 양쪽에서 주소를 뽑아 키로 쓴다. 인덱스를 쓰지 않은 이유는
+        // 하위필지 삭제(:3740 splice)로 순서가 밀리면 조용히 딴 것을 가리키기 때문이다.
+        return window.SubLotIdentity.buildOptions(parcel.subLots);
     }
 
     closeCropAreaModalFn() {
         if (this.cropAreaModal) this.cropAreaModal.classList.add('hidden');
         this.currentParcelIdForCrop = null;
+        // ⚠️ 하위필지 상태를 반드시 지운다 (SAMPL-1-159).
+        //    예전에는 취소로 닫아도 남아, 다음에 **상위 필지** 작물 모달을 열었을 때
+        //    그 작물이 하위필지로 잘못 귀속돼 저장됐다(적대적 검증 실측).
+        //    하위필지 작물은 엑셀·흙토람이 실제로 읽으므로 조용한 데이터 오귀속이다.
+        //    `confirmCropArea`는 정상 확정 시에만 지웠기 때문에 취소 경로가 새고 있었다.
+        this.currentSubLotParcelId = null;
+        this.currentSubLotIndex = null;
         this.tempCropAreas = [];
     }
 
@@ -1629,7 +1638,12 @@ class SoilSampleManager extends window.BaseSampleManager {
         }
 
         const subLotOptions = this.getSubLotOptions(this.currentParcelIdForCrop || this.currentSubLotParcelId);
-        const hasSubLots = subLotOptions.length > 1;
+        // ⚠️ 하위필지 자신의 작물 모달에서는 하위필지 선택을 **렌더하지 않는다** (SAMPL-1-159).
+        //    그 모달의 작물은 이미 그 하위필지 것인데, 선택이 뜨면 **다른 하위필지를 가리키게**
+        //    저장할 수 있다. 화면은 '전체'로 보이는데 상태는 undefined인 불일치도 생긴다.
+        //    이 값은 어디서도 읽히지 않아 조용한 모순 데이터로만 남는다.
+        const isSubLotOwnModal = this.currentSubLotParcelId !== null && this.currentSubLotParcelId !== undefined;
+        const hasSubLots = !isSubLotOwnModal && subLotOptions.length > 1;
 
         if (!this.cropAreaList) return;
 
@@ -3725,6 +3739,14 @@ class SoilSampleManager extends window.BaseSampleManager {
                     const value = input.value.trim();
                     if (value) {
                         const parcel = this.parcels.find(p => p.id === parcelId);
+                        // ⚠️ 주소가 작물 배정의 식별자다 (SAMPL-1-159). 중복을 허용하면
+                        //    둘 중 하나를 지웠을 때 그쪽을 가리켰던 작물이 **조용히 남은 쪽으로**
+                        //    옮겨간다. 사용자는 알 수 없으므로 입력 시점에 막는다.
+                        const check = window.SubLotIdentity.canAdd(value, parcel.subLots);
+                        if (!check.ok) {
+                            this.showToast(check.reason, 'warning');
+                            return;
+                        }
                         parcel.subLots.push({ lotAddress: value, crops: [] });
                         this.updateSubLotsDisplay(parcelId);
                         this.updateParcelSummary(parcelId);
@@ -3740,7 +3762,15 @@ class SoilSampleManager extends window.BaseSampleManager {
                     parcel.subLots.splice(subLotIndex, 1);
                     this.updateSubLotsDisplay(parcelId);
                     this.updateParcelSummary(parcelId);
+                    // ⚠️ `updateParcelsData()`가 배정을 '전체'로 정리하는데, 예전에는
+                    //    작물 목록을 다시 그리지 않아 **배지가 옛 값을 계속 보여줬다** —
+                    //    손실 사실이 화면에 감춰졌다 (적대적 검증 실측).
+                    const cleaned = window.SubLotIdentity.normalizeParcels(this.parcels);
+                    this.updateCropsAreaDisplay(parcelId);
                     this.updateParcelsData();
+                    if (cleaned > 0) {
+                        this.showToast(`하위필지 삭제로 작물 ${cleaned}건의 배정을 '전체'로 되돌렸습니다.`, 'warning');
+                    }
                 }
                 if (target.classList.contains('btn-add-sublot-crop')) {
                     this.openSubLotCropModal(target.dataset.parcelId, parseInt(target.dataset.sublotIndex, 10));
