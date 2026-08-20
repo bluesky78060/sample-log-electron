@@ -26,7 +26,16 @@ async function openList(page, type) {
     page.on('dialog', (d) => d.dismiss().catch(() => {}));
     const res = await page.goto(type.path);
     expect(res && res.status(), `docs${type.path} 없음 — \`npm run build\` 먼저`).toBeLessThan(400);
-    await page.waitForFunction((m) => !!window[m], type.mgr, { timeout: 15000 });
+    // ⚠️ 매니저 **객체**만 기다리면 안 된다. 수질·중금속은 `tableBody` 바인딩이 그보다
+    //    늦게 끝나고(`cacheElements`가 아직 안 돌았다), 그 사이에 데이터를 심으면
+    //    `renderLogs`의 `if (this.tableBody)` 폴백이 **조용히 0행을 렌더한다** —
+    //    예외도 콘솔 오류도 없다. 그러면 뒤쪽 단언이 "버튼이 화면 밖"이라고 실패해
+    //    원인을 감춘다. 실제로 main에서 14건이 이 사유로 빨간불이었다 (SAMPL-2-36).
+    await page.waitForFunction(
+        (m) => { const mgr = /** @type {any} */ (window)[m]; return !!mgr && !!mgr.tableBody; },
+        type.mgr,
+        { timeout: 15000 }
+    );
     expect(
         await page.evaluate(() => /** @type {any} */ (window).APP_VERSION),
         'docs/의 APP_VERSION이 package.json과 다르다 — 빌드 누락이거나 다른 프로젝트다'
@@ -53,6 +62,24 @@ async function openList(page, type) {
         if (typeof mgr.switchView === 'function') mgr.switchView('list');
     }, type.mgr);
     await page.waitForTimeout(400);
+
+    // 심은 데이터가 실제로 그려졌는지 **여기서** 확인한다. 0행인 채로 진행하면
+    // 모든 후속 단언이 엉뚱한 사유로 실패한다 (SAMPL-2-36).
+    //
+    // ⚠️ `not.toHaveCount(0)`으로는 부족하다 (독립 리뷰 지적) — 1건만 그려져도,
+    //    우리가 심지 않은 잔여 데이터가 그려져도 통과한다. 그래서 두 가지를 본다:
+    //      (1) **3건 전부** 그려졌는가 — `.btn-edit`은 행마다 1개다.
+    //          `tr` 수로 세면 안 된다. 토양은 농가 구분선 행이 끼어 5행이 된다.
+    //      (2) 그것이 **우리가 심은 id**인가 — 페이지가 자체 로드한 데이터일 수 있다.
+    //    `toHaveCount`는 자동 재시도하므로, 늦게 끝난 초기화가 행을 덮어써도 잡힌다.
+    await expect(
+        page.locator('.btn-edit'),
+        '심은 3건이 모두 렌더되지 않았다 — 목록 렌더 경로가 조용히 죽었다'
+    ).toHaveCount(3);
+    await expect(
+        page.locator('.btn-edit[data-id="row1"]'),
+        '그려진 행이 우리가 심은 레코드가 아니다 — 페이지 자체 데이터를 검사하고 있다'
+    ).toHaveCount(1);
 }
 
 for (const type of TYPES) {
