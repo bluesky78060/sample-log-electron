@@ -462,44 +462,6 @@
         </div>
     </main>
 
-    <!-- 작물 검색 모달 -->
-    <div id="cropModal" class="modal hidden">
-        <div class="modal-overlay"></div>
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>🌾 작물 검색</h3>
-                <button type="button" class="modal-close" id="closeCropModal">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="search-filter-row">
-                    <input type="text" id="cropSearchInput" placeholder="작물명 검색 (예: 고추, 사과...)">
-                    <select id="cropCategoryFilter">
-                        <option value="전체">전체 카테고리</option>
-                    </select>
-                </div>
-                <div class="results-info">
-                    <span id="cropResultCount">0개 작물</span>
-                    <button type="button" id="clearCropSelection" class="btn-text-danger">선택 초기화</button>
-                </div>
-                <div class="crop-list-wrapper">
-                    <ul id="cropList" class="crop-list">
-                        <!-- 작물 목록 -->
-                    </ul>
-                </div>
-                <div class="selected-section">
-                    <h4>선택된 작물 <span id="selectedCropCount">0</span>개</h4>
-                    <div id="selectedCropTags" class="tag-container">
-                        <span class="no-selection">선택된 작물이 없습니다</span>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" id="cancelCropSelection" class="btn-cancel">취소</button>
-                <button type="button" id="confirmCropSelection" class="btn-confirm">선택 완료</button>
-            </div>
-        </div>
-    </div>
-
     <!-- 작물+면적 입력 모달 -->
     <div id="cropAreaModal" class="modal hidden">
         <div class="modal-overlay"></div>

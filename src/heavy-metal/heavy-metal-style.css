@@ -407,33 +407,6 @@
 }
 
 /* ========================================
-   작물 입력 래퍼
-   ======================================== */
-
-.crop-input-wrapper {
-    display: flex;
-    gap: 0.5rem;
-}
-
-.crop-input-wrapper input {
-    flex: 1;
-}
-
-.btn-search-crop {
-    padding: 0.5rem 0.75rem;
-    background: #f1f5f9;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.btn-search-crop:hover {
-    background: var(--heavy-metal-primary-light);
-    border-color: var(--heavy-metal-primary);
-}
-
-/* ========================================
    반응형 스타일
    ======================================== */
 
@@ -618,18 +591,6 @@ select#listYearSelect.list-year-select {
 [data-theme="dark"] .lot-address-autocomplete-list li:hover {
     background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(124, 58, 237, 0.2));
     color: #c4b5fd;
-}
-
-/* 다크 모드 작물 검색 버튼 */
-[data-theme="dark"] .btn-search-crop {
-    background: rgba(30, 27, 46, 0.9);
-    border-color: rgba(148, 163, 184, 0.2);
-    color: #e2e8f0;
-}
-
-[data-theme="dark"] .btn-search-crop:hover {
-    background: rgba(139, 92, 246, 0.15);
-    border-color: var(--heavy-metal-primary);
 }
 
 /* 다크 모드 년도 선택 */

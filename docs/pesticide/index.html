@@ -36,9 +36,9 @@
             color: #e9d5ff !important;
         }
     </style>
-  <script type="module" crossorigin src="../assets/pesticide-DDwlZh7t.js"></script>
+  <script type="module" crossorigin src="../assets/pesticide-DXMsgdgV.js"></script>
   <link rel="modulepreload" crossorigin href="../assets/logger-CfyPf5Kf.js">
-  <link rel="modulepreload" crossorigin href="../assets/tooltip-4gNYTT9A.js">
+  <link rel="modulepreload" crossorigin href="../assets/tooltip-D5TgAi1l.js">
   <link rel="modulepreload" crossorigin href="../assets/xlsx.min-CvK3Qp9U.js">
   <link rel="modulepreload" crossorigin href="../assets/excel-import-manager-DOG0B1VK.js">
   <link rel="modulepreload" crossorigin href="../assets/toast-CYVUzQgW.js">
@@ -48,7 +48,7 @@
   <link rel="modulepreload" crossorigin href="../assets/crop-data-loader-BHTD3wRp.js">
   <link rel="modulepreload" crossorigin href="../assets/pesticide-data-df7o846k.js">
   <link rel="modulepreload" crossorigin href="../assets/mrl-api-BJ0awYG4.js">
-  <link rel="stylesheet" crossorigin href="../assets/tooltip-DJJDSVH2.css">
+  <link rel="stylesheet" crossorigin href="../assets/tooltip-C4yUTnmK.css">
   <link rel="stylesheet" crossorigin href="../assets/pesticide-B-yYw5ib.css">
   <link rel="stylesheet" crossorigin href="../assets/tailwind-output-uplGniQ-.css">
 </head>
@@ -472,44 +472,6 @@
             </div>
         </div>
     </main>
-
-    <!-- 작물 검색 모달 -->
-    <div id="cropModal" class="modal hidden">
-        <div class="modal-overlay"></div>
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>🌾 작물 검색</h3>
-                <button type="button" class="modal-close" id="closeCropModal">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="search-filter-row">
-                    <input type="text" id="cropSearchInput" placeholder="작물명 검색 (예: 고추, 사과...)">
-                    <select id="cropCategoryFilter">
-                        <option value="전체">전체 카테고리</option>
-                    </select>
-                </div>
-                <div class="results-info">
-                    <span id="cropResultCount">0개 작물</span>
-                    <button type="button" id="clearCropSelection" class="btn-text-danger">선택 초기화</button>
-                </div>
-                <div class="crop-list-wrapper">
-                    <ul id="cropList" class="crop-list">
-                        <!-- 작물 목록 -->
-                    </ul>
-                </div>
-                <div class="selected-section">
-                    <h4>선택된 작물 <span id="selectedCropCount">0</span>개</h4>
-                    <div id="selectedCropTags" class="tag-container">
-                        <span class="no-selection">선택된 작물이 없습니다</span>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" id="cancelCropSelection" class="btn-cancel">취소</button>
-                <button type="button" id="confirmCropSelection" class="btn-confirm">선택 완료</button>
-            </div>
-        </div>
-    </div>
 
     <!-- 작물+면적 입력 모달 -->
     <div id="cropAreaModal" class="modal hidden">

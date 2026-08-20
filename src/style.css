@@ -4210,37 +4210,13 @@ input[type="number"] {
     color: var(--gray-600);
 }
 
-/* ShadCN Text Danger Button */
-.btn-text-danger {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: none;
-    border: none;
-    color: var(--danger);
-    font-size: 0.8125rem;
-    font-weight: 500;
-    cursor: pointer;
-    padding: 0.25rem 0.5rem;
-    transition: var(--transition);
-    border-radius: var(--radius-sm);
-}
-
-.btn-text-danger:hover {
-    text-decoration: underline;
-    background: var(--danger-light);
-}
-
-.btn-text-danger:focus-visible {
-    outline: none;
-    box-shadow: 0 0 0 2px var(--danger);
-}
-
 /* ShadCN Crop List Wrapper */
 .crop-list-wrapper {
     border: 1px solid var(--gray-200);
     border-radius: var(--radius-md);
-    max-height: 300px;
+    /* `max-height`를 두지 않는다 — 유일한 사용처가 `#cropModal` 안이고
+       아래 `#cropModal .crop-list-wrapper`가 항상 `max-height: none`으로 덮는다.
+       남겨두면 "300px 상한이 있다"고 잘못 읽힌다 (SAMPL-2-31 코드리뷰 실측). */
     overflow-y: auto;
     margin-bottom: 1rem;
     box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
@@ -4322,60 +4298,6 @@ input[type="number"] {
 }
 .crop-copy-hint { font-size: 0.8rem; color: var(--gray-500); }
 
-.crop-list li.selected {
-    background: var(--primary-light);
-}
-
-/* ShadCN Checkbox Styling */
-.crop-list li input[type="checkbox"] {
-    width: 18px;
-    height: 18px;
-    cursor: pointer;
-    accent-color: hsl(var(--primary));
-    border-radius: var(--radius-sm);
-}
-
-.crop-list .crop-name {
-    flex: 1;
-    font-weight: 500;
-    color: var(--gray-800);
-}
-
-.crop-list .crop-category {
-    font-size: 0.75rem;
-    color: var(--gray-500);
-    background: var(--gray-100);
-    padding: 0.25rem 0.5rem;
-    border-radius: var(--radius-sm);
-}
-
-.crop-list .crop-code {
-    font-size: 0.75rem;
-    color: var(--gray-400);
-}
-
-/* ShadCN Selected Section */
-.selected-section {
-    background: var(--gray-50);
-    border: 1px solid var(--gray-200);
-    border-radius: var(--radius-md);
-    padding: 1rem;
-}
-
-.selected-section h4 {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--gray-700);
-    margin-bottom: 0.75rem;
-}
-
-.tag-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    min-height: 36px;
-}
-
 /* ShadCN Crop Tag Styling */
 .crop-tag {
     display: inline-flex;
@@ -4392,34 +4314,6 @@ input[type="number"] {
 
 .crop-tag:hover {
     box-shadow: 0 2px 4px -1px rgb(0 0 0 / 0.2);
-}
-
-.crop-tag .remove-tag {
-    background: none;
-    border: none;
-    color: white;
-    cursor: pointer;
-    padding: 0;
-    font-size: 1rem;
-    line-height: 1;
-    opacity: 0.8;
-    transition: var(--transition);
-    border-radius: var(--radius-sm);
-}
-
-.crop-tag .remove-tag:hover {
-    opacity: 1;
-    background: rgba(255, 255, 255, 0.2);
-}
-
-.crop-tag .remove-tag:focus-visible {
-    outline: none;
-    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
-}
-
-.no-selection {
-    color: var(--gray-400);
-    font-size: 0.875rem;
 }
 
 /* =============================================
@@ -6563,33 +6457,9 @@ select {
     background: rgba(124, 144, 130, 0.15);
 }
 
-[data-theme="dark"] .crop-list li.selected {
-    background: rgba(124, 144, 130, 0.25);
-    border-color: #7C9082;
-}
-
 [data-theme="dark"] .results-info {
     color: var(--gray-600);
     border-color: var(--gray-200);
-}
-
-[data-theme="dark"] .selected-section {
-    background: rgba(28, 25, 23, 0.9);
-    border-color: #44403C;
-}
-
-[data-theme="dark"] .selected-section h4 {
-    color: var(--gray-800);
-}
-
-[data-theme="dark"] .tag-container .tag {
-    background: rgba(124, 144, 130, 0.2);
-    color: #A3C0AA;
-    border-color: rgba(124, 144, 130, 0.3);
-}
-
-[data-theme="dark"] .tag-container .no-selection {
-    color: var(--gray-500);
 }
 
 /* 다크 모드 주소 검색 모달 (Warm Dark) */
