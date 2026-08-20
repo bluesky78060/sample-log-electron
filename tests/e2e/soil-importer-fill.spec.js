@@ -206,3 +206,183 @@ test.describe('성토 행 가져오기 접수번호 (SAMPL-1-153)', () => {
         expect(persisted.map((s) => s.receptionNumber)).toEqual(['1', '2']);
     });
 });
+
+/**
+ * 서브넘버 행이 조용히 버려지던 문제 (SAMPL-1-154)
+ *
+ * 수정 전 증상: `5`, `5-1`, `5-2`를 가져오면 두 번째부터 "중복"으로 판정돼
+ * 기본 정책(건너뛰기)에서 사라졌다. 사용자에게는 "⚠️ 중복 2건"으로만 보여
+ * **정상 동작으로 오해**한다 — 그것이 가장 위험한 지점이었다.
+ *
+ * ⚠️ 이 스펙은 **저장된 결과**를 본다. 미리보기만 보면 접히는 것과 버려지는 것을
+ *    구별할 수 없다 — SAMPL-1-153이 같은 함정에 빠졌다(미리보기 1,2,3 / 저장 1,1,1).
+ */
+const PASTE_HEADER_NUM = '접수번호\t성명\t연락처\t지번주소\t작물\t면적\t구분\t목적';
+
+async function pasteWithNumbers(page, dataRows) {
+    await page.click('#soilImportBtn');
+    const modal = page.locator('#soilImporterModal');
+    await expect(modal).toBeVisible();
+    await modal.locator('input[name="sriMode"][value="paste"]').check();
+    await modal.locator('[data-el="textarea"]').fill([PASTE_HEADER_NUM, ...dataRows].join('\n'));
+    await modal.locator('[data-act="automap"]').click();
+    // ⚠️ "접수번호 자동부여"는 **기본 켜짐**이다. 켜진 채로는 엑셀의 접수번호를
+    //    아예 쓰지 않으므로(`autoAll`) 이 스펙이 검증하려는 경로에 도달하지 못한다.
+    //    실제로 이 해제를 빼먹어 저장 번호가 1, 2로 나왔다.
+    await modal.locator('[data-el="autoNumber"]').uncheck();
+    return modal;
+}
+
+/** 저장된 레코드를 필지·하위필지까지 읽는다 */
+async function readPersistedFull(page) {
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+    await page.waitForFunction(() => typeof window.soilManager !== 'undefined');
+    return page.evaluate(() => {
+        const year = window.soilManager.selectedYear;
+        const raw = localStorage.getItem(`soilSampleLogs_${year}`);
+        return (raw ? JSON.parse(raw) : []).map((l) => {
+            const p = (l.parcels || [])[0] || {};
+            return {
+                rn: String(l.receptionNumber ?? ''),
+                groupId: l.groupId ?? '',
+                lotAddress: p.lotAddress ?? l.lotAddress ?? '',
+                crops: (p.crops || []).map((c) => c.name),
+                subLots: (p.subLots || []).map((s) => ({
+                    addr: typeof s === 'string' ? s : s.lotAddress,
+                    crops: (typeof s === 'string' ? [] : (s.crops || [])).map((c) => c.name),
+                    areas: (typeof s === 'string' ? [] : (s.crops || [])).map((c) => c.area),
+                })),
+            };
+        });
+    });
+}
+
+test.describe('서브넘버 행 가져오기 (SAMPL-1-154)', () => {
+    test.beforeEach(async ({ page }) => {
+        await page.goto('/soil/');
+        await page.waitForLoadState('networkidle');
+        await page.waitForFunction(() => typeof window.soilManager !== 'undefined');
+        await page.evaluate(() => localStorage.clear());
+    });
+
+    // 🚨 이 티켓의 증상 그대로. 수정 전에는 저장이 1건이었다.
+    test('지번주소가 다르면 하위필지 한 접수로 묶인다 — 어느 행도 버려지지 않는다', async ({ page }) => {
+        const modal = await pasteWithNumbers(page, [
+            '5\t홍길동\t010-1111-2222\t봉화읍 내성리 224\t고추\t100\t밭\t일반재배',
+            '5-1\t홍길동\t010-1111-2222\t봉화읍 내성리 225\t마늘\t200\t밭\t일반재배',
+            '5-2\t홍길동\t010-1111-2222\t봉화읍 내성리 226\t무\t300\t밭\t일반재배',
+        ]);
+
+        // 수정 전: ['5', '5-1', '5-2']이지만 뒤 두 건이 dup로 표시되고 버려졌다
+        expect(await previewNumbers(modal)).toEqual(['5', '5-1', '5-2']);
+
+        await modal.locator('[data-act="import"]').click();
+        await expect(modal).toBeHidden();
+
+        const persisted = await readPersistedFull(page);
+        // 접수는 1건 — 하위필지가 있는 필지는 접수번호를 1개만 받는다 (2026-08-20 확정)
+        expect(persisted, `저장 결과: ${JSON.stringify(persisted)}`).toHaveLength(1);
+        expect(persisted[0].rn).toBe('5');
+        expect(persisted[0].lotAddress).toContain('224');
+        expect(persisted[0].crops).toEqual(['고추']);
+        // ⚠️ 핵심: 나머지 두 지번이 **살아 있어야 한다**. 수정 전에는 사라졌다.
+        expect(persisted[0].subLots.map((s) => s.addr)).toEqual([
+            '봉화읍 내성리 225', '봉화읍 내성리 226',
+        ]);
+        expect(persisted[0].subLots.map((s) => s.crops)).toEqual([['마늘'], ['무']]);
+    });
+
+    test('지번주소가 같으면 분할모드 — 작물마다 레코드가 하나씩, groupId를 공유한다', async ({ page }) => {
+        const modal = await pasteWithNumbers(page, [
+            '5\t홍길동\t010-1111-2222\t봉화읍 내성리 224\t고추\t100\t밭\t일반재배',
+            '5-1\t홍길동\t010-1111-2222\t봉화읍 내성리 224\t배추\t200\t밭\t일반재배',
+        ]);
+        expect(await previewNumbers(modal)).toEqual(['5', '5-1']);
+
+        await modal.locator('[data-act="import"]').click();
+        await expect(modal).toBeHidden();
+
+        const persisted = await readPersistedFull(page);
+        expect(persisted, `저장 결과: ${JSON.stringify(persisted)}`).toHaveLength(2);
+        expect(persisted.map((s) => s.rn)).toEqual(['5', '5-1']);
+        expect(persisted.map((s) => s.crops)).toEqual([['고추'], ['배추']]);
+        // 같은 접수이므로 groupId를 공유한다 — 수정 화면이 두 행을 한 접수로 연다
+        expect(persisted[0].groupId).toBe(persisted[1].groupId);
+        expect(persisted[0].groupId).not.toBe('');
+    });
+
+    test('진짜 같은 번호는 여전히 중복으로 걸러진다 (과잉수정 방지)', async ({ page }) => {
+        const modal = await pasteWithNumbers(page, [
+            '5\t홍길동\t010-1111-2222\t봉화읍 내성리 224\t고추\t100\t밭\t일반재배',
+            '5\t김철수\t010-3333-4444\t물야면 오전리 45\t무\t300\t밭\t일반재배',
+        ]);
+        await modal.locator('[data-act="import"]').click();
+        await expect(modal).toBeHidden();
+
+        const persisted = await readPersistedFull(page);
+        expect(persisted).toHaveLength(1);
+        expect(persisted[0].rn).toBe('5');
+    });
+    // 🚨 리뷰 전에 스스로 찾은 결함. 미리보기의 그룹 키(`imp-5`)를 그대로 저장하면
+    //    **다른 가져오기에서 같은 본번이 나올 때 무관한 두 접수가 같은 groupId를 갖는다.**
+    //    그러면 그룹 수정이 둘을 한 접수로 열어 남의 레코드를 건드린다.
+    test('서로 다른 가져오기의 같은 본번이 groupId를 공유하지 않는다', async ({ page }) => {
+        const first = await pasteWithNumbers(page, [
+            '5\t홍길동\t010-1111-2222\t봉화읍 내성리 224\t고추\t100\t밭\t일반재배',
+            '5-1\t홍길동\t010-1111-2222\t봉화읍 내성리 224\t배추\t200\t밭\t일반재배',
+        ]);
+        await first.locator('[data-act="import"]').click();
+        await expect(first).toBeHidden();
+
+        // 두 번째 가져오기 — 다른 사람, 다른 본번이지만 같은 서브넘버 구조
+        const second = await pasteWithNumbers(page, [
+            '7\t김철수\t010-3333-4444\t물야면 오전리 45\t무\t300\t밭\t일반재배',
+            '7-1\t김철수\t010-3333-4444\t물야면 오전리 45\t파\t400\t밭\t일반재배',
+        ]);
+        await second.locator('[data-act="import"]').click();
+        await expect(second).toBeHidden();
+
+        const persisted = await readPersistedFull(page);
+        expect(persisted).toHaveLength(4);
+        const g5 = persisted.filter((r) => r.rn.startsWith('5')).map((r) => r.groupId);
+        const g7 = persisted.filter((r) => r.rn.startsWith('7')).map((r) => r.groupId);
+        // 각 접수 안에서는 공유하고
+        expect(new Set(g5).size, `5번 그룹: ${g5}`).toBe(1);
+        expect(new Set(g7).size, `7번 그룹: ${g7}`).toBe(1);
+        // 접수끼리는 절대 공유하지 않는다
+        expect(g5[0]).not.toBe(g7[0]);
+        // UUID여야 한다 — `imp-5` 같은 배치 내부 키가 새어나가면 안 된다
+        expect(g5[0]).not.toMatch(/^imp-/);
+    });
+    // 🚨 독립 리뷰(codex)가 찾은 MAJOR 두 건 — **저장까지** 봐야 잡힌다.
+    //    미리보기만 보면 둘 다 멀쩡해 보인다.
+    test('하위필지 면적이 저장까지 보존되고, 건너뛴 중복은 되살아나지 않는다', async ({ page }) => {
+        // 기존에 5-1이 있어 그 행은 dup·건너뜀이 된다
+        await page.evaluate(() => {
+            const year = window.soilManager.selectedYear;
+            localStorage.setItem(`soilSampleLogs_${year}`, JSON.stringify([
+                { id: 'seed-1', receptionNumber: '5-1', name: '기존', landClass1: '농가의뢰', subCategory: '밭', parcels: [] },
+            ]));
+        });
+        await page.reload();
+        await page.waitForLoadState('networkidle');
+        await page.waitForFunction(() => (window.soilManager?.sampleLogs || []).length === 1);
+
+        const modal = await pasteWithNumbers(page, [
+            '5\t홍길동\t010-1111-2222\t봉화읍 내성리 224\t고추\t100\t밭\t일반재배',
+            '5-1\t홍길동\t010-1111-2222\t봉화읍 내성리 225\t마늘\t50\t밭\t일반재배',
+            '5-2\t홍길동\t010-1111-2222\t봉화읍 내성리 226\t무\t70\t밭\t일반재배',
+        ]);
+        await modal.locator('[data-act="import"]').click();
+        await expect(modal).toBeHidden();
+
+        const persisted = await readPersistedFull(page);
+        const lead = persisted.find((r) => r.rn === '5');
+        expect(lead, `저장 결과: ${JSON.stringify(persisted)}`).toBeTruthy();
+        // 건너뛴 225는 선두 안에도 없어야 한다 (수정 전에는 되살아났다)
+        expect(lead.subLots.map((s) => s.addr)).toEqual(['봉화읍 내성리 226']);
+        // 면적이 '0'으로 뭉개지지 않아야 한다 (수정 전에는 전부 '0')
+        expect(lead.subLots[0].areas).toEqual(['70']);
+    });
+});

@@ -322,7 +322,9 @@ describe('computePreview — 오류 행과 집계', () => {
             mapping: MAP, dupPolicy: 'overwrite',
             logs: [{ receptionNumber: '5' }],
         })
-        expect(r.stats).toEqual({ total: 3, new: 1, dup: 1, err: 1 })
+        // `sub`는 SAMPL-1-154에서 추가된 집계다 — 하위필지로 선두 행에 접힌 행 수.
+        // toEqual로 두어 새 키가 조용히 늘어나면 여기서 잡히게 한다.
+        expect(r.stats).toEqual({ total: 3, new: 1, dup: 1, err: 1, sub: 0 })
         expect(r.willImport).toBe(2)
     })
 
@@ -410,12 +412,18 @@ describe('collectLiteralNumbers', () => {
         expect([...collectLit(logs, '농가의뢰')].sort()).toEqual(['5', '7', 'F2'])
     })
 
-    it('서브넘버는 본번으로 접고 경지구분 범위를 지킨다', () => {
+    // ⚠️ **계약이 바뀌었다** (SAMPL-1-154). 예전에는 서브넘버를 본번으로 접었고
+    //    이 테스트가 그 동작을 고정하고 있었다 — 그런데 그것이 바로 결함이었다.
+    //    저장된 `5-1`이 `5`로 들어가면 들어온 `5-2`가 그 `5`와 충돌해
+    //    **정상 행이 "중복"으로 조용히 버려진다.**
+    //    이 함수의 목적은 "수동 입력 번호를 표기 그대로 비교"하는 것이므로
+    //    접지 않는 쪽이 원래 의도에 맞다.
+    it('서브넘버를 접지 않고 표기 그대로 담으며 경지구분 범위를 지킨다', () => {
         const logs = [
             { receptionNumber: '5-1', landClass1: '농가의뢰' },
             { receptionNumber: '9', landClass1: '공익직불제' },
         ]
-        expect([...collectLit(logs, '농가의뢰')]).toEqual(['5'])
+        expect([...collectLit(logs, '농가의뢰')]).toEqual(['5-1'])
     })
 
     it('landClass1 생략 시 기본값으로 폴백한다 (computeNextNumber와 동일)', () => {
@@ -476,5 +484,172 @@ describe('collectExistingNumbers — 기본 경지구분 폴백 (computeNextNumb
     it('landClass1 생략 시 기본값으로 폴백한다', () => {
         expect(collect([{ receptionNumber: '5' }], undefined).has('5')).toBe(true)
         expect(collect([{ receptionNumber: 'F5', subCategory: '성토' }], undefined, { fill: true }).has('5')).toBe(true)
+    })
+})
+
+describe('computePreview — 서브넘버 행은 한 접수로 묶는다 (SAMPL-1-154)', () => {
+    // 🚨 이 티켓의 증상 그대로. `5`, `5-1`, `5-2`가 들어오면 두 번째부터 "중복"으로
+    //    판정돼 기본 정책(건너뛰기)에서 조용히 사라졌다. 사용자에게는 "중복 2건"으로만
+    //    보여 **정상 동작으로 오해**한다 — 그것이 가장 위험한 지점이었다.
+    //
+    // `-N` 접미사는 이 저장소에서 두 가지를 뜻한다(soil-script.js:2054 주석):
+    //    분할모드 = 한 지번에 작물 여럿   → 5, 5-1   (지번주소 같음)
+    //    하위필지 = 한 접수에 지번 여럿   → 5, 5-1   (지번주소 다름)
+    // 대장 내보내기는 하위필지를 `{본번}-{n}` + 각자의 지번주소로 쓴다(soil-script.js:4856).
+    // 따라서 **지번주소로 판별**한다 — 담당자 확인을 받은 결정이다 (2026-08-20).
+    const MAP = { receptionNumber: 0, name: 1, lotAddress: 2, cropsDisplay: 3 }
+    const run = (rows, opts = {}) => preview({
+        rows, mapping: MAP, landClass1: '농가의뢰', dupPolicy: opts.dupPolicy || 'skip',
+        logs: opts.logs || [],
+        nextNumber: opts.nextNumber ?? 1,
+        nextFillNumber: opts.nextFillNumber ?? 1,
+    })
+
+    it('지번주소가 다르면 하위필지 한 접수로 묶는다', () => {
+        const r = run([
+            ['5', 'A', '문단리 224', '고추'],
+            ['5-1', 'A', '문단리 225', '마늘'],
+            ['5-2', 'A', '문단리 226', '무'],
+        ])
+        // 조용히 버려지지 않는다 — 어느 행도 dup이 아니다
+        expect(r.items.map(i => i.status)).toEqual(['new', 'sub', 'sub'])
+        expect(r.stats.dup).toBe(0)
+        // 접수는 1건이다 (하위필지가 있는 필지는 접수번호 1개 — 2026-08-20 확정 규칙)
+        expect(r.willImport).toBe(1)
+        const lead = r.items[0]
+        expect(lead.group.mode).toBe('sublot')
+        // `area`는 면적 컬럼이 매핑되지 않은 이 케이스에서 ''이다.
+        // 면적 보존은 아래 '하위필지 면적이 보존된다'가 따로 덮는다.
+        expect(lead.group.subLots).toEqual([
+            { lotAddress: '문단리 225', cropsDisplay: '마늘', area: '' },
+            { lotAddress: '문단리 226', cropsDisplay: '무', area: '' },
+        ])
+    })
+
+    it('지번주소가 같으면 분할모드로 묶는다 — 접수번호는 원문대로 보존', () => {
+        const r = run([
+            ['5', 'A', '문단리 224', '고추'],
+            ['5-1', 'A', '문단리 224', '배추'],
+        ])
+        expect(r.items.map(i => i.status)).toEqual(['new', 'new'])
+        // 분할모드는 작물마다 레코드가 하나씩이다 (폼 등록 경로와 같은 모양)
+        expect(r.willImport).toBe(2)
+        expect(r.items.map(i => i.display)).toEqual(['5', '5-1'])
+        expect(r.items[0].group.mode).toBe('split')
+        // 같은 접수이므로 groupId를 공유하고 cropIndex가 0,1로 붙는다
+        expect(r.items[0].group.id).toBe(r.items[1].group.id)
+        expect(r.items.map(i => i.group.cropIndex)).toEqual([0, 1])
+    })
+
+    it('진짜 같은 번호는 여전히 dup이다 (과잉수정 방지)', () => {
+        const r = run([
+            ['5', 'A', '문단리 224', '고추'],
+            ['5', 'B', '문단리 999', '무'],
+        ])
+        expect(r.items.map(i => i.status)).toEqual(['new', 'dup'])
+    })
+
+    it('본번 행이 없으면 묶지 않고 각자 원문 번호로 등록한다', () => {
+        // 손으로 만든 파일에서 5-1, 5-2만 오는 경우 — 의도를 알 수 없으므로
+        // 추측해서 묶지 않는다. 조용한 유실만 없으면 된다.
+        const r = run([
+            ['5-1', 'A', '문단리 225', '마늘'],
+            ['5-2', 'A', '문단리 226', '무'],
+        ])
+        expect(r.items.map(i => i.status)).toEqual(['new', 'new'])
+        expect(r.items.map(i => i.display)).toEqual(['5-1', '5-2'])
+        expect(r.willImport).toBe(2)
+    })
+
+    it('기존 레코드 5-1과 들어온 5-1은 표기 그대로 충돌한다', () => {
+        // collectLiteralNumbers가 본번으로 접으면 이 판정이 무너진다
+        const logs = [{ receptionNumber: '5-1', subCategory: '논', landClass1: '농가의뢰' }]
+        const r = run([['5-1', 'A', '문단리 225', '마늘']], { logs })
+        expect(r.items[0].status).toBe('dup')
+    })
+
+    it('기존 레코드 5가 있어도 들어온 5-1은 그것과 충돌하지 않는다', () => {
+        const logs = [{ receptionNumber: '5', subCategory: '논', landClass1: '농가의뢰' }]
+        const r = run([['5-1', 'A', '문단리 225', '마늘']], { logs })
+        expect(r.items[0].status).toBe('new')
+    })
+    // 🚨 독립 리뷰(codex)가 찾은 MAJOR. 미리보기가 "건너뜀"이라 말한 행이
+    //    선두 레코드의 subLots 안에 되살아났다 — 미리보기 ≠ 저장.
+    it('건너뛰는 중복 하위필지는 선두의 subLots에도 들어가지 않는다', () => {
+        const logs = [{ receptionNumber: '5-1', subCategory: '논', landClass1: '농가의뢰' }]
+        const r = run([
+            ['5', 'A', '문단리 224', '고추'],
+            ['5-1', 'A', '문단리 225', '마늘'],   // 기존과 표기가 같아 dup
+            ['5-2', 'A', '문단리 226', '무'],
+        ], { logs })
+        expect(r.items.map(i => i.status)).toEqual(['new', 'dup', 'sub'])
+        expect(r.items[1].skip).toBe(true)
+        // 건너뛴 225는 어디에도 없어야 한다
+        expect(r.items[0].group.subLots).toEqual([
+            { lotAddress: '문단리 226', cropsDisplay: '무', area: '' },
+        ])
+    })
+
+    // 🚨 같은 리뷰의 MAJOR. 하위필지 작물 면적이 '0'으로 고정돼 조용히 사라졌다.
+    it('하위필지 면적이 보존된다', () => {
+        const MAP_AREA = { receptionNumber: 0, name: 1, lotAddress: 2, cropsDisplay: 3, area: 4 }
+        const r = preview({
+            rows: [
+                ['5', 'A', '문단리 224', '고추', '100'],
+                ['5-1', 'A', '문단리 225', '마늘', '50'],
+            ],
+            mapping: MAP_AREA, landClass1: '농가의뢰', dupPolicy: 'skip',
+            logs: [], nextNumber: 1, nextFillNumber: 1,
+        })
+        expect(r.items[0].group.subLots).toEqual([
+            { lotAddress: '문단리 225', cropsDisplay: '마늘', area: '50' },
+        ])
+    })
+
+    // 🚨 같은 리뷰의 MINOR. 지번주소가 매핑 안 되면 전부 ''이라 "같아 보여"
+    //    무조건 분할모드로 오판했다. 판단 근거가 없으면 묶지 않는 쪽이 안전하다.
+    it('지번주소 컬럼이 매핑되지 않으면 묶지 않는다', () => {
+        const r = preview({
+            rows: [['5', 'A', '고추'], ['5-1', 'A', '마늘']],
+            mapping: { receptionNumber: 0, name: 1, cropsDisplay: 2 },
+            landClass1: '농가의뢰', dupPolicy: 'skip',
+            logs: [], nextNumber: 1, nextFillNumber: 1,
+        })
+        expect(r.items.every(i => i.group === undefined)).toBe(true)
+        expect(r.items.map(i => i.status)).toEqual(['new', 'new'])
+        expect(r.willImport).toBe(2)
+    })
+    // 🚨 2라운드 리뷰 MINOR. 주소 컬럼은 매핑됐지만 값이 비면 '' === ''로 "같아 보여"
+    //    분할모드로 오판했다. 매핑이 아예 없는 경우와 똑같이 판단 불가다.
+    it('지번주소 값이 비어 있으면 묶지 않는다', () => {
+        const r = run([
+            ['5', 'A', '', '고추'],
+            ['5-1', 'A', '', '마늘'],
+        ])
+        expect(r.items.every(i => i.group === undefined)).toBe(true)
+        expect(r.items.map(i => i.status)).toEqual(['new', 'new'])
+        expect(r.willImport).toBe(2)
+    })
+
+    // 🚨 2라운드 리뷰 MAJOR(O(n^2))를 고치며 후처리를 단일 순회로 바꿨다.
+    //    묶임 결과가 규모와 무관하게 같아야 한다 — 리팩터링이 동작을 바꾸지 않았음을 고정한다.
+    it('그룹이 많아도 각 선두가 자기 하위필지만 가진다', () => {
+        const rows = []
+        for (let n = 1; n <= 30; n++) {
+            rows.push([String(n), `사람${n}`, `주소${n}-본`, '고추'])
+            rows.push([`${n}-1`, `사람${n}`, `주소${n}-하나`, '마늘'])
+            rows.push([`${n}-2`, `사람${n}`, `주소${n}-둘`, '무'])
+        }
+        const r = run(rows)
+        expect(r.willImport).toBe(30)
+        expect(r.stats.sub).toBe(60)
+        expect(r.stats.dup).toBe(0)
+        const leads = r.items.filter(i => i.group && i.group.cropIndex === 0)
+        expect(leads).toHaveLength(30)
+        for (const lead of leads) {
+            const n = lead.display
+            expect(lead.group.subLots.map(s => s.lotAddress))
+                .toEqual([`주소${n}-하나`, `주소${n}-둘`])
+        }
     })
 })

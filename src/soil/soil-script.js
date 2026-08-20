@@ -918,14 +918,27 @@ class SoilSampleManager extends window.BaseSampleManager {
             basePnu: src.basePnu || '',
             createdAt: nowISO,
             updatedAt: nowISO,
-            groupId: crypto.randomUUID(),
+            // 서브넘버 그룹(SAMPL-1-154): 같은 본번의 행들은 한 접수이므로 groupId를 공유한다.
+            // 그룹이 아니면 종전대로 레코드마다 새 groupId를 만든다.
+            groupId: src.groupId || crypto.randomUUID(),
             parcelIndex: 1,
             totalParcels: 1,
             parcels: [{
                 id: crypto.randomUUID(),
                 lotAddress,
                 isMountain: false,
-                subLots: [],
+                // 하위필지 행은 선두 레코드 안으로 접힌다 — 꼬리표가 아니라 실제 이동이라
+                // 엑셀·목록·흙토람이 모두 이 배열을 읽는다 (SAMPL-1-161).
+                subLots: Array.isArray(src.subLots)
+                    ? src.subLots.map(sub => ({
+                        lotAddress: sub.lotAddress || '',
+                        crops: (sub.cropsDisplay && sub.cropsDisplay !== '-')
+                            // ⚠️ 면적을 '0'으로 고정하면 안 된다 — 미리보기에는 보이는데
+                            //    저장은 0이 되어 **면적이 조용히 사라진다** (독립 리뷰 MAJOR).
+                            ? [{ name: sub.cropsDisplay, area: (parseFloat(sub.area) || 0).toString() }]
+                            : [],
+                    }))
+                    : [],
                 crops: (cropsDisplay && cropsDisplay !== '-')
                     ? [{ name: cropsDisplay, area: (parseFloat(area) || 0).toString() }]
                     : [],
