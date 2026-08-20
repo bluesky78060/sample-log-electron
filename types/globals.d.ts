@@ -46,6 +46,8 @@ declare global {
     var CROP_DATA: any[];
     var CROP_CATEGORIES: string[];
     var CropSearch: any;
+    /** 하위필지 식별 순수 로직 (SAMPL-1-159) */
+    var SubLotIdentity: any;
     /** 흙토람 미리보기 표 구성 순수 로직 (SAMPL-1-158) */
     var PreviewTable: any;
     var compostManager: any;
@@ -72,6 +74,8 @@ declare global {
         CROP_DATA: any[];
         CROP_CATEGORIES: string[];
         CropSearch: any;
+        /** 하위필지 식별 순수 로직 (SAMPL-1-159) */
+        SubLotIdentity: any;
         PreviewTable: any;
         waterManager: any;
         compostManager: any;

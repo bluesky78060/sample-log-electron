@@ -118,3 +118,7 @@ docs/00-discovery/
 docs/01-plan/
 docs/02-review/
 docs/03-code-review/
+
+# Playwright 실행 산물 (SAMPL-1-159 리뷰에서 커밋 잡음으로 확인)
+test-results/
+playwright-report/
