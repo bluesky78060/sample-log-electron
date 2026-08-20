@@ -243,9 +243,93 @@
         for (const log of (logs || [])) {
             if (!log || !log.receptionNumber) continue;
             if ((log.landClass1 || LAND_CLASS1_DEFAULT) !== target) continue;
-            set.add(String(log.receptionNumber).split('-')[0].trim());
+            // ⚠️ **본번으로 접지 않는다.** 예전에는 `.split('-')[0]`로 잘라 넣어
+            //    저장된 `5-1`이 `5`로 들어갔고, 그래서 들어온 `5-2`가 그 `5`와 충돌해
+            //    정상 행이 "중복"으로 버려졌다 (SAMPL-1-154). 표기 그대로가 맞다 —
+            //    이 함수의 목적 자체가 "수동 입력 번호를 표기 그대로 비교"하는 것이다.
+            set.add(String(log.receptionNumber).trim());
         }
         return set;
+    }
+
+    /**
+     * 서브넘버 행(`5`, `5-1`, `5-2`)을 한 접수로 묶는다 (SAMPL-1-154, 순수 함수).
+     *
+     * 반환: `Map<rowIndex, group>`. 그룹에 속하지 않는 행은 키가 없다.
+     *   group = { id, mode: 'split'|'sublot', leaderRow, cropIndex, size, subLots? }
+     *
+     * 판별 규칙 — **지번주소**로 가른다:
+     *   같으면 `split`  (한 지번의 여러 작물 — 폼의 분할모드와 같은 모양)
+     *   다르면 `sublot` (한 접수의 여러 지번 — 대장 내보내기가 쓰는 모양)
+     *
+     * 묶는 조건은 **본번 행이 배치에 있을 것**이다. `5-1`, `5-2`만 온 파일은
+     * 무엇을 의도했는지 알 수 없으므로 추측하지 않는다.
+     *
+     * @param {Array<Array<string>>} rows
+     * @param {Object} mapping
+     * @param {boolean} autoAll  자동부여 강제 여부 — 참이면 수동 번호가 없어 그룹도 없다
+     */
+    function buildSubNumberGroups(rows, mapping, autoAll) {
+        const groupOf = new Map();
+        if (autoAll || mapping.receptionNumber == null) return groupOf;
+        // ⚠️ 지번주소 컬럼이 매핑되지 않으면 모든 주소가 ''이라 **무조건 같아 보인다**
+        //    → 전부 분할모드로 오판한다. 하위필지인지 판단할 정보가 없으면 묶지 않는다
+        //    (독립 리뷰 지적). 묶지 않아도 각 행은 자기 번호로 등록되므로 유실은 없다.
+        if (mapping.lotAddress == null) return groupOf;
+
+        const cell = (row, key) => {
+            const idx = mapping[key];
+            if (idx == null || idx < 0) return '';
+            return String(row[idx] ?? '').trim();
+        };
+
+        // 본번별로 행을 모은다 (원본 순서 유지)
+        const byBase = new Map();
+        rows.forEach((row, rowIndex) => {
+            const recNo = cell(row, 'receptionNumber');
+            if (!recNo) return;                       // 빈 칸은 자동부여로 간다
+            const base = recNo.split('-')[0].trim();
+            if (!base) return;
+            if (!byBase.has(base)) byBase.set(base, []);
+            byBase.get(base).push({ rowIndex, recNo, row });
+        });
+
+        for (const [base, members] of byBase) {
+            if (members.length < 2) continue;                       // 혼자면 그룹이 아니다
+            const leader = members.find((m) => m.recNo === base);
+            if (!leader) continue;                                  // 본번 행이 없으면 묶지 않는다
+            // 본번 행이 둘 이상이면 그것은 진짜 중복이다 — 그룹으로 감싸 감추지 않는다
+            if (members.filter((m) => m.recNo === base).length > 1) continue;
+
+            const leadAddr = cell(leader.row, 'lotAddress');
+            const followers = members.filter((m) => m !== leader);
+
+            // ⚠️ 주소 칸이 **비어 있으면** 컬럼이 매핑됐어도 판단 근거가 없다.
+            //    빈 값끼리는 `'' === ''`로 "같아 보여" 분할모드로 오판한다
+            //    (독립 리뷰 MINOR). 매핑 자체가 없는 경우와 똑같이 묶지 않는다.
+            if (!leadAddr || followers.some((m) => !cell(m.row, 'lotAddress'))) continue;
+
+            const sameAddress = followers.every((m) => cell(m.row, 'lotAddress') === leadAddr);
+            const mode = sameAddress ? 'split' : 'sublot';
+            const id = `imp-${base}`;
+
+            groupOf.set(leader.rowIndex, {
+                id, mode, size: members.length, leaderRow: leader.rowIndex, cropIndex: 0,
+                // ⚠️ `subLots`는 **여기서 만들지 않는다.** 이 함수는 중복 판정 전에 돌아
+                //    건너뛸 행까지 넣게 되는데, 그 값은 어차피 행 루프 뒤 후처리가
+                //    `status === 'sub'`인 항목만으로 통째로 덮는다.
+                //    한때 여기서도 만들었다가 **덮여서 도달하지 않는 죽은 코드**가 됐고,
+                //    변이 검증이 그것을 잡아냈다(면적 전달을 없애도 테스트가 통과했다).
+                //    출처를 하나로 둔다 — 아래 "하위필지 선두의 subLots를 다시 만든다" 참조.
+            });
+            followers.forEach((m, i) => {
+                groupOf.set(m.rowIndex, {
+                    id, mode, size: members.length, leaderRow: leader.rowIndex,
+                    cropIndex: i + 1,
+                });
+            });
+        }
+        return groupOf;
     }
 
     /** 번호 집합에서 다음 번호를 추정한다 (매니저 미준비 시 폴백) */
@@ -319,10 +403,26 @@
         // 수동 번호 중복 판정용 배치 집합 (표기 그대로, 시퀀스 무관)
         const seenLiteralInBatch = new Set();
 
-        const items = [];
-        const stats = { total: rows.length, new: 0, dup: 0, err: 0 };
+        // ------------------------------------------------------------------
+        // 서브넘버 그룹 사전 판별 (SAMPL-1-154)
+        //
+        // `-N` 접미사는 이 저장소에서 **두 가지**를 뜻한다 (soil-script.js:2054 주석):
+        //    분할모드 = 한 지번에 작물 여럿  → 5, 5-1  (지번주소 **같음**)
+        //    하위필지 = 한 접수에 지번 여럿  → 5, 5-1  (지번주소 **다름**)
+        // 대장 내보내기는 하위필지를 `{본번}-{n}` + 각자의 지번주소로 쓰므로
+        // (soil-script.js:4856) 내보내기→가져오기 왕복이 이 판별에 달려 있다.
+        //
+        // ⚠️ **본번 행(`5`)이 배치에 있을 때만 묶는다.** `5-1`, `5-2`만 온 파일은
+        //    의도를 알 수 없으므로 추측하지 않고 각자 원문 번호로 등록한다.
+        //    이 티켓의 목적은 "묶는 것"이 아니라 **조용한 유실을 없애는 것**이다.
+        const groupOf = buildSubNumberGroups(rows, mapping, autoAll);
 
-        rows.forEach((row) => {
+        const items = [];
+        // `sub` = 하위필지로 선두 행에 접힌 행. 신규도 중복도 아니므로 따로 센다 —
+        // 어느 쪽에 섞어도 사용자가 읽는 숫자가 거짓이 된다 (SAMPL-1-154).
+        const stats = { total: rows.length, new: 0, dup: 0, err: 0, sub: 0 };
+
+        rows.forEach((row, rowIndex) => {
             const get = (key) => {
                 const idx = mapping[key];
                 if (idx == null || idx < 0) return '';
@@ -378,14 +478,19 @@
                 stats.new++;
                 items.push({ status: 'new', display: recNo, rec: { ...rec, receptionNumber: undefined }, auto: true });
             } else {
-                const base = String(recNo).split('-')[0].trim();
+                const literal = String(recNo).trim();
+                const base = literal.split('-')[0].trim();
+                const group = groupOf.get(rowIndex);
 
                 // 중복 판정은 **표기 그대로, 시퀀스 무관**이다 (폼 등록 경로와 동일 규칙).
                 // 시퀀스별로 나눠 판정하면 구분='성토' 행의 수동 번호 `5`가 일반 `5`와
                 // 충돌하는 것을 놓쳐 같은 번호가 두 건 저장된다.
-                const isDup = existingLiteral.has(base) || seenLiteralInBatch.has(base);
+                //
+                // ⚠️ 비교 키는 `base`가 아니라 `literal`이다. 본번으로 접으면 `5-1`이
+                //    `5`를 점유해 뒤따르는 `5-2`가 "중복"으로 버려진다 (SAMPL-1-154).
+                const isDup = existingLiteral.has(literal) || seenLiteralInBatch.has(literal);
                 const willBeSaved = !(isDup && dupPolicy === 'skip');
-                seenLiteralInBatch.add(base);
+                seenLiteralInBatch.add(literal);
 
                 // 커서는 시퀀스별로 올린다 — 매니저가 그 시퀀스로 채번하기 때문이다.
                 // 성토 시퀀스는 F를 떼고 숫자만 본다 (computeNextNumber와 동일).
@@ -411,14 +516,60 @@
                     stats.dup++;
                     items.push({
                         status: 'dup', display: recNo, skip: dupPolicy === 'skip',
-                        rec: { ...rec, receptionNumber: recNo },
+                        rec: { ...rec, receptionNumber: recNo }, group,
+                    });
+                } else if (group && group.mode === 'sublot' && group.cropIndex > 0) {
+                    stats.sub++;
+                    // 하위필지 행은 **선두 행 안으로 접힌다** — 별 레코드가 아니다.
+                    // `dup`가 아니므로 조용히 버려지지 않고, `new`도 아니므로
+                    // 등록 건수를 부풀리지도 않는다. 사용자에게는 "묶임"으로 보인다.
+                    items.push({
+                        status: 'sub', display: recNo,
+                        rec: { ...rec, receptionNumber: recNo }, group,
                     });
                 } else {
                     stats.new++;
-                    items.push({ status: 'new', display: recNo, rec: { ...rec, receptionNumber: recNo } });
+                    items.push({ status: 'new', display: recNo, rec: { ...rec, receptionNumber: recNo }, group });
                 }
             }
         });
+
+        // ------------------------------------------------------------------
+        // 하위필지 선두의 subLots를 **실제로 접힐 행만으로** 다시 만든다.
+        //
+        // `buildSubNumberGroups`는 중복 판정 전에 돌기 때문에 잠정치에 건너뛸 행까지
+        // 들어 있다. 그대로 두면 미리보기가 "⚠️ 중복 · 건너뜀"이라 말한 행이
+        // **선두 레코드 안에 되살아나** 미리보기와 저장이 어긋난다 (독립 리뷰 MAJOR).
+        //
+        // 접히는 것은 `status === 'sub'`인 행뿐이다:
+        //   - `dup` + 건너뛰기 → 어디에도 저장되지 않는다 (미리보기 그대로)
+        //   - `dup` + 덮어쓰기 → **자기 레코드로** 저장된다. 여기 또 넣으면 두 번 저장된다
+        //   - `err`            → 저장되지 않는다
+        //
+        // rows와 items는 1:1이다 (모든 행이 정확히 한 항목을 push한다).
+        //
+        // ⚠️ **한 번만 순회한다.** 선두마다 items 전체를 filter하면 O(n²)이라
+        //    "1만 그룹 × 2만 행" 같은 대량 가져오기에서 화면이 멎는다 (독립 리뷰 MAJOR).
+        //    `PREVIEW_ROW_LIMIT`은 그리는 행만 제한할 뿐 계산량은 줄이지 않는다.
+        const subLotsByGroup = new Map();
+        const leadsByGroup = new Map();
+        for (const it of items) {
+            if (!it.group) continue;
+            if (it.group.mode !== 'sublot') continue;
+            if (it.group.cropIndex === 0) {
+                leadsByGroup.set(it.group.id, it);
+            } else if (it.status === 'sub') {
+                if (!subLotsByGroup.has(it.group.id)) subLotsByGroup.set(it.group.id, []);
+                subLotsByGroup.get(it.group.id).push({
+                    lotAddress: it.rec.lotAddress || '',
+                    cropsDisplay: it.rec.cropsDisplay || '',
+                    area: it.rec.area || '',
+                });
+            }
+        }
+        for (const [gid, lead] of leadsByGroup) {
+            lead.group = { ...lead.group, subLots: subLotsByGroup.get(gid) || [] };
+        }
 
         // 실제 등록될 건수 = new + (덮어쓰기 정책의 dup)
         const willImport = items.filter(it =>
@@ -546,6 +697,9 @@
 .sri-pill.new{background:#dcfce7;color:#166534}
 .sri-pill.dup{background:#fef3c7;color:#92400e}
 .sri-pill.err{background:#fee2e2;color:#991b1b}
+/* 하위필지로 접힌 행 — 중복(노랑)과 **다른 색**이어야 한다. 같은 색이면
+   사용자가 여전히 "버려졌다"고 읽는다 (SAMPL-1-154). */
+.sri-pill.sub{background:#dbeafe;color:#1e40af}
 .sri-pv-empty{padding:18px;text-align:center;color:#94a3b8;font-size:.86rem;border:1px dashed #e2e8f0;border-radius:12px}
 .sri-pv-wrap{border:1px solid #e2e8f0;border-radius:12px;overflow:auto;max-height:260px}
 .sri-pv-table{margin:0;border-collapse:collapse;font-size:.8rem;min-width:640px;width:100%}
@@ -560,6 +714,8 @@
 .sri-status.new{background:#dcfce7;color:#166534}
 .sri-status.dup{background:#fef3c7;color:#92400e}
 .sri-status.err{background:#fee2e2;color:#991b1b}
+.sri-status.sub{background:#dbeafe;color:#1e40af}
+.sri-pv-table tr.is-sub td{background:#eff6ff}
 .sri-pv-overflow{padding:8px 10px;font-size:.78rem;color:#94a3b8;text-align:center}
 /* footer */
 .sri-footer{display:flex;align-items:center;gap:12px;padding:16px 24px;border-top:1px solid #e2e8f0;
@@ -1239,14 +1395,18 @@
 
             summary.innerHTML =
                 `<span class="sri-pill new">✅ 신규 ${p.stats.new}</span>` +
+                // 하위필지로 접힌 행은 신규도 중복도 아니다. 어느 쪽에 섞어도 사용자가
+                // 읽는 숫자가 거짓이 된다 — 0이면 아예 보여주지 않는다 (SAMPL-1-154).
+                (p.stats.sub > 0 ? `<span class="sri-pill sub">🔗 하위필지 ${p.stats.sub}</span>` : '') +
                 `<span class="sri-pill dup">⚠️ 중복 ${p.stats.dup}</span>` +
                 `<span class="sri-pill err">⛔ 오류 ${p.stats.err}</span>`;
 
             const shown = p.items.slice(0, PREVIEW_ROW_LIMIT);
-            const labels = { new: '신규', dup: '중복', err: '오류' };
+            const labels = { new: '신규', dup: '중복', err: '오류', sub: '하위필지' };
             const trs = shown.map(it => {
                 const r = it.rec || {};
-                const cls = it.status === 'dup' ? 'is-dup' : (it.status === 'err' ? 'is-err' : '');
+                const cls = it.status === 'dup' ? 'is-dup'
+                    : (it.status === 'err' ? 'is-err' : (it.status === 'sub' ? 'is-sub' : ''));
                 const statusBadge = `<span class="sri-status ${it.status}">${labels[it.status]}${it.skip ? ' · 건너뜀' : ''}</span>`;
                 return `<tr class="${cls}">
                     <td>${statusBadge}</td>
@@ -1287,7 +1447,14 @@
                 }
             }
             if (note) {
-                note.textContent = `총 ${p.stats.total}건 중 ${p.willImport}건이 [${p.landClass1}]으로 등록됩니다`;
+                // 접힌 행이 있으면 **왜 등록 건수가 행 수보다 적은지** 설명한다.
+                // 설명이 없으면 사용자가 "버려졌다"고 읽는다 — 이 티켓의 원래 증상이
+                // 바로 그 오해였다 (SAMPL-1-154).
+                const subNote = p.stats.sub > 0
+                    ? ` (같은 본번의 서브넘버 ${p.stats.sub}건은 하위필지로 묶여 함께 저장됩니다)`
+                    : '';
+                note.textContent =
+                    `총 ${p.stats.total}건 중 ${p.willImport}건이 [${p.landClass1}]으로 등록됩니다${subNote}`;
             }
         }
 
@@ -1303,14 +1470,37 @@
                 return;
             }
 
+            // ⚠️ 미리보기의 그룹 id(`imp-5`)를 **그대로 저장하면 안 된다.** 그것은 배치 안에서
+            //    행을 묶기 위한 키일 뿐이라, 다른 경지구분·다른 날 가져오기에서 같은 본번이
+            //    나오면 서로 무관한 두 접수가 같은 groupId를 갖게 되고 그룹 수정이 둘을
+            //    한 접수로 연다. 실행마다 진짜 UUID로 해석한다 (SAMPL-1-154).
+            const groupIdOf = new Map();
+            const resolveGroupId = (key) => {
+                if (!groupIdOf.has(key)) groupIdOf.set(key, crypto.randomUUID());
+                return groupIdOf.get(key);
+            };
+
             let applied = 0, failed = 0;
             for (const it of p.items) {
                 if (it.status === 'err') continue;
                 if (it.status === 'dup' && it.skip) continue;
+                // 하위필지 행은 선두 행 안으로 접힌다 — 여기서 따로 저장하지 않는다.
+                // (선두 행이 `group.subLots`를 들고 간다 — SAMPL-1-154)
+                if (it.status === 'sub') continue;
                 try {
                     const rec = { ...it.rec };
                     // 자동부여 행은 receptionNumber 생략 → 매니저가 부여
                     if (it.auto) delete rec.receptionNumber;
+                    // 서브넘버 그룹 정보를 매니저에 그대로 넘긴다.
+                    //   sublot → 선두 레코드의 parcels[0].subLots를 채운다
+                    //   split  → 같은 groupId를 공유하고 cropIndex가 붙는다
+                    if (it.group) {
+                        rec.groupId = resolveGroupId(it.group.id);
+                        rec.cropIndex = it.group.cropIndex;
+                        if (it.group.mode === 'sublot' && it.group.subLots) {
+                            rec.subLots = it.group.subLots;
+                        }
+                    }
                     mgr.addImportedRecord(rec);
                     applied++;
                 } catch (err) {
