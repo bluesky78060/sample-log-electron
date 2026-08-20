@@ -1428,6 +1428,7 @@ class PesticideSampleManager extends window.BaseSampleManager {
 
             // Action buttons
             const tdActions = document.createElement('td');
+            tdActions.className = 'col-action';   // sticky 고정 (SAMPL-2-35)
             const divActions = document.createElement('div');
             divActions.className = 'table-actions';
             const btnEdit = document.createElement('button');

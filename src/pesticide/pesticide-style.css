@@ -2143,20 +2143,24 @@
 .data-table .col-name     { left: 415px; min-width: 70px; border-right: 2px solid #fecaca; }
 
 /* 고정 컬럼 행 배경 (tbody) */
-.data-table tbody td.sticky-col {
+.data-table tbody td.sticky-col,
+.data-table tbody td.col-action {
     background: white;
 }
 
-.data-table tbody tr:hover td.sticky-col {
+.data-table tbody tr:hover td.sticky-col,
+.data-table tbody tr:hover td.col-action {
     background-color: #fef2f2;
 }
 
-.data-table tbody tr.row-completed td.sticky-col {
+.data-table tbody tr.row-completed td.sticky-col,
+.data-table tbody tr.row-completed td.col-action {
     background: #f0fdf4;
 }
 
 /* 다크 모드 */
-[data-theme="dark"] .data-table .sticky-col {
+[data-theme="dark"] .data-table .sticky-col,
+[data-theme="dark"] .data-table .col-action {
     background: #1C1917;
 }
 

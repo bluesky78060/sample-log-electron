@@ -3512,6 +3512,9 @@ class SoilSampleManager extends window.BaseSampleManager {
 
             // 액션 버튼
             const tdAction = document.createElement('td');
+            // 관리 열은 sticky로 고정한다 (SAMPL-2-35). 클래스가 없으면 고정되지 않아
+            // 가로 스크롤 시 화면 밖으로 나간다.
+            tdAction.className = 'col-action';
             const actionsDiv = document.createElement('div');
             actionsDiv.className = 'table-actions';
             const btnEdit = document.createElement('button');
