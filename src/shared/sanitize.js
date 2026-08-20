@@ -4,6 +4,9 @@
 // DOMPurify를 사용한 HTML 새니타이징
 // ========================================
 
+/** DOMPurify 부재 경고를 한 번만 찍기 위한 플래그 (호출마다 찍으면 콘솔이 넘친다) */
+let missingDOMPurifyWarned = false;
+
 /**
  * HTML 문자열을 새니타이즈하여 XSS 공격 방지
  * @param {string} html - 새니타이즈할 HTML 문자열
@@ -39,9 +42,25 @@ function sanitizeHTML(html) {
         return DOMPurify.sanitize(html, config);
     }
     // ⚠️ DOMPurify가 없으면 **마크업 전체가 문자로 보인다** — 화면이 깨진다.
-    //    13페이지 중 6곳(`/`·`*-analysis`·`heuktoram`)에 DOMPurify가 없고,
-    //    지금은 그 페이지들이 sanitizeHTML을 호출하지 않아 드러나지 않을 뿐이다.
-    //    → SAMPL-2-34 (시끄럽게 실패시키거나 6개 entry에 DOMPurify를 추가)
+    //
+    //    SAMPL-2-34에서 13개 entry 전부에 `import DOMPurify`를 넣어 이 경로는
+    //    정상 빌드에서 도달하지 않는다. 그래도 폴백을 남기는 이유는 두 가지다:
+    //    (1) 새 페이지를 만들며 import를 빠뜨릴 수 있고
+    //    (2) 화면을 통째로 죽이는 것(throw)보다 깨진 채로 보이는 편이 낫다.
+    //
+    //    다만 **조용히 넘어가지는 않는다.** 예전에는 아무 신호 없이 이스케이프만 해서
+    //    "왜 화면에 태그가 보이지" 하는 원인 불명의 붕괴가 됐다.
+    //    호출마다 찍으면 콘솔이 넘치므로 한 번만 알린다.
+    if (!missingDOMPurifyWarned) {
+        missingDOMPurifyWarned = true;
+        (window.logger?.error || console.error)(
+            '[sanitize] DOMPurify가 없어 마크업을 이스케이프합니다 — 화면에 태그가 글자로 보입니다. ' +
+            // ⚠️ 이 문구에 `window.` + `DOMPurify` + `=`를 **붙여 쓰지 말 것.**
+            //    `check-docs-assets.js`의 커버리지 검사가 그 패턴으로 대입문을 찾는데,
+            //    이 문자열이 번들에 섞이면 검사가 **모든 페이지에서 항상 통과**한다(실측).
+            '이 페이지의 entry에서 dompurify를 import하고 전역에 대입했는지 확인하세요 (SAMPL-2-34).'
+        );
+    }
     return escapeHTML(html);
 }
 

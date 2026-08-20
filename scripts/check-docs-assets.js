@@ -136,8 +136,50 @@ function main() {
         }
     }
 
+    // ── DOMPurify 커버리지 (SAMPL-2-34) ──
+    // `sanitizeHTML`은 DOMPurify가 없으면 마크업을 통째로 이스케이프해 화면에 태그가
+    // 글자로 나온다. 예전에 13페이지 중 6곳에 `import DOMPurify`가 없었고, 그 페이지들이
+    // 마침 `sanitizeHTML`을 호출하지 않아 **드러나지 않았을 뿐**이었다.
+    //
+    // E2E에도 검사가 있지만(`tests/e2e/dompurify-coverage.spec.js`) 그쪽은 페이지 목록이
+    // 하드코딩이라 **새 페이지가 늘면 조용히 빠진다.** 여기는 `docs/`의 HTML을 전부 훑으므로
+    // 새 페이지가 자동으로 들어오고, 필수 CI라서 브라우저 없이 100ms 안에 막는다.
+    const purifyGaps = [];
+    for (const htmlFile of htmlFiles) {
+        const html = fs.readFileSync(htmlFile, 'utf8');
+        const relHtml = path.relative(targetDir, htmlFile);
+        const refs = [...extractLocalAssetRefs(html)].filter((r) => r.endsWith('.js'));
+        if (refs.length === 0) continue;   // manual·release는 JS를 싣지 않는다
+
+        let usesSanitize = false;
+        let exposesGlobal = false;
+        for (const ref of refs) {
+            const resolved = path.resolve(path.dirname(htmlFile), ref);
+            if (!existsCaseSensitive(resolved)) continue;
+            const code = fs.readFileSync(resolved, 'utf8');
+            // `sanitizeHTML`을 전역에 노출하는 청크가 실려 있는가
+            if (code.includes('window.sanitizeHTML')) usesSanitize = true;
+            // DOMPurify가 **전역에 노출**되는가.
+            // ⚠️ 라이브러리가 번들에 있는지만 보면 안 된다 — `import`는 남기고
+            //    `window.DOMPurify = ...` 대입만 지우는 변이가 그 검사를 통과했다(실측).
+            //    `sanitizeHTML`은 전역을 읽으므로 **대입**이 있어야 동작한다.
+            //    minify 후에도 `window.DOMPurify=` 형태는 유지된다(실측: `window.DOMPurify=x`).
+            if (/window\.DOMPurify\s*=/.test(code)) exposesGlobal = true;
+        }
+        if (usesSanitize && !exposesGlobal) purifyGaps.push(relHtml);
+    }
+
     // 참조 총계는 빌드마다 달라지므로 참고 출력일 뿐 — 합격 조건은 "누락 0건"이다.
     console.log(`docs 자산 참조 검사: HTML ${htmlFiles.length}개, 참조 ${totalRefs}건 (대상: ${targetDir})`);
+
+    if (purifyGaps.length > 0) {
+        console.error(`\n[X] sanitizeHTML을 싣고도 DOMPurify가 없는 페이지: ${purifyGaps.length}건\n`);
+        for (const h of purifyGaps) console.error(`  ${h}`);
+        console.error('\n원인: 그 페이지의 entry에 `import DOMPurify`가 없습니다.');
+        console.error("해결: entry에 `import DOMPurify from 'dompurify';` + `window.DOMPurify = DOMPurify;` (SAMPL-2-34)\n");
+        process.exitCode = EXIT_MISSING;
+        return;
+    }
 
     if (missing.length === 0 && outside.length === 0) {
         console.log('[OK] 누락 0건');
