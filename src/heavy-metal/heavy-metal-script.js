@@ -1113,11 +1113,6 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
         this.bindLocationAutocomplete();
 
         // ========================================
-        // 작물 검색 모달
-        // ========================================
-        this.setupCropSearch();
-
-        // ========================================
         // 선택 삭제
         // ========================================
         const btnBulkDelete = document.getElementById('btnBulkDelete');
@@ -1449,96 +1444,6 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
             regionKeys: ['bonghwa', 'yeongju', 'uljin'],
             regionNames: this.GYEONGBUK_REGION_NAMES || null,
         });
-    }
-
-    // ========================================
-    // 작물 검색 모달
-    // ========================================
-    setupCropSearch() {
-        const cropNameInput = document.getElementById('cropName');
-        const searchCropBtn = document.getElementById('searchCropBtn');
-        const cropModal = document.getElementById('cropModal');
-
-        if (!searchCropBtn || !cropModal) return;
-
-        const closeCropModal = document.getElementById('closeCropModal');
-        const cancelCropSelection = document.getElementById('cancelCropSelection');
-        const confirmCropSelection = document.getElementById('confirmCropSelection');
-        const cropSearchInput = document.getElementById('cropSearchInput');
-        const cropList = document.getElementById('cropList');
-        const cropCategoryFilter = document.getElementById('cropCategoryFilter');
-        const cropResultCount = document.getElementById('cropResultCount');
-
-        let selectedCrop = null;
-
-        searchCropBtn.addEventListener('click', () => {
-            cropModal.classList.remove('hidden');
-            if (cropSearchInput) cropSearchInput.focus();
-            renderCropList();
-        });
-
-        function closeCropModalFn() {
-            cropModal.classList.add('hidden');
-        }
-
-        if (closeCropModal) closeCropModal.addEventListener('click', closeCropModalFn);
-        if (cancelCropSelection) cancelCropSelection.addEventListener('click', closeCropModalFn);
-        cropModal.querySelector('.modal-overlay')?.addEventListener('click', closeCropModalFn);
-
-        function renderCropList() {
-            if (!cropList || typeof CROP_DATA === 'undefined') return;
-
-            const searchTerm = cropSearchInput?.value.toLowerCase() || '';
-            const category = cropCategoryFilter?.value || '전체';
-            let crops = [];
-
-            if (cropCategoryFilter && cropCategoryFilter.options.length === 1) {
-                Object.keys(CROP_DATA).forEach(cat => {
-                    const option = document.createElement('option');
-                    option.value = cat;
-                    option.textContent = cat;
-                    cropCategoryFilter.appendChild(option);
-                });
-            }
-
-            if (category === '전체') {
-                Object.values(CROP_DATA).forEach(arr => crops.push(...arr));
-            } else {
-                crops = CROP_DATA[category] || [];
-            }
-
-            if (searchTerm) {
-                crops = crops.filter(c => c.toLowerCase().includes(searchTerm));
-            }
-
-            cropList.innerHTML = '';
-            crops.forEach(crop => {
-                const li = document.createElement('li');
-                li.textContent = crop;
-                li.className = selectedCrop === crop ? 'selected' : '';
-                li.addEventListener('click', () => {
-                    selectedCrop = crop;
-                    renderCropList();
-                });
-                cropList.appendChild(li);
-            });
-
-            if (cropResultCount) {
-                cropResultCount.textContent = `${crops.length}개 작물`;
-            }
-        }
-
-        if (cropSearchInput) cropSearchInput.addEventListener('input', renderCropList);
-        if (cropCategoryFilter) cropCategoryFilter.addEventListener('change', renderCropList);
-
-        if (confirmCropSelection) {
-            confirmCropSelection.addEventListener('click', () => {
-                if (selectedCrop && cropNameInput) {
-                    cropNameInput.value = selectedCrop;
-                }
-                closeCropModalFn();
-            });
-        }
     }
 
     // ========================================

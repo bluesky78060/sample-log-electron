@@ -2938,33 +2938,6 @@ class PesticideSampleManager extends window.BaseSampleManager {
             }
         }
 
-        // -- 기존 작물 검색 모달 (기존 코드 호환, 숨김) --
-        const cropModal = document.getElementById('cropModal');
-        const openCropModalBtn = document.getElementById('openCropModalBtn');
-        const closeCropModalBtn = document.getElementById('closeCropModal');
-        const cancelCropBtn = document.getElementById('cancelCropSelection');
-
-        if (typeof CROP_CATEGORIES !== 'undefined') {
-            const cropCategoryFilter = document.getElementById('cropCategoryFilter');
-            if (cropCategoryFilter) {
-                CROP_CATEGORIES.forEach(cat => {
-                    if (cat !== '전체') {
-                        const option = document.createElement('option');
-                        option.value = cat;
-                        option.textContent = cat;
-                        cropCategoryFilter.appendChild(option);
-                    }
-                });
-            }
-        }
-
-        if (openCropModalBtn) openCropModalBtn.style.display = 'none';
-
-        const closeModal = () => { if (cropModal) cropModal.classList.add('hidden'); };
-        if (closeCropModalBtn) closeCropModalBtn.addEventListener('click', closeModal);
-        if (cancelCropBtn) cancelCropBtn.addEventListener('click', closeModal);
-        if (cropModal) cropModal.querySelector('.modal-overlay')?.addEventListener('click', closeModal);
-
         // -- 엑셀 가져오기 (ExcelImportManager) --
         const excelImporter = new ExcelImportManager({
             appFields: [
