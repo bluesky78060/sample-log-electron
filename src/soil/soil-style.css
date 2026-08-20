@@ -1320,20 +1320,24 @@ tr.farm-separator:hover {
 .gongik-bulk-bar #gongikBulkApplyBtn { padding: 5px 12px; font-size: 0.8rem; }
 
 /* 고정 컬럼 행 배경 (tbody) */
-.data-table tbody td.sticky-col {
+.data-table tbody td.sticky-col,
+.data-table tbody td.col-action {
     background: white;
 }
 
-.data-table tbody tr:hover td.sticky-col {
+.data-table tbody tr:hover td.sticky-col,
+.data-table tbody tr:hover td.col-action {
     background-color: #faf8f5;
 }
 
-.data-table tbody tr.row-completed td.sticky-col {
+.data-table tbody tr.row-completed td.sticky-col,
+.data-table tbody tr.row-completed td.col-action {
     background: #f0fdf4;
 }
 
 /* 다크 모드 */
-[data-theme="dark"] .data-table .sticky-col {
+[data-theme="dark"] .data-table .sticky-col,
+[data-theme="dark"] .data-table .col-action {
     background: #1C1917;
 }
 

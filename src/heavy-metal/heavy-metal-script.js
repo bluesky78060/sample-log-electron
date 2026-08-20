@@ -263,6 +263,7 @@ class HeavyMetalSampleManager extends window.BaseSampleManager {
 
         // 20. Action buttons
         const tdActions = document.createElement('td');
+        tdActions.className = 'col-action';   // sticky 고정 (SAMPL-2-35)
         const actionDiv = document.createElement('div');
         actionDiv.className = 'action-btns';
 
