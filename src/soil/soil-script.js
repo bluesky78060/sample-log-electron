@@ -3395,7 +3395,9 @@ class SoilSampleManager extends window.BaseSampleManager {
             tdName.dataset.name = row.name;
             tdName.dataset.farmerKey = `${row.name}|${row.phoneNumber || ''}`;
             tdName.textContent = row.name;
-            tdName.title = `"${row.name}" 클릭하면 같은 이름+전화번호 일괄 선택`;
+            // ⚠️ 폴백 필수 — 이름 없는 레코드에서 `"undefined" 클릭하면...`이 된다
+            //    (SAMPL-2-33의 새 테스트가 발견한 **선재** 결함. 이 티켓이 만든 것이 아니다)
+            tdName.title = `"${row.name || '-'}" 클릭하면 같은 이름+전화번호 일괄 선택`;
             tr.appendChild(tdName);
 
             // SAMPL-1-89: 공익직불제 전용 — 경영체등록번호 (성명 다음, gongik-on일 때만 표시)

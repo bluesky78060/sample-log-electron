@@ -1251,17 +1251,24 @@ class PesticideSampleManager extends window.BaseSampleManager {
                 ? addressOnly.replace(SIDO_PATTERN, '')
                 : (addressOnly || '-');
 
-            const safeName = escapeHTML(row.name);
-            const safeDisplayAddress = escapeHTML(displayAddress);
-            const safeProducerName = escapeHTML(row.producerName || '-');
+            // ⚠️ 이 값들은 **이스케이프하지 않는다** (SAMPL-2-33).
+            //    아래에서 `textContent`·`dataset`·`el.title`로 넣는데, 그 경로는 HTML을
+            //    해석하지 않으므로 이스케이프하면 **엔티티 코드가 글자로 보인다**
+            //    (실측: `김&철수` → 화면에 `김&amp;철수`).
+            //    변수명도 `safeXxx` → `xxxText`로 바꿨다 — `safe`라는 이름이 붙어 있으면
+            //    다음 사람이 템플릿 문자열에 그대로 써서 XSS를 만든다.
+            //    템플릿(`${}`) 자리에 넣을 때는 반드시 `escapeHTML`/`escapeAttr`를 쓸 것.
+            const nameText = row.name || '-';   // ⚠️ 폴백 필수 — escapeHTML(undefined)는 ''였지만 원본은 'undefined'로 보인다
+            const displayAddressText = displayAddress;
+            const producerNameText = row.producerName || '-';
             const producerAddrWithoutSido = (row.producerAddress || '-').replace(/^경상북도\s*/, '');
-            const safeProducerAddress = escapeHTML(producerAddrWithoutSido);
-            const safeRequestContent = escapeHTML(row.requestContent || '-');
+            const producerAddressText = producerAddrWithoutSido;
+            const requestContentText = row.requestContent || '-';
             const displayPhone = row.phoneNumber && window.SampleUtils?.formatPhoneNumber
                 ? (window.SampleUtils.formatPhoneNumber(row.phoneNumber) || row.phoneNumber)
                 : (row.phoneNumber || '-');
-            const safePhone = escapeHTML(displayPhone);
-            const safeNote = escapeHTML(row.note || '-');
+            const phoneText = displayPhone;
+            const noteText = row.note || '-';
 
             tr.dataset.id = row.id;
 
@@ -1347,8 +1354,8 @@ class PesticideSampleManager extends window.BaseSampleManager {
             const tdName = document.createElement('td');
             tdName.className = 'sticky-col col-name';
             tdName.dataset.name = row.name || '';
-            tdName.textContent = safeName;
-            tdName.title = `"${safeName}" 클릭하면 같은 이름 일괄 선택`;
+            tdName.textContent = nameText;
+            tdName.title = `"${nameText}" 클릭하면 같은 이름 일괄 선택`;
             tr.appendChild(tdName);
 
             // Zipcode (hidden)
@@ -1360,30 +1367,30 @@ class PesticideSampleManager extends window.BaseSampleManager {
             // Address
             const tdAddress = document.createElement('td');
             tdAddress.className = 'col-address';
-            tdAddress.textContent = safeDisplayAddress;
+            tdAddress.textContent = displayAddressText;
             tr.appendChild(tdAddress);
 
             // Producer name
             const tdProducerName = document.createElement('td');
-            tdProducerName.textContent = safeProducerName;
+            tdProducerName.textContent = producerNameText;
             tr.appendChild(tdProducerName);
 
             // Producer address
             const tdProducerAddress = document.createElement('td');
             tdProducerAddress.className = 'col-producer-address';
-            tdProducerAddress.textContent = safeProducerAddress;
+            tdProducerAddress.textContent = producerAddressText;
             tr.appendChild(tdProducerAddress);
 
             // Request content
             const tdRequestContent = document.createElement('td');
             tdRequestContent.className = 'text-truncate';
-            tdRequestContent.dataset.tooltip = safeRequestContent;
-            tdRequestContent.textContent = safeRequestContent;
+            tdRequestContent.dataset.tooltip = requestContentText;
+            tdRequestContent.textContent = requestContentText;
             tr.appendChild(tdRequestContent);
 
             // Phone
             const tdPhone = document.createElement('td');
-            tdPhone.textContent = safePhone;
+            tdPhone.textContent = phoneText;
             tr.appendChild(tdPhone);
 
             // Reception method
@@ -1394,8 +1401,8 @@ class PesticideSampleManager extends window.BaseSampleManager {
             // Note
             const tdNote = document.createElement('td');
             tdNote.className = 'col-note text-truncate';
-            tdNote.dataset.tooltip = safeNote;
-            tdNote.textContent = safeNote;
+            tdNote.dataset.tooltip = noteText;
+            tdNote.textContent = noteText;
             tr.appendChild(tdNote);
 
             // Mail date
