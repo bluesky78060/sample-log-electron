@@ -32,6 +32,10 @@ import '../shared/analysis-db.js';
 // 결과 가져오기 모달 (Phase 1)
 // 미리보기 표 구성 순수 로직 (SAMPL-1-158 — importer보다 먼저: window.PreviewTable 준비)
 import './preview-table.js';
+// 하위필지 식별·이관 순수 로직 (SAMPL-1-161 — window.SubLotIdentity 준비).
+// 흙토람은 localStorage를 **직접** 읽는 별도 페이지라, 토양 화면의 로드 마이그레이션이
+// 닿지 않는다. 여기서도 같은 이관을 적용해야 옛 꼬리표 배정이 반영된다.
+import '../soil/sublot-identity.js';
 import './heuktoram-result-importer.js';
 
 // Main script

@@ -390,6 +390,25 @@ class HeuktoramManager {
             if (!data) return [];
             const parsed = JSON.parse(data);
             if (!Array.isArray(parsed)) return [];
+            // 옛 꼬리표 배정(`crops[].subLotTarget`)을 실제 이동으로 이관한다 (SAMPL-1-161).
+            //
+            // ⚠️ 흙토람은 localStorage를 **직접** 읽으므로 토양 화면의 로드 훅이 닿지 않는다.
+            //    이걸 빼면 담당자가 토양 화면에서 저장 동작을 하기 전까지
+            //    시비처방 서식이 배정을 반영하지 못한다 — 이 티켓이 고치려던 결함 그대로다.
+            //    여기서는 **읽은 사본만** 고치고 localStorage에 쓰지 않는다(멱등).
+            //    ⚠️ 옵셔널 체이닝이지만 **조용히 넘어가지는 않는다.** 모듈이 없으면
+            //       이관이 통째로 안 도는데 화면은 멀쩡해 보여 아무도 모른다.
+            if (typeof window.SubLotIdentity?.migrateParcels !== 'function') {
+                (window.logger?.error || console.error)(
+                    '[heuktoram] SubLotIdentity가 없어 하위필지 배정 이관을 건너뜁니다 — ' +
+                    '옛 배정이 시비처방 서식에 반영되지 않습니다 (SAMPL-1-161).');
+            } else {
+                parsed.forEach(log => {
+                    if (log && Array.isArray(log.parcels)) {
+                        window.SubLotIdentity.migrateParcels(log.parcels);
+                    }
+                });
+            }
             // 접수번호 오름차순 정렬 (숫자 우선, F접두사 포함, -N 접미사 포함)
             return parsed.sort((a, b) => {
                 const toNum = s => {
@@ -491,7 +510,15 @@ class HeuktoramManager {
             let entryCounter = 0; // 접수 건 전체 카운터 (0=필지, 1+=하위필지)
             for (let pi = 0; pi < log.parcels.length; pi++) {
                 const parcel = log.parcels[pi];
-                const crops = parcel.crops || [{ name: '', area: '', code: '' }];
+                // ⚠️ `parcel.crops || [...]`이면 **빈 배열이 truthy라 폴백이 안 걸린다.**
+                //    작물을 전부 하위필지로 배정한 필지가 그 모양이 되는데(SAMPL-1-161),
+                //    그러면 루프가 0회 돌아 **대표 지번 행이 통째로 사라지고**
+                //    `entryCounter`가 0에 머물러 첫 하위필지가 `-0`을 받는다
+                //    (적대적 검증이 실제 `buildFlatRows`로 실측).
+                //    바로 아래 하위필지 쪽(`:522`)은 이미 length를 본다 — 규칙을 맞춘다.
+                const crops = (parcel.crops && parcel.crops.length > 0)
+                    ? parcel.crops
+                    : [{ name: '', area: '', code: '' }];
 
                 for (let ci = 0; ci < crops.length; ci++) {
                     this.flatRows.push({
