@@ -1746,6 +1746,8 @@
             //    행을 묶기 위한 키일 뿐이라, 다른 경지구분·다른 날 가져오기에서 같은 본번이
             //    나오면 서로 무관한 두 접수가 같은 groupId를 갖게 되고 그룹 수정이 둘을
             //    한 접수로 연다. 실행마다 진짜 UUID로 해석한다 (SAMPL-1-154).
+            /** @type {Array<Object>} 준비된 레코드 — 루프가 끝난 뒤 한 번에 저장한다 */
+            const toSave = [];
             const groupIdOf = new Map();
             const resolveGroupId = (key) => {
                 if (!groupIdOf.has(key)) groupIdOf.set(key, crypto.randomUUID());
@@ -1783,11 +1785,29 @@
                             rec.subLots = it.group.subLots;
                         }
                     }
-                    mgr.addImportedRecord(rec);
-                    applied++;
+                    // ⚠️ 여기서 저장하지 않는다 — 아래에서 **한 번에** 넣는다 (SAMPL-1-172).
+                    //    행마다 저장하면 배열 전체를 다시 쓰고 목록을 다시 그려 O(n²)가 된다.
+                    toSave.push(rec);
                 } catch (err) {
                     failed++;
-                    logErr('가져오기 레코드 저장 실패:', err, it.rec);
+                    logErr('가져오기 레코드 준비 실패:', err, it.rec);
+                }
+            }
+
+            // 배치 저장. 한 건이 실패해도 나머지는 들어간다 — 대량 입력에서
+            // 한 줄 때문에 전부 잃는 것은 담당자에게 최악이다.
+            if (toSave.length > 0) {
+                if (typeof mgr.addImportedRecords === 'function') {
+                    const res = mgr.addImportedRecords(toSave);
+                    applied += res.added.length;
+                    failed += res.failed.length;
+                    for (const f of res.failed) logErr('가져오기 레코드 저장 실패:', f.error, f.record);
+                } else {
+                    // 구 매니저 폴백 — 느리지만 동작은 한다
+                    for (const rec of toSave) {
+                        try { mgr.addImportedRecord(rec); applied++; }
+                        catch (err) { failed++; logErr('가져오기 레코드 저장 실패:', err, rec); }
+                    }
                 }
             }
 
