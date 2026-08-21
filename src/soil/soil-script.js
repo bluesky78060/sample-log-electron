@@ -32,18 +32,6 @@ const GONGIK_BASE_YEAR_OPTIONS = ['2024토양화학성분 기준', '2025토양�
 const LAND_CLASS1_DEFAULT = '농가의뢰';
 
 /**
- * 등록 직전 클라우드 접수번호 확인의 상한 (SAMPL-1-167).
- *
- * 이 앱은 **오프라인 우선**이라 확인이 등록을 막아서는 안 된다. 상한을 넘으면
- * 포기하고 로컬 검사로 진행하되 "확인하지 못했다"고 알린다.
- *
- * ⚠️ 4초는 **현장 실측이 아니라 잠정치다.** 너무 짧으면 느린 회선에서 정상 응답을
- *    실패로 처리해 경고가 잦아지고, 너무 길면 등록 버튼이 굳은 것처럼 보인다.
- *    담당자 환경에서 잦은 경고가 관찰되면 이 값부터 조정한다.
- */
-const SOIL_CLOUD_PRECHECK_TIMEOUT_MS = 4000;
-
-/**
  * 통계용 라벨·색상 매핑. LAND_CLASS1_OPTIONS 변경 시 함께 갱신할 것.
  * 매핑 외 값은 category-other 폴백.
  */
@@ -2035,60 +2023,6 @@ class SoilSampleManager extends window.BaseSampleManager {
      *   `records: null`이면 확인하지 못한 것이다. `unavailable`이 false면
      *   Firebase가 꺼져 있어 **확인할 것이 없는** 정상 상태다.
      */
-    async fetchCloudReceptionRecords(year, timeoutMs = SOIL_CLOUD_PRECHECK_TIMEOUT_MS) {
-        if (!window.firebaseConfig?.isEnabled?.()) {
-            // 클라우드를 쓰지 않는 설치본 — 확인할 것이 없다. 경고할 일도 아니다.
-            return { records: null, unavailable: false, reason: 'disabled' };
-        }
-
-        // ⚠️ **`loadFromFirebase`를 쓰지 않는다.** 그 메서드는 오류를 내부에서 삼키고
-        //    `{ data: [] }`를 돌려준다(`BaseSampleManager.js:583`). 그러면 네트워크 오류가
-        //    "클라우드에 0건"으로 보여 **중복 검사가 조용히 통과**한다 — 이 티켓이
-        //    막으려는 바로 그 실패다(독립 리뷰 MAJOR). 읽기 성공 여부를 알아야 하므로
-        //    `firestoreDb`를 직접 부른다.
-        const db = window.firestoreDb;
-        if (!db || typeof db.getAll !== 'function') {
-            return { records: null, unavailable: true, reason: 'no-db' };
-        }
-
-        let timer = null;
-        try {
-            // ⚠️ 상한이 없으면 네트워크가 느릴 때 등록 버튼이 영영 반응하지 않는다.
-            //    현장에서 그것은 앱이 죽은 것과 같다.
-            const timeout = new Promise((resolve) => {
-                // ⚠️ 타이머를 잡아 두고 finally에서 끈다. 안 끄면 제출마다 타이머가 쌓인다.
-                timer = setTimeout(() => resolve({ __timedOut: true }), timeoutMs);
-            });
-            const read = (typeof db.getAllWithMeta === 'function')
-                // ⚠️ `getAllWithMeta`도 **오류를 삼켜** `{ documents: [] }`를 돌려준다
-                //    (`firestore-db.js`의 catch). 그것을 성공한 빈 결과로 받으면
-                //    실패한 조회가 "클라우드에 겹치는 번호 없음"으로 통과한다 —
-                //    이 계열 티켓이 막으려는 바로 그 실패다. `error`가 붙어 오면
-                //    읽지 못한 것으로 본다 (SAMPL-1-169 독립 리뷰 MAJOR).
-                ? db.getAllWithMeta(this.moduleKey, parseInt(String(year), 10))
-                    .then((r) => {
-                        if (r && r.error) return null;
-                        return (r && Array.isArray(r.documents)) ? r.documents : null;
-                    })
-                : db.getAll(this.moduleKey, parseInt(String(year), 10));
-
-            const res = await Promise.race([read, timeout]);
-            if (res && res.__timedOut) {
-                return { records: null, unavailable: true, reason: 'timeout' };
-            }
-            if (!Array.isArray(res)) {
-                // 배열이 아니면 읽었다고 볼 수 없다 — 빈 배열과 구별한다
-                return { records: null, unavailable: true, reason: 'bad-response' };
-            }
-            return { records: res, unavailable: false, reason: 'ok' };
-        } catch (err) {
-            (window.logger?.warn || console.warn)('[접수번호] 클라우드 확인 실패', err);
-            return { records: null, unavailable: true, reason: 'error' };
-        } finally {
-            if (timer !== null) clearTimeout(timer);
-        }
-    }
-
     /**
      * 접수번호가 이미 쓰이고 있는지 찾는다 (SAMPL-1-168).
      *
@@ -5329,6 +5263,11 @@ class SoilSampleManager extends window.BaseSampleManager {
                 const total = records.length;
                 records.forEach((l, i) => { l.parcelIndex = i + 1; l.totalParcels = total; });
             },
+            // 클라우드 접수번호 확인에 필요하다 (SAMPL-1-170).
+            // ⚠️ 토양도 **공통 엑셀 가져오기를 쓴다.** 자체 importer
+            //    (soil-result-importer.js, 붙여넣기 경로)와는 별개다 —
+            //    "토양은 자체 importer만 쓴다"고 넘겼다가 독립 리뷰가 잡았다.
+            manager: this,
             getExistingLogs: () => this.sampleLogs,
             autoNumberFilter: (log) => {
                 if (!log.receptionNumber) return false;

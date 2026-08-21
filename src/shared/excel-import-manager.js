@@ -43,6 +43,19 @@ class ExcelImportManager {
         this._columnMapping = {};
         this._parsedLogs = [];
 
+        // 접수번호 중복 검사 상태 (SAMPL-1-170).
+        // 토양(soil-result-importer.js)에서 검증된 것과 같은 구조다 —
+        // 연도 도장을 찍어 두고, 도장이 어긋난 캐시는 쓰지 않는다.
+        this._cloudRecords = null;
+        this._cloudUnavailable = false;
+        this._cloudChecked = false;
+        this._cloudYear = null;
+        this._cloudGen = 0;
+        /** @type {Array<string>} 이번 배치에서 겹친 접수번호 */
+        this._dupNumbers = [];
+        /** 부여할 수 있는 번호가 바닥났다 (안전 정수 경계) */
+        this._numberingExhausted = false;
+
         // DOM 요소 (init에서 캐싱)
         this._els = {};
     }
@@ -179,6 +192,16 @@ class ExcelImportManager {
                 this._currentStep = 1;
                 this._showStep(1);
                 this._els.modal.classList.remove('hidden');
+                // 클라우드는 **여는 순간 한 번만** 읽는다. 기다리지 않는다 —
+                // 담당자가 컬럼을 맞추는 동안 도착하면 그때 판정에 반영된다.
+                // ⚠️ **이전 세션의 확인 결과를 물려받지 않는다** (독립 리뷰 MAJOR).
+                //    `_cloudChecked`가 true인 채로 남으면, 연도를 바꾸고 새 파일을 연 뒤
+                //    조회가 끝나기 전에 눌러도 저장이 통과한다 — 새 연도의 클라우드를
+                //    확인하지 않은 채로.
+                this._cloudChecked = false;
+                this._cloudUnavailable = false;
+                this._cloudGen++;
+                this._loadCloudRecords(this._cloudGen);
 
             } catch (err) {
                 console.error('엑셀 파싱 오류:', err);
@@ -359,7 +382,11 @@ class ExcelImportManager {
         }
 
         // 접수번호 자동 채번
+        this._numberingExhausted = false;
         this._autoAssignReceptionNumbers();
+
+        // 시트가 들고 온 번호가 이미 쓰이고 있는지 본다 (SAMPL-1-170)
+        this._detectDuplicateNumbers();
 
         // 미리보기 테이블 렌더링
         this._renderPreview(warnings);
@@ -369,9 +396,116 @@ class ExcelImportManager {
     // 접수번호 자동 채번
     // ========================================
 
+    /** 이 가져오기가 붙어 있는 시료 매니저 (없으면 클라우드 확인을 건너뛴다) */
+    _manager() {
+        return this.config.manager || null;
+    }
+
+    /**
+     * 클라우드 접수번호를 한 번 읽어 둔다 (SAMPL-1-170).
+     * `fetchCloudReceptionRecords`는 `BaseSampleManager`에 있고 실패와 "0건"을
+     * 구별해 돌려준다 — 그 구별이 이 검사의 전부다.
+     */
+    async _loadCloudRecords(gen) {
+        const mgr = this._manager();
+        if (!mgr || typeof mgr.fetchCloudReceptionRecords !== 'function') {
+            if (gen === this._cloudGen) this._cloudChecked = true;
+            return;
+        }
+        const year = mgr.selectedYear;
+        let records = null;
+        let unavailable = false;
+        try {
+            const res = await mgr.fetchCloudReceptionRecords(year);
+            records = res.records || null;
+            unavailable = !!res.unavailable;
+        } catch (_) {
+            unavailable = true;
+        }
+        // 낡은 응답을 버린다 — 다시 열었거나 연도가 바뀌었으면 이 응답은 남의 것이다
+        if (gen !== this._cloudGen) return;
+        if (String(mgr.selectedYear) !== String(year)) {
+            this._cloudGen++;
+            return this._loadCloudRecords(this._cloudGen);
+        }
+        this._cloudRecords = records;
+        this._cloudUnavailable = unavailable;
+        this._cloudChecked = true;
+        this._cloudYear = year;
+        // 3단계를 이미 보고 있으면 판정을 다시 해서 보여준다
+        if (this._currentStep === 3) this._buildPreview();
+    }
+
+    /** 캐시가 현재 연도 것일 때만 쓴다 */
+    _freshCloudRecords() {
+        const mgr = this._manager();
+        if (!Array.isArray(this._cloudRecords)) return [];
+        if (!mgr || String(this._cloudYear) !== String(mgr.selectedYear)) return [];
+        return this._cloudRecords;
+    }
+
+    /**
+     * 접수번호 문자열을 **낱개 번호로 분해**한다 (SAMPL-1-170 독립 리뷰 MAJOR).
+     *
+     * ⚠️ 수질은 그룹 접수를 `"100, 101"`처럼 **쉼표로 이어 붙여** 저장한다
+     *    (`water-script.js`의 `receptionNumbers.join(', ')`).
+     *    통째로 비교하면 `101`이 이미 쓰이고 있는데도 겹침을 못 보고,
+     *    `parseInt('100, 101')`은 100이 나와 최대값 계산도 틀린다.
+     */
+    _splitNumbers(value) {
+        return String(value ?? '')
+            .split(',')
+            .map(v => v.trim())
+            .filter(v => v !== '');
+    }
+
+    /**
+     * 이미 쓰이고 있는 접수번호 집합 (로컬 + 클라우드).
+     *
+     * ⚠️ **표기 그대로 비교한다.** 본번으로 접으면 `5-1`이 `5`를 점유해
+     *    뒤따르는 `5-2`가 중복으로 버려진다 (토양에서 SAMPL-1-154로 겪은 것).
+     */
+    _existingNumberSet() {
+        const local = this.config.getExistingLogs ? (this.config.getExistingLogs() || []) : [];
+        const set = new Set();
+        for (const log of [...local, ...this._freshCloudRecords()]) {
+            for (const n of this._splitNumbers(log?.receptionNumber)) set.add(n);
+        }
+        return set;
+    }
+
+    /**
+     * 시트가 들고 온 접수번호가 이미 쓰이고 있는지 본다 (SAMPL-1-170).
+     *
+     * 예전에는 **아무 검사도 없었다** — 시트에 번호가 있으면 그대로 저장했고,
+     * 이미 있는 번호와 겹쳐도 경고가 없었다. 접수번호는 분석결과 매칭 키라
+     * 겹치면 어느 시료의 결과인지 확정할 수 없다.
+     */
+    _detectDuplicateNumbers() {
+        const pool = this._existingNumberSet();
+        const seen = new Set();
+        const dups = [];
+        for (const log of this._parsedLogs) {
+            for (const n of this._splitNumbers(log?.receptionNumber)) {
+                // 배치 안에서 같은 번호가 두 번 나오는 것도 중복이다
+                if ((pool.has(n) || seen.has(n)) && !dups.includes(n)) dups.push(n);
+                seen.add(n);
+            }
+        }
+        this._dupNumbers = dups;
+    }
+
     _autoAssignReceptionNumbers() {
-        const hasReceptionNumbers = this._parsedLogs.some(l => l.receptionNumber !== '');
-        if (hasReceptionNumbers) return;
+        // ⚠️ **일부 행만 번호가 있는 시트를 그냥 두지 않는다** (독립 리뷰 MAJOR).
+        //    예전에는 한 행이라도 번호가 있으면 곧바로 돌아가, 빈 행이 **접수번호 없이**
+        //    저장됐다. 접수번호는 분석결과 매칭 키라 비어 있으면 그 시료의 결과를
+        //    붙일 수 없다. 빈 행만 골라 겹치지 않는 번호를 준다.
+        const blanks = this._parsedLogs.filter(l => String(l.receptionNumber ?? '').trim() === '');
+        const hasReceptionNumbers = this._parsedLogs.some(l => String(l.receptionNumber ?? '').trim() !== '');
+        if (hasReceptionNumbers) {
+            if (blanks.length > 0) this._fillBlankReceptionNumbers(blanks);
+            return;
+        }
 
         // 기존 데이터에서 최대 번호 구하기
         const existingLogs = this.config.getExistingLogs ? this.config.getExistingLogs() : [];
@@ -384,18 +518,66 @@ class ExcelImportManager {
             if (!log.receptionNumber) return;
             if (filterFn && !filterFn(log)) return;
 
-            let n;
             if (extractFn) {
-                n = extractFn(log);
-            } else {
-                n = parseInt(log.receptionNumber, 10);
+                const n = extractFn(log);
+                if (!isNaN(n) && n > maxNum) maxNum = n;
+                return;
             }
-            if (!isNaN(n) && n > maxNum) maxNum = n;
+            // 쉼표로 이어 붙인 그룹 접수(`"100, 101"`)를 통째로 parseInt하면 100이 나온다.
+            // 아래 `_assignFrom`이 점유 번호를 다시 건너뛰므로 중복은 나지 않지만,
+            // 한쪽만 통째로 보는 채로 두면 다음에 고치는 사람이 그 차이에 걸린다.
+            for (const part of this._splitNumbers(log.receptionNumber)) {
+                const n = parseInt(part, 10);
+                if (!isNaN(n) && n > maxNum) maxNum = n;
+            }
         });
 
-        this._parsedLogs.forEach((l, i) => {
-            l.receptionNumber = String(maxNum + i + 1);
-        });
+        // ⚠️ **`max + 1`만으로는 부족하다.** `maxNum`은 로컬만 보므로 클라우드에
+        //    더 큰 번호가 있으면 그대로 충돌한다 (SAMPL-1-170).
+        //    이미 쓰인 번호를 실제로 건너뛰며 올린다.
+        this._assignFrom(this._parsedLogs, maxNum + 1);
+    }
+
+    /** 번호가 비어 있는 행만 채운다 (일부 행만 번호가 있는 시트) */
+    _fillBlankReceptionNumbers(blanks) {
+        const local = this.config.getExistingLogs ? (this.config.getExistingLogs() || []) : [];
+        const nums = [];
+        for (const log of [...this._parsedLogs, ...local, ...this._freshCloudRecords()]) {
+            for (const part of this._splitNumbers(log?.receptionNumber)) {
+                const n = parseInt(part, 10);
+                if (Number.isFinite(n)) nums.push(n);
+            }
+        }
+        this._assignFrom(blanks, (nums.length ? Math.max(...nums) : 0) + 1);
+    }
+
+    /**
+     * `start`부터 **이미 쓰인 번호를 건너뛰며** 차례로 부여한다.
+     *
+     * ⚠️ `max + 1`만으로는 부족하다. `maxNum`은 로컬만 보므로 클라우드에 더 큰 번호가
+     *    있으면 그대로 충돌한다 (SAMPL-1-170).
+     */
+    _assignFrom(targets, start) {
+        const pool = this._existingNumberSet();
+        let candidate = start;
+        for (const l of targets) {
+            // 안전 정수 범위를 벗어나면 `candidate++`가 제자리에 머물러 무한히 돈다.
+            while (pool.has(String(candidate))) {
+                if (!Number.isSafeInteger(candidate + 1)) { candidate = null; break; }
+                candidate++;
+            }
+            // ⚠️ **쓸 수 있는 번호가 없으면 아무것도 부여하지 않고 멈춘다.**
+            //    경계에서 그냥 빠져나가면 **이미 쓰이고 있는 번호를 그대로 부여**한다 —
+            //    무한 루프는 막았지만 중복을 만드는 셈이다 (독립 리뷰 🟡).
+            //    커밋 쪽이 이 표시를 보고 저장을 막는다.
+            if (candidate === null || !Number.isSafeInteger(candidate)) {
+                this._numberingExhausted = true;
+                return;
+            }
+            l.receptionNumber = String(candidate);
+            pool.add(String(candidate));
+            candidate++;
+        }
     }
 
     // ========================================
@@ -403,7 +585,17 @@ class ExcelImportManager {
     // ========================================
 
     _renderPreview(warnings) {
-        this._els.previewSummary.textContent = `총 ${this._parsedLogs.length}건의 데이터를 가져옵니다.`;
+        // ⚠️ 확인하지 못했다는 사실을 조용히 넘기지 않는다 — 그러면 담당자는
+        //    "겹침 없음"과 "확인 못 함"을 구별할 수 없다 (SAMPL-1-170).
+        let summary = `총 ${this._parsedLogs.length}건의 데이터를 가져옵니다.`;
+        if (this._dupNumbers.length > 0) {
+            const shown = this._dupNumbers.slice(0, 5).join(', ');
+            const more = this._dupNumbers.length > 5 ? ` 외 ${this._dupNumbers.length - 5}종` : '';
+            summary += `  ⚠️ 접수번호 ${shown}${more}이(가) 이미 쓰이고 있습니다.`;
+        } else if (this._cloudUnavailable) {
+            summary += '  ☁️ 클라우드를 확인하지 못했습니다 — 이 컴퓨터의 기록만 검사했습니다.';
+        }
+        this._els.previewSummary.textContent = summary;
 
         // 헤더
         const cols = this.config.previewColumns;
@@ -476,6 +668,32 @@ class ExcelImportManager {
                 return;
             }
 
+            // ⚠️ **겹치는 번호를 저장하지 않는다** (SAMPL-1-170).
+            //    이 가져오기에는 토양 같은 "건너뛰기/덮어쓰기" 선택이 없다.
+            //    여기서 통과시키면 담당자가 아무것도 모른 채 중복이 들어간다.
+            //    접수번호를 비워 두면 자동부여가 겹치지 않는 번호를 준다.
+            if (this._numberingExhausted) {
+                showToast('부여할 수 있는 접수번호가 없습니다. 시트의 접수번호를 확인해 주세요.', 'error');
+                return;
+            }
+
+            if (this._dupNumbers.length > 0) {
+                showToast(
+                    `접수번호 ${this._dupNumbers.slice(0, 5).join(', ')}이(가) 이미 쓰이고 있습니다. ` +
+                    '시트의 번호를 고치거나 접수번호 열을 비워 자동부여로 가져오세요.',
+                    'error'
+                );
+                return;
+            }
+
+            // 클라우드를 아직 읽는 중이면 판정이 끝나지 않았다. Firebase를 쓰지 않거나
+            // 확인에 실패한 경우는 `_cloudChecked`가 true로 끝나므로 여기 걸리지 않는다
+            // (오프라인 우선 — 확인 실패가 가져오기를 막지는 않는다).
+            if (!this._cloudChecked) {
+                showToast('클라우드 접수번호를 확인하는 중입니다. 잠시 후 다시 눌러 주세요.', 'warning');
+                return;
+            }
+
             // 가져오기 완료 콜백
             this.config.onImportComplete(this._parsedLogs);
 
@@ -519,6 +737,7 @@ class ExcelImportManager {
 
     _reset() {
         this._parsedLogs = [];
+        this._dupNumbers = [];
         this._excelData = [];
         this._excelHeaders = [];
         this._columnMapping = {};

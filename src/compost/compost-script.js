@@ -2103,6 +2103,9 @@ class CompostSampleManager extends window.BaseSampleManager {
                 }
                 return null;
             },
+            // 클라우드 접수번호 확인에 필요하다 (SAMPL-1-170).
+            // 없으면 로컬만 검사한다 — 조용히 넘어가지는 않는다.
+            manager: this,
             getExistingLogs: () => this.sampleLogs,
             onImportComplete: (records) => {
                 records.forEach(logEntry => this.sampleLogs.push(logEntry));
