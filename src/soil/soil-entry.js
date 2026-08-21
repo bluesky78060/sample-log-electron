@@ -11,6 +11,8 @@ import '../shared/file-api.js';
 import '../shared/utils.js';
 import '../shared/toast.js';
 import '../shared/pagination.js';
+// 목록 고정 열 오프셋을 실제 폭에서 계산한다 (SAMPL-1-171)
+import '../shared/sticky-columns.js';
 import '../shared/address.js';
 import '../shared/address-parser.js';
 import '../shared/autocomplete-manager.js';

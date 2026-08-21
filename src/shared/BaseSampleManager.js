@@ -1344,6 +1344,10 @@ class BaseSampleManager {
                 }
             }
         }
+
+        // 열 폭이 내용에 따라 달라지므로, 그린 뒤 고정 열 오프셋을 다시 잡는다
+        // (SAMPL-1-171). 다음 프레임에 한 번만 돌아 연속 렌더에도 헛일하지 않는다.
+        window.scheduleStickyColumns?.();
     }
 
     /**
