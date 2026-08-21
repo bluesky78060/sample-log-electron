@@ -386,3 +386,66 @@ test.describe('서브넘버 행 가져오기 (SAMPL-1-154)', () => {
         expect(lead.subLots[0].areas).toEqual(['70']);
     });
 });
+
+/**
+ * F 접두 불변식 (SAMPL-2-30)
+ *
+ * 불변식: **`F` 접두 ⟺ subCategory === '성토'**.
+ * 강제되지 않아서, 대장을 내보낸 뒤 **구분 컬럼을 매핑하지 않고** 재가져오면
+ * 기존 `F1` 성토 행이 `subCategory='-'`인 두 번째 F1 레코드로 저장됐다.
+ * 그 레코드는 일반 풀에서도(F 접두라) 성토 풀에서도(구분이 성토가 아니라) 빠져
+ * **두 시퀀스 어디에도 보이지 않는 유령 번호**가 된다.
+ */
+test.describe('F 접두 불변식 (SAMPL-2-30)', () => {
+    test.beforeEach(async ({ page }) => {
+        await page.goto('/soil/');
+        await page.waitForLoadState('networkidle');
+        await page.waitForFunction(() => typeof window.soilManager !== 'undefined');
+        await page.evaluate(() => localStorage.clear());
+    });
+
+    test('구분 미매핑 F 행은 저장되지 않는다 — 유령 번호가 생기지 않는다', async ({ page }) => {
+        await page.click('#soilImportBtn');
+        const modal = page.locator('#soilImporterModal');
+        await expect(modal).toBeVisible();
+        await modal.locator('input[name="sriMode"][value="paste"]').check();
+        // 구분 컬럼이 없는 붙여넣기 — 대장 내보내기 후 재가져오기의 실제 경로
+        await modal.locator('[data-el="textarea"]').fill([
+            '접수번호\t성명\t지번주소',
+            'F1\t성토민원\t봉화읍 내성리 1',
+            '1\t일반민원\t봉화읍 내성리 2',
+        ].join('\n'));
+        await modal.locator('[data-act="automap"]').click();
+        await modal.locator('[data-el="autoNumber"]').uncheck();
+
+        // F1 행은 오류로 잡히고, 일반 1행만 등록 대상이 된다
+        const importBtn = modal.locator('[data-act="import"]');
+        await expect(importBtn).toHaveText(/1건 가져오기/);
+        await importBtn.click();
+        await expect(modal).toBeHidden();
+
+        const persisted = await readPersisted(page);
+        expect(persisted.map((s) => s.receptionNumber)).toEqual(['1']);
+        // 수정 전에는 여기에 F1이 subCategory='-'로 함께 저장됐다
+        expect(persisted.some((s) => s.receptionNumber.startsWith('F'))).toBe(false);
+    });
+
+    test('구분=성토가 매핑된 F 행은 정상 저장된다 (과잉수정 방지)', async ({ page }) => {
+        await page.click('#soilImportBtn');
+        const modal = page.locator('#soilImporterModal');
+        await expect(modal).toBeVisible();
+        await modal.locator('input[name="sriMode"][value="paste"]').check();
+        await modal.locator('[data-el="textarea"]').fill([
+            '접수번호\t성명\t지번주소\t구분',
+            'F1\t성토민원\t봉화읍 내성리 1\t성토',
+        ].join('\n'));
+        await modal.locator('[data-act="automap"]').click();
+        await modal.locator('[data-el="autoNumber"]').uncheck();
+        await modal.locator('[data-act="import"]').click();
+        await expect(modal).toBeHidden();
+
+        const persisted = await readPersisted(page);
+        expect(persisted.map((s) => s.receptionNumber)).toEqual(['F1']);
+        expect(persisted[0].subCategory).toBe('성토');
+    });
+});
