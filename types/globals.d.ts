@@ -133,6 +133,13 @@ declare global {
 
         /** file-api.js가 설정하는 실행 환경 플래그 */
         isElectron?: boolean;
+
+        /** 목록 고정 열 오프셋 재계산 (SAMPL-1-171, `src/shared/sticky-columns.js`) */
+        refreshStickyColumns?: () => number;
+        /** 폭이 멈출 때까지 따라가며 재계산 (SAMPL-1-171) */
+        scheduleStickyColumns?: () => void;
+        /** 재계산 계기 부착 (SAMPL-1-171) */
+        installStickyColumns?: () => void;
     }
 }
 
