@@ -1,0 +1,55 @@
+{
+  "//": "SAMPL-2-25 — **Node 컨텍스트** 파일만 검사한다.",
+  "//2": "여기 있는 파일은 process·Buffer·__dirname·require를 쓰는 것이 정상이다:",
+  "//3": "  src/index.js(Electron main) · src/preload.js · scripts/ · tests/ · 루트 설정 파일",
+  "//4": "브라우저에서 도는 코드는 tsconfig.browser.json이 맡는다. 나누지 않으면",
+  "//5": "types:[\"node\"]가 브라우저 파일에도 흘러 들어가 이 앱의 중심 불변식",
+  "//6": "(Electron vs Web 이중 환경)을 게이트가 잡지 못한다 — 웹에서 런타임 크래시다.",
+
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,
+    "composite": true,
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
+
+    "strict": true,
+    "noImplicitAny": false,
+
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "types": ["node"],
+
+    "baseUrl": ".",
+    "paths": { "@shared/*": ["src/shared/*"] }
+  },
+
+  "//7": "⚠️ TS의 include glob은 중괄호 확장을 지원하지 않는다. 확장자마다 나열해야",
+  "//8": "한다 — `src/**/*.{js,ts}`로 쓰면 리터럴이 되어 아무것도 매치되지 않고,",
+  "//9": "검사할 파일이 없어 tsc가 0건으로 통과한다(= SAMPL-2-24의 위장 게이트 재발).",
+  "include": [
+    "src/index.js",
+    "src/preload.js",
+    "scripts/**/*.js",
+    "scripts/**/*.mjs",
+    "scripts/**/*.cjs",
+    "scripts/**/*.ts",
+    "tests/**/*.js",
+    "tests/**/*.mjs",
+    "tests/**/*.cjs",
+    "tests/**/*.ts",
+    "types/**/*.d.ts",
+    "forge.config.js",
+    "vite.config.js",
+    "vitest.config.js",
+    "playwright.config.js"
+  ],
+
+  "exclude": ["node_modules", "docs", "out", "playwright-report", "test-results"]
+}
