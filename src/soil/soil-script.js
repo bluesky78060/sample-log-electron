@@ -866,6 +866,30 @@ class SoilSampleManager extends window.BaseSampleManager {
     }
 
     /**
+     * 지정 연도·경지구분 1차의 다음 **성토** 번호(정수). `getNextNumberForClass`의 형제.
+     *
+     * 미리보기는 이것을 쓰고, 폼 등록은 `generateNextFillReceptionNumber`를 쓴다.
+     * 형제를 따로 둔 이유가 둘 있다 (SAMPL-2-30 🔵):
+     *  1. **연도 비대칭.** `generateNextFillReceptionNumber`는 `this.sampleLogs`만 보므로
+     *     연도를 무시한다. 일반 쪽은 연도를 받는데 성토만 안 받으면, 연도 선택이
+     *     붙는 순간 성토 커서만 틀린 번호를 보여준다.
+     *  2. **로그 소음.** 미리보기 재계산은 키 입력마다 일어난다. 그때마다
+     *     `this.log(...)`가 찍히면 콘솔이 덮여 진짜 신호가 묻힌다.
+     *     그래서 이 메서드는 **정수만 돌려주고 아무것도 찍지 않는다.**
+     * @param {number|string} [year]
+     * @param {string} [landClass1]
+     * @returns {number}
+     */
+    getNextFillNumberForClass(year, landClass1) {
+        const targetClass = landClass1 || LAND_CLASS1_DEFAULT;
+        const targetYear = year || this.selectedYear;
+        const logs = (String(targetYear) === String(this.selectedYear))
+            ? this.sampleLogs
+            : SampleUtils.safeParseJSON(this.getStorageKey(targetYear), []);
+        return window.ReceptionNumber.computeNextNumber(logs, targetClass, { fill: true });
+    }
+
+    /**
      * 현재 연도 저장소에 가져온 레코드 한 건 추가 (SoilResultImporter 위임 대상).
      * receptionNumber 미지정 시 landClass1별 독립 번호를 자동 부여한다.
      * 저장은 persistRecords(L1 Phase 3 P3-C: 로컬 + Firebase 개별 동기화)로 위임.

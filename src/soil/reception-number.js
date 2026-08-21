@@ -41,7 +41,11 @@
             // 같은 경지구분 1차 범위만
             if ((log.landClass1 || def) !== target) continue;
 
-            const baseNumber = String(log.receptionNumber).split('-')[0];
+            // `.trim()`은 `soil-result-importer.js`의 `collectExistingNumbers`와 맞춘 것이다
+            // (SAMPL-2-30 🔵). 두 함수는 "한 줄씩 같아야 한다"는 계약인데 여기만 빠져 있었다.
+            // 차분 퍼징 16,000회에서 결과 차이는 0이었으나, 계약이 어긋난 줄을 남겨두면
+            // 다음 사람이 어느 쪽이 맞는지 판단할 근거가 없어진다.
+            const baseNumber = String(log.receptionNumber).split('-')[0].trim();
             // 일반 체계에서는 'F' 접두(성토 흔적) 번호를 제외
             if (!fill && baseNumber.startsWith('F')) continue;
 

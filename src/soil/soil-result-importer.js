@@ -465,6 +465,83 @@
             const pool = isFill ? existingFill : existing;
             const seenPool = isFill ? seenFillInBatch : seenInBatch;
 
+            // ------------------------------------------------------------------
+            // 불변식: **`F` 접두 ⟺ subCategory === '성토'** (SAMPL-2-30)
+            //
+            // 이 불변식이 코드로 강제되지 않아, 대장을 내보낸 뒤 **구분 컬럼을 매핑하지
+            // 않고** 재가져오면 기존 `F1` 성토 행이 `subCategory='-'`인 두 번째 F1
+            // 레코드로 저장됐다. 그 레코드는 일반 풀에서도(F 접두라) 성토 풀에서도
+            // (구분이 성토가 아니라) 빠져 **두 시퀀스 어디에도 보이지 않는 유령 번호**가 된다.
+            //
+            // 방향이 둘이라 서로 다르게 다룬다:
+            //   F인데 성토가 아니다 → **막는다.** 저장하면 되돌리기 어려운 오염이고,
+            //                          사용자가 할 일(구분 컬럼 매핑)이 분명하다.
+            //   성토인데 F가 아니다 → **경고만.** 여기서 `F`를 붙여 정규화하면
+            //                          SAMPL-1-153이 리뷰로 확정한 "수동 번호는 표기
+            //                          그대로, 시퀀스 무관 비교" 계약이 깨진다
+            //                          (성토 '1'이 'F1'이 되면 기존 일반 '1'과의
+            //                          충돌을 놓친다). 계약은 두고 사람이 알게 한다.
+            //
+            // ⚠️ 접두 판정은 **대문자 `F`만** 본다. 한때 `/^f/i`로 소문자까지 받았는데,
+            //    정작 성토 번호를 숫자로 바꾸는 곳들(`collectExistingNumbers`,
+            //    `reception-number.js`, 채번 키)은 전부 `replace('F','')` 즉 대문자만
+            //    벗긴다. 그래서 `f3`을 F로 인정하면 `parseInt('f3')`가 NaN이 되어
+            //    **성토 커서가 전진하지 않고** 미리보기와 실제 채번이 어긋난다
+            //    (독립 리뷰 MAJOR — 내가 만든 불일치였다).
+            //    대소문자 통일은 그 11개 지점의 채번 의미를 함께 바꾸는 일이라 별건이고,
+            //    여기서는 **소문자를 아예 막는다** (경고만으로는 오염을 못 막는다 —
+            //    저장되면 커서가 전진하지 않아 죽은 번호가 남는다).
+            let invariantWarn;
+            if (!useAuto) {
+                const literalNo = String(recNo).trim();
+
+                // 소문자 `f`는 **막는다.** 한때 경고만 붙였는데, 그러면 사용자가 그대로
+                // 저장할 수 있고 저장된 `f3`은 `parseInt('f3')`가 NaN이라 채번 커서에
+                // 반영되지 않는다 — 목록 정렬·자동채번·중복 판정 어디에서도 숫자로
+                // 취급되지 않는 죽은 번호가 남는다 (독립 리뷰 2라운드 MAJOR).
+                // 경고는 **알려주기만 할 뿐 오염을 막지 못한다.**
+                if (/^f/.test(literalNo)) {
+                    stats.err++;
+                    items.push({
+                        status: 'err',
+                        reason: '접수번호가 소문자 f로 시작합니다 — 대문자 F로 고쳐 주세요 (소문자는 번호로 인식되지 않습니다)',
+                        display: recNo, rec,
+                    });
+                    return;
+                }
+
+                // 같은 이유로 **형식 자체를 검사한다.** `abc`·`Fabc`·`12abc`처럼
+                // 숫자로 파싱되지 않는 번호는 예전부터 그냥 저장됐는데, 저장된 뒤
+                // `parseInt`가 NaN이거나 앞부분만 잘려 **채번 커서·정렬·중복 판정이
+                // 전부 어긋난다**. 소문자 f만 막고 이쪽을 두면 같은 구멍이 남는다
+                // (독립 리뷰 3라운드 MAJOR — 내가 만든 것은 아니나 같은 계열이다).
+                //
+                // 허용 형식: `5` · `5-1` · `F5` · `F5-1` (본번 + 선택적 가지번호)
+                if (!/^F?\d+(-\d+)*$/.test(literalNo)) {
+                    stats.err++;
+                    items.push({
+                        status: 'err',
+                        reason: '접수번호 형식이 아닙니다 — 숫자, 5-1 같은 가지번호, 성토는 F5 형식만 됩니다',
+                        display: recNo, rec,
+                    });
+                    return;
+                }
+
+                const hasF = /^F/.test(literalNo);
+                if (hasF && !isFill) {
+                    stats.err++;
+                    items.push({
+                        status: 'err',
+                        reason: 'F 접두는 성토 전용입니다 — 구분 컬럼을 매핑하거나 번호에서 F를 빼세요',
+                        display: recNo, rec,
+                    });
+                    return;
+                }
+                if (!hasF && isFill) {
+                    invariantWarn = '성토인데 F 접두가 없습니다 — 이 번호는 일반 목록에서 보이지 않습니다';
+                }
+            }
+
             if (useAuto) {
                 // 기존·배치 양쪽을 피해 증가시킨다
                 let candidate = isFill ? nextFill : nextNum;
@@ -516,7 +593,7 @@
                     stats.dup++;
                     items.push({
                         status: 'dup', display: recNo, skip: dupPolicy === 'skip',
-                        rec: { ...rec, receptionNumber: recNo }, group,
+                        rec: { ...rec, receptionNumber: recNo }, group, warn: invariantWarn,
                     });
                 } else if (group && group.mode === 'sublot' && group.cropIndex > 0) {
                     stats.sub++;
@@ -525,11 +602,11 @@
                     // 등록 건수를 부풀리지도 않는다. 사용자에게는 "묶임"으로 보인다.
                     items.push({
                         status: 'sub', display: recNo,
-                        rec: { ...rec, receptionNumber: recNo }, group,
+                        rec: { ...rec, receptionNumber: recNo }, group, warn: invariantWarn,
                     });
                 } else {
                     stats.new++;
-                    items.push({ status: 'new', display: recNo, rec: { ...rec, receptionNumber: recNo }, group });
+                    items.push({ status: 'new', display: recNo, rec: { ...rec, receptionNumber: recNo }, group, warn: invariantWarn });
                 }
             }
         });
@@ -577,6 +654,14 @@
         ).length;
 
         return { items, stats, willImport, landClass1 };
+    }
+
+    /** 속성 위치 전용 이스케이프 — 본문용 escapeHtml을 속성에 쓰면 안 된다 (SAMPL-2-32) */
+    function escapeAttrLocal(s) {
+        if (typeof window.escapeAttr === 'function') return window.escapeAttr(s);
+        return String(s ?? '')
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
 
     function escapeHtml(s) {
@@ -715,6 +800,8 @@
 .sri-status.dup{background:#fef3c7;color:#92400e}
 .sri-status.err{background:#fee2e2;color:#991b1b}
 .sri-status.sub{background:#dbeafe;color:#1e40af}
+.sri-status.warn{background:#fef3c7;color:#92400e;margin-left:4px}
+.sri-reason{font-size:.72rem;color:#991b1b;white-space:normal;max-width:220px;margin-top:2px}
 .sri-pv-table tr.is-sub td{background:#eff6ff}
 .sri-pv-overflow{padding:8px 10px;font-size:.78rem;color:#94a3b8;text-align:center}
 /* footer */
@@ -875,7 +962,7 @@
         <span class="sri-muted">중복 접수번호가 있을 때:</span>
         <div class="sri-opt-sub">
           <label class="sri-radio"><input type="radio" name="sriDup" value="skip" checked> 건너뛰기</label>
-          <label class="sri-radio"><input type="radio" name="sriDup" value="overwrite"> 그래도 추가(덮어쓰기)</label>
+          <label class="sri-radio"><input type="radio" name="sriDup" value="overwrite"> 그래도 추가 <span class="sri-muted">(같은 접수번호가 중복 등록됨)</span></label>
         </div>
       </div>
     </section>
@@ -971,10 +1058,18 @@
                 r.addEventListener('change', () => { if (r.checked) this._switchMode(r.value); });
             });
 
-            // 붙여넣기
+            // 붙여넣기 — **디바운스한다** (SAMPL-2-30 🔵).
+            //
+            // `_refresh()`는 파싱 + 전체 재계산 + 표 재렌더를 한다. 그것을 키 입력마다
+            // 돌리면 수백 행을 붙여넣고 한 글자 고칠 때 입력이 눈에 띄게 끊긴다.
+            // 붙여넣기 자체는 `input` 한 번이라 150ms 뒤 한 번만 돌아도 체감은 같다.
+            //
+            // ⚠️ 모달을 닫을 때 타이머를 반드시 정리한다. 남겨두면 닫힌 뒤 콜백이 깨어나
+            //    이미 비운 상태를 만지며, 그 예외는 아무도 보지 않는다.
             this._els.textarea?.addEventListener('input', () => {
                 this._state.rawText = this._els.textarea.value;
-                this._refresh();
+                clearTimeout(this._recomputeTimer);
+                this._recomputeTimer = setTimeout(() => this._refresh(), 150);
             });
             this._els.hasHeader?.addEventListener('change', () => {
                 this._state.hasHeader = this._els.hasHeader.checked;
@@ -1037,6 +1132,12 @@
                 this._state.autoNumber = this._els.autoNumber.checked;
                 this._refresh();
             });
+            // ⚠️ 라디오 라벨을 "덮어쓰기"로 되돌리지 말 것 (SAMPL-2-30 ②).
+            //    `_commit`은 `addImportedRecord`를 부르고 그 메서드는 항상 새 id로
+            //    push하므로 **기존 레코드를 갱신하지 않는다** — 같은 접수번호가 두 줄이 된다.
+            //    라벨이 동작과 다르면 사용자는 "덮어썼겠지" 하고 목록을 확인하지 않는다.
+            //    진짜 upsert가 생기면 그때 문구를 바꾼다.
+            //    (마크업 쪽에 이 주석을 두면 템플릿 리터럴 안의 백틱이 문자열을 끊는다 — 실측)
             m.querySelectorAll('input[name="sriDup"]').forEach(r => {
                 r.addEventListener('change', () => {
                     if (r.checked) { this._state.dupPolicy = r.value; this._recompute(); this._renderPreview(); }
@@ -1081,6 +1182,10 @@
 
         close() {
             if (!this._els?.modal) return;
+            // 재계산 디바운스 타이머를 반드시 끈다. 남겨두면 닫힌 뒤 콜백이 깨어나
+            // 이미 비운 상태를 만지고, 그 예외는 아무도 보지 않는다 (SAMPL-2-30 🔵).
+            clearTimeout(this._recomputeTimer);
+            this._recomputeTimer = null;
             this._els.modal.hidden = true;
             document.removeEventListener('keydown', this._escHandler);
         }
@@ -1326,7 +1431,13 @@
             if (mgr && Array.isArray(mgr.sampleLogs)) return mgr.sampleLogs;
             const year = (mgr && mgr.selectedYear) || new Date().getFullYear();
             try {
-                const raw = localStorage.getItem(`soilSampleLogs_${year}`);
+                // 저장 키는 **매니저에게 묻는다.** 문자열을 복제해 두면 매니저가 키 규칙을
+                // 바꿨을 때 이쪽만 옛 키를 읽어 **중복 검사 풀이 통째로 비고**, 그러면
+                // 모든 행이 "신규"가 되어 중복이 그대로 저장된다 (SAMPL-2-30 🟡).
+                const key = (mgr && typeof mgr.getStorageKey === 'function')
+                    ? mgr.getStorageKey(year)
+                    : `soilSampleLogs_${year}`;
+                const raw = localStorage.getItem(key);
                 return raw ? JSON.parse(raw) : [];
             } catch (_) { return []; }
         }
@@ -1353,9 +1464,17 @@
             const nextNumber = (mgr && typeof mgr.getNextNumberForClass === 'function')
                 ? mgr.getNextNumberForClass(year, landClass1)
                 : null;
-            // 매니저는 'F3' 문자열을 주므로 숫자만 뽑아 커서로 쓴다
+            // 성토 커서. 일반 쪽과 **대칭인** 메서드를 쓴다 (SAMPL-2-30 🔵).
+            //  - 연도를 넘긴다: `generateNextFillReceptionNumber`는 `this.sampleLogs`만 보아
+            //    연도를 무시했다. 일반만 연도를 받으면 성토 커서만 틀리게 된다.
+            //  - 로그를 찍지 않는다: 재계산은 키 입력마다 일어나 콘솔을 덮었다.
+            //  - `'F3'` 문자열에서 숫자를 되뽑는 우회도 없어진다.
             let nextFillNumber = null;
-            if (mgr && typeof mgr.generateNextFillReceptionNumber === 'function') {
+            if (mgr && typeof mgr.getNextFillNumberForClass === 'function') {
+                const n = mgr.getNextFillNumberForClass(year, landClass1);
+                if (typeof n === 'number' && !Number.isNaN(n)) nextFillNumber = n;
+            } else if (mgr && typeof mgr.generateNextFillReceptionNumber === 'function') {
+                // 구 매니저 폴백
                 const parsed = parseInt(String(mgr.generateNextFillReceptionNumber(landClass1)).replace('F', ''), 10);
                 if (!Number.isNaN(parsed)) nextFillNumber = parsed;
             }
@@ -1407,10 +1526,15 @@
                 const r = it.rec || {};
                 const cls = it.status === 'dup' ? 'is-dup'
                     : (it.status === 'err' ? 'is-err' : (it.status === 'sub' ? 'is-sub' : ''));
-                const statusBadge = `<span class="sri-status ${it.status}">${labels[it.status]}${it.skip ? ' · 건너뜀' : ''}</span>`;
+                // 불변식 경고는 **행 위에** 보여야 한다. 요약 숫자에만 넣으면
+                // 어느 행이 문제인지 알 수 없어 사용자가 손쓸 수가 없다 (SAMPL-2-30 ③).
+                const warnBadge = it.warn
+                    ? `<span class="sri-status warn" title="${escapeAttrLocal(it.warn)}">⚠️ 확인</span>`
+                    : '';
+                const statusBadge = `<span class="sri-status ${it.status}">${labels[it.status]}${it.skip ? ' · 건너뜀' : ''}</span>${warnBadge}`;
                 return `<tr class="${cls}">
                     <td>${statusBadge}</td>
-                    <td>${escapeHtml(it.display ?? '')}</td>
+                    <td>${escapeHtml(it.display ?? '')}${it.reason ? `<div class="sri-reason">${escapeHtml(it.reason)}</div>` : ''}</td>
                     <td>${escapeHtml(r.name ?? '')}</td>
                     <td>${escapeHtml(r.phoneNumber ?? '')}</td>
                     <td class="addr">${escapeHtml(r.lotAddress ?? '')}</td>

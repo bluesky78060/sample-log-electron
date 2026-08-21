@@ -653,3 +653,109 @@ describe('computePreview — 서브넘버 행은 한 접수로 묶는다 (SAMPL-
         }
     })
 })
+
+describe('computePreview — F 접두 불변식 (SAMPL-2-30)', () => {
+    // 이 앱의 불변식: **`F` 접두 ⟺ subCategory === '성토'**.
+    // 코드로 강제되지 않아, 대장을 내보낸 뒤 **구분 컬럼을 매핑하지 않고** 재가져오면
+    // 기존 `F1` 성토 행이 `subCategory='-'`인 두 번째 F1 레코드로 저장됐다.
+    // 그 레코드는 일반 풀에서도(F 접두라) 성토 풀에서도(구분이 성토가 아니라) 빠져
+    // **두 시퀀스 어디에도 보이지 않는 유령 번호**가 된다.
+    const MAP_FULL = { receptionNumber: 0, name: 1, lotAddress: 2, subCategory: 3 }
+    const run30 = (rows, opts = {}) => preview({
+        rows, mapping: opts.mapping || MAP_FULL, landClass1: '농가의뢰',
+        dupPolicy: opts.dupPolicy || 'skip', logs: opts.logs || [],
+        nextNumber: opts.nextNumber ?? 1, nextFillNumber: opts.nextFillNumber ?? 1,
+    })
+
+    it('F 접두인데 구분이 성토가 아니면 오류다 — 유령 번호를 만들지 않는다', () => {
+        const r = run30([['F1', 'A', '주소', '논']])
+        expect(r.items[0].status).toBe('err')
+        expect(r.items[0].reason).toMatch(/성토/)
+        expect(r.willImport).toBe(0)
+    })
+
+    it('구분 컬럼을 아예 매핑하지 않은 F 행도 오류다 (실제 재현 경로)', () => {
+        // 대장 내보내기 → 구분 미매핑 재가져오기. 예전에는 조용히 new로 통과했다.
+        const r = run30([['F1', 'A', '주소']], {
+            mapping: { receptionNumber: 0, name: 1, lotAddress: 2 },
+        })
+        expect(r.items[0].status).toBe('err')
+    })
+
+    it('F 접두 + 구분=성토는 정상이다 (과잉수정 방지)', () => {
+        const r = run30([['F1', 'A', '주소', '성토']])
+        expect(r.items[0].status).toBe('new')
+        expect(r.items[0].display).toBe('F1')
+    })
+
+    // ⚠️ 소문자 f는 **막는다.** 처음에는 경고만 붙였는데, 2라운드 리뷰가
+    //    "경고는 알려줄 뿐 오염을 막지 못한다"고 지적했다 — 저장된 `f3`은
+    //    parseInt('f3')가 NaN이라 채번 커서에 반영되지 않아 목록 정렬·자동채번·
+    //    중복 판정 어디에서도 숫자로 취급되지 않는 죽은 번호가 된다.
+    //    이 저장소의 다른 11개 지점이 전부 대문자만 벗기므로 여기만 관대할 수 없다.
+    it('소문자 f로 시작하는 수동 번호는 오류다', () => {
+        const r = run30([['f3', 'A', '주소', '논']])
+        expect(r.items[0].status).toBe('err')
+        expect(r.items[0].reason).toMatch(/소문자 f/)
+        expect(r.willImport).toBe(0)
+    })
+
+    it('소문자 f + 구분=성토도 오류다', () => {
+        expect(run30([['f3', 'A', '주소', '성토']]).items[0].status).toBe('err')
+    })
+
+    // 🚨 3라운드 리뷰 MAJOR. 소문자 f만 막고 이쪽을 두면 같은 구멍이 남는다 —
+    //    숫자로 파싱되지 않는 번호가 저장되면 채번 커서·정렬·중복 판정이 다 어긋난다.
+    //    (선재 결함이지만 이 티켓의 주제가 접수번호 유일성이라 함께 막는다.)
+    it.each(['abc', 'Fabc', '12abc', '5x', 'F', '-1', '5--1'])(
+        '접수번호 형식이 아닌 %s는 오류다', (bad) => {
+            const r = run30([[bad, 'A', '주소', '논']])
+            expect(r.items[0].status).toBe('err')
+            expect(r.items[0].reason).toMatch(/형식/)
+        })
+
+    it.each(['5', '5-1', 'F5', 'F5-1', '5-1-2'])('정상 형식 %s는 통과한다 (과잉수정 방지)', (ok) => {
+        // F로 시작하는 것은 성토 구분과 함께 줘야 불변식을 통과한다
+        const subCat = ok.startsWith('F') ? '성토' : '논'
+        expect(run30([[ok, 'A', '주소', subCat]]).items[0].status).toBe('new')
+    })
+
+    // 🚨 2라운드 리뷰가 명시적으로 요구한 검증: 경고 존재만 보지 말고
+    //    **다음 자동 번호까지** 확인하라. 소문자 번호가 저장되면 커서가
+    //    전진하지 않아 이후 채번이 어긋나기 때문이다.
+    it('막힌 소문자 행은 뒤따르는 자동부여 번호를 어지럽히지 않는다', () => {
+        const r = run30([
+            ['f3', 'A', '주소1', '논'],
+            ['', 'B', '주소2', '논'],
+            ['', 'C', '주소3', '논'],
+        ])
+        expect(r.items.map(i => i.status)).toEqual(['err', 'new', 'new'])
+        // f3이 저장되지 않으므로 커서는 1부터 정상 전진한다
+        expect(r.items.slice(1).map(i => i.display)).toEqual(['1', '2'])
+        expect(r.willImport).toBe(2)
+    })
+
+    // ③ 반대 방향 — 성토인데 F가 없다. 이쪽은 **막지 않고 경고만** 한다.
+    //    SAMPL-1-153이 리뷰로 확정한 "수동 번호는 표기 그대로, 시퀀스 무관 비교"
+    //    계약을 뒤집지 않기 위해서다. 정규화하면 성토 '1'이 'F1'이 되어
+    //    기존 일반 '1'과의 충돌을 놓치게 된다.
+    it('성토 행에 F 없는 수동 번호는 등록되지만 경고가 붙는다', () => {
+        const r = run30([['7', 'A', '주소', '성토']])
+        expect(r.items[0].status).toBe('new')
+        expect(r.items[0].display).toBe('7')
+        expect(r.items[0].warn).toMatch(/F/)
+    })
+
+    it('경고는 기존 중복 판정을 바꾸지 않는다 (SAMPL-1-153 계약 유지)', () => {
+        const logs = [{ receptionNumber: '1', subCategory: '논', landClass1: '농가의뢰' }]
+        const r = run30([['1', 'A', '주소', '성토']], { logs, nextNumber: 2 })
+        expect(r.items[0].status).toBe('dup')
+        expect(r.items[0].warn).toMatch(/F/)
+    })
+
+    it('자동부여된 성토 번호에는 경고가 붙지 않는다', () => {
+        const r = run30([['', 'A', '주소', '성토']])
+        expect(r.items[0].display).toBe('F1')
+        expect(r.items[0].warn).toBeUndefined()
+    })
+})
