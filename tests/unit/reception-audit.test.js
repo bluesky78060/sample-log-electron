@@ -193,3 +193,81 @@ describe('summarizeAudit — 단위 표기 (독립 리뷰 반영)', () => {
         expect(s.lines[0]).toContain('형식 재확인')
     })
 })
+
+describe('diagnoseEmptyResult — 왜 없는지를 말한다 (SAMPL-1-163)', () => {
+    const diag = (o) => window.ReceptionAudit.diagnoseEmptyResult(o)
+
+    // 🚨 담당자가 실제로 막힌 지점. 예전에는 아래 네 경우가 전부
+    //    '저장된 토양 데이터가 없습니다.' 한 문장이었다.
+    it('저장소가 완전히 비면 환경을 의심하라고 말한다', () => {
+        const d = diag({ soilKeyCount: 0, otherTypeKeyCount: 0, totalRecords: 0, isElectron: false })
+        expect(d.kind).toBe('no-keys-at-all')
+        expect(d.message).toContain('전혀 없습니다')
+        expect(d.hint).toContain('다른 곳에서 점검했을 가능성')
+    })
+
+    it('다른 시료는 있고 토양만 없으면 그렇게 말한다 — 환경은 맞다', () => {
+        const d = diag({ soilKeyCount: 0, otherTypeKeyCount: 3, totalRecords: 0, isElectron: true })
+        expect(d.kind).toBe('no-soil-keys')
+        expect(d.message).toContain('다른 시료 데이터는 3종')
+        expect(d.hint).toContain('저장소 자체는 맞습니다')
+    })
+
+    it('토양 저장소는 있는데 0건이면 정상일 수 있다고 말한다', () => {
+        const d = diag({ soilKeyCount: 2, otherTypeKeyCount: 0, totalRecords: 0, isElectron: true })
+        expect(d.kind).toBe('empty-soil-keys')
+        expect(d.message).toContain('연도 2개')
+        expect(d.hint).toContain('정상입니다')
+    })
+
+    it('레코드가 있으면 진단하지 않는다', () => {
+        const d = diag({ soilKeyCount: 1, otherTypeKeyCount: 0, totalRecords: 5, isElectron: true })
+        expect(d.kind).toBe('has-records')
+        expect(d.message).toBe('')
+    })
+
+    // ⚠️ 이 앱의 중심 불변식: Electron 앱과 웹은 **별개 저장소**다.
+    //    앱으로 접수하고 웹에서 점검하면 정상 데이터가 있어도 0건이 나온다.
+    it('어디서 실행했는지를 항상 알린다', () => {
+        expect(diag({ soilKeyCount: 0, otherTypeKeyCount: 0, totalRecords: 0, isElectron: true }).hint)
+            .toContain('Electron 앱')
+        expect(diag({ soilKeyCount: 0, otherTypeKeyCount: 0, totalRecords: 0, isElectron: false }).hint)
+            .toContain('웹 브라우저')
+    })
+
+    it('Firestore가 범위 밖임을 화면 문구가 말한다', () => {
+        // 리뷰 문서에만 적혀 있으면 담당자는 볼 일이 없다
+        const d = diag({ soilKeyCount: 0, otherTypeKeyCount: 0, totalRecords: 0, isElectron: false })
+        expect(d.hint).toContain('Firestore')
+    })
+
+    it('세 경우의 문장이 서로 달라야 한다 (한 문장으로 뭉치면 회귀다)', () => {
+        const a = diag({ soilKeyCount: 0, otherTypeKeyCount: 0, totalRecords: 0, isElectron: false })
+        const b = diag({ soilKeyCount: 0, otherTypeKeyCount: 2, totalRecords: 0, isElectron: false })
+        const c = diag({ soilKeyCount: 1, otherTypeKeyCount: 0, totalRecords: 0, isElectron: false })
+        expect(new Set([a.message, b.message, c.message]).size).toBe(3)
+        expect(new Set([a.kind, b.kind, c.kind]).size).toBe(3)
+    })
+})
+
+describe('diagnoseEmptyResult — 표현 계층 분리 (독립 리뷰 SUGGESTION)', () => {
+    const diag = (o) => window.ReceptionAudit.diagnoseEmptyResult(o)
+
+    it('순수 함수는 마크다운을 돌려주지 않는다', () => {
+        // 화면이 `**`를 지우게 하면 표현 계층이 순수 함수에 섞인다
+        for (const o of [
+            { soilKeyCount: 0, otherTypeKeyCount: 0, totalRecords: 0, isElectron: false },
+            { soilKeyCount: 0, otherTypeKeyCount: 2, totalRecords: 0, isElectron: true },
+            { soilKeyCount: 1, otherTypeKeyCount: 0, totalRecords: 0, isElectron: true },
+        ]) {
+            const d = diag(o)
+            expect(d.message).not.toContain('**')
+            expect(d.hint).not.toContain('**')
+        }
+    })
+
+    it('저장소가 완전히 비면 다음 행동을 직접 말한다', () => {
+        const d = diag({ soilKeyCount: 0, otherTypeKeyCount: 0, totalRecords: 0, isElectron: false })
+        expect(d.hint).toContain('앱을 열어 같은 화면에서 다시 실행하세요')
+    })
+})

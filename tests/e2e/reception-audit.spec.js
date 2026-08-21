@@ -98,11 +98,46 @@ test.describe('접수번호 정합성 점검 (SAMPL-1-155)', () => {
         await expect(page.locator('#receptionAuditResult')).toContainText('문제 0건');
     });
 
-    test('저장된 토양 데이터가 없으면 그렇다고 말한다', async ({ page }) => {
+    // 🚨 담당자가 실제로 막힌 지점 (SAMPL-1-163). 예전에는 아래 세 경우가 전부
+    //    '저장된 토양 데이터가 없습니다.' 한 문장이라 다음에 뭘 할지 알 수 없었다.
+    test('저장소가 완전히 비면 환경을 의심하라고 말한다', async ({ page }) => {
         await openSettings(page);
         await seed(page, {});
         await page.locator('#receptionAuditBtn').click();
-        await expect(page.locator('#receptionAuditResult')).toContainText('저장된 토양 데이터가 없습니다');
+        const box = page.locator('#receptionAuditResult');
+        await expect(box).toContainText('시료 데이터가 전혀 없습니다');
+        await expect(box).toContainText('다른 곳에서 점검했을 가능성');
+        // 어디서 돌렸는지 + Firestore 범위 밖임을 화면이 말해야 한다
+        await expect(box).toContainText('웹 브라우저');
+        await expect(box).toContainText('Firestore');
+    });
+
+    test('다른 시료는 있고 토양만 없으면 그렇게 말한다 — 환경은 맞다', async ({ page }) => {
+        await openSettings(page);
+        await page.evaluate(() => {
+            localStorage.clear();
+            localStorage.setItem('waterSampleLogs_2026', JSON.stringify([{ id: 'w', receptionNumber: '1' }]));
+            localStorage.setItem('compostSampleLogs_2026', JSON.stringify([{ id: 'c', receptionNumber: '1' }]));
+        });
+        await page.reload();
+        await page.waitForFunction(() => !!window.ReceptionAudit, { timeout: 15000 });
+
+        await page.locator('#receptionAuditBtn').click();
+        const box = page.locator('#receptionAuditResult');
+        await expect(box).toContainText('다른 시료 데이터는 2종');
+        await expect(box).toContainText('저장소 자체는 맞습니다');
+        // 완전히 빈 경우와 **다른 문장**이어야 한다
+        await expect(box).not.toContainText('전혀 없습니다');
+    });
+
+    test('토양 저장소는 있는데 0건이면 정상일 수 있다고 말한다', async ({ page }) => {
+        await openSettings(page);
+        await seed(page, { 2026: [] });
+        await page.locator('#receptionAuditBtn').click();
+        const box = page.locator('#receptionAuditResult');
+        await expect(box).toContainText('레코드가 0건입니다');
+        await expect(box).toContainText('정상입니다');
+        await expect(box).not.toContainText('전혀 없습니다');
     });
 
     test('점검 배선이 다른 설정 기능을 죽이지 않는다', async ({ page }) => {
@@ -153,5 +188,46 @@ test.describe('점검이 조용히 거짓말하지 않는다 (SAMPL-1-155 · 독
         // ⚠️ "문제 0건"이 "검사하지 못했다"를 덮으면 안 된다
         await expect(box).toContainText('읽지 못한 저장소가 있습니다');
         await expect(box).toContainText('2026');
+    });
+});
+
+test.describe('진단이 스스로 모순되지 않는다 (SAMPL-1-163 · 독립 리뷰 반영)', () => {
+    // 🚨 리뷰 MINOR 2. 손상된 토양 키가 있으면 위에는 "읽지 못한 저장소"라고 하면서
+    //    본문은 "이 환경에 시료 데이터가 전혀 없습니다"라고 말했다 — 화면이 서로 다른 말을 한다.
+    test('읽지 못한 토양 키를 "키 없음"으로 재분류하지 않는다', async ({ page }) => {
+        await openSettings(page);
+        await page.evaluate(() => {
+            localStorage.clear();
+            localStorage.setItem('soilSampleLogs_2026', '{이건 JSON이 아니다');
+        });
+        await page.reload();
+        await page.waitForFunction(() => !!window.ReceptionAudit, { timeout: 15000 });
+
+        await page.locator('#receptionAuditBtn').click();
+        const box = page.locator('#receptionAuditResult');
+        await expect(box).toContainText('읽지 못한 저장소가 있습니다');
+        // 키는 **찾았으므로** '전혀 없습니다'가 나오면 안 된다
+        await expect(box).not.toContainText('전혀 없습니다');
+        await expect(box).toContainText('레코드가 0건입니다');
+    });
+
+    // 🚨 리뷰 MINOR 1. 저장소 규칙 밖의 키를 세면 오탐이고,
+    //    한 타입의 두 연도를 "2종"이라 하면 담당자가 시료 종류로 오해한다.
+    test('저장소 규칙 밖의 키는 세지 않고, 한 타입의 여러 연도는 1종으로 센다', async ({ page }) => {
+        await openSettings(page);
+        await page.evaluate(() => {
+            localStorage.clear();
+            // 같은 타입의 두 연도 → 1종
+            localStorage.setItem('waterSampleLogs_2025', JSON.stringify([{ id: 'a' }]));
+            localStorage.setItem('waterSampleLogs_2026', JSON.stringify([{ id: 'b' }]));
+            // 규칙 밖의 키 → 세지 않는다
+            localStorage.setItem('waterSampleLogs_backup', 'x');
+            localStorage.setItem('compostSampleLogsExtra', 'x');
+        });
+        await page.reload();
+        await page.waitForFunction(() => !!window.ReceptionAudit, { timeout: 15000 });
+
+        await page.locator('#receptionAuditBtn').click();
+        await expect(page.locator('#receptionAuditResult')).toContainText('다른 시료 데이터는 1종');
     });
 });

@@ -1072,9 +1072,43 @@ checkAuthFileStatus();
         return stores;
     }
 
+    /**
+     * 다른 시료 타입의 저장소 키 수를 센다 (SAMPL-1-163).
+     *
+     * 토양이 0건일 때 **환경이 틀린 것인지 토양만 없는 것인지**를 가르는 신호다.
+     * 다른 시료가 있으면 저장소 자체는 맞는 곳이다.
+     */
+    function countOtherTypeStores() {
+        const prefixes = SAMPLE_TYPES
+            .filter((t) => t.key !== 'soil')
+            .map((t) => t.storagePrefix);
+        // ⚠️ **타입 수**를 센다. 키 수를 세면 `waterSampleLogs_2025`·`_2026` 두 연도가
+        //    "2종"으로 표시돼 담당자가 시료 종류로 오해한다 (독립 리뷰 MINOR).
+        const found = new Set();
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (!key) continue;
+            for (const pre of prefixes) {
+                // ⚠️ 접두사로 시작하기만 하면 세면 `waterSampleLogs_backup` 같은
+                //    저장소 규칙 밖의 키까지 잡힌다. 연도 4자리 또는 레거시(연도 없음)만 인정한다.
+                if (key === pre || new RegExp(`^${pre}_\\d{4}$`).test(key)) {
+                    found.add(pre);
+                    break;
+                }
+            }
+        }
+        return found.size;
+    }
+
     let lastReports = [];
     /** 읽지 못한 저장소 이름 — 조용히 넘기면 "문제 0건"이 거짓이 된다 */
     let unreadable = [];
+    /**
+     * **찾은** 토양 저장소 키 수 (파싱 성공분이 아니라).
+     * 파싱 성공분만 세면 손상된 JSON이 있을 때 "키가 없다"로 재분류돼
+     * 바로 위의 `⛔ 읽지 못한 저장소` 경고와 본문이 서로 다른 말을 한다.
+     */
+    let soilStoreCount = 0;
 
     function render(reports) {
         const S = window.ReceptionAudit;
@@ -1096,7 +1130,28 @@ checkAuthFileStatus();
         wrap.style.cssText = 'padding:0.9rem;border-radius:8px;border:1px solid #e2e8f0;background:#f8fafc';
 
         if (summary.totalRecords === 0) {
-            wrap.textContent = '저장된 토양 데이터가 없습니다.';
+            // ⚠️ 예전에는 여기서 `저장된 토양 데이터가 없습니다.` 한 문장만 냈다.
+            //    그 문장은 네 가지 상황(키 없음 / 토양만 없음 / 키는 있고 0건 /
+            //    다른 환경에서 실행)을 전부 덮어 **담당자가 다음에 무엇을 할지 알 수 없었다**
+            //    (SAMPL-1-163 — 담당자가 실제로 이 화면에 막혔다).
+            const S = window.ReceptionAudit;
+            const d = S.diagnoseEmptyResult({
+                soilKeyCount: soilStoreCount,
+                otherTypeKeyCount: countOtherTypeStores(),
+                totalRecords: summary.totalRecords,
+                isElectron: window.electronAPI?.isElectron === true,
+            });
+            const head = document.createElement('div');
+            head.style.cssText = 'font-weight:600;margin-bottom:0.4rem';
+            head.textContent = d.message;
+            const hint = document.createElement('div');
+            hint.style.cssText = 'font-size:0.84rem;color:#475569;line-height:1.5';
+            // ⚠️ textContent만 쓴다 — 값에 사용자 데이터가 섞이지 않지만 규칙을 지킨다
+            // 순수 함수가 일반 텍스트를 돌려주므로 여기서 손볼 것이 없다
+            //    (표현 계층을 순수 함수에 섞지 않는다 — 독립 리뷰 SUGGESTION)
+            hint.textContent = d.hint;
+            wrap.appendChild(head);
+            wrap.appendChild(hint);
             box.appendChild(wrap);
             if (csvBtn) csvBtn.hidden = true;
             return;
@@ -1176,6 +1231,7 @@ checkAuthFileStatus();
                 return;
             }
             const stores = findSoilStores();
+            soilStoreCount = stores.length;
             unreadable = [];
             lastReports = [];
             for (const store of stores) {
