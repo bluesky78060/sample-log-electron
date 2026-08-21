@@ -48,6 +48,98 @@ async function openCropModal(page, subLots, crops) {
     }, [subLots, crops]);
 }
 
+/**
+ * 필수 필드 + 필지 + 하위필지 2개 + 두 번째 하위필지에 작물 배정까지 **실제 클릭으로** 등록한다.
+ * (SAMPL-1-160의 수정 왕복 테스트가 같은 상태를 두 번 세워야 해서 뽑아냈다)
+ */
+async function registerWithSubLotAssignment(page) {
+    await page.evaluate(() => {
+        const set = (id, v) => {
+            const el = /** @type {any} */ (document.getElementById(id));
+            if (el) { el.value = v; el.dispatchEvent(new Event('change', { bubbles: true })); }
+        };
+        set('receptionMethod', '방문');
+        set('name', '홍길동');
+        set('phoneNumber', '010-1234-5678');
+        set('date', '2026-08-20');
+        const purpose = /** @type {any} */ (document.getElementById('purpose'));
+        if (purpose && purpose.options.length > 1) {
+            purpose.selectedIndex = 1;
+            purpose.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    });
+
+    await page.locator('.lot-address-input').first().fill('문단리 224');
+    await page.locator('.crop-direct-input').first().fill('고추');
+    await page.locator('.area-direct-input').first().fill('100');
+
+    const parcelId = await page.evaluate(() => /** @type {any} */ (window).soilManager.parcels[0].id);
+    for (const addr of ['문단리 225', '문단리 226']) {
+        await page.locator(`.sub-lot-input[data-id="${parcelId}"]`).fill(addr);
+        await page.locator(`.btn-add-sub-lot-icon[data-id="${parcelId}"]`).click();
+    }
+    await expect(page.locator(`#subLots-${parcelId} .sub-lot-card`)).toHaveCount(2);
+
+    await page.locator('.btn-add-crop-area, .btn-add-crop-compact').first().click();
+    await expect(page.locator('#cropAreaList')).toBeVisible();
+    const first = page.locator('#cropAreaList .crop-area-input-row').first();
+    await first.locator('.crop-search-input').fill('고추');
+    await first.locator('input[type="number"]').first().fill('100');
+    await first.locator('select[id^="sublot-select-"]').selectOption('문단리 226');
+    await page.locator('#confirmCropAreaBtn').click();
+
+    await page.locator('#navSubmitBtn').click();
+    await expect(page.locator('.btn-edit').first()).toBeAttached({ timeout: 15000 });
+}
+
+/**
+ * 등록 결과 모달을 닫는다.
+ *
+ * ⚠️ 이것을 빼먹으면 `.modal-overlay`가 목록의 수정 버튼을 덮어
+ * `force` 없는 클릭이 "intercepts pointer events"로 막힌다. 그 막힌 클릭을
+ * 제품 결함으로 읽은 것이 **SAMPL-1-160 오진의 한 축**이었다.
+ */
+async function closeRegistrationModal(page) {
+    const modal = page.locator('#registrationResultModal');
+    // ⚠️ 모달이 **떠 있었다는 것부터** 확인한다. 존재 여부만 보고 클릭 실패를 삼키면,
+    //    모달이 애초에 안 뜬 경우에도 마지막 `hidden` 단언이 통과해 이 헬퍼가
+    //    아무것도 검증하지 않는 껍데기가 된다 (독립 리뷰 지적).
+    await expect(modal, '등록 결과 모달이 뜨지 않았다 — 등록이 실패했을 수 있다')
+        .not.toHaveClass(/hidden/, { timeout: 10000 });
+    // 실패를 삼키지 않는다 — 닫지 못하면 그 자리에서 알아야 한다
+    await page.locator('#closeRegistrationModal').click({ timeout: 5000 });
+    await expect(modal).toHaveClass(/hidden/, { timeout: 10000 });
+}
+
+/**
+ * **저장소에서** 레코드를 읽는다 (메모리 배열이 아니라).
+ *
+ * ⚠️ `soilManager.sampleLogs`만 읽으면 `persistRecords()`가 통째로 죽어도 통과한다 —
+ * `submitForm()`이 메모리를 먼저 갱신하기 때문이다(독립 리뷰 MAJOR).
+ * 이 저장소는 SAMPL-1-153에서 같은 함정으로 결함을 놓친 적이 있다
+ * (`soil-importer-fill.spec.js` 상단 주석 참조). 새로고침 후 localStorage를 본다.
+ */
+async function readPersistedSoil(page) {
+    await page.reload();
+    await page.waitForFunction(
+        () => !!window.soilManager && !!window.SubLotIdentity, { timeout: 15000 });
+    return page.evaluate(() => {
+        const mgr = /** @type {any} */ (window).soilManager;
+        const raw = localStorage.getItem(`soilSampleLogs_${mgr.selectedYear}`);
+        return (raw ? JSON.parse(raw) : []).map((l) => {
+            const p = (l.parcels || [])[0] || {};
+            return {
+                rn: String(l.receptionNumber ?? ''),
+                own: (p.crops || []).map((c) => c.name),
+                subLots: (p.subLots || []).map((s) => ({
+                    addr: typeof s === 'string' ? s : s.lotAddress,
+                    crops: (typeof s === 'string' ? [] : (s.crops || [])).map((c) => c.name),
+                })),
+            };
+        });
+    });
+}
+
 test.describe('하위필지 선택 (SAMPL-1-159)', () => {
     // 🚨 이 티켓의 증상 그대로.
     test('객체 하위필지가 [object Object]로 보이지 않는다', async ({ page }) => {
@@ -349,9 +441,88 @@ test.describe('하위필지 선택 (SAMPL-1-159)', () => {
         //       나는 그 무효한 결과를 제품 결함으로 오진했다. 우회를 넣을 때는
         //       그것이 무엇을 무효화하는지 먼저 확인해야 한다.
         //
-        //    SAMPL-2-35가 풀리면 이 테스트에 수정 왕복을 잇는다.
+        //    **SAMPL-2-35가 풀렸고(커밋 7f635b6), 수정 왕복은 아래 테스트가 잇는다.**
         //    여기까지로 검증되는 것: 하위필지 추가 실경로(`canAdd` 포함) · 드롭다운 선택 ·
         //    모달 확정 · **등록 저장에 배정이 실제로 담긴다**는 것.
+    });
+
+    // 🚨 SAMPL-1-160 — 위 주석이 예고한 수정 왕복. **실제 클릭**으로 검증한다.
+    //
+    // 이 티켓은 "수정하면 작물이 사라진다"고 발행됐다가 **오진으로 판명**됐다.
+    // 오진의 원인이 둘이었고, 둘 다 이 테스트가 고정한다:
+    //
+    //   1. `.btn-edit`이 뷰포트 밖이라 `force: true` 클릭이 빗나갔다 (SAMPL-2-35, 해결됨)
+    //   2. **등록 결과 모달의 오버레이가 목록 버튼을 덮는다** — 모달을 닫지 않으면
+    //      `force` 없는 클릭도 "intercepts pointer events"로 막힌다 (이번에 실측)
+    //
+    // 그리고 설령 클릭이 유효했더라도 `parcels[0].crops`는 **0개가 정답**이다 —
+    // SAMPL-1-161부터 배정은 꼬리표가 아니라 **실제 이동**이라 작물이 하위필지 안으로
+    // 옮겨가기 때문이다. 그 0을 "유실"로 읽은 것이 오진의 마지막 조각이었다.
+    test('수정 왕복 — 실제 클릭으로 열면 주소·하위필지·배정이 모두 복원된다', async ({ page }) => {
+        await openSoil(page);
+        await registerWithSubLotAssignment(page);
+
+        // ⚠️ 등록 결과 모달을 **반드시 닫는다.** 실사용자도 닫고 나서 목록을 쓴다.
+        //    닫지 않으면 오버레이가 목록을 덮어 클릭이 막히고, 그 막힌 클릭을
+        //    제품 결함으로 오독하게 된다 — 이 티켓이 정확히 그렇게 태어났다.
+        await closeRegistrationModal(page);
+
+        // ⚠️ `force: true`를 쓰지 않는다. 그 우회가 클릭을 무효로 만들면서도
+        //    테스트는 진행시켜 SAMPL-1-160 오진을 낳았다.
+        await page.locator('.btn-edit').first().click({ timeout: 10000 });
+        await page.waitForTimeout(400);
+
+        const restored = await page.evaluate(() => {
+            const mgr = /** @type {any} */ (window).soilManager;
+            const p = (mgr.parcels || [])[0] || {};
+            return {
+                parcelCount: (mgr.parcels || []).length,
+                lot: p.lotAddress || '',
+                ownCrops: (p.crops || []).map((c) => c.name),
+                subLots: (p.subLots || []).map((s) =>
+                    typeof s === 'string' ? s : s.lotAddress),
+                subLotCrops: (p.subLots || []).map((s) =>
+                    (typeof s === 'string' ? [] : (s.crops || [])).map((c) => c.name)),
+            };
+        });
+        const dump = JSON.stringify(restored);
+
+        // 편집 모드에 실제로 들어갔는가 — 아무것도 복원되지 않았다면 클릭이 닿지 않은 것이다
+        expect(restored.parcelCount, `편집 모드에 들어가지 못했다: ${dump}`).toBe(1);
+        expect(restored.lot, `필지 주소가 복원되지 않았다: ${dump}`).toContain('224');
+        expect(restored.subLots, `하위필지가 복원되지 않았다: ${dump}`)
+            .toEqual(['문단리 225', '문단리 226']);
+        // 배정된 작물은 **하위필지 안에** 있어야 한다 (SAMPL-1-161: 배정은 실제 이동)
+        expect(restored.subLotCrops, `배정이 복원되지 않았다: ${dump}`).toEqual([[], ['고추']]);
+        // 상위가 0인 것이 정답이다 — 이것을 "유실"로 읽은 것이 SAMPL-1-160 오진이었다
+        expect(restored.ownCrops, `배정했는데 상위 필지에 남아 있다: ${dump}`).toEqual([]);
+    });
+
+    // 🚨 티켓의 검증 조건: "수정 화면에서 아무것도 바꾸지 않고 저장 → 작물이 유지되는가".
+    //    복원만 맞고 저장에서 잃으면 사용자에게는 똑같이 유실이다.
+    test('수정 왕복 — 아무것도 바꾸지 않고 저장해도 배정이 살아남는다', async ({ page }) => {
+        await openSoil(page);
+        await registerWithSubLotAssignment(page);
+        await closeRegistrationModal(page);
+
+        await page.locator('.btn-edit').first().click({ timeout: 10000 });
+        await page.waitForTimeout(400);
+
+        // 아무것도 바꾸지 않고 그대로 저장
+        await page.locator('#navSubmitBtn').click();
+        await page.waitForTimeout(600);
+
+        // ⚠️ **새로고침 후 저장소에서 읽는다.** 메모리 배열만 보면 `persistRecords()`가
+        //    죽어도 통과한다 — `submitForm()`이 메모리를 먼저 갱신하기 때문이다.
+        const saved = await readPersistedSoil(page);
+        const dump = JSON.stringify(saved);
+
+        // 레코드가 늘지 않았는가 — 수정이 새 접수를 만들면 그것도 사고다
+        expect(saved, `수정 저장이 레코드를 늘렸다: ${dump}`).toHaveLength(1);
+        const target = saved[0].subLots.find((sub) => sub.addr === '문단리 226');
+        expect(target, `하위필지가 저장에서 사라졌다: ${dump}`).toBeTruthy();
+        expect(target.crops, `수정 저장에서 배정이 사라졌다: ${dump}`).toEqual(['고추']);
+        expect(saved[0].own, `수정 저장이 배정을 상위로 되돌렸다: ${dump}`).toEqual([]);
     });
 
     // 🚨 C-1: 편집 경로(`openCropAreaModal`)도 저장 경로와 **같은 규칙**을 써야 한다.
