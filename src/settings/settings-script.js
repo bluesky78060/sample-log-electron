@@ -1027,3 +1027,193 @@ checkAuthFileStatus();
         }
     }
 })();
+
+// ============================================================
+// 접수번호 정합성 점검 (SAMPL-1-155)
+//
+// SAMPL-1-153이 앞으로의 가져오기를, SAMPL-2-30이 입구를 막았지만
+// **그 전에 저장된 레코드는 아무도 손대지 않았다.** 이 기능은 그것을 찾아낸다.
+//
+// ⚠️ **찾기만 하고 고치지 않는다.** 접수번호는 라벨·흙토람 내보내기·대장 출력에
+//    이미 쓰였을 수 있어, 도구가 조용히 재부여하면 종이와 화면이 어긋난다.
+//
+// ⚠️ 배선 전체를 try/catch로 감싸고 실패하면 버튼을 숨긴다. 이 파일은 위에서
+//    아래로 실행되는 스크립트라, 여기서 던지면 **뒤에 남은 배선이 통째로 죽는다**
+//    (SAMPL-1-156이 값비싸게 배운 것).
+// ============================================================
+(function bindReceptionAudit() {
+    const btn = document.getElementById('receptionAuditBtn');
+    const csvBtn = document.getElementById('receptionAuditCsvBtn');
+    const box = document.getElementById('receptionAuditResult');
+    if (!btn || !box) return;
+
+    /**
+     * 점검할 저장소 키를 모두 찾는다.
+     *
+     * ⚠️ **연도 없는 레거시 키(`soilSampleLogs`)도 포함해야 한다.**
+     *    `cache-manager.js:24`가 그 키의 존재를 명시한다. 연도 키만 훑으면
+     *    레거시 데이터를 통째로 건너뛰고 **"문제 0건"이라 말하게 된다** —
+     *    이 점검이 막으려는 바로 그 조용한 실패다 (독립 리뷰 지적).
+     * @returns {Array<{key: string, label: string}>}
+     */
+    function findSoilStores() {
+        const stores = [];
+        let hasLegacy = false;
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (!key) continue;
+            const m = /^soilSampleLogs_(\d{4})$/.exec(key);
+            if (m) stores.push({ key, label: m[1] });
+            else if (key === 'soilSampleLogs') hasLegacy = true;
+        }
+        stores.sort((a, b) => a.label.localeCompare(b.label));
+        // 레거시는 맨 뒤에 둔다 — 연도 목록의 정렬을 흐트러뜨리지 않는다
+        if (hasLegacy) stores.push({ key: 'soilSampleLogs', label: '연도없음(레거시)' });
+        return stores;
+    }
+
+    let lastReports = [];
+    /** 읽지 못한 저장소 이름 — 조용히 넘기면 "문제 0건"이 거짓이 된다 */
+    let unreadable = [];
+
+    function render(reports) {
+        const S = window.ReceptionAudit;
+        const summary = S.summarizeAudit(reports);
+        box.innerHTML = '';
+
+        // ⚠️ 읽지 못한 저장소가 있으면 **무엇을 말하든 그 전에** 알린다.
+        //    "문제 0건"이 "검사하지 못했다"를 덮으면 안 된다.
+        if (unreadable.length) {
+            const warn = document.createElement('div');
+            warn.style.cssText =
+                'padding:0.9rem;border-radius:8px;border:1px solid #fca5a5;background:#fef2f2;margin-bottom:0.75rem;color:#991b1b';
+            warn.textContent =
+                `⛔ 읽지 못한 저장소가 있습니다: ${unreadable.join(', ')} — 아래 결과는 그 데이터를 포함하지 않습니다.`;
+            box.appendChild(warn);
+        }
+
+        const wrap = document.createElement('div');
+        wrap.style.cssText = 'padding:0.9rem;border-radius:8px;border:1px solid #e2e8f0;background:#f8fafc';
+
+        if (summary.totalRecords === 0) {
+            wrap.textContent = '저장된 토양 데이터가 없습니다.';
+            box.appendChild(wrap);
+            if (csvBtn) csvBtn.hidden = true;
+            return;
+        }
+
+        if (summary.totalIssues === 0) {
+            // ⚠️ "0건"을 분명히 말한다. 아무것도 안 보여주면 사용자는 점검이
+            //    돌지 않은 것으로 오해한다 — 조용한 성공은 실패와 구별되지 않는다.
+            wrap.style.borderColor = '#86efac';
+            wrap.style.background = '#f0fdf4';
+            wrap.textContent =
+                `✅ 확인 결과 문제 0건 (${summary.totalRecords}건 검사, ${reports.length}개 연도)`;
+            box.appendChild(wrap);
+            if (csvBtn) csvBtn.hidden = true;
+            return;
+        }
+
+        wrap.style.borderColor = '#fcd34d';
+        wrap.style.background = '#fffbeb';
+        const head = document.createElement('div');
+        head.style.cssText = 'font-weight:600;margin-bottom:0.5rem';
+        head.textContent =
+            `⚠️ ${summary.totalIssues}건 확인됨 (${summary.totalRecords}건 검사)`;
+        wrap.appendChild(head);
+
+        const ul = document.createElement('ul');
+        ul.style.cssText = 'margin:0 0 0.5rem 1.1rem;font-size:0.86rem;color:#334155';
+        for (const line of summary.lines) {
+            const li = document.createElement('li');
+            li.textContent = line;   // textContent만 — 값은 사용자 데이터에서 온다
+            ul.appendChild(li);
+        }
+        wrap.appendChild(ul);
+
+        const note = document.createElement('div');
+        note.style.cssText = 'font-size:0.8rem;color:#92400e';
+        note.textContent =
+            '이 도구는 고치지 않습니다. CSV를 내려받아 확인한 뒤, 재부여 여부는 담당자가 판단해 주세요.';
+        wrap.appendChild(note);
+
+        box.appendChild(wrap);
+        if (csvBtn) csvBtn.hidden = false;
+    }
+
+    function toCsv(reports) {
+        /** CSV 인젝션 방지 + RFC 4180 (soil-result-importer.js와 같은 규칙) */
+        function cell(val) {
+            let s = String(val ?? '');
+            // ⚠️ 선행 **제어문자**도 막는다. Excel이 앞의 탭·개행을 지우고 나면
+            //    그 뒤의 `=`가 수식으로 살아난다 (독립 리뷰 지적).
+            //    `soil-result-importer.js`는 `=+-@|`만 보는데, 그쪽도 같은 구멍이 있다.
+            if (/^[\t\r\n=+\-@|]/.test(s)) s = "'" + s;
+            if (s.includes(',') || s.includes('"') || s.includes('\n') || s.includes('\r')) {
+                s = '"' + s.replace(/"/g, '""') + '"';
+            }
+            return s;
+        }
+        const lines = [['연도', '유형', '접수번호', '성명', '구분', '경지구분1차', 'id'].map(cell).join(',')];
+        const push = (year, kind, r) =>
+            lines.push([year, kind, r.receptionNumber, r.name, r.subCategory, r.landClass1, r.id].map(cell).join(','));
+
+        for (const rep of reports) {
+            rep.fillWithoutF.forEach(r => push(rep.year, '성토인데 F 없음', r));
+            rep.fWithoutFill.forEach(r => push(rep.year, 'F인데 성토 아님', r));
+            rep.lowercaseF.forEach(r => push(rep.year, '소문자 f', r));
+            rep.badFormat.forEach(r => push(rep.year, '형식 아님', r));
+            rep.duplicates.forEach(d => d.records.forEach(r => push(rep.year, '중복 번호', r)));
+        }
+        return lines.join('\n');
+    }
+
+    btn.addEventListener('click', () => {
+        try {
+            const S = window.ReceptionAudit;
+            if (!S) {
+                box.textContent = '점검 모듈을 불러오지 못했습니다.';
+                return;
+            }
+            const stores = findSoilStores();
+            unreadable = [];
+            lastReports = [];
+            for (const store of stores) {
+                let logs = [];
+                try {
+                    const raw = localStorage.getItem(store.key);
+                    logs = raw ? JSON.parse(raw) : [];
+                } catch (e) {
+                    // 손상된 JSON을 조용히 빈 배열로 넘기면 "문제 0건"이라 말하게 된다 —
+                    // 그것이 이 점검이 막으려는 바로 그 종류의 거짓말이다.
+                    // 화면에도 **읽지 못했다고 말한다.**
+                    (window.logger?.warn || console.warn)(`[정합성 점검] ${store.label} 데이터를 읽지 못했습니다`, e);
+                    unreadable.push(store.label);
+                    continue;
+                }
+                lastReports.push(S.auditReceptionNumbers(logs, store.label));
+            }
+            render(lastReports);
+        } catch (err) {
+            (window.logger?.error || console.error)('[정합성 점검] 실패', err);
+            box.textContent = '점검 중 오류가 발생했습니다. 콘솔을 확인해 주세요.';
+        }
+    });
+
+    csvBtn?.addEventListener('click', () => {
+        try {
+            const csv = toCsv(lastReports);
+            const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `접수번호-정합성-점검.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            (window.logger?.error || console.error)('[정합성 점검] CSV 실패', err);
+        }
+    });
+})();

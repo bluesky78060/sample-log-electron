@@ -50,6 +50,8 @@ declare global {
     var SubLotIdentity: any;
     /** 흙토람 미리보기 표 구성 순수 로직 (SAMPL-1-158) */
     var PreviewTable: any;
+    /** 접수번호 정합성 점검 순수 로직 (SAMPL-1-155) */
+    var ReceptionAudit: any;
     var compostManager: any;
     var pesticideManager: any;
     var heuktoramManager: any;
@@ -74,6 +76,8 @@ declare global {
         CROP_DATA: any[];
         CROP_CATEGORIES: string[];
         CropSearch: any;
+        /** 접수번호 정합성 점검 순수 로직 (SAMPL-1-155) */
+        ReceptionAudit: any;
         /** 하위필지 식별 순수 로직 (SAMPL-1-159) */
         SubLotIdentity: any;
         PreviewTable: any;
