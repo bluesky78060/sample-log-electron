@@ -1140,6 +1140,14 @@ checkAuthFileStatus();
                 otherTypeKeyCount: countOtherTypeStores(),
                 totalRecords: summary.totalRecords,
                 isElectron: window.electronAPI?.isElectron === true,
+                // 주간 캐시 정리 흔적. 이 키는 CacheManager의 KEYS_TO_PRESERVE에 있어
+                // 정리 때 지워지지 않으므로, 남아 있으면 "정리된 적이 있다"는 증거다.
+                lastCacheClearMs: Number(localStorage.getItem('lastCacheClear')) || null,
+                // 0건을 지운 실행도 시각을 남기므로 건수까지 넘겨야 근거가 정확하다.
+                // 구 설치본에는 이 키가 없다 — 그때는 null이 되어 최근성만으로 판단한다.
+                lastCacheClearCount: localStorage.getItem('lastCacheClearCount') == null
+                    ? null
+                    : Number(localStorage.getItem('lastCacheClearCount')),
             });
             const head = document.createElement('div');
             head.style.cssText = 'font-weight:600;margin-bottom:0.4rem';

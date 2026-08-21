@@ -17,6 +17,7 @@ const CacheManager = (function() {
         'settings',               // 일반 설정
         'theme',                  // 테마 설정
         'lastCacheClear',         // 마지막 클리어 시간
+        'lastCacheClearCount',    // 마지막 클리어의 삭제 건수 (SAMPL-1-164 진단 근거)
         'cacheAutoCleared'        // 자동 클리어 기록
     ];
 
@@ -112,6 +113,11 @@ const CacheManager = (function() {
 
         // 클리어 시간 기록
         localStorage.setItem('lastCacheClear', Date.now().toString());
+        // ⚠️ **삭제 건수도 남긴다** (SAMPL-1-164). 시간만 남기면 "언젠가 정리 함수가
+        //    실행됐다"는 흔적일 뿐이고, 0건을 지운 실행과 실제로 시료 키를 지운 실행을
+        //    구별할 수 없다. 정합성 점검이 이 값을 근거로 "캐시가 원인"이라고 말하므로
+        //    근거가 정확해야 한다 — 0건이었다면 캐시는 원인이 아니다.
+        localStorage.setItem('lastCacheClearCount', String(keysToRemove.length));
 
         const result = {
             success: true,
