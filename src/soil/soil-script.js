@@ -2081,6 +2081,42 @@ class SoilSampleManager extends window.BaseSampleManager {
         }
     }
 
+    /**
+     * 접수번호가 이미 쓰이고 있는지 찾는다 (SAMPL-1-168).
+     *
+     * ⚠️ **수정 경로는 자기 자신을 제외해야 한다.** 기존 접수를 수정할 때
+     *    자기 번호를 그대로 다시 쓰는 것은 정상이다. 제외하지 않으면
+     *    **아무것도 바꾸지 않은 저장조차 막힌다** — 담당자에게는 앱이 고장난 것과 같다.
+     *    이 함수를 쓰는 쪽이 무엇을 제외할지 반드시 정해서 넘긴다.
+     *
+     * 겹침 판정은 경지구분 1차 범위다 — 채번이 경지구분 단위로 독립이라
+     * 다른 경지구분의 같은 번호는 충돌이 아니다.
+     *
+     * @param {Array<string>} numbersToCheck 부여하려는 번호들 (표기 그대로, 예: '328', 'F5')
+     * @param {Array<Object>} pool 검사 대상 레코드 (로컬 + 클라우드)
+     * @param {string} landClass1 현재 경지구분 1차
+     * @param {{ids?: Array<string|number>, groupId?: string}} [exclude] 자기 제외 대상
+     * @returns {Array<string>} 이미 쓰이고 있는 번호들
+     */
+    findDuplicateReceptionNumbers(numbersToCheck, pool, landClass1, exclude = {}) {
+        const list = Array.isArray(pool) ? pool : [];
+        const excludeIds = new Set((exclude.ids || []).map(String));
+        // groupId가 빈 값이면 제외 기준으로 쓰지 않는다 — 안 그러면 groupId 없는
+        // 레코드가 전부 제외돼 검사가 통째로 무력화된다.
+        const excludeGroupId = exclude.groupId ? String(exclude.groupId) : null;
+
+        return numbersToCheck.filter(numToCheck => list.some(log => {
+            if (!log) return false;
+            if ((log.landClass1 || LAND_CLASS1_DEFAULT) !== landClass1) return false;
+            if (excludeIds.has(String(log.id))) return false;
+            if (excludeGroupId && log.groupId && String(log.groupId) === excludeGroupId) return false;
+            // `5-1`은 하위필지·분할이라 기준번호로 비교한다
+            const logBaseNumber = (log.receptionNumber || '').split('-')[0];
+            return logBaseNumber === numToCheck;
+        }));
+    }
+
+
     async submitForm() {
         // ⚠️ **이중 제출을 막는다** (SAMPL-1-167, 독립 리뷰 MAJOR).
         //    이 메서드는 클라우드 확인 때문에 async가 됐다. 그 사이(최대 4초)에
@@ -2138,6 +2174,57 @@ class SoilSampleManager extends window.BaseSampleManager {
             }
 
             const groupId = oldGroupLogs[0]?.groupId;
+
+            // 🚨 **수정 경로에는 중복 검사가 아예 없었다** (SAMPL-1-168).
+            //    클라우드는커녕 같은 기기의 로컬 레코드와 겹쳐도 조용히 저장됐다.
+            //    접수번호는 분석결과 매칭 키라, 겹치면 어느 시료의 결과인지 확정할 수 없다.
+            //
+            //    ⚠️ 검사는 **아직 아무것도 바꾸기 전에** 한다. 아래 `filter`가
+            //       기존 그룹 레코드를 지우므로, 그 뒤에 두면 막고 돌아갈 때
+            //       담당자의 접수가 사라진 채로 남는다.
+            {
+                const editNumbersToCheck = validParcels.map((_, index) => {
+                    const num = baseNumber + index;
+                    return isFillNumber ? `F${num}` : String(num);
+                });
+                const yearStorageKey = this.getStorageKey(this.selectedYear);
+                const localLogs = SampleUtils.safeParseJSON(yearStorageKey, []);
+
+                // 등록과 같은 규칙: 확인할 수 있으면 강해지고, 못 하면 막지 않는다
+                const cloud = await this.fetchCloudReceptionRecords(this.selectedYear);
+                if (cloud.unavailable) {
+                    this.showToast(
+                        '클라우드를 확인하지 못했습니다 — 이 컴퓨터의 기록만으로 접수번호를 검사합니다. ' +
+                        '다른 자리에서 같은 번호를 쓰고 있을 수 있습니다.',
+                        'warning'
+                    );
+                }
+                const editPool = cloud.records ? [...localLogs, ...cloud.records] : localLogs;
+
+                // ⚠️ **자기 그룹은 제외한다.** 제외하지 않으면 번호를 그대로 둔 채
+                //    이름만 고치는 저장조차 "이미 존재합니다"로 막힌다.
+                //    id와 groupId **둘 다** 본다 — 다른 자리에서 이 그룹에 필지가
+                //    추가됐다면 그 레코드는 `editingGroupIds`에 없지만 같은 그룹이다.
+                const editDuplicates = this.findDuplicateReceptionNumbers(
+                    editNumbersToCheck,
+                    editPool,
+                    commonData.landClass1,
+                    { ids: this.editingGroupIds, groupId }
+                );
+
+                // ⚠️ 신규 등록과 달리 **자동으로 다른 번호를 부여하지 않는다.**
+                //    이미 접수된 건의 번호를 말없이 바꾸면 분석결과 매칭 키가 어긋난다
+                //    (라벨·흙토람 내보내기·대장 출력도 이 번호를 쓴다).
+                //    무엇을 쓸지는 담당자가 정해야 한다.
+                if (editDuplicates.length > 0) {
+                    this.showToast(
+                        `접수번호 ${editDuplicates.join(', ')}이(가) 이미 다른 접수에 쓰이고 있습니다. ` +
+                        '다른 번호로 바꿔 주세요.',
+                        'warning'
+                    );
+                    return;
+                }
+            }
 
             // 기존 그룹 레코드 모두 제거
             this.sampleLogs = this.sampleLogs.filter(l => l.groupId !== groupId);
@@ -2289,6 +2376,46 @@ class SoilSampleManager extends window.BaseSampleManager {
             }
 
             const existingLog = this.sampleLogs[logIndex];
+
+            // 🚨 **단일 수정도 접수번호를 폼에서 다시 읽는다** (아래 `receptionNumber:` 참조).
+            //    `collectCommonFormData`에 번호가 없다는 이유로 "단일 수정은 번호를 못 바꾼다"고
+            //    판단했는데 **틀렸다** — 독립 리뷰가 잡았다. 그룹과 똑같이 검사해야 한다.
+            {
+                const editedNumber = String(formData.get('receptionNumber') || '').trim();
+                if (editedNumber) {
+                    const yearStorageKey = this.getStorageKey(this.selectedYear);
+                    const localLogs = SampleUtils.safeParseJSON(yearStorageKey, []);
+                    const cloud = await this.fetchCloudReceptionRecords(this.selectedYear);
+                    if (cloud.unavailable) {
+                        this.showToast(
+                            '클라우드를 확인하지 못했습니다 — 이 컴퓨터의 기록만으로 접수번호를 검사합니다. ' +
+                            '다른 자리에서 같은 번호를 쓰고 있을 수 있습니다.',
+                            'warning'
+                        );
+                    }
+                    const editPool = cloud.records ? [...localLogs, ...cloud.records] : localLogs;
+
+                    // `5-1`(하위필지·분할)로 열렸을 수 있으므로 **기준번호로 맞춰** 비교한다.
+                    // 풀 쪽도 기준번호로 보므로 한쪽만 원문이면 겹침을 통째로 놓친다.
+                    const editedBase = editedNumber.split('-')[0];
+                    const dup = this.findDuplicateReceptionNumbers(
+                        [editedBase],
+                        editPool,
+                        formData.get('landClass1') || existingLog.landClass1 || LAND_CLASS1_DEFAULT,
+                        { ids: [this.editingId], groupId: existingLog.groupId }
+                    );
+                    if (dup.length > 0) {
+                        // 그룹과 같은 이유로 자동 재부여하지 않는다 — 이미 접수된 건의
+                        // 번호를 말없이 바꾸면 분석결과 매칭 키가 어긋난다.
+                        this.showToast(
+                            `접수번호 ${editedNumber}이(가) 이미 다른 접수에 쓰이고 있습니다. 다른 번호로 바꿔 주세요.`,
+                            'warning'
+                        );
+                        return;
+                    }
+                }
+            }
+
             const firstParcelCategory = validParcels[0]?.category;
             const firstParcelPurpose = validParcels[0]?.purpose;
             const mainSubCategory = formData.get('subCategory') || '-';
@@ -2370,13 +2497,8 @@ class SoilSampleManager extends window.BaseSampleManager {
 
         // 접수번호는 경지구분 1차별 독립 시퀀스이므로 중복 검사도 현재 경지구분 범위로 한정
         const currentLandClass1 = this.getCurrentLandClass1();
-        const duplicateNumbers = numbersToCheck.filter(numToCheck => {
-            return latestLogs.some(log => {
-                if ((log.landClass1 || LAND_CLASS1_DEFAULT) !== currentLandClass1) return false;
-                const logBaseNumber = (log.receptionNumber || '').split('-')[0];
-                return logBaseNumber === numToCheck;
-            });
-        });
+        // 신규 등록이므로 제외할 자기 자신이 없다 (SAMPL-1-168에서 공통 함수로 뽑음)
+        const duplicateNumbers = this.findDuplicateReceptionNumbers(numbersToCheck, latestLogs, currentLandClass1);
 
         if (duplicateNumbers.length > 0) {
             // ⚠️ 화면에는 **로컬만** 넣는다. 합친 풀을 그대로 넣으면 클라우드 사본이
