@@ -32,6 +32,18 @@ const GONGIK_BASE_YEAR_OPTIONS = ['2024토양화학성분 기준', '2025토양�
 const LAND_CLASS1_DEFAULT = '농가의뢰';
 
 /**
+ * 등록 직전 클라우드 접수번호 확인의 상한 (SAMPL-1-167).
+ *
+ * 이 앱은 **오프라인 우선**이라 확인이 등록을 막아서는 안 된다. 상한을 넘으면
+ * 포기하고 로컬 검사로 진행하되 "확인하지 못했다"고 알린다.
+ *
+ * ⚠️ 4초는 **현장 실측이 아니라 잠정치다.** 너무 짧으면 느린 회선에서 정상 응답을
+ *    실패로 처리해 경고가 잦아지고, 너무 길면 등록 버튼이 굳은 것처럼 보인다.
+ *    담당자 환경에서 잦은 경고가 관찰되면 이 값부터 조정한다.
+ */
+const SOIL_CLOUD_PRECHECK_TIMEOUT_MS = 4000;
+
+/**
  * 통계용 라벨·색상 매핑. LAND_CLASS1_OPTIONS 변경 시 함께 갱신할 것.
  * 매핑 외 값은 category-other 폴백.
  */
@@ -497,7 +509,13 @@ class SoilSampleManager extends window.BaseSampleManager {
         if (this.form) {
             this.form.addEventListener('submit', (e) => {
                 e.preventDefault();
-                this.submitForm();
+                // ⚠️ `submitForm`은 SAMPL-1-167에서 **async가 됐다**(등록 직전 클라우드 확인).
+                //    catch를 붙이지 않으면 실패가 unhandled rejection으로 콘솔에만 남고
+                //    담당자는 버튼을 눌렀는데 아무 일도 안 일어난 것으로 본다.
+                Promise.resolve(this.submitForm()).catch((err) => {
+                    (window.logger?.error || console.error)('접수 등록 실패', err);
+                    this.showToast('등록 중 오류가 발생했습니다. 콘솔을 확인해 주세요.', 'error');
+                });
             });
 
             // 폼 리셋 시 필지도 초기화
@@ -1999,7 +2017,88 @@ class SoilSampleManager extends window.BaseSampleManager {
     // 폼 제출 처리
     // ========================================
 
-    submitForm() {
+    /**
+     * 등록 직전 **클라우드의 접수번호**를 가져온다 (SAMPL-1-167 = SAMPL-1-166 A안).
+     *
+     * 등록 시 중복 검사가 localStorage만 보던 탓에, 다른 자리에서 먼저 접수돼 아직
+     * 동기화되지 않은 건이 보이지 않았고 같은 번호가 그대로 나갔다.
+     * 실제로 담당자 데이터에서 다필지 접수 한 건 분량(328·329·330)이 통째로
+     * 두 번 부여된 것이 발견됐다.
+     *
+     * ⚠️ **등록을 막지 않는다.** 이 앱은 오프라인 우선이다(`CLAUDE.md`).
+     *    확인할 수 있을 때 강해지고, 못 할 때는 로컬 검사로 진행한다.
+     *    다만 **못 했다는 사실을 조용히 넘기지 않는다** — 호출부가 알린다.
+     *
+     * @param {string|number} year
+     * @param {number} [timeoutMs] 상한. 응답이 없으면 기다리지 않고 포기한다.
+     * @returns {Promise<{records: Array<Object>|null, unavailable: boolean, reason: string}>}
+     *   `records: null`이면 확인하지 못한 것이다. `unavailable`이 false면
+     *   Firebase가 꺼져 있어 **확인할 것이 없는** 정상 상태다.
+     */
+    async fetchCloudReceptionRecords(year, timeoutMs = SOIL_CLOUD_PRECHECK_TIMEOUT_MS) {
+        if (!window.firebaseConfig?.isEnabled?.()) {
+            // 클라우드를 쓰지 않는 설치본 — 확인할 것이 없다. 경고할 일도 아니다.
+            return { records: null, unavailable: false, reason: 'disabled' };
+        }
+
+        // ⚠️ **`loadFromFirebase`를 쓰지 않는다.** 그 메서드는 오류를 내부에서 삼키고
+        //    `{ data: [] }`를 돌려준다(`BaseSampleManager.js:583`). 그러면 네트워크 오류가
+        //    "클라우드에 0건"으로 보여 **중복 검사가 조용히 통과**한다 — 이 티켓이
+        //    막으려는 바로 그 실패다(독립 리뷰 MAJOR). 읽기 성공 여부를 알아야 하므로
+        //    `firestoreDb`를 직접 부른다.
+        const db = window.firestoreDb;
+        if (!db || typeof db.getAll !== 'function') {
+            return { records: null, unavailable: true, reason: 'no-db' };
+        }
+
+        let timer = null;
+        try {
+            // ⚠️ 상한이 없으면 네트워크가 느릴 때 등록 버튼이 영영 반응하지 않는다.
+            //    현장에서 그것은 앱이 죽은 것과 같다.
+            const timeout = new Promise((resolve) => {
+                // ⚠️ 타이머를 잡아 두고 finally에서 끈다. 안 끄면 제출마다 타이머가 쌓인다.
+                timer = setTimeout(() => resolve({ __timedOut: true }), timeoutMs);
+            });
+            const read = (typeof db.getAllWithMeta === 'function')
+                ? db.getAllWithMeta(this.moduleKey, parseInt(String(year), 10))
+                    .then((r) => (r && Array.isArray(r.documents)) ? r.documents : null)
+                : db.getAll(this.moduleKey, parseInt(String(year), 10));
+
+            const res = await Promise.race([read, timeout]);
+            if (res && res.__timedOut) {
+                return { records: null, unavailable: true, reason: 'timeout' };
+            }
+            if (!Array.isArray(res)) {
+                // 배열이 아니면 읽었다고 볼 수 없다 — 빈 배열과 구별한다
+                return { records: null, unavailable: true, reason: 'bad-response' };
+            }
+            return { records: res, unavailable: false, reason: 'ok' };
+        } catch (err) {
+            (window.logger?.warn || console.warn)('[접수번호] 클라우드 확인 실패', err);
+            return { records: null, unavailable: true, reason: 'error' };
+        } finally {
+            if (timer !== null) clearTimeout(timer);
+        }
+    }
+
+    async submitForm() {
+        // ⚠️ **이중 제출을 막는다** (SAMPL-1-167, 독립 리뷰 MAJOR).
+        //    이 메서드는 클라우드 확인 때문에 async가 됐다. 그 사이(최대 4초)에
+        //    담당자가 버튼을 다시 누르면 **같은 번호로 두 건이 등록된다** —
+        //    이 티켓이 없애려던 바로 그 중복을, 이 티켓의 수정이 만들어내는 셈이다.
+        if (this._submitting) {
+            this.log('제출이 이미 진행 중 — 무시');
+            return;
+        }
+        this._submitting = true;
+        try {
+            return await this._submitFormInner();
+        } finally {
+            this._submitting = false;
+        }
+    }
+
+    async _submitFormInner() {
         const validParcels = this.parcels.filter(p => p.lotAddress.trim());
         if (validParcels.length === 0) {
             this.showToast('최소 1개의 필지 주소를 입력해주세요.', 'warning');
@@ -2250,7 +2349,24 @@ class SoilSampleManager extends window.BaseSampleManager {
         });
 
         const yearStorageKey = this.getStorageKey(this.selectedYear);
-        const latestLogs = SampleUtils.safeParseJSON(yearStorageKey, []);
+        const localLogs = SampleUtils.safeParseJSON(yearStorageKey, []);
+
+        // ⚠️ **로컬만 보면 다른 자리의 접수를 놓친다** (SAMPL-1-167 = SAMPL-1-166 A안).
+        //    담당자 데이터에서 다필지 접수 한 건 분량(328·329·330)이 통째로 두 번
+        //    부여된 것이 그렇게 일어났다. 등록 직전에 클라우드도 확인한다.
+        //
+        //    확인하지 못해도 **등록은 막지 않는다**(오프라인 우선). 대신 알린다.
+        const cloud = await this.fetchCloudReceptionRecords(this.selectedYear);
+        if (cloud.unavailable) {
+            this.showToast(
+                '클라우드를 확인하지 못했습니다 — 이 컴퓨터의 기록만으로 접수번호를 검사합니다. ' +
+                '다른 자리에서 같은 번호를 쓰고 있을 수 있습니다.',
+                'warning'
+            );
+        }
+        // 번호 검사 풀은 **로컬 + 클라우드**다. id가 겹치면 한쪽만 남기면 되지만,
+        // 여기서는 번호만 보므로 그냥 합쳐도 판정이 달라지지 않는다.
+        const latestLogs = cloud.records ? [...localLogs, ...cloud.records] : localLogs;
 
         // 접수번호는 경지구분 1차별 독립 시퀀스이므로 중복 검사도 현재 경지구분 범위로 한정
         const currentLandClass1 = this.getCurrentLandClass1();
@@ -2263,11 +2379,27 @@ class SoilSampleManager extends window.BaseSampleManager {
         });
 
         if (duplicateNumbers.length > 0) {
-            this.sampleLogs = latestLogs;
+            // ⚠️ 화면에는 **로컬만** 넣는다. 합친 풀을 그대로 넣으면 클라우드 사본이
+            //    목록에 겹쳐 보인다 — 이 화면은 저장소의 거울이어야 한다.
+            this.sampleLogs = localLogs;
             this.filterAndRenderLogs();
-            const nextAvailable = isFillNumber
-                ? this.generateNextFillReceptionNumber()
-                : this.generateNextReceptionNumber();
+
+            // ⚠️ 반면 **재부여 번호는 합친 풀로** 계산해야 한다. 로컬만 보고 고르면
+            //    방금 피한 클라우드 번호를 또 집을 수 있다 — 충돌을 옮길 뿐이다.
+            //    `computeNextNumber`는 `this.sampleLogs`를 보므로 잠깐 바꿔 쓰고 되돌린다.
+            const displayLogs = this.sampleLogs;
+            let nextAvailable;
+            try {
+                this.sampleLogs = latestLogs;
+                nextAvailable = isFillNumber
+                    ? this.generateNextFillReceptionNumber()
+                    : this.generateNextReceptionNumber();
+            } finally {
+                // ⚠️ **반드시 되돌린다.** 예외가 나면 `sampleLogs`가 로컬+클라우드인 채로
+                //    남고, 이후 목록·저장·내보내기가 클라우드 사본을 로컬 데이터로
+                //    취급한다 (독립 리뷰 MINOR).
+                this.sampleLogs = displayLogs;
+            }
             this.receptionNumberInput.value = nextAvailable;
             this.showToast(`접수번호 ${duplicateNumbers.join(', ')}이(가) 이미 존재합니다. ${nextAvailable}번으로 변경되었습니다.`, 'warning');
             return;
