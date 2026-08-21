@@ -1,3 +1,11 @@
+/**
+ * 클라우드 접수번호 확인의 시간 상한 (SAMPL-1-167).
+ * ⚠️ 4초는 **현장 실측이 아니라 잠정치다.** 느린 회선에서 정상 응답이 실패로
+ *    처리될 수 있다. 상한이 없으면 네트워크가 느릴 때 버튼이 영영 반응하지 않아
+ *    현장에서는 앱이 죽은 것과 같으므로, 잠정치라도 두는 편을 택했다.
+ */
+const CLOUD_PRECHECK_TIMEOUT_MS = 4000;
+
 // ========================================
 // Base Sample Manager 클래스
 // 모든 시료 타입의 공통 기능을 관리하는 기본 클래스
@@ -557,6 +565,73 @@ class BaseSampleManager {
      * Firebase에서 데이터 로드
      * @param {string} year - 연도
      */
+    /**
+     * 클라우드의 접수번호 레코드를 읽는다 (SAMPL-1-167에서 토양에 만들고
+     * SAMPL-1-170에서 5개 타입 공용으로 올렸다).
+     *
+     * ⚠️ **읽기 실패와 "0건"을 구별해서 돌려준다.** 그 둘을 섞으면 실패한 조회가
+     *    "겹치는 번호 없음"으로 통과해, 중복 검사가 있으나 마나가 된다.
+     *
+     * @param {string|number} year
+     * @param {number} [timeoutMs]
+     * @returns {Promise<{records: Array<Object>|null, unavailable: boolean, reason: string}>}
+     */
+    async fetchCloudReceptionRecords(year, timeoutMs = CLOUD_PRECHECK_TIMEOUT_MS) {
+        if (!window.firebaseConfig?.isEnabled?.()) {
+            // 클라우드를 쓰지 않는 설치본 — 확인할 것이 없다. 경고할 일도 아니다.
+            return { records: null, unavailable: false, reason: 'disabled' };
+        }
+
+        // ⚠️ **`loadFromFirebase`를 쓰지 않는다.** 그 메서드는 오류를 내부에서 삼키고
+        //    `{ data: [] }`를 돌려준다(`BaseSampleManager.js:583`). 그러면 네트워크 오류가
+        //    "클라우드에 0건"으로 보여 **중복 검사가 조용히 통과**한다 — 이 티켓이
+        //    막으려는 바로 그 실패다(독립 리뷰 MAJOR). 읽기 성공 여부를 알아야 하므로
+        //    `firestoreDb`를 직접 부른다.
+        const db = window.firestoreDb;
+        // 둘 중 **하나라도** 있으면 읽을 수 있다. `getAll`만 요구하면
+        // `getAllWithMeta`만 있는 구현을 `no-db`로 잘못 처리한다 (독립 리뷰 🟡).
+        if (!db || (typeof db.getAll !== 'function' && typeof db.getAllWithMeta !== 'function')) {
+            return { records: null, unavailable: true, reason: 'no-db' };
+        }
+
+        let timer = null;
+        try {
+            // ⚠️ 상한이 없으면 네트워크가 느릴 때 등록 버튼이 영영 반응하지 않는다.
+            //    현장에서 그것은 앱이 죽은 것과 같다.
+            const timeout = new Promise((resolve) => {
+                // ⚠️ 타이머를 잡아 두고 finally에서 끈다. 안 끄면 제출마다 타이머가 쌓인다.
+                timer = setTimeout(() => resolve({ __timedOut: true }), timeoutMs);
+            });
+            const read = (typeof db.getAllWithMeta === 'function')
+                // ⚠️ `getAllWithMeta`도 **오류를 삼켜** `{ documents: [] }`를 돌려준다
+                //    (`firestore-db.js`의 catch). 그것을 성공한 빈 결과로 받으면
+                //    실패한 조회가 "클라우드에 겹치는 번호 없음"으로 통과한다 —
+                //    이 계열 티켓이 막으려는 바로 그 실패다. `error`가 붙어 오면
+                //    읽지 못한 것으로 본다 (SAMPL-1-169 독립 리뷰 MAJOR).
+                ? db.getAllWithMeta(this.moduleKey, parseInt(String(year), 10))
+                    .then((r) => {
+                        if (r && r.error) return null;
+                        return (r && Array.isArray(r.documents)) ? r.documents : null;
+                    })
+                : db.getAll(this.moduleKey, parseInt(String(year), 10));
+
+            const res = await Promise.race([read, timeout]);
+            if (res && res.__timedOut) {
+                return { records: null, unavailable: true, reason: 'timeout' };
+            }
+            if (!Array.isArray(res)) {
+                // 배열이 아니면 읽었다고 볼 수 없다 — 빈 배열과 구별한다
+                return { records: null, unavailable: true, reason: 'bad-response' };
+            }
+            return { records: res, unavailable: false, reason: 'ok' };
+        } catch (err) {
+            (window.logger?.warn || console.warn)('[접수번호] 클라우드 확인 실패', err);
+            return { records: null, unavailable: true, reason: 'error' };
+        } finally {
+            if (timer !== null) clearTimeout(timer);
+        }
+    }
+
     async loadFromFirebase(year) {
         try {
             this.log(` Firebase getAll 호출 - moduleKey: ${this.moduleKey}, year: ${year}`);
