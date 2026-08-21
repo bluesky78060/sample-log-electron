@@ -380,3 +380,114 @@ describe('diagnoseEmptyResult — 캐시 흔적의 근거를 검증한다 (독�
         expect(d.kind).toBe('no-keys-at-all')
     })
 })
+
+describe('detailLines — 어떤 번호가 문제인지 보여준다 (SAMPL-1-165)', () => {
+    const details = (logs, limit) =>
+        window.ReceptionAudit.detailLines(audit(logs, 2026), limit)
+
+    // 🚨 담당자가 실제로 마주친 결과: "중복 번호 3종(6건)"만 보이고
+    //    어떤 번호인지는 CSV를 열어야 알 수 있었다.
+    it('중복 번호와 그 번호를 쓰는 사람들을 함께 보여준다', () => {
+        const d = details([
+            rec({ id: '1', rn: '5', sub: '논', name: '홍길동' }),
+            rec({ id: '2', rn: '5', sub: '밭', name: '김철수' }),
+        ])
+        expect(d).toHaveLength(1)
+        expect(d[0].label).toContain('중복')
+        expect(d[0].lines[0]).toContain('농가의뢰 5')
+        expect(d[0].lines[0]).toContain('2건')
+        // 번호만 알려주면 어느 접수끼리 겹쳤는지 알 수 없다
+        expect(d[0].lines[0]).toContain('홍길동')
+        expect(d[0].lines[0]).toContain('김철수')
+    })
+
+    it('유형별로 나눠 보여준다', () => {
+        const d = details([
+            rec({ id: 'a', rn: '1', sub: '성토', name: 'A' }),
+            rec({ id: 'b', rn: 'F9', sub: '논', name: 'B' }),
+            rec({ id: 'c', rn: 'f3', sub: '논', name: 'C' }),
+            rec({ id: 'd', rn: '12abc', sub: '논', name: 'D' }),
+        ])
+        expect(d.map(g => g.label)).toEqual([
+            '성토인데 F 접두 없음',
+            'F 접두인데 성토 아님',
+            '소문자 f로 시작',
+            '접수번호 형식이 아님',
+        ])
+        expect(d[0].lines[0]).toContain('A')
+    })
+
+    it('문제가 없으면 빈 배열이다', () => {
+        expect(details([rec({ id: '1', rn: '1', sub: '논' })])).toEqual([])
+    })
+
+    // ⚠️ 손상이 수백 건이면 화면이 끝없이 길어져 결국 못 읽는다.
+    it('상한을 넘으면 자르고 남은 수를 알린다', () => {
+        const many = []
+        for (let i = 1; i <= 25; i++) many.push(rec({ id: `x${i}`, rn: `${i}`, sub: '성토', name: `사람${i}` }))
+        const d = details(many, 10)
+        expect(d[0].lines).toHaveLength(10)
+        expect(d[0].hiddenCount).toBe(15)
+    })
+
+    it('상한 안이면 자르지 않는다', () => {
+        const d = details([rec({ id: 'a', rn: '1', sub: '성토' })], 10)
+        expect(d[0].hiddenCount).toBe(0)
+    })
+
+    it('limit이 없거나 잘못되면 기본값을 쓴다', () => {
+        const many = []
+        for (let i = 1; i <= 15; i++) many.push(rec({ id: `x${i}`, rn: `${i}`, sub: '성토' }))
+        expect(details(many).at(0).lines).toHaveLength(10)
+        expect(details(many, 0).at(0).lines).toHaveLength(10)
+        expect(details(many, -5).at(0).lines).toHaveLength(10)
+    })
+})
+
+describe('detailLines — 그룹 내부 상한과 식별자 (독립 리뷰 MAJOR)', () => {
+    const details = (logs, limit) =>
+        window.ReceptionAudit.detailLines(audit(logs, 2026), limit)
+
+    // 🚨 한 번호에 1,000건이 걸리면 이름 1,000개가 한 줄에 나와 화면을 읽을 수 없다.
+    it('한 중복 그룹 안에서도 상한을 두고 남은 수를 알린다', () => {
+        const many = []
+        for (let i = 1; i <= 12; i++) {
+            many.push({ id: `id-${i}`, receptionNumber: '5', name: `사람${i}`, subCategory: '논', landClass1: '농가의뢰' })
+        }
+        const d = details(many)
+        const line = d.at(-1).lines[0]
+        expect(line).toContain('12건')
+        expect(line).toContain('외 7건')      // 5건만 보이고 7건은 접힌다
+        expect(line).toContain('사람1')
+        expect(line).not.toContain('사람12')
+    })
+
+    // 🚨 성명·구분이 같으면 두 레코드를 구별할 수 없다 — 어느 쪽이 정본인지 못 고른다.
+    it('접수일자와 id로 같은 이름의 레코드를 구별할 수 있다', () => {
+        const d = details([
+            { id: 'aaaaaaaa-1111', receptionNumber: '5', name: '홍길동', subCategory: '논', landClass1: '농가의뢰', date: '2026-03-04' },
+            { id: 'bbbbbbbb-2222', receptionNumber: '5', name: '홍길동', subCategory: '논', landClass1: '농가의뢰', date: '2026-05-01' },
+        ])
+        const line = d.at(-1).lines[0]
+        expect(line).toContain('2026-03-04')
+        expect(line).toContain('2026-05-01')
+        expect(line).toContain('#aaaaaaaa')
+        expect(line).toContain('#bbbbbbbb')
+    })
+
+    it('식별 정보가 하나도 없어도 줄이 비지 않는다', () => {
+        const d = details([
+            { receptionNumber: '5', landClass1: '농가의뢰' },
+            { receptionNumber: '5', landClass1: '농가의뢰' },
+        ])
+        expect(d.at(-1).lines[0]).toContain('식별 정보 없음')
+    })
+
+    it('그룹이 상한 안이면 접지 않는다', () => {
+        const d = details([
+            { id: 'a', receptionNumber: '5', name: 'A', subCategory: '논', landClass1: '농가의뢰' },
+            { id: 'b', receptionNumber: '5', name: 'B', subCategory: '논', landClass1: '농가의뢰' },
+        ])
+        expect(d.at(-1).lines[0]).not.toContain('외 ')
+    })
+})
