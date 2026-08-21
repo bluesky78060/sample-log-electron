@@ -327,3 +327,80 @@ test.describe('캐시 흔적의 근거를 검증한다 (SAMPL-1-164 · 독립 �
         expect(Number(recorded.at)).toBeGreaterThan(0);
     });
 });
+
+test.describe('어떤 번호가 문제인지 화면에서 보인다 (SAMPL-1-165)', () => {
+    // 🚨 담당자가 실제로 마주친 결과: "중복 번호 3종(6건)"만 보이고
+    //    어떤 번호인지는 CSV를 열어야 알 수 있었다.
+    test('중복 번호와 그 번호를 쓰는 사람이 화면에 나온다', async ({ page }) => {
+        await openSettings(page);
+        await seed(page, {
+            2026: [
+                log('a', '5', '논', '농가의뢰'),
+                log('b', '5', '밭', '농가의뢰'),
+                log('c', '9', '논', '농가의뢰'),
+                log('d', '9', '논', '농가의뢰'),
+            ],
+        });
+        await page.locator('#receptionAuditBtn').click();
+        const box = page.locator('#receptionAuditResult');
+        await expect(box).toContainText('중복 번호 2종(4건)');
+        // 어떤 번호인지 화면에서 바로 보여야 한다
+        await expect(box).toContainText('농가의뢰 5');
+        await expect(box).toContainText('농가의뢰 9');
+        // 누구의 접수인지도 보여야 판단할 수 있다
+        await expect(box).toContainText('민원인a');
+        await expect(box).toContainText('민원인b');
+    });
+
+    test('유형별 제목과 함께 나온다', async ({ page }) => {
+        await openSettings(page);
+        await seed(page, {
+            2026: [log('a', '1', '성토'), log('b', 'F9', '논')],
+        });
+        await page.locator('#receptionAuditBtn').click();
+        const box = page.locator('#receptionAuditResult');
+        await expect(box).toContainText('2026년 · 성토인데 F 접두 없음');
+        await expect(box).toContainText('2026년 · F 접두인데 성토 아님');
+    });
+
+    // ⚠️ 값은 사용자 데이터다. 성명에 태그가 들어 있어도 해석되면 안 된다.
+    test('값에 태그가 있어도 글자로만 보인다', async ({ page }) => {
+        await openSettings(page);
+        await page.evaluate(() => {
+            localStorage.clear();
+            localStorage.setItem('soilSampleLogs_2026', JSON.stringify([
+                { id: 'x', receptionNumber: '1', name: '<img src=x onerror=alert(1)>', subCategory: '성토', landClass1: '농가의뢰', parcels: [] },
+            ]));
+        });
+        await page.reload();
+        await page.waitForFunction(() => !!window.ReceptionAudit, { timeout: 15000 });
+
+        const dialogs = [];
+        page.on('dialog', (d) => { dialogs.push(d.message()); d.dismiss().catch(() => {}); });
+        await page.locator('#receptionAuditBtn').click();
+        const box = page.locator('#receptionAuditResult');
+        await expect(box).toContainText('<img src=x onerror=alert(1)>');
+        // 태그로 해석됐다면 img 요소가 생긴다
+        expect(await box.locator('img').count()).toBe(0);
+        expect(dialogs, `alert가 떴다: ${dialogs}`).toEqual([]);
+    });
+
+    test('상한을 넘으면 잘렸다고 말한다', async ({ page }) => {
+        await openSettings(page);
+        await page.evaluate(() => {
+            localStorage.clear();
+            const many = [];
+            for (let i = 1; i <= 25; i++) {
+                many.push({ id: `x${i}`, receptionNumber: String(i), name: `사람${i}`,
+                    subCategory: '성토', landClass1: '농가의뢰', parcels: [] });
+            }
+            localStorage.setItem('soilSampleLogs_2026', JSON.stringify(many));
+        });
+        await page.reload();
+        await page.waitForFunction(() => !!window.ReceptionAudit, { timeout: 15000 });
+
+        await page.locator('#receptionAuditBtn').click();
+        await expect(page.locator('#receptionAuditResult'))
+            .toContainText('외 15건은 CSV에서 확인하세요');
+    });
+});

@@ -1194,10 +1194,39 @@ checkAuthFileStatus();
         }
         wrap.appendChild(ul);
 
+        // ⚠️ **어떤 번호가 문제인지 화면에서 바로 보여준다** (SAMPL-1-165).
+        //    요약은 건수만 말하므로, 담당자가 다음 판단을 하려면 CSV를 열어야 했다 —
+        //    3종짜리 결과에 그것은 과하다. 상한을 넘으면 잘렸다고 정직하게 말한다.
+        for (const rep of reports) {
+            if (!rep.issueCount) continue;
+            for (const group of S.detailLines(rep, 10)) {
+                const head = document.createElement('div');
+                head.style.cssText = 'font-size:0.84rem;font-weight:600;color:#334155;margin-top:0.5rem';
+                head.textContent = `${rep.year}년 · ${group.label}`;
+                wrap.appendChild(head);
+
+                const list = document.createElement('ul');
+                list.style.cssText = 'margin:0.2rem 0 0 1.1rem;font-size:0.82rem;color:#475569';
+                for (const line of group.lines) {
+                    const li = document.createElement('li');
+                    // ⚠️ textContent만 쓴다 — 값은 사용자 데이터에서 온다
+                    li.textContent = line;
+                    list.appendChild(li);
+                }
+                if (group.hiddenCount > 0) {
+                    const more = document.createElement('li');
+                    more.style.cssText = 'color:#94a3b8';
+                    more.textContent = `… 외 ${group.hiddenCount}건은 CSV에서 확인하세요`;
+                    list.appendChild(more);
+                }
+                wrap.appendChild(list);
+            }
+        }
+
         const note = document.createElement('div');
-        note.style.cssText = 'font-size:0.8rem;color:#92400e';
+        note.style.cssText = 'font-size:0.8rem;color:#92400e;margin-top:0.6rem';
         note.textContent =
-            '이 도구는 고치지 않습니다. CSV를 내려받아 확인한 뒤, 재부여 여부는 담당자가 판단해 주세요.';
+            '이 도구는 고치지 않습니다. 확인한 뒤 재부여 여부는 담당자가 판단해 주세요.';
         wrap.appendChild(note);
 
         box.appendChild(wrap);
@@ -1217,9 +1246,10 @@ checkAuthFileStatus();
             }
             return s;
         }
-        const lines = [['연도', '유형', '접수번호', '성명', '구분', '경지구분1차', 'id'].map(cell).join(',')];
+        // 접수일자는 화면 상세와 같은 식별자다 — CSV에도 있어야 대조가 된다
+        const lines = [['연도', '유형', '접수번호', '성명', '구분', '경지구분1차', '접수일자', 'id'].map(cell).join(',')];
         const push = (year, kind, r) =>
-            lines.push([year, kind, r.receptionNumber, r.name, r.subCategory, r.landClass1, r.id].map(cell).join(','));
+            lines.push([year, kind, r.receptionNumber, r.name, r.subCategory, r.landClass1, r.date, r.id].map(cell).join(','));
 
         for (const rep of reports) {
             rep.fillWithoutF.forEach(r => push(rep.year, '성토인데 F 없음', r));
