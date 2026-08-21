@@ -231,3 +231,99 @@ test.describe('진단이 스스로 모순되지 않는다 (SAMPL-1-163 · 독립
         await expect(page.locator('#receptionAuditResult')).toContainText('다른 시료 데이터는 1종');
     });
 });
+
+test.describe('주간 캐시 정리를 원인으로 지목한다 (SAMPL-1-164)', () => {
+    // 🚨 담당자가 금요일에 실제로 마주친 화면을 그대로 재현한다.
+    //    이 앱은 매주 금요일 시료 캐시를 지우고, 지워진 데이터는 시료 목록 화면을
+    //    열 때 Firebase에서 다시 불러온다. 설정 화면에는 그 기능이 없다.
+    test('캐시 정리 흔적이 있으면 환경이 아니라 캐시를 원인으로 말한다', async ({ page }) => {
+        await openSettings(page);
+        await page.evaluate(() => {
+            localStorage.clear();
+            // CacheManager가 정리 후 남기는 흔적 (KEYS_TO_PRESERVE라 지워지지 않는다).
+            // ⚠️ **최근**이고 **실제로 지운 건수가 있어야** 근거가 된다 —
+            //    영구 보존 키라 오래된 흔적을 지금의 원인으로 단정하면 안 되고,
+            //    0건을 지운 실행도 시각을 남기기 때문이다 (독립 리뷰 MAJOR).
+            localStorage.setItem('lastCacheClear', String(Date.now() - 24 * 60 * 60 * 1000));
+            localStorage.setItem('lastCacheClearCount', '4');
+        });
+        await page.reload();
+        await page.waitForFunction(() => !!window.ReceptionAudit, { timeout: 15000 });
+
+        await page.locator('#receptionAuditBtn').click();
+        const box = page.locator('#receptionAuditResult');
+        await expect(box).toContainText('캐시가 정리돼');
+        await expect(box).toContainText(/캐시가 정리돼 로컬에 시료 데이터가 없습니다 \(\d{4}-\d{2}-\d{2}\)/);
+        // ⚠️ 데이터가 사라졌다는 오해를 적극적으로 막아야 한다
+        await expect(box).toContainText('사라진 것이 아닙니다');
+        await expect(box).toContainText('토양 목록 화면을 한 번 열어');
+        // 틀린 방향(환경 탓)을 가리키면 안 된다
+        await expect(box).not.toContainText('전혀 없습니다');
+    });
+
+    test('캐시 흔적이 없으면 기존 환경 안내가 나온다 (과잉적용 방지)', async ({ page }) => {
+        await openSettings(page);
+        await seed(page, {});
+        await page.locator('#receptionAuditBtn').click();
+        const box = page.locator('#receptionAuditResult');
+        await expect(box).toContainText('전혀 없습니다');
+        await expect(box).not.toContainText('캐시가 정리돼');
+    });
+
+    test('안내문이 점검 전에 캐시 제약을 알린다', async ({ page }) => {
+        await openSettings(page);
+        // 실행해 보기 전에 읽을 수 있어야 한다 — 사후 설명만으로는 늦다
+        await expect(page.locator('#receptionAuditBtn').locator('xpath=../..'))
+            .toContainText('매주 금요일 캐시가 정리되므로');
+    });
+});
+
+test.describe('캐시 흔적의 근거를 검증한다 (SAMPL-1-164 · 독립 리뷰 MAJOR)', () => {
+    test('오래된 정리 흔적은 원인으로 삼지 않는다', async ({ page }) => {
+        await openSettings(page);
+        await page.evaluate(() => {
+            localStorage.clear();
+            // 90일 전 흔적 — 그 사이에 목록을 열었다면 데이터가 돌아왔을 것이다
+            localStorage.setItem('lastCacheClear', String(Date.now() - 90 * 24 * 60 * 60 * 1000));
+            localStorage.setItem('lastCacheClearCount', '5');
+        });
+        await page.reload();
+        await page.waitForFunction(() => !!window.ReceptionAudit, { timeout: 15000 });
+
+        await page.locator('#receptionAuditBtn').click();
+        const box = page.locator('#receptionAuditResult');
+        await expect(box).not.toContainText('캐시가 정리돼');
+        await expect(box).toContainText('전혀 없습니다');
+    });
+
+    test('0건을 지운 정리는 원인으로 삼지 않는다', async ({ page }) => {
+        await openSettings(page);
+        await page.evaluate(() => {
+            localStorage.clear();
+            localStorage.setItem('lastCacheClear', String(Date.now() - 60 * 60 * 1000));
+            localStorage.setItem('lastCacheClearCount', '0');
+        });
+        await page.reload();
+        await page.waitForFunction(() => !!window.ReceptionAudit, { timeout: 15000 });
+
+        await page.locator('#receptionAuditBtn').click();
+        await expect(page.locator('#receptionAuditResult')).not.toContainText('캐시가 정리돼');
+    });
+
+    // CacheManager가 실제로 건수를 남기는지 — 진단의 근거가 되는 계약이다
+    test('캐시 삭제가 삭제 건수를 기록한다', async ({ page }) => {
+        await openSettings(page);
+        const recorded = await page.evaluate(() => {
+            localStorage.clear();
+            localStorage.setItem('soilSampleLogs_2026', JSON.stringify([{ id: 'a' }]));
+            localStorage.setItem('waterSampleLogs_2026', JSON.stringify([{ id: 'b' }]));
+            window.CacheManager.clearCache(false);
+            return {
+                count: localStorage.getItem('lastCacheClearCount'),
+                at: localStorage.getItem('lastCacheClear'),
+            };
+        });
+        expect(recorded.count).toBe('2');
+        expect(Number(recorded.at)).toBeGreaterThan(0);
+    });
+});

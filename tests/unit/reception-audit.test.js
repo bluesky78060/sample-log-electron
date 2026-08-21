@@ -271,3 +271,112 @@ describe('diagnoseEmptyResult — 표현 계층 분리 (독립 리뷰 SUGGESTION
         expect(d.hint).toContain('앱을 열어 같은 화면에서 다시 실행하세요')
     })
 })
+
+describe('diagnoseEmptyResult — 주간 캐시 정리 (SAMPL-1-164)', () => {
+    const diag = (o) => window.ReceptionAudit.diagnoseEmptyResult(o)
+
+    // 🚨 담당자가 금요일에 실제로 마주친 상황.
+    //    CacheManager가 매주 금요일 시료 캐시를 지우는데, 지워진 데이터는
+    //    **시료 페이지를 열 때** Firebase에서 다시 불러온다. 설정 화면에는 그 기능이 없다.
+    //    그 상태에서 "환경이 다를 것"이라고 말하면 틀린 방향을 가리키는 것이고,
+    //    담당자는 클라우드에 멀쩡히 있는 데이터가 사라졌다고 오해한다.
+    it('캐시 정리 흔적이 있으면 그것을 원인으로 지목한다', () => {
+        const d = diag({
+            soilKeyCount: 0, otherTypeKeyCount: 0, totalRecords: 0, isElectron: true,
+            lastCacheClearMs: Date.UTC(2026, 7, 21),
+            nowMs: Date.UTC(2026, 7, 22),
+        })
+        expect(d.kind).toBe('cache-cleared')
+        expect(d.message).toContain('캐시가 정리돼')
+        expect(d.hint).toContain('사라진 것이 아닙니다')
+        expect(d.hint).toContain('토양 목록 화면을 한 번 열어')
+    })
+
+    it('정리 날짜를 함께 보여준다', () => {
+        const d = diag({
+            soilKeyCount: 0, otherTypeKeyCount: 0, totalRecords: 0, isElectron: true,
+            lastCacheClearMs: new Date(2026, 7, 21).getTime(),
+            nowMs: new Date(2026, 7, 22).getTime(),
+        })
+        expect(d.message).toContain('2026-08-21')
+    })
+
+    it('캐시 흔적이 없으면 기존 환경 안내를 유지한다', () => {
+        const d = diag({
+            soilKeyCount: 0, otherTypeKeyCount: 0, totalRecords: 0, isElectron: true,
+            lastCacheClearMs: null,
+        })
+        expect(d.kind).toBe('no-keys-at-all')
+        expect(d.message).toContain('전혀 없습니다')
+    })
+
+    it('두 문장이 서로 달라야 한다 (한쪽으로 뭉치면 회귀다)', () => {
+        const base = { soilKeyCount: 0, otherTypeKeyCount: 0, totalRecords: 0, isElectron: true }
+        const cleared = diag({ ...base, lastCacheClearMs: Date.now() })
+        const never = diag({ ...base, lastCacheClearMs: null })
+        expect(cleared.message).not.toBe(never.message)
+        expect(cleared.kind).not.toBe(never.kind)
+    })
+
+    it('캐시 흔적이 있어도 데이터가 있으면 진단하지 않는다', () => {
+        const d = diag({
+            soilKeyCount: 1, otherTypeKeyCount: 0, totalRecords: 7, isElectron: true,
+            lastCacheClearMs: Date.now(),
+        })
+        expect(d.kind).toBe('has-records')
+    })
+
+    it('토양 키가 있으면 캐시 흔적보다 그쪽을 먼저 말한다', () => {
+        // 이미 불러온 뒤라면 캐시 이야기는 더 이상 원인이 아니다
+        const d = diag({
+            soilKeyCount: 2, otherTypeKeyCount: 0, totalRecords: 0, isElectron: true,
+            lastCacheClearMs: Date.now(),
+        })
+        expect(d.kind).toBe('empty-soil-keys')
+    })
+})
+
+describe('diagnoseEmptyResult — 캐시 흔적의 근거를 검증한다 (독립 리뷰 MAJOR)', () => {
+    const diag = (o) => window.ReceptionAudit.diagnoseEmptyResult(o)
+    const base = { soilKeyCount: 0, otherTypeKeyCount: 0, totalRecords: 0, isElectron: true }
+    const DAY = 24 * 60 * 60 * 1000
+
+    // 🚨 lastCacheClear는 **영구 보존 키**다. 3개월 전 흔적을 지금의 원인으로 단정하면
+    //    틀린 방향을 가리킨다 — 그 사이에 목록을 열었다면 데이터가 돌아왔을 것이다.
+    it('오래된 정리 흔적은 원인으로 삼지 않는다', () => {
+        const now = Date.now()
+        const d = diag({ ...base, lastCacheClearMs: now - 90 * DAY, lastCacheClearCount: 5, nowMs: now })
+        expect(d.kind).toBe('no-keys-at-all')
+    })
+
+    it('최근(8일 이내) 정리는 원인으로 삼는다', () => {
+        const now = Date.now()
+        const d = diag({ ...base, lastCacheClearMs: now - 3 * DAY, lastCacheClearCount: 5, nowMs: now })
+        expect(d.kind).toBe('cache-cleared')
+    })
+
+    // 🚨 수동 캐시 삭제는 **0건을 지워도** 시각을 남긴다. 시각만 보면
+    //    "언젠가 정리 함수가 돌았다"는 흔적일 뿐 지금 빈 저장소의 증거가 아니다.
+    it('0건을 지운 정리는 원인이 아니다', () => {
+        const now = Date.now()
+        const d = diag({ ...base, lastCacheClearMs: now - 1 * DAY, lastCacheClearCount: 0, nowMs: now })
+        expect(d.kind).toBe('no-keys-at-all')
+    })
+
+    it('건수 기록이 없는 구 설치본은 최근성만으로 판단한다', () => {
+        const now = Date.now()
+        const d = diag({ ...base, lastCacheClearMs: now - 1 * DAY, lastCacheClearCount: null, nowMs: now })
+        expect(d.kind).toBe('cache-cleared')
+    })
+
+    it.each([0, NaN, Infinity, -1])('비정상 시각 %s는 무시한다', (bad) => {
+        const d = diag({ ...base, lastCacheClearMs: bad, lastCacheClearCount: 5, nowMs: Date.now() })
+        expect(d.kind).toBe('no-keys-at-all')
+    })
+
+    it('미래 시각도 무시한다 (시계가 어긋난 기기)', () => {
+        const now = Date.now()
+        const d = diag({ ...base, lastCacheClearMs: now + 10 * DAY, lastCacheClearCount: 5, nowMs: now })
+        expect(d.kind).toBe('no-keys-at-all')
+    })
+})
