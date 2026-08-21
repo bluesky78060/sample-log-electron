@@ -1,0 +1,63 @@
+{
+  "//": "SAMPL-2-25 — **브라우저 컨텍스트** 파일만 검사한다.",
+  "//2": "`types: []`가 이 파일의 존재 이유다. 단일 tsconfig에 types:[\"node\"]가 있으면",
+  "//3": "브라우저 코드에서 process.platform·Buffer·__dirname·require()가 **전부 통과한다**",
+  "//4": "(SAMPL-2-25 실측: 그 셋을 쓰는 파일을 src/shared/에 넣어도 typecheck exit 0).",
+  "//5": "이 앱의 중심 불변식은 Electron(Node) vs Web(브라우저) 이중 환경인데,",
+  "//6": "브라우저 파일이 Node API를 쓰는 것을 검사기가 못 잡으면 웹에서 런타임 크래시다.",
+  "//7": "반대 방향도 있다 — 브라우저의 setTimeout 반환을 NodeJS.Timeout으로 추론해",
+  "//8": "없는 오류를 만들어낸다.",
+  "//9": "⚠️ compilerOptions.types를 비워 두는 것이 이 파일의 핵심이다.",
+  "//9b": "   [\"node\"]로 되돌리면 프로젝트를 나눈 의미가 통째로 사라진다.",
+  "//9c": "   (주석 키는 compilerOptions **밖**에만 둘 수 있다 — 안에 넣으면 TS5023이 난다)",
+
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,
+    "composite": true,
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.browser.tsbuildinfo",
+
+    "strict": true,
+    "noImplicitAny": false,
+
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+
+    "types": [],
+
+    "baseUrl": ".",
+    "paths": {
+      "@shared/*": ["src/shared/*"],
+      "jszip": ["./types/stubs/jszip.d.ts"]
+    }
+  },
+
+  "//10": "src/ 전체에서 Node 컨텍스트 두 파일만 뺀다. 확장자는 나열한다 —",
+  "//11": "중괄호 확장이 지원되지 않아 리터럴로 취급되면 조용히 0건 검사가 된다.",
+  "include": [
+    "src/**/*.js",
+    "src/**/*.mjs",
+    "src/**/*.cjs",
+    "src/**/*.ts",
+    "src/**/*.mts",
+    "src/**/*.cts",
+    "types/**/*.d.ts"
+  ],
+
+  "exclude": [
+    "node_modules",
+    "docs",
+    "out",
+    "playwright-report",
+    "test-results",
+    "src/index.js",
+    "src/preload.js"
+  ]
+}

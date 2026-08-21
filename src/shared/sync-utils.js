@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * @fileoverview 클라우드 동기화 유틸리티
  * @description Firebase와 로컬 데이터 간 스마트 병합 기능

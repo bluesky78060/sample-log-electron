@@ -52,6 +52,8 @@ declare global {
     var PreviewTable: any;
     /** 접수번호 정합성 점검 순수 로직 (SAMPL-1-155) */
     var ReceptionAudit: any;
+    /** 접수번호 채번 순수 로직 (SAMPL-1-153) */
+    var ReceptionNumber: any;
     var compostManager: any;
     var pesticideManager: any;
     var heuktoramManager: any;
@@ -78,6 +80,8 @@ declare global {
         CropSearch: any;
         /** 접수번호 정합성 점검 순수 로직 (SAMPL-1-155) */
         ReceptionAudit: any;
+        /** 접수번호 채번 순수 로직 (SAMPL-1-153) */
+        ReceptionNumber: any;
         /** 하위필지 식별 순수 로직 (SAMPL-1-159) */
         SubLotIdentity: any;
         PreviewTable: any;

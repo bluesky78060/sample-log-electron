@@ -17,7 +17,7 @@
     "build": "npm run build:css && npm run sync-version && npx vite build && node scripts/restore-ai-pm-docs.js",
     "publish": "electron-forge publish",
     "lint": "echo \"No linting configured\"",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -b tsconfig.json",
     "typecheck:watch": "tsc --noEmit --watch",
     "test": "npx playwright test",
     "test:ui": "npx playwright test --ui",
