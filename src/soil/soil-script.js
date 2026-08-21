@@ -2060,8 +2060,16 @@ class SoilSampleManager extends window.BaseSampleManager {
                 timer = setTimeout(() => resolve({ __timedOut: true }), timeoutMs);
             });
             const read = (typeof db.getAllWithMeta === 'function')
+                // ⚠️ `getAllWithMeta`도 **오류를 삼켜** `{ documents: [] }`를 돌려준다
+                //    (`firestore-db.js`의 catch). 그것을 성공한 빈 결과로 받으면
+                //    실패한 조회가 "클라우드에 겹치는 번호 없음"으로 통과한다 —
+                //    이 계열 티켓이 막으려는 바로 그 실패다. `error`가 붙어 오면
+                //    읽지 못한 것으로 본다 (SAMPL-1-169 독립 리뷰 MAJOR).
                 ? db.getAllWithMeta(this.moduleKey, parseInt(String(year), 10))
-                    .then((r) => (r && Array.isArray(r.documents)) ? r.documents : null)
+                    .then((r) => {
+                        if (r && r.error) return null;
+                        return (r && Array.isArray(r.documents)) ? r.documents : null;
+                    })
                 : db.getAll(this.moduleKey, parseInt(String(year), 10));
 
             const res = await Promise.race([read, timeout]);
