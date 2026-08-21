@@ -150,7 +150,58 @@ function smartMerge(localData, cloudData, options = {}) {
         return aNum - bNum || String(a.receptionNumber || '').localeCompare(String(b.receptionNumber || ''));
     });
 
-    return { data: merged, hasChanges, updated, added, deleted };
+    // ⚠️ **번호 충돌을 조용히 통과시키지 않는다** (SAMPL-1-166).
+    //    이 병합은 `id` 기준이라, id가 다르고 접수번호가 같은 두 레코드는
+    //    **둘 다 살아남는다.** 실제로 그렇게 새어 들어온 중복이 담당자 데이터에서
+    //    3종 6건 발견됐다(2026-08-21). 접수번호는 분석결과 매칭 키이므로
+    //    같은 번호가 둘이면 어느 시료의 결과인지 확정할 수 없다.
+    //
+    //    등록을 막지는 않는다 — 이 앱은 오프라인 우선이고, 병합은 이미 일어난 뒤다.
+    //    대신 **누가 겹쳤는지 알려준다.** 사후 발견이라도 조용한 것보다 낫다.
+    const receptionConflicts = findReceptionConflicts(merged);
+
+    return { data: merged, hasChanges, updated, added, deleted, receptionConflicts };
+}
+
+/**
+ * 병합 결과에서 **접수번호가 겹치는 무리**를 찾는다 (SAMPL-1-166, 순수 함수).
+ *
+ * 겹침 판정은 `경지구분1차 + 접수번호` 범위다 — 채번이 경지구분 단위로 독립이라
+ * 다른 경지구분의 같은 번호는 충돌이 아니다.
+ *
+ * ⚠️ **접수번호가 빈 레코드는 세지 않는다.** 그것은 별개의 문제이고,
+ *    여기 섞으면 "빈 번호끼리 충돌"이라는 무의미한 보고가 쏟아진다.
+ *
+ * @param {Array<Object>} records
+ * @returns {Array<{landClass1: string, receptionNumber: string, ids: Array<string>}>}
+ */
+function findReceptionConflicts(records) {
+    const list = Array.isArray(records) ? records : [];
+    /** @type {Map<string, Array<string>>} */
+    const byKey = new Map();
+
+    for (const r of list) {
+        if (!r) continue;
+        const num = String(r.receptionNumber ?? '').trim();
+        if (!num) continue;
+        const cls = r.landClass1 || '농가의뢰';
+        const key = `${cls}\u0000${num}`;
+        const bucket = byKey.get(key);
+        if (bucket) bucket.push(String(r.id ?? ''));
+        else byKey.set(key, [String(r.id ?? '')]);
+    }
+
+    const out = [];
+    for (const [key, ids] of byKey) {
+        if (ids.length < 2) continue;
+        const sep = key.indexOf('\u0000');
+        out.push({
+            landClass1: key.slice(0, sep),
+            receptionNumber: key.slice(sep + 1),
+            ids,
+        });
+    }
+    return out;
 }
 
 /**
@@ -190,7 +241,8 @@ const SyncUtilsAPI = {
     mergeCloudData,
     getTimestamp,
     normalizeId,
-    getItemId
+    getItemId,
+    findReceptionConflicts
 };
 
 // 브라우저: window 전역 노출 (기존 패턴 유지)

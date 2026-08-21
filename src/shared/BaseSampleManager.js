@@ -399,6 +399,11 @@ class BaseSampleManager {
                             ? window.SyncUtils.mergeCloudData(localLogs, firebaseLogs, { fromCache })
                             : { data: this.smartMerge(localLogs, firebaseLogs, { allowDeletions: !fromCache }), localOnly: [] };
                         this.sampleLogs = merged.data;
+                        // ⚠️ **이 경로가 담당자가 실제로 겪는 첫 화면 로드다** (SAMPL-1-166).
+                        //    `mergeCloudData`는 충돌을 돌려주는데 `merged.data`만 쓰고 넘어가면
+                        //    B안의 알림이 정작 가장 흔한 경로에서 울리지 않는다(독립 리뷰 MAJOR).
+                        //    `syncWithCloud`만 알리면 반쪽짜리다.
+                        this.notifyReceptionConflicts(merged.receptionConflicts);
 
                         // PER-9: TTL 포함 캐시 저장 (Firebase 원본 응답 기준 — 병합 결과 아님)
                         if (!cacheValid) {
@@ -583,11 +588,57 @@ class BaseSampleManager {
     /**
      * 스마트 병합 - utils.js의 함수 사용
      */
+    /**
+     * 병합에서 드러난 접수번호 충돌을 담당자에게 알린다 (SAMPL-1-166).
+     *
+     * 접수번호는 **분석결과 매칭 키**다. 같은 번호가 둘이면 어느 시료의 결과인지
+     * 확정할 수 없고, 라벨·흙토람 내보내기·대장 출력도 어긋난다.
+     *
+     * ⚠️ **같은 충돌을 반복해서 띄우지 않는다.** 병합은 화면을 열 때마다 일어나므로
+     *    매번 토스트를 띄우면 담당자가 곧 무시하게 된다 — 그러면 알림이 없는 것과 같다.
+     * @param {Array<{landClass1: string, receptionNumber: string, ids: Array<string>}>} [conflicts]
+     */
+    notifyReceptionConflicts(conflicts) {
+        if (!Array.isArray(conflicts) || conflicts.length === 0) return;
+        this._seenReceptionConflicts = this._seenReceptionConflicts || new Set();
+
+        const fresh = conflicts.filter((c) => {
+            // ⚠️ 억제 키에 **충돌한 레코드 id까지** 넣는다 (독립 리뷰 MAJOR).
+            //    `경지구분/번호`만 쓰면, 담당자가 고친 뒤 **다른 레코드가 같은 번호로
+            //    다시 겹쳐도** 같은 키라 영원히 침묵한다 — 재발을 놓치는 것이
+            //    이 기능이 막으려는 바로 그 실패다.
+            const ids = [...(c.ids || [])].map(String).sort().join('|');
+            const key = `${c.landClass1}/${c.receptionNumber}/${ids}`;
+            if (this._seenReceptionConflicts.has(key)) return false;
+            this._seenReceptionConflicts.add(key);
+            return true;
+        });
+        if (fresh.length === 0) return;
+
+        const list = fresh.slice(0, 3)
+            .map((c) => `${c.landClass1} ${c.receptionNumber}`)
+            .join(', ');
+        const more = fresh.length > 3 ? ` 외 ${fresh.length - 3}종` : '';
+        (window.logger?.warn || console.warn)(
+            `[${this.moduleKey}] 동기화에서 접수번호 충돌을 발견했습니다`, fresh
+        );
+        this.showToast(
+            `접수번호가 겹칩니다: ${list}${more}. 설정 → 접수번호 정합성 점검에서 확인하세요.`,
+            'warning'
+        );
+    }
+
     smartMerge(localData, firebaseData, options = {}) {
         if (window.SyncUtils?.smartMerge) {
             // SyncUtils.smartMerge는 { data, hasChanges, ... } 객체를 반환하므로
             // 배열 계약을 유지하기 위해 data를 언래핑한다 (객체를 그대로 쓰면 데이터 손상)
             const result = window.SyncUtils.smartMerge(localData, firebaseData, options);
+            // ⚠️ **번호 충돌을 조용히 넘기지 않는다** (SAMPL-1-166).
+            //    이 병합은 id 기준이라 id가 다르고 접수번호가 같은 두 레코드는 둘 다 살아남는다.
+            //    실제로 그렇게 새어 들어온 중복이 담당자 데이터에서 3종 6건 발견됐고,
+            //    아무도 그것을 알지 못한 채 몇 달이 지났다.
+            //    등록을 막지는 않는다(오프라인 우선 설계) — 대신 **그 자리에서 알린다.**
+            this.notifyReceptionConflicts(result?.receptionConflicts);
             return Array.isArray(result) ? result : (result?.data || []);
         }
         // 폴백: id 기준 union merge (로컬 우선 — Firebase만 반환하면 로컬 변경 유실)
