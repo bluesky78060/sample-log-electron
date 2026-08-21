@@ -15,6 +15,8 @@ import '../shared/sanitize.js';
 import '../shared/toast.js';
 import '../shared/theme.js';
 import '../shared/cache-manager.js';
+// 접수번호 정합성 점검 (SAMPL-1-155) — 순수 함수만 노출한다
+import '../shared/reception-audit.js';
 
 // MRL API (식품안전나라)
 import '../shared/mrl-api.js';

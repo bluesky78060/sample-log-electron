@@ -705,6 +705,36 @@
             </div>
         </div>
 
+        <!-- 접수번호 정합성 점검 (SAMPL-1-155) -->
+        <div class="settings-card">
+            <h2>
+                <span>🔢</span>
+                접수번호 정합성 점검
+            </h2>
+
+            <div class="alert alert-info">
+                토양 접수번호가 규칙에 맞는지 저장된 연도 전체를 훑어 확인합니다.
+                <strong>찾기만 하고 고치지는 않습니다</strong> — 접수번호는 라벨·흙토람 내보내기·대장 출력에
+                이미 쓰였을 수 있어 재부여는 담당자가 판단할 일입니다.
+                <br>
+                <small style="color: #64748b;">
+                    확인 항목: 성토인데 F 접두 없음 · F 접두인데 성토 아님 · 소문자 f로 시작 ·
+                    숫자/F숫자/가지번호 형식이 아님 · 같은 경지구분 안의 중복 번호
+                </small>
+            </div>
+
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                <button type="button" id="receptionAuditBtn" class="btn btn-primary">
+                    🔍 점검 실행
+                </button>
+                <button type="button" id="receptionAuditCsvBtn" class="btn btn-secondary" hidden>
+                    📄 결과 CSV 내려받기
+                </button>
+            </div>
+
+            <div id="receptionAuditResult" style="margin-top: 1rem;"></div>
+        </div>
+
         <!-- 캐시 관리 -->
         <div class="settings-card">
             <h2>
