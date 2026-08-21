@@ -189,7 +189,13 @@ async function getAllDocumentsWithMeta(sampleType, year, options = {}) {
         return { documents: normalizeDataIds(documents), fromCache };
     } catch (error) {
         (window.logger?.error || console.error)('Firestore 전체 조회 실패:', error);
-        return { documents: [], fromCache: false };
+        // ⚠️ **실패를 빈 결과와 구별할 수 있게 표시한다** (SAMPL-1-169).
+        //    `{ documents: [] }`만 돌려주면 네트워크·권한 오류가 "이 연도에 0건"과
+        //    똑같이 보인다. 접수번호 중복 검사가 그 위에 올라가 있어, 실패한 조회가
+        //    **"클라우드에 겹치는 번호 없음"으로 통과**했다.
+        //    빈 배열은 그대로 두어 기존 호출부의 동작은 바뀌지 않는다 — 알고 싶은
+        //    호출부만 `error`를 보면 된다.
+        return { documents: [], fromCache: false, error };
     }
 }
 

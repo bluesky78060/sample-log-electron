@@ -1016,6 +1016,19 @@
                 autoNumber: true,
                 dupPolicy: 'skip',       // 'skip' | 'overwrite'
                 preview: null,
+                // 클라우드 접수번호 (SAMPL-1-169). 모달을 열 때 **한 번만** 읽는다 —
+                // `_recompute`는 키 입력마다 돌아 매번 부르면 네트워크를 두드린다.
+                cloudRecords: null,
+                cloudUnavailable: false,
+                // "아직 안 읽음"과 "읽었지만 확인할 것이 없음"(Firebase 꺼짐)은 다르다.
+                // 둘을 구별하지 않으면 꺼진 설치본에서 영영 응답을 기다리게 된다.
+                cloudChecked: false,
+                // ⚠️ **이 캐시가 어느 연도 것인지** 함께 들고 다닌다. 연도만 바뀌고
+                //    캐시는 그대로면 지난해 번호로 올해를 검사하게 된다.
+                cloudYear: null,
+                // 미리보기가 **어느 연도 기준으로 계산됐는지**. 연도가 바뀐 뒤
+                // 재계산 없이 곧바로 저장하는 경로를 막는 데 쓴다.
+                previewYear: null,
             };
         }
 
@@ -1175,6 +1188,11 @@
             this._refresh();
 
             this._els.modal.hidden = false;
+            // 클라우드는 **여는 순간 한 번만** 읽는다. 기다리지 않는다 —
+            // 담당자가 붙여넣기·매핑을 하는 동안 도착하면 그때 미리보기가 갱신된다.
+            // 세대를 올려 이전 세션의 늦은 응답이 이 세션에 섞이지 않게 한다.
+            this._cloudGen = (this._cloudGen || 0) + 1;
+            this._loadCloudRecords(this._cloudGen);
             document.addEventListener('keydown', this._escHandler);
             // 첫 포커스 → 닫기 버튼 (접근성)
             this._els.modal.querySelector('.sri-close')?.focus();
@@ -1428,7 +1446,19 @@
         /** 현재 연도 범위의 기존 접수 레코드 (매니저 미준비 시 localStorage 폴백) */
         _existingLogs() {
             const mgr = window.soilManager;
-            if (mgr && Array.isArray(mgr.sampleLogs)) return mgr.sampleLogs;
+            // ⚠️ **클라우드도 풀에 넣는다** (SAMPL-1-169). 로컬만 보면 다른 자리에서
+            //    먼저 접수된 번호가 미리보기에 "신규"로 표시되고, 자동부여도 그 번호를
+            //    피하지 못한다 — 등록(SAMPL-1-167)·수정(SAMPL-1-168)에서 막은 것과
+            //    같은 구멍이 가져오기에 남아 있었다.
+            //    `computePreview`가 이 배열 하나에서 세 풀을 모두 도출하므로
+            //    여기서 합치면 수동 중복 판정과 자동부여 회피가 함께 고쳐진다.
+            // ⚠️ 연도가 맞을 때만 합친다. 이것이 **이벤트에 기대지 않는 안전망**이다 —
+            //    연도 변경을 어디선가 놓치더라도 지난해 번호가 올해 판정에 섞이지 않는다
+            //    (독립 3차 리뷰: 조회가 끝난 뒤 연도를 바꾸는 경로가 남아 있었다).
+            const cloudFresh = Array.isArray(this._state.cloudRecords)
+                && String(this._state.cloudYear) === String(mgr?.selectedYear);
+            const cloud = cloudFresh ? this._state.cloudRecords : [];
+            if (mgr && Array.isArray(mgr.sampleLogs)) return cloud.length ? [...mgr.sampleLogs, ...cloud] : mgr.sampleLogs;
             const year = (mgr && mgr.selectedYear) || new Date().getFullYear();
             try {
                 // 저장 키는 **매니저에게 묻는다.** 문자열을 복제해 두면 매니저가 키 규칙을
@@ -1438,8 +1468,87 @@
                     ? mgr.getStorageKey(year)
                     : `soilSampleLogs_${year}`;
                 const raw = localStorage.getItem(key);
-                return raw ? JSON.parse(raw) : [];
-            } catch (_) { return []; }
+                const local = raw ? JSON.parse(raw) : [];
+                return cloud.length ? [...local, ...cloud] : local;
+            } catch (_) { return cloud; }
+        }
+
+        /**
+         * 캐시된 클라우드 번호가 현재 연도 것인지 확인하고, 아니면 다시 읽는다.
+         * 재조회가 도는 동안에는 `_existingLogs`가 낡은 캐시를 합치지 않는다.
+         */
+        _ensureCloudYearFresh() {
+            const st = this._state;
+            const mgr = window.soilManager;
+            if (!st || !mgr || !st.cloudChecked) return;
+            if (String(st.cloudYear) === String(mgr.selectedYear)) return;
+            // ⚠️ **캐시를 비우지 않는다.** 비우면 연도 도장이 무의미해지고,
+            //    `_existingLogs`의 연도 대조가 죽은 코드가 된다 (변이로 실측).
+            //    도장이 어긋난 캐시는 어차피 합쳐지지 않으므로 그대로 둔다 —
+            //    검사가 한 군데(도장 대조)에만 있는 편이 확인하기 쉽다.
+            st.cloudChecked = false;
+            st.cloudUnavailable = false;
+            this._cloudGen = (this._cloudGen || 0) + 1;
+            this._loadCloudRecords(this._cloudGen);
+        }
+
+        /**
+         * 클라우드 접수번호를 한 번 읽어 상태에 담는다 (SAMPL-1-169).
+         *
+         * 매니저가 이미 만들어 둔 `fetchCloudReceptionRecords`를 그대로 쓴다 —
+         * 시간초과 상한·오류 처리·`loadFromFirebase`의 오류 삼킴 회피가 거기 들어 있다.
+         *
+         * ⚠️ **실패해도 가져오기를 막지 않는다.** 이 앱은 오프라인 우선이다.
+         *    대신 미리보기에 확인하지 못했다고 적는다 — 조용히 넘기면 담당자는
+         *    "중복 없음"과 "확인 못 함"을 구별할 수 없다.
+         */
+        async _loadCloudRecords(gen) {
+            const mgr = window.soilManager;
+            if (!mgr || typeof mgr.fetchCloudReceptionRecords !== 'function') {
+                if (gen === this._cloudGen && this._state) this._state.cloudChecked = true;
+                return;
+            }
+            // ⚠️ **요청 당시의 연도를 붙잡아 둔다.** 응답을 기다리는 사이에 담당자가
+            //    연도를 바꾸면, 도착한 2026년 번호가 2027년 미리보기의 중복 판정과
+            //    자동부여 풀에 들어간다 — 엉뚱한 해의 번호를 피해 채번하게 된다.
+            const year = mgr.selectedYear;
+            let state = null;
+            let unavailable = false;
+            try {
+                const res = await mgr.fetchCloudReceptionRecords(year);
+                state = res.records || null;
+                unavailable = !!res.unavailable;
+            } catch (_) {
+                unavailable = true;
+            }
+
+            // ⚠️ **낡은 응답을 버린다.** 세 가지를 다 확인해야 한다:
+            //    ① 세대 — 모달을 닫았다 다시 열면 `_state`가 새 객체로 갈리는데,
+            //       await에서 깨어난 이 코드는 **새 상태를 가리킨다.** 세대를 안 보면
+            //       이전 세션의 응답이 새 세션에 조용히 들어간다 (독립 리뷰 MAJOR).
+            //    ② 모달이 아직 열려 있는지
+            //    ③ 연도가 그대로인지
+            if (gen !== this._cloudGen) return;
+            if (!this._state || this._els?.modal?.hidden) return;
+
+            // ⚠️ 연도가 바뀌었으면 **버리는 것으로 끝내면 안 된다.** 버리기만 하면
+            //    새 연도는 영영 확인되지 않고, `cloudChecked`가 false로 남아
+            //    "확인 실패" 표시조차 뜨지 않는다 — 담당자는 클라우드를 검사한 줄 안다
+            //    (독립 재리뷰 MAJOR). 새 연도로 다시 읽는다.
+            // 문자열/숫자 혼용에 대비해 정규화한다. 항등 비교면 숫자로 대입된 순간
+            //    정상 응답까지 버리게 된다.
+            if (String(mgr.selectedYear) !== String(year)) {
+                this._cloudGen = (this._cloudGen || 0) + 1;
+                return this._loadCloudRecords(this._cloudGen);
+            }
+
+            this._state.cloudRecords = state;
+            this._state.cloudUnavailable = unavailable;
+            this._state.cloudChecked = true;
+            this._state.cloudYear = year;
+            // 응답이 늦게 오므로 그때 미리보기를 다시 그린다
+            this._recompute();
+            this._renderPreview();
         }
 
         // 풀을 하나씩 뽑아 넘기는 진입점(_existingNumbers)은 두지 않는다.
@@ -1451,6 +1560,10 @@
          * 이 메서드는 매니저·상태에서 입력을 모으는 일만 한다.
          */
         _recompute() {
+            // 조회가 끝난 뒤 연도가 바뀌었으면 다시 읽는다. `_recompute`는 모달이
+            // 살아 있는 동안 계속 불리므로, 연도 변경 이벤트를 따로 듣지 않아도
+            // 여기서 반드시 걸린다.
+            this._ensureCloudYearFresh();
             const { rows } = this._parseInput();
             const landClass1 = this._state.bulkLandClass || LAND_CLASS1_DEFAULT;
             const mgr = window.soilManager;
@@ -1479,6 +1592,7 @@
                 if (!Number.isNaN(parsed)) nextFillNumber = parsed;
             }
 
+            this._state.previewYear = year;
             this._state.preview = computePreview({
                 rows,
                 mapping: this._state.fieldMapping,
@@ -1518,7 +1632,13 @@
                 // 읽는 숫자가 거짓이 된다 — 0이면 아예 보여주지 않는다 (SAMPL-1-154).
                 (p.stats.sub > 0 ? `<span class="sri-pill sub">🔗 하위필지 ${p.stats.sub}</span>` : '') +
                 `<span class="sri-pill dup">⚠️ 중복 ${p.stats.dup}</span>` +
-                `<span class="sri-pill err">⛔ 오류 ${p.stats.err}</span>`;
+                `<span class="sri-pill err">⛔ 오류 ${p.stats.err}</span>` +
+                // 확인하지 못했다는 사실을 조용히 넘기지 않는다 (SAMPL-1-169).
+                // 이 표시가 없으면 담당자는 "중복 0"과 "확인 못 함"을 구별할 수 없다.
+                (this._state.cloudUnavailable
+                    ? '<span class="sri-pill err sri-cloudfail" title="다른 자리에서 같은 번호를 쓰고 있어도 여기서는 보이지 않습니다">' +
+                      '☁️ 클라우드 확인 실패 — 이 컴퓨터 기록만 검사</span>'
+                    : '');
 
             const shown = p.items.slice(0, PREVIEW_ROW_LIMIT);
             const labels = { new: '신규', dup: '중복', err: '오류', sub: '하위필지' };
@@ -1594,6 +1714,34 @@
                 return;
             }
 
+            // ⚠️ **연도가 바뀐 뒤 재계산 없이 누른 경우를 막는다** (독립 4차 리뷰 MAJOR).
+            //    미리보기는 계산 당시 연도의 번호 풀로 채번했다. 그대로 저장하면
+            //    지난해 기준으로 뽑은 번호가 올해에 들어간다.
+            //
+            //    조용히 다시 계산해서 저장하지는 않는다 — 담당자가 화면에서 본 번호와
+            //    실제로 저장되는 번호가 달라진다. 다시 계산해 **보여주고**, 확인한 뒤
+            //    누르게 한다. 한 번 더 누르는 대신, 본 것과 저장되는 것이 같아진다.
+            if (this._state.previewYear != null
+                && String(this._state.previewYear) !== String(mgr.selectedYear)) {
+                this._recompute();
+                this._renderPreview();
+                toast('연도가 바뀌어 미리보기를 다시 계산했습니다. 접수번호를 확인한 뒤 다시 눌러 주세요.', 'warning');
+                return;
+            }
+
+            // ⚠️ **재조회가 아직 안 끝났으면 그 미리보기는 클라우드를 반영하지 못했다**
+            //    (독립 5차 리뷰 MAJOR). 위 가드가 재계산을 걸면 `previewYear`는 곧바로
+            //    새 연도가 되지만 클라우드 응답은 아직 오지 않았다 — 그 상태로 두 번째를
+            //    누르면 로컬만 본 번호가 저장된다.
+            //
+            //    Firebase를 쓰지 않는 설치본(`cloudChecked`가 true로 끝남)이나 확인에
+            //    실패한 경우는 여기 걸리지 않는다. **기다리는 중일 때만** 멈춘다.
+            if (this._state.cloudChecked === false) {
+                this._renderPreview();
+                toast('클라우드 접수번호를 확인하는 중입니다. 잠시 후 다시 눌러 주세요.', 'warning');
+                return;
+            }
+
             // ⚠️ 미리보기의 그룹 id(`imp-5`)를 **그대로 저장하면 안 된다.** 그것은 배치 안에서
             //    행을 묶기 위한 키일 뿐이라, 다른 경지구분·다른 날 가져오기에서 같은 본번이
             //    나오면 서로 무관한 두 접수가 같은 groupId를 갖게 되고 그룹 수정이 둘을
@@ -1613,8 +1761,18 @@
                 if (it.status === 'sub') continue;
                 try {
                     const rec = { ...it.rec };
-                    // 자동부여 행은 receptionNumber 생략 → 매니저가 부여
-                    if (it.auto) delete rec.receptionNumber;
+                    // 🚨 **미리보기가 보여준 번호를 그대로 저장한다** (SAMPL-1-169).
+                    //    예전에는 자동부여 행의 번호를 지워 매니저가 다시 부여하게 했다.
+                    //    그런데 매니저의 채번(`getNextNumberForClass`)은 **로컬만** 본다 —
+                    //    클라우드에 1·2가 있으면 화면에는 3으로 보이는데 실제로는 1이
+                    //    저장됐다(실측: 미리보기 3·4 → 저장 1·2). 표시만 고치고 저장은
+                    //    그대로인 셈이라, 이 티켓이 막으려던 충돌이 그대로 일어난다.
+                    //
+                    //    ⚠️ 이 저장소가 이미 한 번 겪은 실패다 — SAMPL-1-153의
+                    //       "미리보기는 1,2,3인데 실제로는 1,1,1". 그때 세운 규칙이
+                    //       **미리보기 = 저장**이고, 그 규칙을 여기서도 지킨다.
+                    if (it.auto && it.display) rec.receptionNumber = it.display;
+                    else if (it.auto) delete rec.receptionNumber;
                     // 서브넘버 그룹 정보를 매니저에 그대로 넘긴다.
                     //   sublot → 선두 레코드의 parcels[0].subLots를 채운다
                     //   split  → 같은 groupId를 공유하고 cropIndex가 붙는다
