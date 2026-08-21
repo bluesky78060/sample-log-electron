@@ -903,7 +903,7 @@ class SoilSampleManager extends window.BaseSampleManager {
      *   subCategory, purpose, note, landClass1, receptionNumber? }
      * @returns {Object} 저장된 레코드(부여된 receptionNumber 포함)
      */
-    addImportedRecord(record) {
+    addImportedRecord(record, options = {}) {
         const src = record || {};
         const landClass1 = src.landClass1 || LAND_CLASS1_DEFAULT;
 
@@ -982,10 +982,49 @@ class SoilSampleManager extends window.BaseSampleManager {
         };
 
         this.sampleLogs.push(newLog);
-        this.persistRecords([newLog]); // 로컬 + Firebase 개별 저장
-        this.filterAndRenderLogs();
+        // ⚠️ **대량 가져오기에서는 저장·재렌더를 미룬다** (SAMPL-1-172).
+        //    `persistRecords`는 `saveLogs`를 부르고, 그것은 **배열 전체**를
+        //    `JSON.stringify`해 localStorage에 쓰고 **전체를 Firestore에 batchSave**한다.
+        //    행마다 부르면 배열이 커질수록 한 행당 비용도 같이 커져 O(n²)가 된다.
+        //
+        //    실측(Firebase 꺼짐, 로컬만): 200행 0.68초 → 1,200행 8.75초.
+        //    행 6배에 시간 12.9배였고, 실제 데이터 1MB를 저장하려고 **540MB를 썼다**.
+        //    Firebase를 켜면 전체 batchSave가 1,200번 나가므로 더 나쁘다.
+        if (!options.defer) {
+            this.persistRecords([newLog]);
+            this.filterAndRenderLogs();
+        }
         this.log('가져오기 레코드 추가:', receptionNumber, '(경지구분1차:', landClass1, ')');
         return newLog;
+    }
+
+    /**
+     * 여러 건을 한 번에 가져온다 — 저장과 재렌더를 **끝에 한 번만** 한다 (SAMPL-1-172).
+     *
+     * 한 건이 실패해도 나머지는 저장한다. 예전 단건 반복 경로가 그랬고,
+     * 대량 입력에서 한 줄 때문에 전부 잃는 것은 담당자에게 최악이다.
+     *
+     * @param {Array<Object>} records
+     * @returns {{added: Array<Object>, failed: Array<{record: Object, error: Error}>}}
+     */
+    addImportedRecords(records) {
+        const list = Array.isArray(records) ? records : [];
+        const added = [];
+        const failed = [];
+        for (const rec of list) {
+            try {
+                added.push(this.addImportedRecord(rec, { defer: true }));
+            } catch (error) {
+                failed.push({ record: rec, error });
+            }
+        }
+        // ⚠️ 한 건도 못 넣었으면 저장하지 않는다. 빈 저장은 아무것도 바꾸지 않으면서
+        //    Firestore 전체 동기화를 한 번 더 일으킨다.
+        if (added.length > 0) {
+            this.persistRecords(added);
+            this.filterAndRenderLogs();
+        }
+        return { added, failed };
     }
 
     // ========================================
