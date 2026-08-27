@@ -1,0 +1,143 @@
+// @ts-check
+// SAMPL-1-174: '전체 보기'를 켜면 열 폭이 통째로 움찔하던 것
+//
+// `.data-table`이 `width: 100%`라 표가 화면보다 **좁으면** 남는 폭을 모든 열이
+// 나눠 갖는다. 그 상태에서 전체 보기로 열 둘(우편번호·경지구분)이 끼어들면
+// 나머지가 전부 그만큼 양보한다 — 실측(1800px): **12개 열이 최대 20.6px씩** 줄었다.
+//
+// 필지 주소 열 하나가 남는 폭을 흡수하게 해서, 폭이 바뀌는 열을 1개로 묶었다.
+// 선례: sample-log-soil SLS-1-279 (같은 증상·같은 해법).
+//
+// ⚠️ **넓은 화면에서만 재현된다.** 표가 화면보다 넓으면 남는 폭 자체가 없어
+//    아무 열도 움직이지 않는다(1280px 실측: 0개).
+//    기본 1280으로 두면 이 스펙은 늘 통과하며 아무것도 지키지 못한다.
+//
+// ⚠️ 2560px로 재는 이유는 **여유(headroom)** 때문이다. 1800px에서는 전체 보기 쪽
+//    남는 폭이 76px뿐인데(래퍼 1758 − 최소 표 폭 1682), 경지구분 열 하나가 정확히
+//    76.5px다 — 그만한 열이 하나만 더 늘면 슬랙이 사라지고 **이 시험은 실패가 아니라
+//    조용히 통과한다**(움직일 폭이 없으니 아무 열도 안 움직인다). 독립 리뷰가 짚었다.
+//    2560px면 여유가 836px로 열 열 개분이다.
+//
+// ⚠️ docs/ 빌드 산출물 대상 — `npm run build` 먼저.
+const { test, expect } = require('@playwright/test');
+
+/** 흡수 열 — 이 열만은 폭이 변해도 된다 (그러라고 만든 것이다) */
+const ABSORBER = 'col-lot-address';
+
+test.describe('목록 열 폭 안정성 (토양)', () => {
+    test.use({ viewport: { width: 2560, height: 900 } });
+
+    test.beforeEach(async ({ page }) => {
+        page.on('dialog', (d) => d.dismiss().catch(() => {}));
+        const res = await page.goto('/soil/');
+        expect(res && res.status(), 'docs/soil/ 없음 — `npm run build` 먼저').toBeLessThan(400);
+        await page.waitForFunction(
+            () => { const m = /** @type {any} */ (window).soilManager; return !!m && !!m.tableBody; },
+            null, { timeout: 15000 }
+        );
+        await page.evaluate(() => {
+            const mgr = /** @type {any} */ (window).soilManager;
+            mgr.sampleLogs = [1, 2, 3].map((i) => ({
+                id: `r${i}`, receptionNumber: String(i), name: `민원인${i}`, date: '2026-08-20',
+                landClass1: '농가의뢰', subCategory: '밭', purpose: '일반재배', receptionMethod: '우편',
+                phoneNumber: `010-1234-567${i}`, note: '비고', mailDate: '2026-08-21',
+                address: '경상북도 봉화군 봉화읍 문단리 221번지 일원',
+                parcels: [{ id: `p${i}`, lotAddress: '문단리 221-15', subLots: [], crops: [{ name: '고추', area: '1000' }] }],
+            }));
+            mgr.filterAndRenderLogs();
+            mgr.switchView('list');
+        });
+        // 성명이 서로 달라 농가 구분선이 사이에 끼므로 데이터 행만 센다
+        await expect(page.locator('#logTableBody tr:not(.farm-separator)')).toHaveCount(3);
+    });
+
+    /**
+     * 폭이 **멈출 때까지** 기다린다.
+     *
+     * ⚠️ 웹 폰트가 단계적으로 로드되는 동안 열 폭이 계속 커진다
+     *    (`sticky-columns.js`가 기록한 실측: 32 → 35.8 → 39.1 → 40).
+     *    기다리지 않고 재면 토글과 무관한 **폰트 정착분**까지 "폭이 바뀌었다"로
+     *    잡혀, 실제로 17개 열이 일제히 1.25배로 보고됐다 — 측정이 흔들린 것이지
+     *    앱이 잘못한 것이 아니다.
+     */
+    async function waitForStableWidths(page) {
+        // ⚠️ `document.fonts.ready`를 **그대로 반환하면 안 된다.** FontFaceSet은 직렬화되지
+        //    않아 던지고, `.catch()`가 삼키면 폰트 대기가 통째로 사라진 채 폴링만 남는다.
+        await page.evaluate(() => document.fonts?.ready.then(() => undefined)).catch(() => {});
+        await page.evaluate(() => { const w = /** @type {any} */ (window); delete w.__lastW; w.__sameW = 0; });
+        // 연속 **3회** 같아야 안정으로 본다. 2회면 폰트 로드 단계 사이의 정체 구간이
+        // 폴링 간격(250ms)을 넘을 때 그것을 "멈췄다"로 오인할 수 있다.
+        await page.waitForFunction(() => {
+            const w = /** @type {any} */ (window);
+            const now = Array.from(document.querySelectorAll('#logTable thead th'))
+                .map((t) => t.getBoundingClientRect().width.toFixed(2)).join(',');
+            w.__sameW = (w.__lastW === now) ? w.__sameW + 1 : 0;
+            w.__lastW = now;
+            return w.__sameW >= 2;
+        }, { timeout: 15000, polling: 250 });
+    }
+
+    /** 보이는 머리글 칸의 폭을 열 이름으로 읽는다 */
+    const widths = (page) => page.evaluate(() => {
+        const vis = (el) => getComputedStyle(el).display !== 'none';
+        /** @type {Record<string, number>} */
+        const out = {};
+        Array.from(document.querySelectorAll('#logTable thead th')).forEach((t) => {
+            if (!vis(t)) return;
+            const key = Array.from(t.classList).find((c) => c.startsWith('col-'))
+                || (t.textContent || '').trim() || '(체크)';
+            out[key] = Math.round(t.getBoundingClientRect().width * 10) / 10;
+        });
+        return out;
+    });
+
+    test('전체 보기를 켜도 필지 주소 말고는 폭이 그대로다', async ({ page }) => {
+        const wrap = await page.evaluate(() => {
+            const w = /** @type {HTMLElement} */ (document.querySelector('.table-wrapper'));
+            return { client: w.clientWidth, scroll: w.scrollWidth };
+        });
+        // 남는 폭이 없으면 애초에 재분배가 일어나지 않는다 — 그 상태로 통과해도 의미가 없다
+        expect(wrap.scroll, '표가 화면보다 넓다 — 이 폭에서는 증상이 재현되지 않는다')
+            .toBeLessThanOrEqual(wrap.client);
+
+        await waitForStableWidths(page);
+        const before = await widths(page);
+        // ⚠️ `col-` 클래스가 없는 열은 **머리글 텍스트**를 키로 쓴다. 같은 이름의 열이
+        //    둘 생기면 뒤엣것이 앞엣것을 덮어 **한 열이 검사에서 조용히 사라진다.**
+        //    실패가 아니라 침묵이므로 여기서 미리 드러낸다.
+        expect(Object.keys(before).length, '열 이름이 겹쳐 일부가 검사에서 빠졌다')
+            .toBe(await page.locator('#logTable thead th:visible').count());
+
+        await page.locator('#viewToggleBtn').click();
+        await expect(page.locator('#logTable th.col-landclass1')).toBeVisible();
+        await waitForStableWidths(page);
+        const after = await widths(page);
+
+        const moved = Object.keys(before)
+            .filter((k) => after[k] !== undefined && Math.abs(after[k] - before[k]) > 0.5)
+            .map((k) => `${k}: ${before[k]} → ${after[k]}`);
+
+        expect(moved.length, `열이 늘지 않았다 — 시험이 무효다`).toBeGreaterThan(0);
+        expect(
+            moved.filter((m) => !m.startsWith(ABSORBER)),
+            `필지 주소 말고 폭이 바뀐 열이 있다: ${moved.join(' / ')}`
+        ).toEqual([]);
+    });
+
+    test('기본 보기로 되돌리면 폭도 되돌아온다', async ({ page }) => {
+        await waitForStableWidths(page);
+        const before = await widths(page);
+        const toggle = page.locator('#viewToggleBtn');
+        await toggle.click();
+        await expect(page.locator('#logTable th.col-landclass1')).toBeVisible();
+        await toggle.click();
+        await expect(page.locator('#logTable th.col-landclass1')).toBeHidden();
+
+        await waitForStableWidths(page);
+        const after = await widths(page);
+        const moved = Object.keys(before)
+            .filter((k) => after[k] !== undefined && Math.abs(after[k] - before[k]) > 0.5)
+            .map((k) => `${k}: ${before[k]} → ${after[k]}`);
+        expect(moved, `왕복했는데 폭이 제자리로 오지 않았다: ${moved.join(' / ')}`).toEqual([]);
+    });
+});
