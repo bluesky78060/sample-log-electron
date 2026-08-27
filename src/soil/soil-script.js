@@ -750,8 +750,7 @@ class SoilSampleManager extends window.BaseSampleManager {
         this.tableBody.innerHTML = '';
 
         // SAMPL-1-89: 공익직불제 탭 선택 시 전용 컬럼(차수·경영체등록번호·기준년도) 표시 + 일괄바
-        const gongikOn = this.currentSearchFilter?.landClass1 === '공익직불제';
-        document.getElementById('logTable')?.classList.toggle('gongik-on', gongikOn);
+        this._syncTableModeClasses();
         this._syncGongikBulkBar();
 
         this.updateRecordCount();
@@ -788,6 +787,76 @@ class SoilSampleManager extends window.BaseSampleManager {
         if (this.currentPage < 1) this.currentPage = 1;
 
         this.renderCurrentPage();
+    }
+
+    /**
+     * SAMPL-1-173: 지금 화면에 **실제로 그려진** 목록 열 수.
+     *
+     * 모드별 열(gongik-col·gongik-hide)과 기본 숨김 열(우편번호·경지구분)이
+     * 겹쳐 있어 상수로는 맞출 수 없다. 헤더 행을 그대로 세는 편이 정확하고,
+     * 열을 더하거나 숨김 규칙을 바꿔도 따라온다.
+     *
+     * ⚠️ 목록이 화면에 없어도(다른 뷰를 보는 중) 정상값이 나온다 —
+     *    `getComputedStyle`은 **그 요소 자신의** 계산값을 돌려주고 조상의
+     *    `display:none`에 영향받지 않는다(독립 리뷰 실측: 17을 그대로 반환).
+     *    그래서 `shown === 0`은 사실상 도달하지 않지만, 0을 넘기면 colSpan이
+     *    "행 끝까지"로 해석돼 의미가 달라지므로 방어값을 남긴다.
+     *
+     * @returns {number} 보이는 열 수. 헤더 행 자체가 없으면 1,
+     *   행은 있는데 보이는 셀이 하나도 없으면 셀 총수.
+     */
+    _visibleColumnCount() {
+        const row = this._logTableEl()?.querySelector('thead tr');
+        if (!row) return 1;
+        const cells = Array.from(row.children);
+        const shown = cells.filter((th) => getComputedStyle(th).display !== 'none').length;
+        return shown || cells.length || 1;
+    }
+
+    /** 목록 표 요소 — `cacheElements` 전에 불릴 수 있어 DOM 조회로 폴백한다. */
+    _logTableEl() {
+        return this.logTable || document.getElementById('logTable');
+    }
+
+    /**
+     * SAMPL-1-173: 목록 표의 **모드 클래스를 한 자리에서** 맞춘다.
+     *
+     * `gongik-on`(공익직불제 전용 열)과 `allclass-on`(전체 경지구분 탭)은 항상
+     * 함께 갱신되어야 한다. 예전에는 이 세 줄이 `renderLogs`와 `renderCurrentPage`에
+     * 그대로 복사돼 있어, 모드가 하나 더 늘면 한쪽만 고치는 사고가 나기 쉬웠다.
+     *
+     * ⚠️ `allclass-on`은 **경지구분 열을 되살리는** 클래스다. 평소 그 열을 감추는
+     *    근거는 "탭이 이미 현재 구분을 보여 준다"인데, 그 전제가 '전체 경지구분'
+     *    탭에서는 깨진다 — 12개 구분의 행이 섞이고 채번이 구분 단위로 독립이라
+     *    (`reception-number.js`) 같은 접수번호가 여러 줄로 보인다.
+     *
+     * @returns {boolean} 공익직불제 모드 여부
+     */
+    _syncTableModeClasses() {
+        const filter = this.currentSearchFilter?.landClass1;
+        const gongikOn = filter === '공익직불제';
+        const table = this._logTableEl();
+        table?.classList.toggle('gongik-on', gongikOn);
+        table?.classList.toggle('allclass-on', !filter);
+        return gongikOn;
+    }
+
+    /**
+     * SAMPL-1-173: 이미 그려진 농가 구분선의 `colSpan`을 지금 열 수에 맞춘다.
+     *
+     * ⚠️ **'전체 보기' 토글은 다시 그리지 않는다.** 클래스만 붙였다 뗄 뿐이라,
+     *    감춰 뒀던 열(우편번호·경지구분)이 되살아나도 구분선은 렌더 당시의 값을
+     *    그대로 들고 있다 — 실측(1280px): 17로 남아 선이 **217px 짧게 끊겼다**.
+     *
+     *    예전 하드코딩(18/19)은 실제보다 **컸는데**, 넘치는 colspan은 브라우저가
+     *    잘라내므로 눈에 띄지 않았다. 정확한 계산으로 바꾸면서 모자라는 쪽 —
+     *    즉 보이는 쪽 — 으로 틀어질 수 있게 됐다. 그래서 토글에서도 맞춘다.
+     */
+    _syncSeparatorColSpan() {
+        const separators = this.tableBody?.querySelectorAll('tr.farm-separator > td');
+        if (!separators || separators.length === 0) return;
+        const n = this._visibleColumnCount();
+        separators.forEach((td) => { /** @type {HTMLTableCellElement} */ (td).colSpan = n; });
     }
 
     /** SAMPL-1-89: 공익직불제 탭일 때만 차수·기준년도 일괄 적용 바 표시 */
@@ -3725,8 +3794,7 @@ class SoilSampleManager extends window.BaseSampleManager {
         this.tableBody.innerHTML = '';
 
         // SAMPL-1-89: 공익직불제 탭이면 전용 컬럼 표시(페이지 이동 시에도 유지)
-        const gongikOn = this.currentSearchFilter?.landClass1 === '공익직불제';
-        document.getElementById('logTable')?.classList.toggle('gongik-on', gongikOn);
+        this._syncTableModeClasses();
 
         if (this.currentFlatRows.length === 0) {
             this.updatePaginationUI();
@@ -3740,13 +3808,21 @@ class SoilSampleManager extends window.BaseSampleManager {
         const fragment = document.createDocumentFragment();
         let prevName = startIndex > 0 ? (this.currentFlatRows[startIndex - 1]?.name || null) : null;
 
+        // SAMPL-1-173: 구분선이 덮을 열 수를 **실제로 그려진 헤더 셀**에서 센다.
+        // 예전에는 `gongikOn ? 18 : 19`로 박아 두었는데, 그 계산은 모드별 열
+        // (gongik-col·gongik-hide)만 보고 **기본 숨김 열**(우편번호·경지구분)을
+        // 세지 않아 실제보다 2 컸다. 눈에 띄지 않은 이유는 남는 colspan을
+        // 브라우저가 잘라내기 때문이고(실측: 구분선을 지워도 표 폭 변화 0),
+        // 그래서 다음에 열을 건드리는 사람이 낡은 계산을 믿을 위험만 남았다.
+        // 루프 밖에서 한 번만 잰다 — 행마다 재면 수백 행에서 그 비용이 드러난다.
+        const spanCols = this._visibleColumnCount();
+
         pageRows.forEach((row) => {
             if (prevName !== null && row.name !== prevName) {
                 const separatorTr = document.createElement('tr');
                 separatorTr.className = 'farm-separator';
                 const separatorTd = document.createElement('td');
-                // SAMPL-1-89: 공익직불제 ON: +3(차수·경영체·기준년도) −4(목적·수령방법·비고·발송일자) = 18
-                separatorTd.colSpan = gongikOn ? 18 : 19;
+                separatorTd.colSpan = spanCols;
                 separatorTr.appendChild(separatorTd);
                 fragment.appendChild(separatorTr);
             }
@@ -4492,6 +4568,9 @@ class SoilSampleManager extends window.BaseSampleManager {
                     if (toggleIcon) toggleIcon.textContent = '👁️';
                     viewToggleBtn.classList.remove('active');
                 }
+                // SAMPL-1-173: 이 토글은 다시 그리지 않고 클래스만 바꾼다. 숨어 있던
+                // 열이 되살아나므로 이미 그려진 구분선의 colSpan을 여기서 맞춘다.
+                this._syncSeparatorColSpan();
             });
         }
 

@@ -177,3 +177,41 @@ test.describe('공익직불제 모드 (토양)', () => {
         expect(r.bad, `공익직불제 모드 겹침: ${r.bad?.join(' / ')}`).toEqual([]);
     });
 });
+
+test.describe("'전체 보기' 토글 (토양)", () => {
+    // 🚨 SAMPL-1-173에서 경지구분 열이 기본 숨김이 되며 **숨었다 되살아나는 고정 열**이
+    //    생겼다. 숨은 동안 그 열에 기록되는 `left`는 무의미한 값이라(실측 -21px),
+    //    되살아날 때 재계산이 따라오지 않으면 앞 열 위로 올라탄다.
+    //    이 조합은 어느 스펙도 보지 않았다 — 위 describe들은 토글을 한 번도 켜지 않는다.
+    test('감춰졌던 경지구분 열이 되살아나도 고정 열이 겹치지 않는다', async ({ page }) => {
+        page.on('dialog', (d) => d.dismiss().catch(() => {}));
+        await page.goto('/soil/');
+        await page.waitForLoadState('networkidle');
+        await page.waitForFunction(() => typeof window.soilManager !== 'undefined');
+        await page.evaluate(() => localStorage.clear());
+        await seedAndShowList(page, 'soilManager');
+
+        // 숨은 상태를 먼저 확인한다 — 여기가 0폭이어야 이 시험이 의미를 갖는다
+        expect(
+            await page.locator('#logTable th.col-landclass1').isVisible(),
+            '경지구분 열이 이미 보인다 — 되살아나는 순간을 검증할 수 없다'
+        ).toBe(false);
+
+        // 앱이 **실제로 반응했는지** 본다. 정착만 기다리면 무반응도 "안정"으로 보인다.
+        const before = await page.evaluate(() =>
+            Array.from(document.querySelectorAll('style[id^="sticky-col-offsets-"]'))
+                .map((e) => e.textContent || '').filter((t) => t.includes('data-sticky-scope')).join('|'));
+
+        await page.locator('#viewToggleBtn').click();
+        await expect(page.locator('#logTable th.col-landclass1')).toBeVisible();
+        await page.waitForFunction((prev) => {
+            const now = Array.from(document.querySelectorAll('style[id^="sticky-col-offsets-"]'))
+                .map((e) => e.textContent || '').filter((t) => t.includes('data-sticky-scope')).join('|');
+            return now !== prev;
+        }, before, { timeout: 15000, polling: 100 });
+        await waitForStableOffsets(page);
+
+        const r = await overlapsAfterScroll(page);
+        expect(r.bad, `전체 보기 겹침: ${r.bad?.join(' / ')}`).toEqual([]);
+    });
+});
