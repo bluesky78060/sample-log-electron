@@ -598,9 +598,34 @@
         <!-- 타임라인 -->
         <div class="timeline">
 
-            <!-- v1.17.10 -->
+            <!-- v1.17.11 -->
             <div class="version-entry">
                 <div class="version-dot latest"></div>
+                <div class="version-card">
+                    <div class="version-card-header">
+                        <div>
+                            <div class="version-meta">
+                                <span class="version-number">v1.17.11</span>
+                                <span class="version-date">2026-09-01</span>
+                            </div>
+                            <div class="version-title">퇴비 목록도 전체 보기에서 열이 흔들리지 않습니다</div>
+                        </div>
+                        <div class="badge-row">
+                            <span class="badge badge-latest">★ 최신</span>
+                            <span class="badge badge-fix">개선</span>
+                        </div>
+                    </div>
+                    <ul class="change-list">
+                        <li><strong>퇴비 목록에서 전체 보기를 켜고 끌 때 열 너비가 흔들리던 것을 잡았습니다</strong> — 넓은 화면에서 <strong>[전체 보기]</strong>를 누르면 숨어 있던 세 열(법인여부·생년월일/법인번호·우편번호)이 나타나는데, 그때 <strong>나머지 열 14개가 한꺼번에 30px 남짓씩 줄었다 늘었다</strong> 하며 표 전체가 움찔했습니다. 이제 <strong>농장주소 열 하나만</strong> 남는 자리를 흡수하고 나머지는 제자리를 지킵니다.</li>
+                        <li><strong>좁은 화면에서는 예전과 똑같습니다</strong> — 표가 화면보다 넓을 때는 나눠 줄 자리가 없으므로 농장주소도 원래 너비(250px)에 머뭅니다. 목록이 옆으로 더 밀려나는 일은 없습니다.</li>
+                        <li>토양 목록은 지난 v1.17.10에서 같은 방식으로 먼저 고쳤습니다.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- v1.17.10 -->
+            <div class="version-entry">
+                <div class="version-dot"></div>
                 <div class="version-card">
                     <div class="version-card-header">
                         <div>
@@ -611,7 +636,6 @@
                             <div class="version-title">목록이 눈에 덜 어지럽게 · 전체 보기에서 열이 흔들리지 않게</div>
                         </div>
                         <div class="badge-row">
-                            <span class="badge badge-latest">★ 최신</span>
                             <span class="badge badge-fix">개선</span>
                         </div>
                     </div>
