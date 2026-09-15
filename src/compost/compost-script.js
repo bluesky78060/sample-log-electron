@@ -41,6 +41,7 @@ class CompostSampleManager extends window.BaseSampleManager {
             dateFrom: '',
             dateTo: '',
             name: '',
+            farmAddress: '',
             receptionFrom: '',
             receptionTo: '',
             completed: 'incomplete'
@@ -1682,6 +1683,7 @@ class CompostSampleManager extends window.BaseSampleManager {
         const searchDateFromInput = document.getElementById('searchDateFromInput');
         const searchDateToInput = document.getElementById('searchDateToInput');
         const searchNameInput = document.getElementById('searchNameInput');
+        const searchFarmAddressInput = document.getElementById('searchFarmAddressInput');
         const searchReceptionFromInput = document.getElementById('searchReceptionFromInput');
         const searchReceptionToInput = document.getElementById('searchReceptionToInput');
         const clearSearchDate = document.getElementById('clearSearchDate');
@@ -1701,6 +1703,7 @@ class CompostSampleManager extends window.BaseSampleManager {
                 if (searchDateFromInput) searchDateFromInput.value = this.currentSearchFilter.dateFrom;
                 if (searchDateToInput) searchDateToInput.value = this.currentSearchFilter.dateTo;
                 if (searchNameInput) searchNameInput.value = this.currentSearchFilter.name;
+                if (searchFarmAddressInput) searchFarmAddressInput.value = this.currentSearchFilter.farmAddress;
                 if (searchReceptionFromInput) searchReceptionFromInput.value = this.currentSearchFilter.receptionFrom;
                 if (searchReceptionToInput) searchReceptionToInput.value = this.currentSearchFilter.receptionTo;
                 listSearchModal.classList.remove('hidden');
@@ -1730,10 +1733,11 @@ class CompostSampleManager extends window.BaseSampleManager {
                 if (searchDateFromInput) searchDateFromInput.value = '';
                 if (searchDateToInput) searchDateToInput.value = '';
                 if (searchNameInput) searchNameInput.value = '';
+                if (searchFarmAddressInput) searchFarmAddressInput.value = '';
                 if (searchReceptionFromInput) searchReceptionFromInput.value = '';
                 if (searchReceptionToInput) searchReceptionToInput.value = '';
                 if (completedFilter) completedFilter.value = 'incomplete';
-                this.currentSearchFilter = { dateFrom: '', dateTo: '', name: '', receptionFrom: '', receptionTo: '', completed: 'incomplete' };
+                this.currentSearchFilter = { dateFrom: '', dateTo: '', name: '', farmAddress: '', receptionFrom: '', receptionTo: '', completed: 'incomplete' };
                 this.filterAndRenderLogs();
                 this.updateSearchButtonState();
                 listSearchModal.classList.add('hidden');
@@ -1744,6 +1748,7 @@ class CompostSampleManager extends window.BaseSampleManager {
                 this.currentSearchFilter.dateFrom = searchDateFromInput ? searchDateFromInput.value : '';
                 this.currentSearchFilter.dateTo = searchDateToInput ? searchDateToInput.value : '';
                 this.currentSearchFilter.name = searchNameInput ? searchNameInput.value.toLowerCase() : '';
+                this.currentSearchFilter.farmAddress = searchFarmAddressInput ? searchFarmAddressInput.value.trim() : '';
                 this.currentSearchFilter.receptionFrom = searchReceptionFromInput ? searchReceptionFromInput.value : '';
                 this.currentSearchFilter.receptionTo = searchReceptionToInput ? searchReceptionToInput.value : '';
                 this.filterAndRenderLogs();
@@ -1752,13 +1757,37 @@ class CompostSampleManager extends window.BaseSampleManager {
         }
 
         // Enter 키로 검색
-        [searchNameInput, searchReceptionFromInput, searchReceptionToInput].forEach(input => {
+        [searchNameInput, searchFarmAddressInput, searchReceptionFromInput, searchReceptionToInput].forEach(input => {
             if (input) {
                 input.addEventListener('keydown', (e) => {
                     if (e.key === 'Enter' && applySearchBtn) applySearchBtn.click();
                 });
             }
         });
+    }
+
+    // Override: 타입 고유 필터 — 퇴비는 농장주소 조건을 더한다
+    matchesTypeSpecificFilters(log) {
+        return this.matchesFarmAddressFilter(log);
+    }
+
+    /**
+     * 농장주소 필터 — 공백으로 나눈 단어를 모두 포함해야 통과한다.
+     * "봉화 물야"처럼 시군과 읍면을 띄어 입력해도 걸리게 하기 위함 (soil 필지 검색과 같은 방식).
+     */
+    matchesFarmAddressFilter(log) {
+        const query = (this.currentSearchFilter.farmAddress || '').trim().toLowerCase();
+        if (!query) return true;
+
+        const target = (log.farmAddress || '').toLowerCase();
+        if (!target) return false;
+
+        return query.split(/\s+/).filter(t => t).every(term => target.includes(term));
+    }
+
+    // Override: 검색 버튼 배지 판정에 농장주소를 포함
+    getFilterKeys() {
+        return [...super.getFilterKeys(), 'farmAddress'];
     }
 
     // ========================================
