@@ -5365,6 +5365,7 @@ class SoilSampleManager extends window.BaseSampleManager {
                 return {
                     id: crypto.randomUUID(), receptionNumber, date, name, phoneNumber, address,
                     subCategory, purpose, receptionMethod, note, groupId: common.groupId,
+                    landClass1: LAND_CLASS1_DEFAULT,   // 서식에 경지구분 열이 없다 — numberScopeFilter와 같은 값
                     parcelIndex: 0, totalParcels: 0,
                     parcels: [{ id: crypto.randomUUID(), lotAddress, isMountain: false, subLots: [],
                         crops: crop ? [{ name: crop, area: area, unit: 'm2' }] : [],
@@ -5398,6 +5399,9 @@ class SoilSampleManager extends window.BaseSampleManager {
                 const base = log.receptionNumber.split('-')[0];
                 return parseInt(base, 10);
             },
+            // 가져온 행은 경지구분 열이 없어 전부 농가의뢰다. 번호는 경지구분별 시퀀스라
+            // 중복 판정·자동부여도 농가의뢰 범위로 본다 (SAMPL-1-178 독립 검증).
+            numberScopeFilter: (log) => (log.landClass1 || LAND_CLASS1_DEFAULT) === LAND_CLASS1_DEFAULT,
             onImportComplete: (records) => {
                 records.forEach(logEntry => this.sampleLogs.push(logEntry));
                 this.sampleLogs.sort((a, b) => {

@@ -30,6 +30,8 @@ class ExcelImportManager {
      * @param {Function} [config.validateStep1] - () => {valid:boolean, message?:string}
      * @param {Function} [config.autoNumberFilter] - (log) => boolean (접수번호 채번 시 필터)
      * @param {Function} [config.autoNumberExtract] - (log) => number|NaN (접수번호에서 숫자 추출)
+     * @param {Function} [config.numberScopeFilter] - (log) => boolean. 가져온 행과 접수번호 시퀀스를
+     *        공유하는 기존 레코드만 남긴다(중복 판정·자동부여 공통). 토양은 경지구분별 시퀀스라 필요하다.
      * @param {boolean} [config.setDefaultDate=true] - importDate 기본값을 오늘로 설정할지 여부
      * @param {Function} [config.postBuildRecords] - (records) => void (레코드 빌드 후 추가 처리)
      */
@@ -468,10 +470,16 @@ class ExcelImportManager {
     _existingNumberSet() {
         const local = this.config.getExistingLogs ? (this.config.getExistingLogs() || []) : [];
         const set = new Set();
-        for (const log of [...local, ...this._freshCloudRecords()]) {
+        for (const log of this._scoped([...local, ...this._freshCloudRecords()])) {
             for (const n of this._splitNumbers(log?.receptionNumber)) set.add(n);
         }
         return set;
+    }
+
+    /** 가져온 행과 번호 시퀀스를 공유하는 레코드만 (numberScopeFilter 없으면 전부) */
+    _scoped(logs) {
+        const f = this.config.numberScopeFilter;
+        return typeof f === 'function' ? logs.filter(l => l && f(l)) : logs;
     }
 
     /**
@@ -508,7 +516,7 @@ class ExcelImportManager {
         }
 
         // 기존 데이터에서 최대 번호 구하기
-        const existingLogs = this.config.getExistingLogs ? this.config.getExistingLogs() : [];
+        const existingLogs = this._scoped(this.config.getExistingLogs ? this.config.getExistingLogs() : []);
         let maxNum = 0;
 
         const extractFn = this.config.autoNumberExtract;
@@ -542,7 +550,7 @@ class ExcelImportManager {
     _fillBlankReceptionNumbers(blanks) {
         const local = this.config.getExistingLogs ? (this.config.getExistingLogs() || []) : [];
         const nums = [];
-        for (const log of [...this._parsedLogs, ...local, ...this._freshCloudRecords()]) {
+        for (const log of [...this._parsedLogs, ...this._scoped([...local, ...this._freshCloudRecords()])]) {
             for (const part of this._splitNumbers(log?.receptionNumber)) {
                 const n = parseInt(part, 10);
                 if (Number.isFinite(n)) nums.push(n);

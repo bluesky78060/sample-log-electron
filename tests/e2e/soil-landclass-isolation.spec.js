@@ -48,6 +48,25 @@ test.describe('경지구분이 다른 같은 번호 시료 분리 (SAMPL-1-178)'
         expect(out).toEqual({ a: false, a1: false, b: true, b1: true });
     });
 
+    // 일괄 완료는 호출부가 로그만 넘겨 단위 테스트로만 잡혔다(M1b). 화면 배선까지 묶는다.
+    test('일괄 완료: 공익직불제 5 선택이 농가의뢰 5·성토 F5로 번지지 않는다', async ({ page }) => {
+        await openSoil(page);
+        const out = await page.evaluate((logs) => {
+            const mgr = /** @type {any} */ (window).soilManager;
+            mgr.sampleLogs = logs;
+            mgr.currentSearchFilter.landClass1 = '';
+            mgr.filterAndRenderLogs();
+            const cb = /** @type {HTMLInputElement} */ (mgr.tableBody.querySelector('.row-checkbox[data-id="b"]'));
+            if (!cb) return { error: '공익직불제 5 행의 체크박스가 그려지지 않았다' };
+            cb.checked = true;
+            /** @type {HTMLElement} */ (document.getElementById('btnBulkComplete')).click();   // confirm은 openSoil이 수락
+            return Object.fromEntries(mgr.sampleLogs.map((l) => [l.id, !!l.isComplete]));
+        }, [log('a', '5', '농가의뢰'), log('a1', '5-1', undefined),
+            log('b', '5', '공익직불제'), log('b1', '5-1', '공익직불제'),
+            log('f', 'F5', '공익직불제')]);
+        expect(out).toEqual({ a: false, a1: false, b: true, b1: true, f: false });
+    });
+
     test('연속 신규 등록: 두 번째 등록의 경지구분이 기본값(농가의뢰)이다', async ({ page }) => {
         await openSoil(page);
         const submit = (landClass1) => page.evaluate(async (lc) => {
