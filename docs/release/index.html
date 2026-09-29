@@ -598,9 +598,36 @@
         <!-- 타임라인 -->
         <div class="timeline">
 
-            <!-- v1.17.12 -->
+            <!-- v1.17.13 -->
             <div class="version-entry">
                 <div class="version-dot latest"></div>
+                <div class="version-card">
+                    <div class="version-card-header">
+                        <div>
+                            <div class="version-meta">
+                                <span class="version-number">v1.17.13</span>
+                                <span class="version-date">2026-09-29</span>
+                            </div>
+                            <div class="version-title">경지구분이 다른 같은 번호 시료가 서로 섞이지 않습니다</div>
+                        </div>
+                        <div class="badge-row">
+                            <span class="badge badge-latest">★ 최신</span>
+                            <span class="badge badge-fix">개선</span>
+                        </div>
+                    </div>
+                    <ul class="change-list">
+                        <li><strong>완료 처리가 다른 경지구분의 같은 번호까지 번지던 것을 고쳤습니다</strong> — 접수번호는 경지구분마다 따로 매겨지는데, <strong>농가의뢰 5번</strong>을 완료하면 <strong>공익직불제 5번</strong>까지 함께 완료되었습니다. 완료 버튼과 일괄 완료 모두 이제 같은 경지구분 안에서만 묶입니다.</li>
+                        <li><strong>흙토람 검정값이 다른 농가 시료로 복사되지 않습니다</strong> — 흙토람 화면에서 한 시료에 값을 입력하거나 붙여넣으면 경지구분이 다른 같은 번호 시료에도 같은 값이 저장되었습니다. 이제 같은 시료(작물·하위필지 행)끼리만 맞춰집니다.</li>
+                        <li><strong>흙토람 결과 가져오기가 엉뚱한 시료에 값을 넣지 않습니다</strong> — 전체 보기에서 같은 번호가 여러 경지구분에 있으면, 가져온 값이 어느 한쪽에 조용히 들어갔습니다. 이제 그런 줄은 <strong>저장하지 않고 이유를 표시</strong>합니다. 토양 목록에서 경지구분 탭을 고르고 행을 선택한 뒤 흙토람을 열어 가져오세요.</li>
+                        <li><strong>연달아 접수할 때 경지구분이 바뀌지 않습니다</strong> — 한 건을 등록한 뒤 다음 접수를 하면 경지구분이 목록 첫 항목으로 돌아가 있었습니다. 이제 <strong>농가의뢰</strong>로 돌아옵니다.</li>
+                        <li><strong>보안 라이브러리 갱신</strong> — 웹 버전에 포함된 입력 정화 라이브러리(DOMPurify)가 3.4.13으로 올라갔습니다.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- v1.17.12 -->
+            <div class="version-entry">
+                <div class="version-dot"></div>
                 <div class="version-card">
                     <div class="version-card-header">
                         <div>
@@ -611,7 +638,6 @@
                             <div class="version-title">퇴비 목록을 농장주소로 찾을 수 있습니다</div>
                         </div>
                         <div class="badge-row">
-                            <span class="badge badge-latest">★ 최신</span>
                             <span class="badge badge-feature">기능 추가</span>
                         </div>
                     </div>

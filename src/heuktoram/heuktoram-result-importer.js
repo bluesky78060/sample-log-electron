@@ -775,11 +775,23 @@
             }
 
             const flatRows = (this.cfg.getFlatRows?.() || []).filter(r => !r.isSubLot);
+            // 번호 하나에 행이 여럿일 수 있다 — 경지구분별로 번호를 따로 매기므로 '농가의뢰 5'와
+            // '공익직불제 5'가 한 표에 오른다. 한 행만 담으면 마지막 행이 이겨 남의 시료에
+            // 저장됐다(SAMPL-1-178). 둘 이상이면 매칭하지 않고 사유를 남긴다.
             const keyMap = new Map();
             for (const r of flatRows) {
                 const k = String(r.displayNumber ?? r.log?.receptionNumber ?? '').trim();
-                if (k) keyMap.set(k, r);
+                if (!k) continue;
+                if (!keyMap.has(k)) keyMap.set(k, []);
+                keyMap.get(k).push(r);
             }
+            const landClassOf = (r) => (r.log?.landClass1 && String(r.log.landClass1).trim()) || '농가의뢰';
+            const ambiguousReason = (key, rows) => {
+                const classes = [...new Set(rows.map(landClassOf))];
+                return classes.length > 1
+                    ? `시료번호 ${key}가 여러 경지구분에 있음(${classes.join(', ')}) — 경지구분을 골라 가져오세요`
+                    : `시료번호 ${key}가 같은 경지구분(${classes[0]})에 ${rows.length}건 있음 — 접수번호를 확인하세요`;
+            };
             const testResults = this.cfg.getTestResults?.() || {};
             const ranges = this.cfg.fieldRanges || {};
 
@@ -812,12 +824,15 @@
                     result.stats.unmatchedRows++;
                     return;
                 }
-                const target = keyMap.get(key);
-                if (!target) {
-                    result.unmatched.push({ excelRowIdx: ri, key, rawRow: row });
+                const candidates = keyMap.get(key) || [];
+                if (candidates.length !== 1) {
+                    const reason = candidates.length > 1 ? ambiguousReason(key, candidates) : '';
+                    result.unmatched.push({ excelRowIdx: ri, key, rawRow: row, reason });
                     result.stats.unmatchedRows++;
+                    if (reason && !result.warnings.includes(reason)) result.warnings.push(reason);
                     return;
                 }
+                const target = candidates[0];
 
                 for (const field of fields) {
                     const colIdx = this._state.fieldMapping[field];
@@ -1007,6 +1022,7 @@
                     `<li class="importer-preview-item is-unmatched">
                         <span class="importer-preview-key">${escapeHtml(u.key || '(빈 키)')}</span>
                         <span class="badge badge-warn">미매칭</span>
+                        ${u.reason ? `<span class="importer-summary-muted">${escapeHtml(u.reason)}</span>` : ''}
                     </li>`
                 ).join('');
                 const more = p.unmatched.length > PREVIEW_UNMATCHED_LIMIT
@@ -1062,7 +1078,7 @@
             const p = this._state.preview;
             if (!p || p.unmatched.length === 0) return;
             const { headers } = this._parseInput();
-            const csvHeaders = ['_원본행번호', ...headers.map((h, i) => h || `열${i + 1}`)].map(csvEscape).join(',');
+            const csvHeaders = ['_원본행번호', ...headers.map((h, i) => h || `열${i + 1}`), '_사유'].map(csvEscape).join(',');
             const lines = [csvHeaders];
             // M-1 fix: 모드별 실제 엑셀 행번호 계산
             // - file 모드: headerRowIdx가 0-based이므로 헤더 다음 행은 headerRowIdx + 2 (1-based)
@@ -1072,7 +1088,7 @@
                 ? (this._state.headerRowIdx >= 0 ? this._state.headerRowIdx + 2 : 1)
                 : (this._state.hasHeader ? 2 : 1);
             for (const u of p.unmatched) {
-                const cells = [String(u.excelRowIdx + baseOffset), ...u.rawRow].map(csvEscape);
+                const cells = [String(u.excelRowIdx + baseOffset), ...u.rawRow, u.reason || ''].map(csvEscape);
                 lines.push(cells.join(','));
             }
             const csv = UTF8_BOM + lines.join('\r\n'); // UTF-8 BOM (Excel 한글 인식)
