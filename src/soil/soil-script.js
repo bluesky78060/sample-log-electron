@@ -257,7 +257,8 @@ class SoilSampleManager extends window.BaseSampleManager {
                 const opt = document.createElement('option');
                 opt.value = value;
                 opt.textContent = value;
-                if (value === LAND_CLASS1_DEFAULT) opt.selected = true;
+                // selected(property)만 주면 form.reset()이 첫 옵션(개량제)으로 되돌린다 (SAMPL-1-178)
+                if (value === LAND_CLASS1_DEFAULT) opt.defaultSelected = true;
                 frag.appendChild(opt);
             });
             this.landClass1Select.appendChild(frag);
@@ -4170,8 +4171,7 @@ class SoilSampleManager extends window.BaseSampleManager {
         this.form.reset();
         // yearSelect 복원: form.reset()이 yearSelect를 첫 옵션(2025)으로 되돌리므로 복원
         { const _yearSelect = document.getElementById('yearSelect'); if (_yearSelect && this.selectedYear) _yearSelect.value = this.selectedYear; }
-        // landClass1 복원: option.selected는 attribute가 아닌 property로 설정되어 있어
-        // form.reset()이 첫 옵션(개량제)으로 되돌리므로 기본값(농가의뢰)을 명시적으로 복원
+        // defaultSelected(populateLandClass1Options) 덕에 reset만으로도 농가의뢰로 돌아온다
         if (this.landClass1Select) this.landClass1Select.value = LAND_CLASS1_DEFAULT;
         setTimeout(() => {
             if (receptionNumber && this.receptionNumberInput) this.receptionNumberInput.value = receptionNumber;
@@ -4421,8 +4421,8 @@ class SoilSampleManager extends window.BaseSampleManager {
                         const receptionNumber = log.receptionNumber || '';
                         // 본필지+하위필지 연동: 첫 번째 '-' 앞 숫자로 그룹핑
                         // 503, 503-1, 503-2 → 모두 baseNumber '503'으로 같은 그룹
-                        // 성토(F접두사)와 일반 시료는 번호가 같아도 별개 그룹으로 분리
-                        const relatedLogs = window.ReceptionGroup.findRelatedLogs(this.sampleLogs, receptionNumber);
+                        // 성토(F접두사)·경지구분이 다르면 번호가 같아도 별개 그룹 (SAMPL-1-178)
+                        const relatedLogs = window.ReceptionGroup.findRelatedLogs(this.sampleLogs, receptionNumber, log.landClass1);
                         relatedLogs.forEach(relatedLog => {
                             relatedLog.isComplete = newCompletedStatus;
                             relatedLog.updatedAt = new Date().toISOString();
@@ -4717,7 +4717,7 @@ class SoilSampleManager extends window.BaseSampleManager {
                 if (selectedIds.length === 0) { alert('완료 처리할 항목을 선택해주세요.'); return; }
 
                 // 연관 접수번호(같은 base 번호) 포함한 실제 처리 대상 사전 계산
-                // 성토(F접두사)와 일반 시료는 분리하여 그룹핑 (순수 로직 위임)
+                // 성토(F접두사)·경지구분이 다르면 분리하여 그룹핑 (순수 로직 위임)
                 const targetIds = window.ReceptionGroup.computeBulkTargetIds(this.sampleLogs, selectedIds);
                 // 선택 대상이 모두 완료 상태면 → 일괄 해제, 아니면 → 일괄 완료
                 const allComplete = [...targetIds].every(id => {

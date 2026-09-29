@@ -157,3 +157,27 @@ describe('동치성: computeBulkTargetIds vs 기존 인라인 로직', () => {
         })
     }
 })
+
+// SAMPL-1-178: 경지구분별로 번호를 따로 매기므로 같은 본번이 다른 농가 시료일 수 있다
+describe('경지구분이 다르면 같은 본번이어도 묶지 않는다 (SAMPL-1-178)', () => {
+    const logs = [
+        { id: 'a', receptionNumber: '5', landClass1: '농가의뢰' },
+        { id: 'a1', receptionNumber: '5-1' },                          // 누락 = 농가의뢰
+        { id: 'b', receptionNumber: '5', landClass1: '공익직불제' },
+        { id: 'b1', receptionNumber: '5-1', landClass1: '공익직불제' },
+        { id: 'f', receptionNumber: 'F5', landClass1: '공익직불제' },    // 성토는 기존대로 별개
+    ]
+    it('findRelatedLogs: 농가의뢰 5 → 농가의뢰 그룹만 (누락값은 농가의뢰로 본다)', () => {
+        expect(RG.findRelatedLogs(logs, '5', '농가의뢰').map(l => l.id)).toEqual(['a', 'a1'])
+        expect(RG.findRelatedLogs(logs, '5', undefined).map(l => l.id)).toEqual(['a', 'a1'])
+    })
+    it('findRelatedLogs: 공익직불제 5 → 공익직불제 일반 그룹만', () => {
+        expect(RG.findRelatedLogs(logs, '5', '공익직불제').map(l => l.id)).toEqual(['b', 'b1'])
+    })
+    it('computeBulkTargetIds: 농가의뢰 5 선택 → 공익직불제 5 미포함', () => {
+        expect([...RG.computeBulkTargetIds(logs, ['a'])].sort()).toEqual(['a', 'a1'])
+    })
+    it('computeBulkTargetIds: 두 경지구분을 각각 선택하면 각자의 그룹만 합집합', () => {
+        expect([...RG.computeBulkTargetIds(logs, ['a1', 'f'])].sort()).toEqual(['a', 'a1', 'f'])
+    })
+})

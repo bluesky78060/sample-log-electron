@@ -914,13 +914,17 @@ class HeuktoramManager {
         const editedRow = this.flatRows.find(r => r.key === key);
         if (!editedRow) return;
 
-        // 같은 log.id이거나, base 접수번호(468-1 → 468)가 같은 log도 sibling으로 처리
+        // 같은 log.id이거나, base 접수번호(468-1 → 468)가 같은 log도 sibling으로 처리.
+        // 경지구분별로 번호를 따로 매기므로 경지구분도 같아야 한다 (SAMPL-1-178).
+        // 성토는 base에 'F'가 남아 있어('F468') 일반 시료와 이미 갈린다.
+        const landClassOf = (log) => log.landClass1 || '농가의뢰';
         const editedBase = String(editedRow.log.receptionNumber || '').replace(/-\d+$/, '');
+        const editedClass = landClassOf(editedRow.log);
         const siblingRows = this.flatRows.filter(r => {
             if (r.key === key) return false;
             if (r.log.id === editedRow.log.id) return true;
             const rBase = String(r.log.receptionNumber || '').replace(/-\d+$/, '');
-            return editedBase && rBase === editedBase;
+            return editedBase && rBase === editedBase && landClassOf(r.log) === editedClass;
         });
         for (const sibling of siblingRows) {
             if (!this.testResults[sibling.key]) {

@@ -513,7 +513,7 @@ const FI=()=>{};var Nd={};/**
     `);const e=r.firebase.SDK_VERSION;e&&e.indexOf("LITE")>=0&&Wd.warn(`
         Warning: You are trying to load Firebase while using Firebase Performance standalone script.
         You should load Firebase Performance with this instance of Firebase to avoid loading duplicate code.
-        `)}}catch{}const Pe=vE;RE();var SE="firebase",PE="12.7.0";/**
+        `)}}catch{}const Pe=vE;RE();var SE="firebase",PE="12.17.1";/**
  * @license
  * Copyright 2020 Google LLC
  *
