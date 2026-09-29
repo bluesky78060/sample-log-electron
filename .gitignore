@@ -128,3 +128,9 @@ playwright-report/
 tmp-prefix-pw.config.js
 *-scrolled.png
 *-midscroll.png
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+/graft/
+
+# graft가 새 worktree 첫 세션에 만드는 opencode 배선 (SAMPL-2-37)
+opencode.json

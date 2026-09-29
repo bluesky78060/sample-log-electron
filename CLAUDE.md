@@ -268,3 +268,60 @@ GitHub Pages 웹 버전이 404가 된다 (v1.17.7 실제 사고 → SAMPL-2-22).
 `sample-log-electron-test`는 `test_` 접두사 Firestore 컬렉션 사용. 암호화 파일은 독립 관리.
 
 > ⚠️ **테스트 프로젝트는 TypeScript로 마이그레이션됨** (2026-06 확인, `src/shared/*.ts`). 메인→테스트 동기화는 `.js` 파일 복사가 아니라 **의미 단위 TS 포팅**으로 수행한다 (선례: SAMPL-1-77). 암호화 모듈(`encryption-manager.ts`, `crypto-utils.ts`, `secure-storage.ts`)과 `COLLECTION_PREFIX = 'test_'`는 절대 덮어쓰지 말 것.
+
+### graft 이 저장소 예외 (SAMPL-2-37)
+
+아래 graft 블록과 `.claude/skills/graft/SKILL.md`는 `graft init`이 덮어쓰는 파일이라 예외는 여기에 둔다.
+
+- **`docs/`도 색인된다.** git이 추적하는 빌드 산출물이라 노드의 약 78%가 해시 번들이다.
+  `--only-dir`로 좁혀도 저장되지 않아서, 편집이 있은 턴 끝에 전역 Stop 훅의 맨 `graft build`가 되돌린다(실측).
+  → 질의는 `--in src/`로 좁히고, `docs/assets/*` 결과는 무시한다. 편집 대상이 아니다.
+- **새 worktree·클론의 첫 세션은 전역 설정에 쓴다.** `graft/.cache/wiring-stamp.json`이 없으면
+  SessionStart 훅이 `global: true`로 재배선한다(~/.codex, ~/.gemini, 저장소의 `opencode.json`. 격리 HOME에서 재현).
+  세션을 열기 전에 기존 worktree의 stamp를 같은 경로로 복사하면 막힌다(실측). `opencode.json`은 gitignore했다.
+- **`graft init` 재실행 또는 graft 업그레이드 후 첫 세션**에서 `.claude/settings.json`에 `hooks`와
+  `Bash(npx graft:*)`·`Bash(graft-dev:*)`·`Bash(node dist/cli.js:*)` 허용이, 그리고 `.claude/helpers/`가 되살아난다. 지운다.
+  훅은 전역과 중복되고, npm의 `graft`는 무관한 패키지다(실제 도구는 `@nanonets/graft`).
+- SKILL.md의 statusline 집계 안내는 여기 해당하지 않는다(OMC HUD 유지).
+
+<!-- graft:start -->
+## Graft — repo context graph
+
+This repo is indexed in `graft/`: small linked markdown nodes that explain each
+system and carry exact file:line spans, kept in sync with the code through git.
+
+For ANY task here — understanding how something works, finding where code lives,
+or scoping a change — get context from the graph before grepping or opening
+source files. Re-ask freely (it's cheap) and reuse literal identifiers you
+already have (symbol, error string, file name) as the query. New to this repo?
+Run `graft map` first — a token-budgeted orientation (dir clusters, hubs,
+hotspots), no LLM, no key.
+
+- Run `graft ask "<your question>" --source` → ranked nodes with the relevant
+  code spans inlined (each hit's ≤8-line crux by default; `--full` for whole
+  definitions when the crux isn't enough). Match the tool to the task shape:
+  for understanding or editing, the top node IS the answer — cite its
+  `covers:` file:line spans and edit straight from `--source`. For
+  exhaustive tasks ("every occurrence / every caller of this pattern"), ranked
+  results are top-N, not complete — run `graft grep "<literal>"` instead
+  (exhaustive over indexed files, grouped by enclosing symbol), falling back
+  to raw `grep -rn` only for unindexed files.
+- `graft skeleton <file>` → every definition's signature + span, ~10× cheaper
+  than reading the file; use it to skim an API surface.
+- `graft callers <symbol>` gives precomputed, exact edges — who calls this.
+  Add `--direction out` for what it calls, or `--depth N` to walk
+  transitively for the full blast radius. For structural questions, skip
+  ranking and use this directly.
+- Or browse: `graft/INDEX.md` lists every node; follow the links.
+- Monorepos and folders of multiple repos rank fairly across sub-projects —
+  hits carry `[scope/]` labels naming which one they're from. Narrow with
+  `graft ask "<task>" --in <scope>/` once you know where you're working.
+
+If a returned span is truncated ("+N more lines"), open the file at that exact
+range before finalizing. Only open source files when a node genuinely lacks a
+needed detail, and then at the exact file:line the node points to — never
+re-read whole files.
+
+After big code changes, refresh the graph with `graft build` (deterministic,
+no API key, $0).
+<!-- graft:end -->
