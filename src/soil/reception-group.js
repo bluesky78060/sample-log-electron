@@ -34,6 +34,8 @@
     /**
      * 두 접수번호가 같은 그룹(같은 본번 + 같은 성토 여부)인지.
      * base가 빈 문자열이면 항상 false.
+     * ⚠️ 경지구분(landClass1)은 비교하지 않는다. 운영 사용처는 없고(테스트뿐) 인자가 번호 문자열이라
+     * 경지구분을 볼 수 없다. 경지구분까지 봐야 하면 findRelatedLogs를 쓴다.
      * @param {string} recA
      * @param {string} recB
      * @returns {boolean}
@@ -45,16 +47,16 @@
     }
 
     /**
-     * 단일 접수번호와 같은 그룹인 로그 전체를 반환한다 (테이블 완료 버튼용).
+     * 기준 로그와 같은 그룹인 로그 전체를 반환한다 (테이블 완료 버튼용).
+     * 기준을 로그 객체로 받는 것은 경지구분 인자를 빠뜨릴 수 없게 하려는 것이다 (SAMPL-1-182).
      * @param {Array<{receptionNumber?: string, landClass1?: string}>} logs
-     * @param {string} receptionNumber
-     * @param {string} [landClass1] - 기준 시료의 경지구분 (누락 = 농가의뢰)
+     * @param {{receptionNumber?: string, landClass1?: string}} targetLog - 기준 시료 (경지구분 누락 = 농가의뢰)
      * @returns {Array} 같은 그룹 로그 배열 (base가 비면 빈 배열)
      */
-    function findRelatedLogs(logs, receptionNumber, landClass1) {
-        const target = parseReceptionGroup(receptionNumber);
+    function findRelatedLogs(logs, targetLog) {
+        const target = parseReceptionGroup(targetLog?.receptionNumber || '');
         if (target.base === '') return [];
-        const targetClass = landClassOf(landClass1);
+        const targetClass = landClassOf(targetLog.landClass1);
         return (logs || []).filter(l => {
             const g = parseReceptionGroup(l.receptionNumber || '');
             return g.base === target.base && g.isFill === target.isFill
