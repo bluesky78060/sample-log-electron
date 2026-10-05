@@ -112,6 +112,27 @@ test('모호 사유 종류별로 경고는 한 줄씩이고, 행별 사유는 �
     expect(list).not.toContain('경지구분을 골라 가져오세요');
 });
 
+// 경고 합치기는 입력 순서·필드 수와 무관해야 한다. 합치는 블록이 행·필드 반복문 안에 있으면
+// 매칭 행이 모호 행보다 앞이거나 없을 때 경고가 사라지고, 필드가 많으면 같은 문장이 쌓인다.
+const MULTI = '시료번호 2개가 여러 경지구분에 있어 저장하지 않았습니다(5, 6)';
+const dupPair = (n) => [log(`m${n}`, String(n), '농가의뢰'), log(`n${n}`, String(n), '공익직불제')];
+for (const [label, tsv] of [
+    ['매칭 행이 모호 행보다 앞', '시료번호\tpH\n7\t7.1\n5\t6.5\n6\t6.6'],
+    ['매칭 행이 없음', '시료번호\tpH\n5\t6.5\n6\t6.6'],
+    ['필드가 둘이고 매칭 행이 마지막', '시료번호\tpH\t유기물\n5\t6.5\t2.1\n6\t6.6\t2.2\n7\t7.1\t2.3'],
+    ['매칭 행과 모호 행이 섞임', '시료번호\tpH\n5\t6.5\n7\t7.1\n6\t6.6\n8\t7.2'],
+]) {
+    test(`경고는 정확히 한 줄이다: ${label}`, async ({ page }) => {
+        await openHeuktoram(page, [...dupPair(5), ...dupPair(6), log('u7', '7', '농가의뢰'), log('u8', '8', '농가의뢰')]);
+        await page.locator('#importResultBtn').click();
+        await page.locator('input[name="importerMode"][value="paste"]').check();
+        await page.locator('#importerTextarea').fill(tsv);
+        await page.locator('#autoMapImporterBtn').click();
+        const lines = (await page.locator('#importerSummary .importer-warning-bar').innerText()).split('\n').filter(Boolean);
+        expect(lines).toEqual([MULTI]);
+    });
+}
+
 test('붙여넣기 모드 미매칭 CSV: 데이터 행이 헤더보다 칸이 많아도 _사유 제목이 사유 값 위에 온다', async ({ page }) => {
     await openHeuktoram(page, [A, B, C]);
     await page.locator('#importResultBtn').click();

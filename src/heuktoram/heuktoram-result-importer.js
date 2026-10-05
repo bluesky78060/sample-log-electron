@@ -896,6 +896,9 @@
                         rangeWarning,
                     });
 
+                }
+            });
+
             const ambiguousWarn = (keys, what) => {
                 if (keys.size === 0) return;
                 const list = [...keys];
@@ -905,8 +908,6 @@
             };
             ambiguousWarn(ambiguousKeys.multi, '여러 경지구분에 있');
             ambiguousWarn(ambiguousKeys.same, '같은 경지구분에 여러 건 있');
-                }
-            });
 
             this._state.preview = result;
         }

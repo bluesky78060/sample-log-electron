@@ -53,3 +53,11 @@ origin/main의 docs/ 번들은 **lock과 다른 의존성으로 빌드돼 있다
 - 6번, 8번, 9번, 흙토람 내보내기 J열: 범위 밖. 9번 보완 내용: 이번 작업에서 다루지 않았다(티켓 본문 참조).
 - soil-script.js·soil-result-importer.js·sync-utils.js·heuktoram-script.js:1582의 기존 복제, package.json, package-lock.json, 릴리스 노트, 테스트 프로젝트.
 - 주의: 이 worktree의 `package-lock.json`이 처음부터 수정 상태(peer 플래그 제거 등)여서 `git checkout`으로 되돌렸다.
+
+## 리뷰 1라운드 후 수정 (코디네이터)
+
+code-reviewer 가 🟠 MAJOR 를 재현했다: `ambiguousWarn` 호출 블록이 `rows.forEach` → `for (const field of fields)` 본문 안에 들어가 있어, 매칭 행이 모호 행보다 앞이거나 없으면 경고가 **0줄**, 필드가 둘 이상이거나 매칭 행이 많으면 같은 문장이 **셀마다 쌓였다**(매칭 30행 × 필드 3개 = 90줄). 작업자 E2E 는 매칭 행이 마지막 하나·필드 하나인 순서만 가져 이 결함을 피했다.
+
+- 수정: 블록을 `rows.forEach` 가 끝난 뒤 `this._state.preview = result;` 바로 앞으로 이동.
+- 테스트: `경고는 정확히 한 줄이다` 4건 추가(매칭 행이 앞 / 매칭 행 없음 / 필드 둘 / 섞임). 수정 전 소스에서 4건 모두 실패, 수정 후 흙토람 E2E 20건 통과.
+- 보류(리뷰 🟡·🔵): 공백뿐인 landClass1 처리 기준이 흙토람(trim)과 토양(trim 안 함)에서 갈림, `isSameGroup` 공개 API 노출, `findRelatedLogs` 옛 시그니처 호출 가드, 남은 `'농가의뢰'` 복제 2곳(heuktoram-result-importer.js:788, heuktoram-script.js:1583).
