@@ -4418,11 +4418,10 @@ class SoilSampleManager extends window.BaseSampleManager {
                     const log = this.sampleLogs.find(l => String(l.id) === id);
                     if (log) {
                         const newCompletedStatus = !log.isComplete;
-                        const receptionNumber = log.receptionNumber || '';
                         // 본필지+하위필지 연동: 첫 번째 '-' 앞 숫자로 그룹핑
                         // 503, 503-1, 503-2 → 모두 baseNumber '503'으로 같은 그룹
                         // 성토(F접두사)·경지구분이 다르면 번호가 같아도 별개 그룹 (SAMPL-1-178)
-                        const relatedLogs = window.ReceptionGroup.findRelatedLogs(this.sampleLogs, receptionNumber, log.landClass1);
+                        const relatedLogs = window.ReceptionGroup.findRelatedLogs(this.sampleLogs, log);
                         relatedLogs.forEach(relatedLog => {
                             relatedLog.isComplete = newCompletedStatus;
                             relatedLog.updatedAt = new Date().toISOString();

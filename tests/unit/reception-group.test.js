@@ -50,22 +50,22 @@ describe('findRelatedLogs (테이블 완료 그룹 연동)', () => {
         { id: 5, receptionNumber: '504' },
     ]
     it('같은 본번 일반 시료만 묶음 (성토 제외)', () => {
-        const r = RG.findRelatedLogs(logs, '503')
+        const r = RG.findRelatedLogs(logs, { receptionNumber: '503' })
         expect(r.map(l => l.id).sort()).toEqual([1, 2, 3])
     })
     it('가지번호로 호출해도 본번 그룹 전체', () => {
-        const r = RG.findRelatedLogs(logs, '503-2')
+        const r = RG.findRelatedLogs(logs, { receptionNumber: '503-2' })
         expect(r.map(l => l.id).sort()).toEqual([1, 2, 3])
     })
     it('성토 번호로 호출 → 성토만', () => {
-        const r = RG.findRelatedLogs(logs, 'F503')
+        const r = RG.findRelatedLogs(logs, { receptionNumber: 'F503' })
         expect(r.map(l => l.id)).toEqual([4])
     })
     it('빈 접수번호 → 빈 배열 (전체 매칭 방지)', () => {
-        expect(RG.findRelatedLogs(logs, '')).toEqual([])
+        expect(RG.findRelatedLogs(logs, { receptionNumber: '' })).toEqual([])
     })
     it('logs 누락 안전', () => {
-        expect(RG.findRelatedLogs(null, '503')).toEqual([])
+        expect(RG.findRelatedLogs(null, { receptionNumber: '503' })).toEqual([])
     })
 })
 
@@ -121,7 +121,7 @@ describe('동치성: findRelatedLogs vs 기존 인라인 로직', () => {
     ]
     for (const rec of ['503', '503-1', 'F503', '504', '', '999']) {
         it(`"${rec}" 결과 동일`, () => {
-            expect(RG.findRelatedLogs(logs, rec).map(l => l.id))
+            expect(RG.findRelatedLogs(logs, { receptionNumber: rec }).map(l => l.id))
                 .toEqual(legacyRelated(logs, rec).map(l => l.id))
         })
     }
@@ -168,11 +168,11 @@ describe('경지구분이 다르면 같은 본번이어도 묶지 않는다 (SAM
         { id: 'f', receptionNumber: 'F5', landClass1: '공익직불제' },    // 성토는 기존대로 별개
     ]
     it('findRelatedLogs: 농가의뢰 5 → 농가의뢰 그룹만 (누락값은 농가의뢰로 본다)', () => {
-        expect(RG.findRelatedLogs(logs, '5', '농가의뢰').map(l => l.id)).toEqual(['a', 'a1'])
-        expect(RG.findRelatedLogs(logs, '5', undefined).map(l => l.id)).toEqual(['a', 'a1'])
+        expect(RG.findRelatedLogs(logs, { receptionNumber: '5', landClass1: '농가의뢰' }).map(l => l.id)).toEqual(['a', 'a1'])
+        expect(RG.findRelatedLogs(logs, { receptionNumber: '5', landClass1: undefined }).map(l => l.id)).toEqual(['a', 'a1'])
     })
     it('findRelatedLogs: 공익직불제 5 → 공익직불제 일반 그룹만', () => {
-        expect(RG.findRelatedLogs(logs, '5', '공익직불제').map(l => l.id)).toEqual(['b', 'b1'])
+        expect(RG.findRelatedLogs(logs, { receptionNumber: '5', landClass1: '공익직불제' }).map(l => l.id)).toEqual(['b', 'b1'])
     })
     it('computeBulkTargetIds: 농가의뢰 5 선택 → 공익직불제 5 미포함', () => {
         expect([...RG.computeBulkTargetIds(logs, ['a'])].sort()).toEqual(['a', 'a1'])

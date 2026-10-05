@@ -786,10 +786,14 @@
                 keyMap.get(k).push(r);
             }
             const landClassOf = (r) => (r.log?.landClass1 && String(r.log.landClass1).trim()) || '농가의뢰';
+            // 모호 번호는 종류별로 모아 경고 한 줄로 합친다(행마다 한 줄이면 120행에 120줄).
+            // 행별 사유는 미매칭 목록과 CSV에만 남는다.
+            const ambiguousKeys = { multi: new Set(), same: new Set() };
             const ambiguousReason = (key, rows) => {
                 const classes = [...new Set(rows.map(landClassOf))];
+                ambiguousKeys[classes.length > 1 ? 'multi' : 'same'].add(key);
                 return classes.length > 1
-                    ? `시료번호 ${key}가 여러 경지구분에 있음(${classes.join(', ')}) — 경지구분을 골라 가져오세요`
+                    ? `시료번호 ${key}가 여러 경지구분에 있음(${classes.join(', ')}) — 토양 목록에서 경지구분 탭을 고르고 행을 선택한 뒤 흙토람을 여세요`
                     : `시료번호 ${key}가 같은 경지구분(${classes[0]})에 ${rows.length}건 있음 — 접수번호를 확인하세요`;
             };
             const testResults = this.cfg.getTestResults?.() || {};
@@ -829,7 +833,6 @@
                     const reason = candidates.length > 1 ? ambiguousReason(key, candidates) : '';
                     result.unmatched.push({ excelRowIdx: ri, key, rawRow: row, reason });
                     result.stats.unmatchedRows++;
-                    if (reason && !result.warnings.includes(reason)) result.warnings.push(reason);
                     return;
                 }
                 const target = candidates[0];
@@ -892,8 +895,19 @@
                         willApply,
                         rangeWarning,
                     });
+
                 }
             });
+
+            const ambiguousWarn = (keys, what) => {
+                if (keys.size === 0) return;
+                const list = [...keys];
+                const head = list.slice(0, 3).join(', ');
+                const tail = list.length > 3 ? ` … 외 ${list.length - 3}개` : '';
+                result.warnings.push(`시료번호 ${list.length}개가 ${what}어 저장하지 않았습니다(${head}${tail})`);
+            };
+            ambiguousWarn(ambiguousKeys.multi, '여러 경지구분에 있');
+            ambiguousWarn(ambiguousKeys.same, '같은 경지구분에 여러 건 있');
 
             this._state.preview = result;
         }
@@ -1077,7 +1091,9 @@
         _downloadUnmatchedCsv() {
             const p = this._state.preview;
             if (!p || p.unmatched.length === 0) return;
-            const { headers } = this._parseInput();
+            const { headers: parsedHeaders, maxCol } = this._parseInput();
+            // 붙여넣기 모드의 헤더 행은 데이터 행보다 짧을 수 있다 — 안 채우면 _사유 제목이 앞으로 당겨진다.
+            const headers = Array.from({ length: Math.max(parsedHeaders.length, maxCol) }, (_, i) => parsedHeaders[i] ?? '');
             const csvHeaders = ['_원본행번호', ...headers.map((h, i) => h || `열${i + 1}`), '_사유'].map(csvEscape).join(',');
             const lines = [csvHeaders];
             // M-1 fix: 모드별 실제 엑셀 행번호 계산
