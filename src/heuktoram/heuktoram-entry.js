@@ -36,6 +36,8 @@ import './preview-table.js';
 // 흙토람은 localStorage를 **직접** 읽는 별도 페이지라, 토양 화면의 로드 마이그레이션이
 // 닿지 않는다. 여기서도 같은 이관을 적용해야 옛 꼬리표 배정이 반영된다.
 import '../soil/sublot-identity.js';
+// 경지구분 폴백 단일 출처(window.ReceptionNumber.DEFAULT_LAND_CLASS) — heuktoram-script.js 전에 로드 (SAMPL-1-182)
+import '../soil/reception-number.js';
 import './heuktoram-result-importer.js';
 
 // Main script

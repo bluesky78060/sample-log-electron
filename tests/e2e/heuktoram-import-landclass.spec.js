@@ -64,3 +64,79 @@ for (const [label, logs] of [['농가의뢰 5 → 공익직불제 5', [A, B, C]]
         expect(list).toContain('공익직불제');
     });
 }
+
+// SAMPL-1-182: 모호 번호마다 경고줄이 하나씩 쌓여 120행이면 요약 영역이 수천 px가 됐다.
+const rangeLogs = (landClass1, prefix, n) =>
+    Array.from({ length: n }, (_, i) => log(`${prefix}${i + 1}`, String(i + 1), landClass1));
+
+/** 저장된 분석값(pH) 건수와 키 */
+const storedPh = (page) => page.evaluate((year) => {
+    const ls = JSON.parse(localStorage.getItem(`soilTestResults_${year}`) || '{}');
+    return Object.keys(ls).filter((k) => ls[k]?.pH != null && ls[k].pH !== '');
+}, YEAR);
+
+test('모호 번호 120개는 경고 한 줄로 합쳐지고 저장은 여전히 0건이다', async ({ page }) => {
+    const logs = [...rangeLogs('농가의뢰', 'f', 120), ...rangeLogs('공익직불제', 'g', 120), log('u', '999', '농가의뢰')];
+    await openHeuktoram(page, logs);
+    const tsv = ['시료번호\tpH', ...Array.from({ length: 120 }, (_, i) => `${i + 1}\t6.5`), '999\t7.7'].join('\n');
+    await page.locator('#importResultBtn').click();
+    await page.locator('input[name="importerMode"][value="paste"]').check();
+    await page.locator('#importerTextarea').fill(tsv);
+    await page.locator('#autoMapImporterBtn').click();
+
+    const bar = page.locator('#importerSummary .importer-warning-bar');
+    const lines = (await bar.innerText()).split('\n').filter(Boolean);
+    expect(lines, '모호 번호마다 경고줄이 쌓였다').toHaveLength(1);
+    expect(lines[0]).toContain('시료번호 120개가 여러 경지구분에 있어 저장하지 않았습니다(1, 2, 3 … 외 117개)');
+    expect(await page.locator('#importerSummary').innerText()).toContain('120건 미매칭');
+
+    await page.locator('#saveResultImporterBtn').click();
+    expect(await storedPh(page), '모호한 번호가 저장됐다').toEqual(['u_0_0']);
+});
+
+test('모호 사유 종류별로 경고는 한 줄씩이고, 행별 사유는 미매칭 목록에 남는다', async ({ page }) => {
+    const dup = log('d2', '9', '농가의뢰');
+    await openHeuktoram(page, [A, B, C, log('d1', '9', '농가의뢰'), dup]);
+    await page.locator('#importResultBtn').click();
+    await page.locator('input[name="importerMode"][value="paste"]').check();
+    await page.locator('#importerTextarea').fill('시료번호\tpH\n5\t6.5\n9\t6.6\n7\t7.1');
+    await page.locator('#autoMapImporterBtn').click();
+    const lines = (await page.locator('#importerSummary .importer-warning-bar').innerText()).split('\n').filter(Boolean);
+    expect(lines).toHaveLength(2);
+    expect(lines.join('|')).toContain('시료번호 1개가 여러 경지구분에 있어');
+    expect(lines.join('|')).toContain('시료번호 1개가 같은 경지구분에 여러 건 있어');
+    const list = await page.locator('#importerPreviewList').innerText();
+    expect(list).toContain('같은 경지구분(농가의뢰)에 2건 있음');
+    // 흙토람 화면에 없는 조작(「경지구분을 골라 가져오세요」)을 안내하지 않는다
+    expect(list).toContain('토양 목록에서 경지구분 탭을 고르고 행을 선택한 뒤 흙토람을 여세요');
+    expect(list).not.toContain('경지구분을 골라 가져오세요');
+});
+
+test('붙여넣기 모드 미매칭 CSV: 데이터 행이 헤더보다 칸이 많아도 _사유 제목이 사유 값 위에 온다', async ({ page }) => {
+    await openHeuktoram(page, [A, B, C]);
+    await page.locator('#importResultBtn').click();
+    await page.locator('input[name="importerMode"][value="paste"]').check();
+    await page.locator('#importerTextarea').fill('시료번호\tpH\n5\t6.5\t메모\n7\t7.1\t-');
+    await page.locator('#autoMapImporterBtn').click();
+    const [download] = await Promise.all([
+        page.waitForEvent('download'),
+        page.locator('#downloadUnmatchedCsvBtn').click(),
+    ]);
+    const chunks = [];
+    for await (const c of await download.createReadStream()) chunks.push(c);
+    const [header, row] = Buffer.concat(chunks).toString('utf8').replace(/^﻿/, '').split('\r\n');
+    expect(header).toBe('_원본행번호,시료번호,pH,열3,_사유');
+    expect(row.startsWith('2,5,6.5,메모,')).toBe(true);
+});
+
+// 공백뿐인 경지구분은 누락(농가의뢰)과 같이 본다 — 내보내기(dataRow[3])와 같은 기준
+test('syncToSiblings: 공백뿐인 landClass1은 누락(농가의뢰)과 같은 경지구분으로 묶는다', async ({ page }) => {
+    await openHeuktoram(page, [log('s1', '5', '   '), log('s2', '5-1', undefined), log('s3', '5-2', '공익직불제')]);
+    const out = await page.evaluate(() => {
+        const m = /** @type {any} */ (window).heuktoramManager;
+        const key = (id) => m.flatRows.find((r) => r.log.id === id).key;
+        m.syncToSiblings(key('s1'), 'pH', '6.5');
+        return { s2: m.testResults[key('s2')]?.pH ?? null, s3: m.testResults[key('s3')]?.pH ?? null };
+    });
+    expect(out).toEqual({ s2: '6.5', s3: null });
+});
