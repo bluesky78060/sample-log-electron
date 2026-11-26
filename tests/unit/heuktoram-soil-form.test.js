@@ -235,3 +235,160 @@ describe('흙토람 토양 서식 — 실물 대조', () => {
         expect(styles, '아래 테두리').toContain('<bottom style="thin">')
     })
 })
+
+// 흙토람 업로드 거부(SAMPL-1-186) — 포장(ZIP) 수준 계약.
+// 소유자 업로드 시험 이력과 미확인 사항은 docs-internal/ai-pm/SAMPL-1-186/SAMPL-1-186-direction.md.
+// 이 테스트는 포장 구조까지만 증명한다 — 흙토람이 받아들이는지는 증명하지 못한다.
+describe('흙토람 xlsx 포장 — 업로드 거부 방지', () => {
+    // HeuktoramManager는 export되지 않아 소스에서 메서드 본문을 꺼내 실행한다.
+    const method = (name, async = false) => {
+        const m = SRC.match(new RegExp(`\\n    ${async ? 'async ' : ''}${name}\\(([^)]*)\\) \\{([\\s\\S]*?)\\n    \\}\\n`))
+        expect(m, `${name} 본문을 찾지 못했다`).toBeTruthy()
+        const Fn = async ? Object.getPrototypeOf(async function () {}).constructor : Function
+        return new Fn('window', ...m[1].split(',').map(s => s.trim()).filter(Boolean), m[2])
+    }
+
+    let JSZip, self
+    beforeAll(async () => {
+        JSZip = (await import('jszip')).default
+        const win = { JSZip }
+        const bind = (name, async) => { const f = method(name, async); return (...a) => f.call(self, win, ...a) }
+        self = {
+            finalizeXlsxPackage: bind('finalizeXlsxPackage', true),
+            injectDataValidations: bind('injectDataValidations', true),
+            buildDataValidationsXml: bind('buildDataValidationsXml'),
+            buildDataValidations: bind('buildDataValidations'),
+        }
+    })
+
+    const BIN = '<Default Extension="bin" ContentType="application/vnd.ms-excel.sheet.binary.macroEnabled.main"/>'
+
+    /** 프로덕션과 같은 write 옵션의 실제 SheetJS 출력 */
+    const sheetJsOutput = () => {
+        const wb = XLSX.utils.book_new()
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['a', 'b'], ['1', '2']]), '검정정보일괄입력')
+        return XLSX.write(wb, { type: 'array', bookType: 'xlsx' })
+    }
+    const names = async (buf) => Object.keys((await JSZip.loadAsync(buf)).files)
+    const ctOf = async (buf) => (await JSZip.loadAsync(buf)).file('[Content_Types].xml').async('string')
+
+    it('전제: SheetJS 원본 출력은 xlsb bin 선언을 갖고 있다 (이게 사라지면 이 수정이 불필요해졌는지 재확인)', async () => {
+        expect(await ctOf(sheetJsOutput())).toContain('binary.macroEnabled.main')
+    })
+
+    it('보정 후 [Content_Types].xml이 ZIP 첫 엔트리이고 xlsb bin 선언이 없다', async () => {
+        const out = await self.finalizeXlsxPackage(sheetJsOutput())
+        expect((await names(out))[0]).toBe('[Content_Types].xml')
+        expect(await ctOf(out)).not.toContain('binary.macroEnabled.main')
+    })
+
+    it('보정은 그 한 줄만 지운다 — 다른 Default·Override와 다른 엔트리 내용은 그대로다', async () => {
+        const src = sheetJsOutput()
+        const out = await self.finalizeXlsxPackage(src)
+        expect(await ctOf(out)).toBe((await ctOf(src)).replace(BIN, ''))
+        const a = await JSZip.loadAsync(src), b = await JSZip.loadAsync(out)
+        expect(Object.keys(b.files).sort()).toEqual(Object.keys(a.files).sort())
+        for (const n of Object.keys(a.files)) {
+            if (n === '[Content_Types].xml' || a.files[n].dir) continue
+            expect(await b.file(n).async('string'), n).toBe(await a.file(n).async('string'))
+        }
+    })
+
+    it('나머지 엔트리의 상대 순서는 유지된다', async () => {
+        const src = await names(sheetJsOutput())
+        const out = await names(await self.finalizeXlsxPackage(sheetJsOutput()))
+        expect(out.slice(1)).toEqual(src.filter(n => n !== '[Content_Types].xml'))
+    })
+
+    it('선언이 원래 없으면(SheetJS가 바뀐 경우) 오류 없이 통과하고 순서만 맞춘다', async () => {
+        const z = await JSZip.loadAsync(sheetJsOutput())
+        z.file('[Content_Types].xml', (await z.file('[Content_Types].xml').async('string')).replace(BIN, ''))
+        const out = await self.finalizeXlsxPackage(await z.generateAsync({ type: 'arraybuffer' }))
+        expect((await names(out))[0]).toBe('[Content_Types].xml')
+        expect(await ctOf(out)).not.toContain('binary.macroEnabled.main')
+    })
+
+    it('[Content_Types].xml이 없으면 조용히 통과하지 않고 던진다', async () => {
+        const z = await JSZip.loadAsync(sheetJsOutput())
+        z.remove('[Content_Types].xml')
+        await expect(self.finalizeXlsxPackage(await z.generateAsync({ type: 'arraybuffer' }))).rejects.toThrow()
+    })
+
+    it('JSZip이 없으면 조용히 통과하지 않고 던진다', async () => {
+        const f = method('finalizeXlsxPackage', true)
+        await expect(f.call({}, {}, sheetJsOutput())).rejects.toThrow('JSZip')
+    })
+
+    it('검증 목록이 비어 injectDataValidations가 원본을 그대로 돌려줘도 보정은 적용된다', async () => {
+        const src = sheetJsOutput()
+        const passthrough = await self.injectDataValidations(src, [])
+        expect(await ctOf(passthrough)).toContain('binary.macroEnabled.main')   // 이 분기는 재압축하지 않는다
+        const out = await self.finalizeXlsxPackage(passthrough)
+        expect((await names(out))[0]).toBe('[Content_Types].xml')
+        expect(await ctOf(out)).not.toContain('binary.macroEnabled.main')
+    })
+
+    it('데이터 검증이 주입된 출력도 보정 후 검증이 그대로 남는다', async () => {
+        const out = await self.finalizeXlsxPackage(
+            await self.injectDataValidations(sheetJsOutput(), self.buildDataValidations(3)))
+        const sheet = await (await JSZip.loadAsync(out)).file('xl/worksheets/sheet1.xml').async('string')
+        expect(sheet).toContain('<dataValidations count="3">')
+        expect(sheet).toContain('sqref="F5:F1048576"')
+        expect((await names(out))[0]).toBe('[Content_Types].xml')
+    })
+
+    // 정상 입력으로는 재검증 throw에 닿을 수 없어, 두 번째 loadAsync(재검증)에 위조 ZIP을 돌려주는 JSZip으로 깬다.
+    const finalizeWithForgedCheck = async (forgedBuf) => {
+        let loads = 0
+        const Fake = function () { return new JSZip() }
+        Fake.loadAsync = (buf) => JSZip.loadAsync(++loads === 2 ? forgedBuf : buf)
+        const f = method('finalizeXlsxPackage', true)
+        return f.call({}, { JSZip: Fake }, sheetJsOutput())
+    }
+
+    /** CT 위치와 bin 선언 유무를 독립적으로 정하는 위조 ZIP — 두 조건이 서로를 가리지 않게 한다. */
+    const forgeZip = async ({ ctFirst, keepBin }) => {
+        const src = await JSZip.loadAsync(sheetJsOutput())
+        const ct = (await ctOf(await src.generateAsync({ type: 'arraybuffer' }))).replace(keepBin ? '' : BIN, '')
+        const forged = new JSZip()
+        const add = async () => {
+            for (const n of Object.keys(src.files)) {
+                if (n !== '[Content_Types].xml' && !src.files[n].dir) {
+                    forged.file(n, await src.file(n).async('uint8array'), { createFolders: false })
+                }
+            }
+        }
+        if (ctFirst) forged.file('[Content_Types].xml', ct, { createFolders: false })
+        await add()
+        if (!ctFirst) forged.file('[Content_Types].xml', ct, { createFolders: false })
+        return forged.generateAsync({ type: 'arraybuffer' })
+    }
+
+    it('재검증이 첫 엔트리가 CT가 아님을 보면 던진다 — bin 선언은 이미 없는 상태에서', async () => {
+        const buf = await forgeZip({ ctFirst: false, keepBin: false })
+        expect((await names(buf))[0]).not.toBe('[Content_Types].xml')
+        expect(await ctOf(buf)).not.toContain('binary.macroEnabled.main')
+        await expect(finalizeWithForgedCheck(buf)).rejects.toThrow('xlsx 포장 보정 실패')
+    })
+
+    it('재검증이 xlsb bin 선언이 남은 것을 보면 던진다 — CT는 이미 첫 엔트리인 상태에서', async () => {
+        const buf = await forgeZip({ ctFirst: true, keepBin: true })
+        expect((await names(buf))[0]).toBe('[Content_Types].xml')
+        expect(await ctOf(buf)).toContain('binary.macroEnabled.main')
+        await expect(finalizeWithForgedCheck(buf)).rejects.toThrow('xlsx 포장 보정 실패')
+    })
+
+    it('재검증을 통과하는 정상 결과는 던지지 않는다 (위 두 테스트가 항상 던지는 목이 아님을 보증)', async () => {
+        const out = await self.finalizeXlsxPackage(sheetJsOutput())
+        await expect(finalizeWithForgedCheck(out)).resolves.toBeInstanceOf(ArrayBuffer)
+    })
+
+    it('흙토람·공익직불제 두 내보내기 모두 보정을 거쳐 다운로드한다', () => {
+        for (const fn of ['exportToHeuktoram', 'exportToGongik']) {
+            const body = SRC.match(new RegExp(`async ${fn}\\(\\) \\{[\\s\\S]*?\\n    \\}\\n`))[0]
+            expect(body, fn).toMatch(/this\.downloadBuffer\(patchedBuffer,/)
+            expect(body, `${fn}: patchedBuffer가 finalizeXlsxPackage 결과여야 한다`)
+                .toMatch(/const patchedBuffer = await this\.finalizeXlsxPackage\(\s*await this\.injectDataValidations\(/)
+        }
+    })
+})

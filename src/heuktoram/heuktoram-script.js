@@ -1343,7 +1343,8 @@ class HeuktoramManager {
             // 사용자가 엑셀에서 용도구분(F열) 셀을 클릭 시 드롭다운이 나타나도록 함
             const arrayBuffer = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
             const validations = this.buildDataValidations(targetRows.length);
-            const patchedBuffer = await this.injectDataValidations(arrayBuffer, validations);
+            const patchedBuffer = await this.finalizeXlsxPackage(
+                await this.injectDataValidations(arrayBuffer, validations));
 
             const fileName = `흙토람_토양검정_${this.selectedYear}_${new Date().toISOString().slice(0, 10)}.xlsx`;
             this.downloadBuffer(patchedBuffer, fileName);
@@ -1425,6 +1426,38 @@ class HeuktoramManager {
 
         zip.file(sheetXmlPath, xml);
         return await zip.generateAsync({ type: 'arraybuffer' });
+    }
+
+    /**
+     * 흙토람이 SheetJS 출력을 「변조된 확장자」로 거부한다(SAMPL-1-186). 시험 이력과 미확인 사항은
+     * docs-internal/ai-pm/SAMPL-1-186/SAMPL-1-186-direction.md 한 곳에 둔다.
+     * 검증 목록이 비어 재압축이 없는 경로에서도 돈다. 어긋나면 던진다 — 거부를 사용자가 나중에야 안다.
+     */
+    async finalizeXlsxPackage(arrayBuffer) {
+        const JSZip = window.JSZip;
+        if (!JSZip) throw new Error('JSZip 미사용: xlsx 포장을 고칠 수 없다');
+        const ctName = '[Content_Types].xml';
+        const binDefault = /<Default Extension="bin" ContentType="[^"]*binary\.macroEnabled\.main"\/>/g;
+
+        const zip = await JSZip.loadAsync(arrayBuffer);
+        const ctFile = zip.file(ctName);
+        if (!ctFile) throw new Error(`${ctName} 없음`);
+        const out = new JSZip();
+        out.file(ctName, (await ctFile.async('string')).replace(binDefault, ''), { createFolders: false });
+        for (const name of Object.keys(zip.files)) {
+            if (name === ctName) continue;
+            const f = zip.files[name];
+            if (f.dir) out.folder(name);
+            else out.file(name, await f.async('uint8array'), { createFolders: false });
+        }
+
+        const result = await out.generateAsync({ type: 'arraybuffer' });
+        const check = await JSZip.loadAsync(result);
+        const ct = await check.file(ctName).async('string');
+        if (Object.keys(check.files)[0] !== ctName || ct.includes('binary.macroEnabled.main')) {
+            throw new Error('xlsx 포장 보정 실패: 흙토람이 거부할 수 있는 파일');
+        }
+        return result;
     }
 
     /**
@@ -1848,7 +1881,8 @@ class HeuktoramManager {
 
             const arrayBuffer = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
             const validations = this.buildGongikDataValidations(targetRows.length);
-            const patchedBuffer = await this.injectDataValidations(arrayBuffer, validations);
+            const patchedBuffer = await this.finalizeXlsxPackage(
+                await this.injectDataValidations(arrayBuffer, validations));
 
             const fileName = `공익직불제_이행점검_${this.selectedYear}_${new Date().toISOString().slice(0, 10)}.xlsx`;
             this.downloadBuffer(patchedBuffer, fileName);
