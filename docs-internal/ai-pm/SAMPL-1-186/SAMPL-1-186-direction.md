@@ -14,9 +14,10 @@
 - 실패: 앱 원본 출력, 그리고 bin 줄만 지운 파일.
 - 값·파일명·시료번호는 원인이 아니다.
 
-## 추론 (시험되지 않은 것)
-- **CT만 앞으로 옮긴 파일의 서버 반응은 시험된 적 없다.** 「둘 다 필요하다」는 추정이지 확인이 아니다(조사 보고서도 서버 판별 규칙은 미확인이라 적었다).
-- 흙토람의 판별 규칙은 우리가 볼 수 없고, 서버 쪽이 바뀌면 이 수정의 효과도 달라질 수 있다.
+## 시험 이력과 미확인 사항 (이 문서가 기준이다)
+- 시험됨: 두 변경(CT 맨 앞 + bin 선언 삭제)을 함께 적용한 파일은 통과했고, **bin 선언만 제거한 파일은 실패했다.**
+- 미시험: **CT만 앞으로 옮긴 파일.** 「둘 다 필요하다」는 이 결과에서 나온 추정이지 확인이 아니다.
+- 모름: 흙토람의 판별 규칙(조사 보고서도 미확인이라 적었다). 서버 인과는 검증되지 않았고, 서버가 바뀌면 이 수정의 효과도 달라질 수 있다.
 
 ## 선택
 확인된 통과 사례 중 가장 작은 변경인 V11을 소유자가 최소 수정으로 채택했다. 조사 보고서(다른 작업 공간, `/tmp` 하위라 **휘발성**): `/private/tmp/claude-501/-Users-leechanhee-orca-workspaces-sample-log-electron-heuktoram-xlsx-diff/c0090462-ce42-41fc-b4b9-27518069de26/scratchpad/heuktoram-bisect-report.md`, `/private/tmp/claude-501/-Users-leechanhee-orca-workspaces-sample-log-electron-heuktoram-xlsx-diff/c0090462-ce42-41fc-b4b9-27518069de26/scratchpad/heuktoram-xlsx-diff-report.md`
