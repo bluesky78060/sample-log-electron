@@ -1429,10 +1429,9 @@ class HeuktoramManager {
     }
 
     /**
-     * 흙토람이 SheetJS 출력을 「변조된 확장자」로 거부해서(SAMPL-1-186) 엑셀식 포장으로 고친다:
-     * [Content_Types].xml을 ZIP 맨 앞으로, xlsb 본문 선언(Default bin) 한 줄 삭제.
-     * 둘 다 필요하다(실측: 순서+선언 제거만 통과). 검증 목록이 비어 재압축이 없는 경로에서도 돈다.
-     * 확신 못 하면 조용히 통과시키지 않고 던진다 — 흙토람 거부를 사용자가 나중에야 안다.
+     * 흙토람이 SheetJS 출력을 「변조된 확장자」로 거부한다(SAMPL-1-186). 소유자 업로드 시험에서
+     * 두 변경을 함께 적용한 파일만 통과했고, 각각 단독의 효과는 시험된 적 없다.
+     * 검증 목록이 비어 재압축이 없는 경로에서도 돈다. 어긋나면 던진다 — 거부를 사용자가 나중에야 안다.
      */
     async finalizeXlsxPackage(arrayBuffer) {
         const JSZip = window.JSZip;

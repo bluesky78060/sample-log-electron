@@ -237,10 +237,10 @@ describe('흙토람 토양 서식 — 실물 대조', () => {
 })
 
 // 흙토람 업로드 거부(SAMPL-1-186) — 포장(ZIP) 수준 계약.
-// 실측: 흙토람은 [Content_Types].xml이 ZIP 맨 앞이 아니거나 xlsb 본문 선언(Default bin)이
-// 남은 SheetJS 출력을 「변조된 확장자」로 거부한다. 둘 중 하나만 고치면 거부된다.
+// 소유자 업로드 시험: CT 맨 앞 + bin 선언 삭제를 함께 적용한 파일 통과, bin 줄만 지운 파일 실패.
+// CT만 옮긴 파일은 시험된 적 없고 서버의 판별 규칙은 확인하지 못했다. 이 테스트는 포장 구조까지만 증명한다.
 describe('흙토람 xlsx 포장 — 업로드 거부 방지', () => {
-    /** 소스의 메서드를 꺼내 실제로 실행한다(HeuktoramManager는 export되지 않는다). */
+    // HeuktoramManager는 export되지 않아 소스에서 메서드 본문을 꺼내 실행한다.
     const method = (name, async = false) => {
         const m = SRC.match(new RegExp(`\\n    ${async ? 'async ' : ''}${name}\\(([^)]*)\\) \\{([\\s\\S]*?)\\n    \\}\\n`))
         expect(m, `${name} 본문을 찾지 못했다`).toBeTruthy()
@@ -337,8 +337,7 @@ describe('흙토람 xlsx 포장 — 업로드 거부 방지', () => {
         expect((await names(out))[0]).toBe('[Content_Types].xml')
     })
 
-    // 사후 재검증은 보정이 어긋난 파일이 다운로드로 새는 마지막 방어선이다.
-    // 정상 입력으로는 이 분기에 닿을 수 없어, 재검증 시점(두 번째 loadAsync)에 위조된 결과를 돌려주는 JSZip으로 직접 깬다.
+    // 정상 입력으로는 재검증 throw에 닿을 수 없어, 두 번째 loadAsync(재검증)에 위조 ZIP을 돌려주는 JSZip으로 깬다.
     const finalizeWithForgedCheck = async (forgedBuf) => {
         let loads = 0
         const Fake = function () { return new JSZip() }
@@ -347,18 +346,33 @@ describe('흙토람 xlsx 포장 — 업로드 거부 방지', () => {
         return f.call({}, { JSZip: Fake }, sheetJsOutput())
     }
 
-    it('재검증이 첫 엔트리가 CT가 아님을 보면 던진다 (조용히 통과 금지)', async () => {
-        await expect(finalizeWithForgedCheck(sheetJsOutput())).rejects.toThrow('xlsx 포장 보정 실패')
+    /** CT 위치와 bin 선언 유무를 독립적으로 정하는 위조 ZIP — 두 조건이 서로를 가리지 않게 한다. */
+    const forgeZip = async ({ ctFirst, keepBin }) => {
+        const src = await JSZip.loadAsync(sheetJsOutput())
+        const ct = (await ctOf(await src.generateAsync({ type: 'arraybuffer' }))).replace(keepBin ? '' : BIN, '')
+        const forged = new JSZip()
+        const add = async () => {
+            for (const n of Object.keys(src.files)) {
+                if (n !== '[Content_Types].xml' && !src.files[n].dir) {
+                    forged.file(n, await src.file(n).async('uint8array'), { createFolders: false })
+                }
+            }
+        }
+        if (ctFirst) forged.file('[Content_Types].xml', ct, { createFolders: false })
+        await add()
+        if (!ctFirst) forged.file('[Content_Types].xml', ct, { createFolders: false })
+        return forged.generateAsync({ type: 'arraybuffer' })
+    }
+
+    it('재검증이 첫 엔트리가 CT가 아님을 보면 던진다 — bin 선언은 이미 없는 상태에서', async () => {
+        const buf = await forgeZip({ ctFirst: false, keepBin: false })
+        expect((await names(buf))[0]).not.toBe('[Content_Types].xml')
+        expect(await ctOf(buf)).not.toContain('binary.macroEnabled.main')
+        await expect(finalizeWithForgedCheck(buf)).rejects.toThrow('xlsx 포장 보정 실패')
     })
 
-    it('재검증이 xlsb bin 선언이 남은 것을 보면 던진다 (CT가 첫 엔트리여도)', async () => {
-        const src = await JSZip.loadAsync(sheetJsOutput())
-        const forged = new JSZip()
-        forged.file('[Content_Types].xml', await src.file('[Content_Types].xml').async('string'), { createFolders: false })
-        for (const n of Object.keys(src.files)) {
-            if (n !== '[Content_Types].xml' && !src.files[n].dir) forged.file(n, await src.file(n).async('uint8array'), { createFolders: false })
-        }
-        const buf = await forged.generateAsync({ type: 'arraybuffer' })
+    it('재검증이 xlsb bin 선언이 남은 것을 보면 던진다 — CT는 이미 첫 엔트리인 상태에서', async () => {
+        const buf = await forgeZip({ ctFirst: true, keepBin: true })
         expect((await names(buf))[0]).toBe('[Content_Types].xml')
         expect(await ctOf(buf)).toContain('binary.macroEnabled.main')
         await expect(finalizeWithForgedCheck(buf)).rejects.toThrow('xlsx 포장 보정 실패')
