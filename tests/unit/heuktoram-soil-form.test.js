@@ -337,6 +337,38 @@ describe('흙토람 xlsx 포장 — 업로드 거부 방지', () => {
         expect((await names(out))[0]).toBe('[Content_Types].xml')
     })
 
+    // 사후 재검증은 보정이 어긋난 파일이 다운로드로 새는 마지막 방어선이다.
+    // 정상 입력으로는 이 분기에 닿을 수 없어, 재검증 시점(두 번째 loadAsync)에 위조된 결과를 돌려주는 JSZip으로 직접 깬다.
+    const finalizeWithForgedCheck = async (forgedBuf) => {
+        let loads = 0
+        const Fake = function () { return new JSZip() }
+        Fake.loadAsync = (buf) => JSZip.loadAsync(++loads === 2 ? forgedBuf : buf)
+        const f = method('finalizeXlsxPackage', true)
+        return f.call({}, { JSZip: Fake }, sheetJsOutput())
+    }
+
+    it('재검증이 첫 엔트리가 CT가 아님을 보면 던진다 (조용히 통과 금지)', async () => {
+        await expect(finalizeWithForgedCheck(sheetJsOutput())).rejects.toThrow('xlsx 포장 보정 실패')
+    })
+
+    it('재검증이 xlsb bin 선언이 남은 것을 보면 던진다 (CT가 첫 엔트리여도)', async () => {
+        const src = await JSZip.loadAsync(sheetJsOutput())
+        const forged = new JSZip()
+        forged.file('[Content_Types].xml', await src.file('[Content_Types].xml').async('string'), { createFolders: false })
+        for (const n of Object.keys(src.files)) {
+            if (n !== '[Content_Types].xml' && !src.files[n].dir) forged.file(n, await src.file(n).async('uint8array'), { createFolders: false })
+        }
+        const buf = await forged.generateAsync({ type: 'arraybuffer' })
+        expect((await names(buf))[0]).toBe('[Content_Types].xml')
+        expect(await ctOf(buf)).toContain('binary.macroEnabled.main')
+        await expect(finalizeWithForgedCheck(buf)).rejects.toThrow('xlsx 포장 보정 실패')
+    })
+
+    it('재검증을 통과하는 정상 결과는 던지지 않는다 (위 두 테스트가 항상 던지는 목이 아님을 보증)', async () => {
+        const out = await self.finalizeXlsxPackage(sheetJsOutput())
+        await expect(finalizeWithForgedCheck(out)).resolves.toBeInstanceOf(ArrayBuffer)
+    })
+
     it('흙토람·공익직불제 두 내보내기 모두 보정을 거쳐 다운로드한다', () => {
         for (const fn of ['exportToHeuktoram', 'exportToGongik']) {
             const body = SRC.match(new RegExp(`async ${fn}\\(\\) \\{[\\s\\S]*?\\n    \\}\\n`))[0]
